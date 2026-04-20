@@ -281,6 +281,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('indents/{indent}', [IndentsController::class, 'show'])->name('indents.show');
     Route::get('indents/{indent}/edit', [IndentsController::class, 'edit'])->name('indents.edit');
     Route::put('indents/{indent}', [IndentsController::class, 'update'])->name('indents.update');
+    Route::patch('indents/{indent}/assign-rake-number', [IndentsController::class, 'assignRakeNumber'])->name('indents.assign-rake-number');
     Route::delete('indents/{indent}', [IndentsController::class, 'destroy'])->name('indents.destroy');
     Route::get('indents/{indent}/create-rake', [IndentsController::class, 'createRake'])->name('indents.create-rake');
     Route::post('indents/{indent}/store-rake', [IndentsController::class, 'storeRakeFromIndent'])->name('indents.store-rake');

@@ -75,6 +75,29 @@ export default function RakesIndex({ tableData }: Props) {
         router.visit(withReturnTo(`/rakes/${row.id}`, returnPath));
     }, []);
 
+    const formatRakeSequence = useCallback((value: string, row: RakeRow): string => {
+        const normalized = value.trim();
+        if (normalized === '') {
+            return normalized;
+        }
+
+        const sidingValue = `${row.siding_code ?? ''} ${row.siding_name ?? ''}`.toLowerCase();
+        let prefix = '';
+        if (sidingValue.includes('pakur')) {
+            prefix = 'P';
+        } else if (sidingValue.includes('dumka')) {
+            prefix = 'D';
+        } else if (sidingValue.includes('kurwa')) {
+            prefix = 'K';
+        }
+
+        if (prefix === '') {
+            return normalized;
+        }
+
+        return normalized.startsWith(`${prefix}-`) ? normalized : `${prefix}-${normalized}`;
+    }, []);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rakes" />
@@ -107,6 +130,7 @@ export default function RakesIndex({ tableData }: Props) {
                         <DataTable<RakeRow>
                             tableData={tableDataWithExactRakeNumber}
                             tableName="rakes"
+                            renderHeader={{ rake_number: 'Rake Seq' }}
                             onRowClick={openRakeRow}
                             rowClassName={(row) =>
                                 row.workflow_has_pending
@@ -136,21 +160,20 @@ export default function RakesIndex({ tableData }: Props) {
                                 },
                             ]}
                             renderCell={(columnId, value, row) => {
-                                if (columnId === 'rake_serial_number') {
-                                    const sidingCode = row.siding_code?.trim() ?? '';
-                                    const formatRakeLabel = (raw: string): string =>
-                                        sidingCode !== '' && !raw.startsWith(`${sidingCode}-`)
-                                            ? `${sidingCode}-${raw}`
-                                            : raw;
+                                if (columnId === 'rake_number') {
+                                    const raw = String(value ?? row.rake_number);
+                                    return formatRakeSequence(raw, row);
+                                }
 
+                                if (columnId === 'rake_serial_number') {
                                     if (row.rake_serial_number != null && row.rake_serial_number !== '') {
-                                        return formatRakeLabel(row.rake_serial_number);
+                                        return row.rake_serial_number;
                                     }
 
                                     if (row.rake_number !== '') {
                                         return (
                                             <span className="text-amber-600 dark:text-amber-400">
-                                                {formatRakeLabel(row.rake_number)}
+                                                {row.rake_number}
                                             </span>
                                         );
                                     }

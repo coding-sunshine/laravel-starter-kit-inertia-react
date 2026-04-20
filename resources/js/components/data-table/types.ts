@@ -97,4 +97,6 @@ export interface DataTableProps<TData extends object> {
     toolbarPosition?: 'left' | 'right';
     /** When set, row click opens details (ignored when the click target is a button, link, or row checkbox). */
     onRowClick?: (row: TData) => void;
+    /** When set, right click opens row context actions. */
+    onRowContextMenu?: (event: React.MouseEvent, row: TData) => void;
 }

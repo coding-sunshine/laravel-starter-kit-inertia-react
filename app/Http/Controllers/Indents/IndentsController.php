@@ -303,6 +303,47 @@ final class IndentsController extends Controller
             ->with('success', $successMessage);
     }
 
+    public function assignRakeNumber(Request $request, Indent $indent): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 401);
+
+        if (! $user->isSuperAdmin() && ! $user->canAccessSiding($indent->siding_id)) {
+            abort(403);
+        }
+
+        $validated = $request->validate(
+            [
+                'rake_serial_number' => ['required', 'string', 'max:100'],
+            ],
+            [],
+            [
+                'rake_serial_number' => 'Rake number',
+            ],
+        );
+
+        $indent->loadMissing('rake:id,indent_id,rake_serial_number');
+        if ($indent->rake === null) {
+            return response()->json([
+                'message' => 'This e-Demand does not have a linked rake yet.',
+                'errors' => [
+                    'rake_serial_number' => ['This e-Demand does not have a linked rake yet.'],
+                ],
+            ], 422);
+        }
+
+        $indent->rake->rake_serial_number = mb_trim((string) $validated['rake_serial_number']);
+        $indent->rake->updated_by = $user->id;
+        $indent->rake->save();
+
+        return response()->json([
+            'message' => 'Rake number updated.',
+            'data' => [
+                'rake_serial_number' => $indent->rake->rake_serial_number,
+            ],
+        ]);
+    }
+
     /**
      * Show the form to create a rake from this indent
      */
