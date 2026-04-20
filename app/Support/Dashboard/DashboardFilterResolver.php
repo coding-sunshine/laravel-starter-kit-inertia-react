@@ -24,6 +24,7 @@ final class DashboardFilterResolver
      *   loaderOperatorName: string|null,
      *   shift: string|null,
      *   penaltyTypeId: int|null,
+     *   rakePenaltyScope: string,
      *   underloadThresholdPercent: float,
      *   dailyRakeDate: CarbonInterface,
      *   coalTransportDate: CarbonInterface,
@@ -62,6 +63,7 @@ final class DashboardFilterResolver
         }
         $shift = $request->filled('shift') ? (string) $request->input('shift') : null;
         $penaltyTypeId = $request->integer('penalty_type') ?: null;
+        $rakePenaltyScope = $this->resolveRakePenaltyScope($request);
 
         $underloadThresholdPercent = 1.0;
         if ($request->filled('underload_threshold')) {
@@ -96,6 +98,7 @@ final class DashboardFilterResolver
             'loader_operator_name' => $loaderOperatorName,
             'shift' => $shift,
             'penalty_type_id' => $penaltyTypeId,
+            'rake_penalty_scope' => $rakePenaltyScope,
             'underload_threshold_percent' => $underloadThresholdPercent,
         ];
 
@@ -111,6 +114,7 @@ final class DashboardFilterResolver
             'loaderOperatorName' => $loaderOperatorName,
             'shift' => $shift,
             'penaltyTypeId' => $penaltyTypeId,
+            'rakePenaltyScope' => $rakePenaltyScope,
             'underloadThresholdPercent' => $underloadThresholdPercent,
             'dailyRakeDate' => $dailyRakeDate,
             'coalTransportDate' => $coalTransportDate,
@@ -272,5 +276,17 @@ final class DashboardFilterResolver
         $parsed = $this->parseRequestDate($request, $key, $tz);
 
         return $parsed ?? $default;
+    }
+
+    private function resolveRakePenaltyScope(Request $request): string
+    {
+        $rawScope = $request->input('rake_penalty_scope');
+        if (! is_string($rawScope)) {
+            return 'all';
+        }
+
+        $scope = mb_trim($rawScope);
+
+        return in_array($scope, ['all', 'with_penalties'], true) ? $scope : 'all';
     }
 }

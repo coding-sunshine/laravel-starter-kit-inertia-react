@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Trash2 } from 'lucide-react';
+import { Download, Trash2 } from 'lucide-react';
 
 function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
@@ -24,6 +24,7 @@ interface Siding {
 interface Rake {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
     rake_type: string | null;
     wagon_count: number | null;
     state: string | null;
@@ -85,6 +86,38 @@ interface Props {
     can_delete_weighment?: boolean;
 }
 
+function formatRakeSequence(
+    rakeNumber: string | null | undefined,
+    siding: Siding | null,
+): string {
+    if (!rakeNumber) {
+        return '-';
+    }
+
+    const normalized = rakeNumber.trim();
+    if (normalized === '') {
+        return '-';
+    }
+
+    const sidingValue = `${siding?.code ?? ''} ${siding?.name ?? ''}`.toLowerCase();
+    let prefix = '';
+    if (sidingValue.includes('pakur')) {
+        prefix = 'P';
+    } else if (sidingValue.includes('kurwa')) {
+        prefix = 'K';
+    } else if (sidingValue.includes('dumka')) {
+        prefix = 'D';
+    }
+
+    if (prefix === '') {
+        return normalized;
+    }
+
+    return normalized.startsWith(`${prefix}-`)
+        ? normalized
+        : `${prefix}-${normalized}`;
+}
+
 export default function WeighmentShow({
     weighment,
     can_delete_weighment = false,
@@ -122,39 +155,53 @@ export default function WeighmentShow({
 
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold">Weighment details</h1>
-                    {showDeleteButton && (
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            type="button"
-                            data-pan="weighments-show-delete-weighment"
-                            onClick={() => {
-                                if (isHistoricalRake) {
-                                    if (
-                                        !window.confirm(
-                                            'Remove this historical weighment import? The associated rake and wagon data created from this PDF will be deleted. This cannot be undone.',
-                                        )
-                                    ) {
+                    <div className="flex flex-wrap items-center gap-2">
+                        {weighment.pdf_file_path ? (
+                            <Button variant="outline" size="sm" asChild>
+                                <a
+                                    href={`/weighments/${weighment.id}/download`}
+                                    className="inline-flex items-center gap-2"
+                                    data-pan="weighments-show-download-weighment-file"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Download file
+                                </a>
+                            </Button>
+                        ) : null}
+                        {showDeleteButton && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                type="button"
+                                data-pan="weighments-show-delete-weighment"
+                                onClick={() => {
+                                    if (isHistoricalRake) {
+                                        if (
+                                            !window.confirm(
+                                                'Remove this historical weighment import? The associated rake and wagon data created from this PDF will be deleted. This cannot be undone.',
+                                            )
+                                        ) {
+                                            return;
+                                        }
+                                        router.delete(`/weighments/${weighment.id}`);
                                         return;
                                     }
-                                    router.delete(`/weighments/${weighment.id}`);
-                                    return;
-                                }
-                                if (!rake) {
-                                    return;
-                                }
-                                if (!window.confirm('Delete all weighment data for this rake?')) {
-                                    return;
-                                }
-                                router.delete(
-                                    `/rakes/${rake.id}/weighments?return_to=weighments`,
-                                );
-                            }}
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {isHistoricalRake ? 'Delete import' : 'Delete weighment'}
-                        </Button>
-                    )}
+                                    if (!rake) {
+                                        return;
+                                    }
+                                    if (!window.confirm('Delete all weighment data for this rake?')) {
+                                        return;
+                                    }
+                                    router.delete(
+                                        `/rakes/${rake.id}/weighments?return_to=weighments`,
+                                    );
+                                }}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {isHistoricalRake ? 'Delete import' : 'Delete weighment'}
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
@@ -164,8 +211,22 @@ export default function WeighmentShow({
                         </CardHeader>
                         <CardContent className="space-y-2 text-sm">
                             <div>
+                                <span className="font-medium">Rake Sequence: </span>
+                                <span>{formatRakeSequence(rake?.rake_number, siding)}</span>
+                            </div>
+                            <div>
                                 <span className="font-medium">Rake number: </span>
-                                <span>{rake?.rake_number ?? '-'}</span>
+                                <span>
+                                    {rake?.rake_serial_number ? (
+                                        rake.rake_serial_number
+                                    ) : rake?.rake_number ? (
+                                        <span className="text-amber-600 dark:text-amber-400">
+                                            {rake.rake_number}
+                                        </span>
+                                    ) : (
+                                        '-'
+                                    )}
+                                </span>
                             </div>
                             <div>
                                 <span className="font-medium">Rake type: </span>

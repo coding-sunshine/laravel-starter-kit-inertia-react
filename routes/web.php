@@ -281,6 +281,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('indents/{indent}', [IndentsController::class, 'show'])->name('indents.show');
     Route::get('indents/{indent}/edit', [IndentsController::class, 'edit'])->name('indents.edit');
     Route::put('indents/{indent}', [IndentsController::class, 'update'])->name('indents.update');
+    Route::patch('indents/{indent}/assign-rake-number', [IndentsController::class, 'assignRakeNumber'])->name('indents.assign-rake-number');
     Route::delete('indents/{indent}', [IndentsController::class, 'destroy'])->name('indents.destroy');
     Route::get('indents/{indent}/create-rake', [IndentsController::class, 'createRake'])->name('indents.create-rake');
     Route::post('indents/{indent}/store-rake', [IndentsController::class, 'storeRakeFromIndent'])->name('indents.store-rake');
@@ -439,6 +440,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Weighments (historical rake weighment imports)
     Route::get('weighments', [WeighmentsController::class, 'index'])->name('weighments.index');
     Route::get('weighments/{weighment}', [WeighmentsController::class, 'show'])->whereNumber('weighment')->name('weighments.show');
+    Route::get('weighments/{weighment}/download', [WeighmentsController::class, 'download'])->whereNumber('weighment')->name('weighments.download');
     Route::delete('weighments/{weighment}', [WeighmentsController::class, 'destroy'])->whereNumber('weighment')->name('weighments.destroy');
     Route::post('weighments/import', [WeighmentsController::class, 'store'])->name('weighments.import');
     Route::post('weighments/manual', [WeighmentsController::class, 'storeManual'])->name('weighments.manual');

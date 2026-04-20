@@ -493,6 +493,29 @@ export default function RailwayReceiptsIndex({
     const diverrtDestinations = rrHub?.diverrtDestinations ?? [];
     const primaryDoc = findDocForSlot(rrDocuments, null);
 
+    const formatRakeSequence = useCallback((value: string, row: RailwayReceiptsRakeRow): string => {
+        const normalized = value.trim();
+        if (normalized === '') {
+            return normalized;
+        }
+
+        const sidingValue = `${row.siding_code ?? ''} ${row.siding_name ?? ''}`.toLowerCase();
+        let prefix = '';
+        if (sidingValue.includes('pakur')) {
+            prefix = 'P';
+        } else if (sidingValue.includes('dumka')) {
+            prefix = 'D';
+        } else if (sidingValue.includes('kurwa')) {
+            prefix = 'K';
+        }
+
+        if (prefix === '') {
+            return normalized;
+        }
+
+        return normalized.startsWith(`${prefix}-`) ? normalized : `${prefix}-${normalized}`;
+    }, []);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Railway Receipts" />
@@ -560,6 +583,7 @@ export default function RailwayReceiptsIndex({
                                 <DataTable<RailwayReceiptsRakeRow>
                                     tableData={rakesTableData}
                                     tableName="railway-receipts-rakes"
+                                    renderHeader={{ rake_number: 'Rake Seq' }}
                                     rowClassName={rakeRowClassName}
                                     onRowClick={(row) => setHubRow(row)}
                                     actions={[
@@ -575,22 +599,21 @@ export default function RailwayReceiptsIndex({
                                         },
                                     ]}
                                     renderCell={(columnId, _value, row) => {
-                                        if (columnId === 'rake_serial_number') {
-                                            const sidingCode = row.siding_code?.trim() ?? '';
-                                            const formatRakeLabel = (raw: string): string =>
-                                                sidingCode !== '' &&
-                                                !raw.startsWith(`${sidingCode}-`)
-                                                    ? `${sidingCode}-${raw}`
-                                                    : raw;
+                                        if (columnId === 'rake_number') {
+                                            return row.rake_number !== ''
+                                                ? formatRakeSequence(row.rake_number, row)
+                                                : '—';
+                                        }
 
+                                        if (columnId === 'rake_serial_number') {
                                             if (row.rake_serial_number != null && row.rake_serial_number !== '') {
-                                                return formatRakeLabel(row.rake_serial_number);
+                                                return row.rake_serial_number;
                                             }
 
                                             if (row.rake_number !== '') {
                                                 return (
                                                     <span className="text-amber-600 dark:text-amber-400">
-                                                        {formatRakeLabel(row.rake_number)}
+                                                        {row.rake_number}
                                                     </span>
                                                 );
                                             }
@@ -691,7 +714,18 @@ export default function RailwayReceiptsIndex({
                 >
                     <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" data-pan="rr-rake-hub-dialog-content">
                         <DialogHeader>
-                            <DialogTitle>Rake {hubRow.rake_number}</DialogTitle>
+                            <DialogTitle>
+                                Rake{' '}
+                                {hubRow.rake_serial_number ? (
+                                    hubRow.rake_serial_number
+                                ) : hubRow.rake_number ? (
+                                    <span className="text-amber-600 dark:text-amber-400">
+                                        {hubRow.rake_number}
+                                    </span>
+                                ) : (
+                                    '—'
+                                )}
+                            </DialogTitle>
                             <DialogDescription>{hubMeta}</DialogDescription>
                         </DialogHeader>
 

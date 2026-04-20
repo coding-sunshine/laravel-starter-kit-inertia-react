@@ -121,7 +121,7 @@ const SECTION_FILTER_KEYS = {
     'siding-overview': ['power_plant', 'rake_number', 'penalty_type'] as const,
     operations: ['shift', 'daily_rake_date', 'coal_transport_date'] as const,
     'penalty-control': ['penalty_type'] as const,
-    'rake-performance': ['rake_number', 'power_plant'] as const,
+    'rake-performance': ['rake_number', 'power_plant', 'rake_penalty_scope'] as const,
     /** Loader / operator live in the Loader-wise overloading card (not the sticky Filters bar). */
     'loader-overload': [] as const,
     'power-plant': ['power_plant'] as const,
@@ -134,6 +134,7 @@ const SECTION_FILTER_KEYS = {
         | 'loader_operator'
         | 'shift'
         | 'penalty_type'
+        | 'rake_penalty_scope'
         | 'daily_rake_date'
         | 'coal_transport_date'
     )[]
@@ -262,6 +263,7 @@ interface DateWiseDispatchData {
 interface RakePerformanceItem {
     id: number;
     rake_number: string;
+    rake_serial_number?: string | null;
     siding: string;
     dispatch_date: string;
     wagon_count: number | null;
@@ -269,8 +271,10 @@ interface RakePerformanceItem {
     over_load: number | null;
     under_load: number | null;
     loading_minutes: number | null;
-    penalty_amount: number;
-    penalty_count: number;
+    predicted_penalty_amount: number;
+    predicted_penalty_count: number;
+    actual_penalty_amount: number;
+    actual_penalty_count: number;
     wagon_overloads?: Array<{
         wagon_number: string;
         over_load_mt: number;
@@ -320,6 +324,7 @@ interface DashboardFilters {
     underload_threshold: number;
     shift: string | null;
     penalty_type: number | null;
+    rake_penalty_scope?: 'all' | 'with_penalties';
     daily_rake_date?: string;
     coal_transport_date?: string;
 }
@@ -400,6 +405,16 @@ function buildDashboardGetParams(args: {
         if (penaltyType != null) params.penalty_type = penaltyType;
     }
 
+    if (sectionHasFilter('rake_penalty_scope')) {
+        const rakePenaltyScope =
+            (overrides.rake_penalty_scope !== undefined
+                ? overrides.rake_penalty_scope
+                : filters.rake_penalty_scope) ?? 'all';
+        if (rakePenaltyScope === 'with_penalties') {
+            params.rake_penalty_scope = 'with_penalties';
+        }
+    }
+
     if (sectionHasFilter('daily_rake_date')) {
         const dailyRakeDate =
             (overrides.daily_rake_date !== undefined ? overrides.daily_rake_date : filters.daily_rake_date) ?? '';
@@ -421,18 +436,26 @@ function buildDashboardGetParams(args: {
 interface DailyRakeDetailsRow {
     sl_no: number;
     siding_name: string;
+    year: string;
     day_rakes: number;
     day_qty: number;
     month_rakes: number;
     month_qty: number;
-    rake_day_avg: number;
-    remarks: string;
+    year_rakes: number;
+    year_qty: number;
 }
 
 interface DailyRakeDetailsData {
     date: string;
     rows: DailyRakeDetailsRow[];
-    totals: { day_rakes: number; day_qty: number; month_rakes: number; month_qty: number; rake_day_avg: number };
+    totals: {
+        day_rakes: number;
+        day_qty: number;
+        month_rakes: number;
+        month_qty: number;
+        year_rakes: number;
+        year_qty: number;
+    };
 }
 
 interface CoalTransportSidingMetric {
@@ -611,6 +634,7 @@ const DEFAULT_LIVE_RAKE_WORKFLOW_STEPS: WorkflowSteps = {
 
 interface LiveRakeStatusRow {
     rake_number: string;
+    rake_serial_number?: string | null;
     siding_name: string;
     state: string;
     workflow_steps?: WorkflowSteps;
@@ -618,6 +642,29 @@ interface LiveRakeStatusRow {
     /** YYYY-MM-DD or em dash when unset */
     loading_date?: string;
     risk: string;
+}
+
+function formatRakeSequenceBySiding(rakeNumber: string, sidingName: string): string {
+    const normalized = rakeNumber.trim();
+    if (normalized === '') {
+        return normalized;
+    }
+
+    const siding = sidingName.toLowerCase();
+    let prefix = '';
+    if (siding.includes('pakur')) {
+        prefix = 'P';
+    } else if (siding.includes('kurwa')) {
+        prefix = 'K';
+    } else if (siding.includes('dumka')) {
+        prefix = 'D';
+    }
+
+    if (prefix === '') {
+        return normalized;
+    }
+
+    return normalized.startsWith(`${prefix}-`) ? normalized : `${prefix}-${normalized}`;
 }
 
 interface TruckReceiptHour {
@@ -2229,14 +2276,21 @@ function DateWiseDispatchSection({ data }: { data: DateWiseDispatchData }) {
 
 function RakePerformanceSection({
     rakes,
+    rakePenaltyScope,
+    onRakePenaltyScopeChange,
     onNavigateToLoader,
 }: {
     rakes: RakePerformanceItem[];
+    rakePenaltyScope: 'all' | 'with_penalties';
+    onRakePenaltyScopeChange: (scope: 'all' | 'with_penalties') => void;
     /** Second arg is the wagon chart’s underload threshold (% of CC) so loader trends can open with the same value. */
     onNavigateToLoader: (loaderId: number, rakeUnderloadThresholdPercent: number) => void;
 }) {
     const rakeOptions = useMemo(() => {
-        return rakes.map((r, i) => ({ idx: i, label: `${r.rake_number} — ${r.siding} (${r.dispatch_date})` }));
+        return rakes.map((r, i) => ({
+            idx: i,
+            label: `${r.rake_serial_number ?? r.rake_number} — ${r.siding} (${r.dispatch_date})`,
+        }));
     }, [rakes]);
 
     const [selectedIdx, setSelectedIdx] = useState(0);
@@ -2370,12 +2424,34 @@ function RakePerformanceSection({
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <Select
+                                value={rakePenaltyScope}
+                                onValueChange={(v) =>
+                                    onRakePenaltyScopeChange(
+                                        v === 'with_penalties'
+                                            ? 'with_penalties'
+                                            : 'all',
+                                    )
+                                }
+                            >
+                                <SelectTrigger className="min-w-[160px] rounded-lg border border-gray-200 bg-white text-sm">
+                                    <SelectValue placeholder="Penalty scope" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        All
+                                    </SelectItem>
+                                    <SelectItem value="with_penalties">
+                                        With penalties
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     }
                 />
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
                 <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
                     <p className="text-xs font-medium text-gray-600">Siding</p>
                     <p className="mt-1 font-bold text-gray-900">{r.siding}</p>
@@ -2396,10 +2472,48 @@ function RakePerformanceSection({
                     <p className="text-xs font-medium text-gray-600">Loading time</p>
                     <p className="mt-1 font-bold tabular-nums text-gray-900">{loadingHours != null ? `${loadingHours}h ${loadingMins}m` : '—'}</p>
                 </div>
-                <div className={`rounded-lg border p-3 ${r.penalty_amount > 0 ? 'border-red-100 bg-red-50' : 'border-green-100 bg-green-50'}`}>
-                    <p className="text-xs font-medium text-gray-600">Penalty</p>
-                    <p className={`mt-1 font-bold tabular-nums ${r.penalty_amount > 0 ? 'text-red-700' : 'text-green-700'}`}>
-                        {r.penalty_amount > 0 ? formatCurrency(r.penalty_amount) : 'None'}
+                <div
+                    className={`rounded-lg border p-3 ${
+                        r.predicted_penalty_amount > 0
+                            ? 'border-red-100 bg-red-50'
+                            : 'border-green-100 bg-green-50'
+                    }`}
+                >
+                    <p className="text-xs font-medium text-gray-600">
+                        Predicted Penalty
+                    </p>
+                    <p
+                        className={`mt-1 font-bold tabular-nums ${
+                            r.predicted_penalty_amount > 0
+                                ? 'text-red-700'
+                                : 'text-green-700'
+                        }`}
+                    >
+                        {r.predicted_penalty_amount > 0
+                            ? formatCurrency(r.predicted_penalty_amount)
+                            : 'None'}
+                    </p>
+                </div>
+                <div
+                    className={`rounded-lg border p-3 ${
+                        r.actual_penalty_amount > 0
+                            ? 'border-red-100 bg-red-50'
+                            : 'border-green-100 bg-green-50'
+                    }`}
+                >
+                    <p className="text-xs font-medium text-gray-600">
+                        Actual Penalty
+                    </p>
+                    <p
+                        className={`mt-1 font-bold tabular-nums ${
+                            r.actual_penalty_amount > 0
+                                ? 'text-red-700'
+                                : 'text-green-700'
+                        }`}
+                    >
+                        {r.actual_penalty_amount > 0
+                            ? formatCurrency(r.actual_penalty_amount)
+                            : 'None'}
                     </p>
                 </div>
             </div>
@@ -2418,6 +2532,7 @@ function RakePerformanceSection({
                                     cy="50%"
                                     innerRadius={56}
                                     outerRadius={92}
+                                    minAngle={2}
                                     paddingAngle={2}
                                     isAnimationActive
                                 >
@@ -3536,6 +3651,7 @@ function DashboardFiltersBar({
             underload_threshold: 1,
             shift: null,
             penalty_type: null,
+            rake_penalty_scope: 'all',
             daily_rake_date: '',
             coal_transport_date: '',
         });
@@ -4030,6 +4146,7 @@ export default function Dashboard() {
         underload_threshold: 1,
         shift: null,
         penalty_type: null,
+        rake_penalty_scope: 'all',
         daily_rake_date: undefined,
         coal_transport_date: undefined,
     };
@@ -4046,6 +4163,10 @@ export default function Dashboard() {
                 : 1,
         shift: props.filters?.shift ?? null,
         penalty_type: props.filters?.penalty_type ?? null,
+        rake_penalty_scope:
+            props.filters?.rake_penalty_scope === 'with_penalties'
+                ? 'with_penalties'
+                : 'all',
     };
     const periodLabel = useMemo(() => {
         switch (filters.period) {
@@ -4113,8 +4234,23 @@ export default function Dashboard() {
         if (filters.loader_operator) params.loader_operator = filters.loader_operator;
         if (filters.shift) params.shift = filters.shift;
         if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
+        if (filters.rake_penalty_scope === 'with_penalties') {
+            params.rake_penalty_scope = 'with_penalties';
+        }
         router.get(dashboardPath, params as Record<string, string>, { replace: true, preserveState: false });
-    }, [dashboardPath, filters.period, filters.siding_ids, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, sidings.length]);
+    }, [
+        dashboardPath,
+        filters.period,
+        filters.siding_ids,
+        filters.power_plant,
+        filters.rake_number,
+        filters.loader_id,
+        filters.loader_operator,
+        filters.shift,
+        filters.penalty_type,
+        filters.rake_penalty_scope,
+        sidings.length,
+    ]);
 
     const applyDailyRakeDate = useCallback((date: string) => {
         const params: Record<string, unknown> = {
@@ -4131,6 +4267,9 @@ export default function Dashboard() {
         if (filters.loader_operator) params.loader_operator = filters.loader_operator;
         if (filters.shift) params.shift = filters.shift;
         if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
+        if (filters.rake_penalty_scope === 'with_penalties') {
+            params.rake_penalty_scope = 'with_penalties';
+        }
         router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
     }, [dashboardPath, filters, activeSection, allSidingIds.length]);
 
@@ -4149,6 +4288,9 @@ export default function Dashboard() {
         if (filters.loader_operator) params.loader_operator = filters.loader_operator;
         if (filters.shift) params.shift = filters.shift;
         if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
+        if (filters.rake_penalty_scope === 'with_penalties') {
+            params.rake_penalty_scope = 'with_penalties';
+        }
         if (filters.daily_rake_date) params.daily_rake_date = filters.daily_rake_date;
         router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
     }, [dashboardPath, filters, activeSection, allSidingIds.length]);
@@ -4238,6 +4380,13 @@ export default function Dashboard() {
         [navigateDashboard],
     );
 
+    const onRakePenaltyScopeChange = useCallback(
+        (scope: 'all' | 'with_penalties') => {
+            navigateDashboard({ rake_penalty_scope: scope });
+        },
+        [navigateDashboard],
+    );
+
     const powerPlantDispatch = props.powerPlantDispatch ?? [];
     const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
     const executiveYesterday = props.executiveYesterday;
@@ -4267,9 +4416,10 @@ export default function Dashboard() {
         if (filters.loader_operator) return true;
         if (filters.shift) return true;
         if (filters.penalty_type != null) return true;
+        if (filters.rake_penalty_scope === 'with_penalties') return true;
         if (sidings.length > 0 && filters.siding_ids.length > 0 && filters.siding_ids.length < sidings.length) return true;
         return false;
-    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
+    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, filters.rake_penalty_scope, filters.siding_ids.length, sidings.length]);
 
     const activeFilterCount = useMemo(() => {
         let n = 0;
@@ -4280,9 +4430,10 @@ export default function Dashboard() {
         if (filters.loader_operator) n += 1;
         if (filters.shift) n += 1;
         if (filters.penalty_type != null) n += 1;
+        if (filters.rake_penalty_scope === 'with_penalties') n += 1;
         if (sidings.length > 0 && filters.siding_ids.length > 0 && filters.siding_ids.length < sidings.length) n += 1;
         return n;
-    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
+    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, filters.rake_penalty_scope, filters.siding_ids.length, sidings.length]);
 
     const navigateToLoaderTrends = useCallback(
         (loaderId: number, rakeUnderloadThresholdPercent?: number) => {
@@ -4311,6 +4462,9 @@ export default function Dashboard() {
             }
             if (filters.penalty_type != null) {
                 params.penalty_type = filters.penalty_type;
+            }
+            if (filters.rake_penalty_scope === 'with_penalties') {
+                params.rake_penalty_scope = filters.rake_penalty_scope;
             }
             if (filters.daily_rake_date) {
                 params.daily_rake_date = filters.daily_rake_date;
@@ -4787,6 +4941,11 @@ export default function Dashboard() {
                                             <>
                                                 <p className="mt-1 text-xs text-gray-600">
                                                     {new Date(dailyRakeDetails.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                    {dailyRakeDetails.rows.length > 0 && (
+                                                        <span className="ml-2 text-gray-500">
+                                                            ({dailyRakeDetails.rows[0].year})
+                                                        </span>
+                                                    )}
                                                     {dailyRakeDetails.totals.day_rakes === 0 && dailyRakeDetails.rows.length > 0 && (
                                                         <span className="ml-2 text-amber-600">— No rake dispatches for this date</span>
                                                     )}
@@ -4804,8 +4963,9 @@ export default function Dashboard() {
                                                                     <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
                                                                         MONTH
                                                                     </th>
-                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">FOR RAKE DAY/AVG</th>
-                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">REMARKS</th>
+                                                                    <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                        YEAR
+                                                                    </th>
                                                                 </tr>
                                                                 <tr>
                                                                     <th className="border border-[#d5dbe4] px-3 py-2" />
@@ -4814,8 +4974,8 @@ export default function Dashboard() {
                                                                     <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
                                                                     <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">RAKES</th>
                                                                     <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
-                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
-                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">RAKES</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
@@ -4831,8 +4991,10 @@ export default function Dashboard() {
                                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
                                                                             {r.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                         </td>
-                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.rake_day_avg.toFixed(2)}</td>
-                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-gray-600">{r.remarks || '—'}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.year_rakes}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                            {r.year_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </td>
                                                                     </tr>
                                                                 ))}
                                                                 <tr className="bg-[#f1f5f9] font-semibold text-black">
@@ -4846,8 +5008,10 @@ export default function Dashboard() {
                                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
                                                                         {dailyRakeDetails.totals.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                     </td>
-                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.rake_day_avg.toFixed(2)}</td>
-                                                                    <td className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.year_rakes}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                        {dailyRakeDetails.totals.year_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
                                                                 </tr>
                                                             </tbody>
                                                         </table>
@@ -4950,7 +5114,13 @@ export default function Dashboard() {
                                                         <tr className="border-b text-left text-gray-600">
                                                             <th className="group cursor-pointer pb-3 pl-4 pr-2 pt-2 font-medium">
                                                                 <span className="inline-flex items-center gap-1">
-                                                                    Rake
+                                                                    Rake Seq
+                                                                    <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
+                                                                </span>
+                                                            </th>
+                                                            <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    Rake number
                                                                     <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
                                                                 </span>
                                                             </th>
@@ -4999,12 +5169,28 @@ export default function Dashboard() {
                                                                     }}
                                                                 >
                                                                     <td className="py-3 pl-4 font-medium">
+                                                                        <span>
+                                                                            {formatRakeSequenceBySiding(
+                                                                                row.rake_number,
+                                                                                row.siding_name,
+                                                                            )}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-3 px-2 font-medium">
                                                                         <span className="inline-flex items-center gap-2">
                                                                             <span
                                                                                 className="inline-block size-2.5 rounded-full"
                                                                                 style={{ backgroundColor: borderColor }}
                                                                             />
-                                                                            <span>{row.rake_number}</span>
+                                                                            <span>
+                                                                                {row.rake_serial_number ? (
+                                                                                    row.rake_serial_number
+                                                                                ) : (
+                                                                                    <span className="text-amber-600 dark:text-amber-400">
+                                                                                        {row.rake_number}
+                                                                                    </span>
+                                                                                )}
+                                                                            </span>
                                                                         </span>
                                                                     </td>
                                                                     <td className="py-3 px-2">{row.siding_name}</td>
@@ -5310,7 +5496,14 @@ export default function Dashboard() {
 
                         {activeSection === 'rake-performance' && canWidget('dashboard.widgets.rake_performance') && (
                             rakePerformance.length > 0
-                                ? <RakePerformanceSection rakes={rakePerformance} onNavigateToLoader={navigateToLoaderTrends} />
+                                ? (
+                                    <RakePerformanceSection
+                                        rakes={rakePerformance}
+                                        rakePenaltyScope={filters.rake_penalty_scope ?? 'all'}
+                                        onRakePenaltyScopeChange={onRakePenaltyScopeChange}
+                                        onNavigateToLoader={navigateToLoaderTrends}
+                                    />
+                                )
                                 : (
                                     <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={Train} title="Rake-wise performance" subtitle="Top dispatched rakes" />

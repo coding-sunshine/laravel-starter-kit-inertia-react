@@ -20,10 +20,14 @@ import AppLayout from '@/layouts/app-layout';
 import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
 import { DataTable } from '@/components/data-table/data-table';
+import InputError from '@/components/input-error';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { parseLaravel422ResponseBody } from '@/lib/laravel-validation-errors';
 import type { DataTableResponse } from 'laravel-data-table';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { FileText, Plus, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface SidingOption {
     id: number;
@@ -56,6 +60,8 @@ interface Props {
     sidings: SidingOption[];
     power_plants: PowerPlantOption[];
 }
+
+const ASSIGN_RAKE_KNOWN_KEYS = new Set<string>(['rake_serial_number']);
 
 function getCsrfHeaders(): HeadersInit {
     const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -94,10 +100,45 @@ export default function IndentsIndex({
     const [previewPdfError, setPreviewPdfError] = useState<string | null>(
         null,
     );
+    const [rowContextMenu, setRowContextMenu] = useState<{
+        x: number;
+        y: number;
+        row: IndentRow;
+    } | null>(null);
+    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+    const [selectedIndent, setSelectedIndent] = useState<IndentRow | null>(null);
+    const [assignRakeSerialNumber, setAssignRakeSerialNumber] = useState('');
+    const [assignFieldErrors, setAssignFieldErrors] = useState<
+        Record<string, string>
+    >({});
+    const [assignErrorBanner, setAssignErrorBanner] = useState<string | null>(
+        null,
+    );
+    const [assigningRakeNumber, setAssigningRakeNumber] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'E-Demand', href: '/indents' },
     ];
+
+    useEffect(() => {
+        if (rowContextMenu === null) {
+            return;
+        }
+
+        const closeContextMenu = () => {
+            setRowContextMenu(null);
+        };
+
+        window.addEventListener('click', closeContextMenu);
+        window.addEventListener('scroll', closeContextMenu, true);
+        window.addEventListener('resize', closeContextMenu);
+
+        return () => {
+            window.removeEventListener('click', closeContextMenu);
+            window.removeEventListener('scroll', closeContextMenu, true);
+            window.removeEventListener('resize', closeContextMenu);
+        };
+    }, [rowContextMenu]);
 
     const handleUploadClick = () => {
         if (!canCreateIndent) {
@@ -164,6 +205,116 @@ export default function IndentsIndex({
         setPreviewPrefill(null);
         setStagedPdfFile(null);
         setPreviewSessionId(0);
+    };
+
+    const openAssignDialog = (row: IndentRow) => {
+        setRowContextMenu(null);
+        setSelectedIndent(row);
+        setAssignRakeSerialNumber(row.rake_serial_number ?? '');
+        setAssignFieldErrors({});
+        setAssignErrorBanner(null);
+        setAssignDialogOpen(true);
+    };
+
+    const closeAssignDialog = () => {
+        if (assigningRakeNumber) {
+            return;
+        }
+        setAssignDialogOpen(false);
+        setSelectedIndent(null);
+        setAssignRakeSerialNumber('');
+        setAssignFieldErrors({});
+        setAssignErrorBanner(null);
+    };
+
+    const submitAssignRakeNumber = async (
+        e: React.FormEvent<HTMLFormElement>,
+    ) => {
+        e.preventDefault();
+        if (selectedIndent === null) {
+            return;
+        }
+
+        setAssignFieldErrors({});
+        setAssignErrorBanner(null);
+        setAssigningRakeNumber(true);
+        try {
+            const response = await fetch(
+                `/indents/${selectedIndent.id}/assign-rake-number`,
+                {
+                    method: 'PATCH',
+                    credentials: 'same-origin',
+                    headers: {
+                        ...getCsrfHeaders(),
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        rake_serial_number: assignRakeSerialNumber,
+                    }),
+                },
+            );
+
+            const body = (await response.json().catch(() => ({}))) as unknown;
+
+            if (!response.ok) {
+                if (response.status === 422) {
+                    const { fields, banner } = parseLaravel422ResponseBody(
+                        body,
+                        ASSIGN_RAKE_KNOWN_KEYS,
+                    );
+                    setAssignFieldErrors(fields);
+                    setAssignErrorBanner(banner);
+                } else {
+                    const message =
+                        typeof body === 'object' &&
+                        body !== null &&
+                        'message' in body
+                            ? String((body as { message: unknown }).message)
+                            : 'Could not assign rake number.';
+                    setAssignErrorBanner(message);
+                }
+
+                return;
+            }
+
+            closeAssignDialog();
+            router.reload({ only: ['tableData'] });
+        } finally {
+            setAssigningRakeNumber(false);
+        }
+    };
+
+    const assignButtonLabel =
+        selectedIndent?.rake_serial_number !== null &&
+        selectedIndent?.rake_serial_number !== undefined &&
+        selectedIndent.rake_serial_number.trim() !== ''
+            ? 'Update'
+            : 'Save';
+
+    const formatRakeSequence = (value: string, row: IndentRow): string => {
+        const normalized = value.trim();
+        if (normalized === '') {
+            return normalized;
+        }
+
+        const sidingValue = `${row.siding_code ?? ''} ${row.siding ?? ''}`.toLowerCase();
+        let prefix = '';
+        if (sidingValue.includes('pakur')) {
+            prefix = 'P';
+        } else if (sidingValue.includes('dumka')) {
+            prefix = 'D';
+        } else if (sidingValue.includes('kurwa')) {
+            prefix = 'K';
+        }
+
+        if (prefix === '') {
+            return normalized;
+        }
+
+        return normalized.startsWith(`${prefix}-`)
+            ? normalized
+            : `${prefix}-${normalized}`;
     };
 
     return (
@@ -237,19 +388,22 @@ export default function IndentsIndex({
                         <DataTable<IndentRow>
                             tableData={tableData}
                             tableName="indents"
+                            renderHeader={{
+                                rake_number: 'Rake Seq',
+                            }}
                             rowClassName={(row) =>
                                 row.weighment_pdf_uploaded
                                     ? 'bg-green-200/80 dark:bg-green-900/40'
                                     : ''
                             }
-                            actions={[
-                                {
-                                    label: 'View',
-                                    onClick: (row) => {
-                                        router.visit(`/indents/${row.id}`);
-                                    },
-                                },
-                            ]}
+                            onRowContextMenu={(event, row) => {
+                                event.preventDefault();
+                                setRowContextMenu({
+                                    x: event.clientX,
+                                    y: event.clientY,
+                                    row,
+                                });
+                            }}
                             renderCell={(columnId, value, row) => {
                                 if (columnId === 'indent_number') {
                                     return (
@@ -279,26 +433,27 @@ export default function IndentsIndex({
                                 }
 
                                 if (columnId === 'rake_serial_number') {
-                                    const sidingCode = row.siding_code?.trim() ?? '';
-                                    const formatRakeLabel = (value: string): string =>
-                                        sidingCode !== '' &&
-                                        !value.startsWith(`${sidingCode}-`)
-                                            ? `${sidingCode}-${value}`
-                                            : value;
-
                                     if (row.rake_serial_number) {
-                                        return formatRakeLabel(row.rake_serial_number);
+                                        return row.rake_serial_number;
                                     }
 
                                     if (row.rake_number) {
                                         return (
                                             <span className="text-amber-600 dark:text-amber-400">
-                                                {formatRakeLabel(row.rake_number)}
+                                                {row.rake_number}
                                             </span>
                                         );
                                     }
 
                                     return '—';
+                                }
+
+                                if (columnId === 'rake_number') {
+                                    if (!row.rake_number) {
+                                        return '—';
+                                    }
+
+                                    return formatRakeSequence(row.rake_number, row);
                                 }
 
                                 if (columnId === 'fnr_number') {
@@ -338,6 +493,34 @@ export default function IndentsIndex({
                 </Card>
             </div>
 
+            {rowContextMenu !== null && (
+                <div
+                    className="fixed z-50 min-w-48 rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+                    style={{
+                        left: rowContextMenu.x,
+                        top: rowContextMenu.y,
+                    }}
+                >
+                    <button
+                        type="button"
+                        className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                        onClick={() => openAssignDialog(rowContextMenu.row)}
+                    >
+                        Assign Rake Number
+                    </button>
+                    <button
+                        type="button"
+                        className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                        onClick={() => {
+                            setRowContextMenu(null);
+                            router.visit(`/indents/${rowContextMenu.row.id}`);
+                        }}
+                    >
+                        View
+                    </button>
+                </div>
+            )}
+
             <Dialog
                 open={previewOpen}
                 onOpenChange={(open) => {
@@ -371,6 +554,57 @@ export default function IndentsIndex({
                             />
                         )}
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={assignDialogOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        closeAssignDialog();
+                    }
+                }}
+            >
+                <DialogContent showCloseButton className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {selectedIndent?.indent_number ?? 'E-Demand'}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={submitAssignRakeNumber} className="space-y-4">
+                        {assignErrorBanner !== null && (
+                            <div
+                                role="alert"
+                                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                            >
+                                {assignErrorBanner}
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="rake_serial_number">
+                                Rake number
+                            </Label>
+                            <Input
+                                id="rake_serial_number"
+                                name="rake_serial_number"
+                                value={assignRakeSerialNumber}
+                                onChange={(event) =>
+                                    setAssignRakeSerialNumber(event.target.value)
+                                }
+                                autoFocus
+                            />
+                            <InputError
+                                message={assignFieldErrors.rake_serial_number}
+                            />
+                        </div>
+                        <div className="flex justify-end">
+                            <Button type="submit" disabled={assigningRakeNumber}>
+                                {assigningRakeNumber
+                                    ? `${assignButtonLabel}…`
+                                    : assignButtonLabel}
+                            </Button>
+                        </div>
+                    </form>
                 </DialogContent>
             </Dialog>
         </AppLayout>

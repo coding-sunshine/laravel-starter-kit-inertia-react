@@ -255,6 +255,29 @@ export default function RakeLoaderIndex({
         router.get(u.pathname + u.search, {}, { preserveScroll: true });
     }, []);
 
+    const formatRakeSequence = useCallback((value: string, row: RakeRow): string => {
+        const normalized = value.trim();
+        if (normalized === '') {
+            return normalized;
+        }
+
+        const sidingValue = `${row.siding_code ?? ''} ${row.siding_label ?? ''}`.toLowerCase();
+        let prefix = '';
+        if (sidingValue.includes('pakur')) {
+            prefix = 'P';
+        } else if (sidingValue.includes('dumka')) {
+            prefix = 'D';
+        } else if (sidingValue.includes('kurwa')) {
+            prefix = 'K';
+        }
+
+        if (prefix === '') {
+            return normalized;
+        }
+
+        return normalized.startsWith(`${prefix}-`) ? normalized : `${prefix}-${normalized}`;
+    }, []);
+
     const openRakeLoading = useCallback((row: RakeRow) => {
         router.visit(rakeLoader.rakes.loading.url(row.id));
     }, []);
@@ -449,6 +472,7 @@ export default function RakeLoaderIndex({
                             <DataTable<RakeRow>
                                 tableData={tableData}
                                 tableName="rake-loader-list"
+                                renderHeader={{ rake_number: 'Rake Seq' }}
                                 preserveSearchParams={['siding_id']}
                                 onRowClick={openRakeLoading}
                                 rowClassName={(row) =>
@@ -473,23 +497,18 @@ export default function RakeLoaderIndex({
                                 ]}
                                 renderCell={(columnId, value, row) => {
                                     if (columnId === 'rake_number') {
-                                        return <span className="font-medium">{String(value ?? row.rake_number)}</span>;
+                                        const raw = String(value ?? row.rake_number);
+                                        return <span className="font-medium">{formatRakeSequence(raw, row)}</span>;
                                     }
                                     if (columnId === 'rake_serial_number') {
-                                        const sidingCode = row.siding_code?.trim() ?? '';
-                                        const formatRakeLabel = (raw: string): string =>
-                                            sidingCode !== '' && !raw.startsWith(`${sidingCode}-`)
-                                                ? `${sidingCode}-${raw}`
-                                                : raw;
-
                                         if (row.rake_serial_number != null && row.rake_serial_number !== '') {
-                                            return formatRakeLabel(row.rake_serial_number);
+                                            return row.rake_serial_number;
                                         }
 
                                         if (row.rake_number !== '') {
                                             return (
                                                 <span className="text-amber-600 dark:text-amber-400">
-                                                    {formatRakeLabel(row.rake_number)}
+                                                    {row.rake_number}
                                                 </span>
                                             );
                                         }

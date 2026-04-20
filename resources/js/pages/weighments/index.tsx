@@ -290,6 +290,29 @@ export default function WeighmentsIndex({ tableData }: Props) {
         tableData.meta.filters == null ||
         (typeof tableData.meta.filters === 'object' && Object.keys(tableData.meta.filters).length === 0);
 
+    const formatRakeSequence = (value: string, row: WeighmentsRakeRow): string => {
+        const normalized = value.trim();
+        if (normalized === '') {
+            return normalized;
+        }
+
+        const sidingValue = `${row.siding_code ?? ''} ${row.siding_name ?? ''}`.toLowerCase();
+        let prefix = '';
+        if (sidingValue.includes('pakur')) {
+            prefix = 'P';
+        } else if (sidingValue.includes('dumka')) {
+            prefix = 'D';
+        } else if (sidingValue.includes('kurwa')) {
+            prefix = 'K';
+        }
+
+        if (prefix === '') {
+            return normalized;
+        }
+
+        return normalized.startsWith(`${prefix}-`) ? normalized : `${prefix}-${normalized}`;
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Weighments" />
@@ -354,6 +377,7 @@ export default function WeighmentsIndex({ tableData }: Props) {
                             <DataTable<WeighmentsRakeRow>
                                 tableData={tableDataWithRakeFilter}
                                 tableName="weighments-rakes"
+                                renderHeader={{ rake_number: 'Rake Seq' }}
                                 onRowClick={(row) => {
                                     openHub(row);
                                 }}
@@ -385,21 +409,21 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                     },
                                 ]}
                                 renderCell={(columnId, _value, row) => {
-                                    if (columnId === 'rake_serial_number') {
-                                        const sidingCode = row.siding_code?.trim() ?? '';
-                                        const formatRakeLabel = (value: string): string =>
-                                            sidingCode !== '' && !value.startsWith(`${sidingCode}-`)
-                                                ? `${sidingCode}-${value}`
-                                                : value;
+                                    if (columnId === 'rake_number') {
+                                        return row.rake_number !== ''
+                                            ? formatRakeSequence(row.rake_number, row)
+                                            : '—';
+                                    }
 
+                                    if (columnId === 'rake_serial_number') {
                                         if (row.rake_serial_number != null && row.rake_serial_number !== '') {
-                                            return formatRakeLabel(row.rake_serial_number);
+                                            return row.rake_serial_number;
                                         }
 
                                         if (row.rake_number !== '') {
                                             return (
                                                 <span className="text-amber-600 dark:text-amber-400">
-                                                    {formatRakeLabel(row.rake_number)}
+                                                    {row.rake_number}
                                                 </span>
                                             );
                                         }
@@ -461,7 +485,15 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                     Rake number
                                 </p>
                                 <DialogTitle className="font-mono text-3xl font-bold tracking-tight sm:text-4xl">
-                                    {selectedRake?.rake_number ?? '—'}
+                                    {selectedRake?.rake_serial_number ? (
+                                        selectedRake.rake_serial_number
+                                    ) : selectedRake?.rake_number ? (
+                                        <span className="text-amber-600 dark:text-amber-400">
+                                            {selectedRake.rake_number}
+                                        </span>
+                                    ) : (
+                                        '—'
+                                    )}
                                 </DialogTitle>
                                 <div className="space-y-1">
                                     <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
@@ -621,6 +653,18 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                             remove all weighment data for this rake (same as the rake workflow).
                                         </p>
                                         <div className="flex flex-wrap items-center gap-2">
+                                            {selectedRake.latest_weighment_id != null ? (
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <a
+                                                        href={`/weighments/${selectedRake.latest_weighment_id}/download`}
+                                                        className="inline-flex items-center gap-2"
+                                                        data-pan="weighments-hub-download-weighment-file"
+                                                    >
+                                                        <Download className="h-4 w-4" />
+                                                        Download file
+                                                    </a>
+                                                </Button>
+                                            ) : null}
                                             {selectedRake.latest_weighment_id != null ? (
                                                 <Button variant="outline" size="sm" asChild>
                                                     <Link

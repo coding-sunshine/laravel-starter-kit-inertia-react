@@ -360,6 +360,7 @@ export function DataTable<TData extends object>({
     preserveSearchParams,
     toolbarPosition = "right",
     onRowClick,
+    onRowContextMenu,
 }: DataTableProps<TData>) {
     const resolvedOptions = useMemo<DataTableOptions>(() => ({
         quickViews: true,
@@ -698,11 +699,21 @@ export function DataTable<TData extends object>({
                                         }
                                         onRowClick(row.original);
                                     }}
+                                    onContextMenu={(e) => {
+                                        if (!onRowContextMenu) {
+                                            return;
+                                        }
+                                        const t = e.target as HTMLElement;
+                                        if (t.closest("button, a, [role=\"checkbox\"], [data-row-click-ignore]")) {
+                                            return;
+                                        }
+                                        onRowContextMenu(e, row.original);
+                                    }}
                                     className={cn(
                                         zebraMuted && "bg-muted/40",
                                         row.getIsSelected() && "bg-primary/5",
                                         perRowClass,
-                                        onRowClick && "cursor-pointer",
+                                        (onRowClick || onRowContextMenu) && "cursor-pointer",
                                     )}
                                 >
                                     {row.getVisibleCells().map((cell) => {
