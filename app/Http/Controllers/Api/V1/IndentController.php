@@ -38,23 +38,9 @@ final class IndentController extends Controller
         $query->with([
             'siding:id,name,code',
             'rake' => static fn ($q) => $q
-                ->select(['id', 'indent_id', 'rake_number', 'state'])
-                ->withCount('rakeWeighments'),
+                ->select(['id', 'indent_id', 'rake_number', 'rake_serial_number'])
+                ->with(['rakeWeighments:id,rake_id']),
         ]);
-
-        $query->when($request->filled('state'), function (Builder $q) use ($request): void {
-            $q->where('state', $request->string('state'));
-        });
-
-        /** @var array<string, mixed> $filterQuery */
-        $filterQuery = $request->query('filter', []);
-        $filterQuery = is_array($filterQuery) ? $filterQuery : [];
-        $query->when(
-            $request->filled('siding_id') && ! array_key_exists('siding', $filterQuery),
-            function (Builder $q) use ($request): void {
-                $q->where('siding_id', $request->integer('siding_id'));
-            }
-        );
 
         $query->when($request->filled('search'), function (Builder $q) use ($request): void {
             $search = $request->string('search')->toString();
@@ -65,6 +51,30 @@ final class IndentController extends Controller
             });
         });
 
+        // Mobile-friendly query params mapped as additive filters
+        // while preserving canonical DataTable filter[...] behavior.
+        $query->when($request->filled('fnr'), function (Builder $q) use ($request): void {
+            $q->where('fnr_number', 'like', '%'.$request->string('fnr')->toString().'%');
+        });
+
+        $query->when($request->filled('siding_id'), function (Builder $q) use ($request): void {
+            $q->where('siding_id', $request->integer('siding_id'));
+        });
+
+        $query->when($request->filled('indent_date_start'), function (Builder $q) use ($request): void {
+            $q->whereDate('indent_date', '>=', $request->date('indent_date_start'));
+        });
+        $query->when($request->filled('indent_date_end'), function (Builder $q) use ($request): void {
+            $q->whereDate('indent_date', '<=', $request->date('indent_date_end'));
+        });
+
+        $query->when($request->filled('expected_loading_start'), function (Builder $q) use ($request): void {
+            $q->whereDate('expected_loading_date', '>=', $request->date('expected_loading_start'));
+        });
+        $query->when($request->filled('expected_loading_end'), function (Builder $q) use ($request): void {
+            $q->whereDate('expected_loading_date', '<=', $request->date('expected_loading_end'));
+        });
+
         /** @var LengthAwarePaginator $indents */
         $indents = QueryBuilder::for($query, $request)
             ->allowedFilters(IndentDataTable::tableAllowedFilters())
@@ -73,20 +83,27 @@ final class IndentController extends Controller
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
 
-        $indents->through(function (Indent $indent): Indent {
-            $rake = $indent->rake;
-            /** True when the rake has any {@see RakeWeighment} (PDF/XLSX import or manual entry; PDF is optional). */
-            $indent->setAttribute(
-                'weighment_available',
-                $rake !== null && (int) ($rake->rake_weighments_count ?? 0) > 0,
-            );
-            $indent->makeHidden('rake');
+        $rows = $indents->through(static function (Indent $indent): array {
+            $row = IndentDataTable::fromModel($indent);
 
-            return $indent;
+            return [
+                'id' => $row->id,
+                'rake_number' => $row->rake_number,
+                'rake_serial_number' => $row->rake_serial_number,
+                'siding_code' => $row->siding_code,
+                'indent_number' => $row->indent_number,
+                'siding' => $row->siding,
+                'indent_date' => $row->indent_date,
+                'expected_loading_date' => $row->expected_loading_date,
+                'e_demand_reference_id' => $row->e_demand_reference_id,
+                'fnr_number' => $row->fnr_number,
+                'state' => $row->state,
+                'weighment_pdf_uploaded' => $row->weighment_pdf_uploaded,
+            ];
         });
 
         return response()->json([
-            'data' => $indents->items(),
+            'data' => $rows->items(),
             'meta' => [
                 'current_page' => $indents->currentPage(),
                 'per_page' => $indents->perPage(),
