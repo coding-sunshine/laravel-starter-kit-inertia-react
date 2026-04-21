@@ -48,7 +48,9 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         // Indents
         Route::get('indents', [IndentController::class, 'index'])->name('indents.index');
         Route::post('indents/upload', [IndentController::class, 'upload'])->name('indents.upload');
+        Route::post('indents', [IndentController::class, 'store'])->name('indents.store');
         Route::get('indents/{indent}', [IndentController::class, 'show'])->name('indents.show');
+        Route::patch('indents/{indent}/assign-rake-number', [IndentController::class, 'assignRakeNumber'])->name('indents.assign-rake-number');
         Route::get('indents/{indent}/download', [IndentController::class, 'download'])->name('indents.download');
 
         // Railway receipts

@@ -17,6 +17,7 @@ use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\Wagon;
 use App\Services\IndentPdfImporter;
+use App\Support\IndentPdfImportScope;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
@@ -54,13 +55,7 @@ final class IndentsController extends Controller
         $user = $request->user();
         abort_unless($user !== null, 401);
 
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->sidings()->get()->pluck('id')->all();
-
-        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
-        }
+        $sidingIds = IndentPdfImportScope::allowedSidingIdsFor($user);
 
         try {
             $prefill = app(IndentPdfImporter::class)->previewImport(
