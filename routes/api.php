@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptUploadController;
 use App\Http\Controllers\Api\V1\RakeController;
 use App\Http\Controllers\Api\V1\RakeWeighmentApiController;
+use App\Http\Controllers\Api\V1\RakeWeighmentWorkflowApiController;
 use App\Http\Controllers\Api\V1\RolePermissionController;
 use App\Http\Controllers\Api\V1\SidingController;
 use App\Http\Controllers\Api\V1\SidingVehicleDispatchController;
@@ -61,6 +62,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
 
         // Weighments
         Route::post('weighments/upload', [WeighmentUploadController::class, 'store'])->name('weighments.upload');
+        Route::get('weighments/template-xlsx', [RakeWeighmentWorkflowApiController::class, 'downloadTemplateXlsx'])->name('weighments.template-xlsx');
 
         Route::get('sidings', [SidingController::class, 'index'])->name('sidings.index');
 
@@ -78,6 +80,9 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('rake-weighments', [RakeWeighmentApiController::class, 'index'])->name('rake-weighments.index');
         Route::get('rake-weighments/{rakeWeighment}', [RakeWeighmentApiController::class, 'show'])->name('rake-weighments.show');
         Route::get('rake-weighments/{rakeWeighment}/download', [RakeWeighmentApiController::class, 'download'])->name('rake-weighments.download');
+        Route::post('rakes/{rake}/weighments/manual', [RakeWeighmentWorkflowApiController::class, 'storeManual'])->name('rakes.weighments.manual');
+        Route::patch('rakes/{rake}/weighments/{rakeWeighment}/manual', [RakeWeighmentWorkflowApiController::class, 'updateManual'])->name('rakes.weighments.update-manual');
+        Route::delete('rakes/{rake}/weighments', [RakeWeighmentWorkflowApiController::class, 'destroy'])->name('rakes.weighments.destroy');
 
         // Management dashboard (mobile)
         Route::prefix('dashboard')->name('dashboard.')->group(function (): void {

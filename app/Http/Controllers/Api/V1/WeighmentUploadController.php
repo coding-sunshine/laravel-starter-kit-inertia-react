@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Services\RakeWeighmentPdfImporter;
-use App\Services\WeighmentPdfImporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +19,6 @@ final class WeighmentUploadController extends Controller
 {
     public function store(
         Request $request,
-        WeighmentPdfImporter $historicalImporter,
         RakeWeighmentPdfImporter $rakeImporter,
     ): JsonResponse {
         $user = $request->user();
@@ -31,8 +29,8 @@ final class WeighmentUploadController extends Controller
 
         try {
             $validated = $request->validate([
-                'pdf' => ['required', 'file', 'mimes:pdf', 'max:20480'],
-                'rake_id' => ['nullable', 'integer', 'exists:rakes,id'],
+                'pdf' => ['required', 'file', 'mimes:pdf,xlsx,xls', 'max:20480'],
+                'rake_id' => ['required', 'integer', 'exists:rakes,id'],
             ]);
         } catch (ValidationException $e) {
             throw $e;
@@ -40,58 +38,41 @@ final class WeighmentUploadController extends Controller
 
         $pdf = $validated['pdf'];
         $rakeId = $validated['rake_id'] ?? null;
+        $extension = mb_strtolower((string) $pdf->getClientOriginalExtension());
+        $isXlsx = in_array($extension, ['xlsx', 'xls'], true);
 
         try {
-            if ($rakeId !== null) {
-                $rake = Rake::query()->findOrFail($rakeId);
-
-                $sidingIds = $user->isSuperAdmin()
-                    ? Siding::query()->pluck('id')->all()
-                    : $user->accessibleSidings()->get()->pluck('id')->all();
-
-                abort_unless(in_array($rake->siding_id, $sidingIds, true), 403);
-
-                $rakeWeighment = $rakeImporter->importForRake($rake, $pdf, (int) $user->id);
-
-                return response()->json([
-                    'data' => [
-                        'mode' => 'existing_rake',
-                        'rake_weighment' => [
-                            'id' => $rakeWeighment->id,
-                            'rake_id' => $rakeWeighment->rake_id,
-                            'attempt_no' => $rakeWeighment->attempt_no,
-                            'gross_weighment_datetime' => $rakeWeighment->gross_weighment_datetime,
-                            'tare_weighment_datetime' => $rakeWeighment->tare_weighment_datetime,
-                            'status' => $rakeWeighment->status,
-                            'total_gross_weight_mt' => $rakeWeighment->total_gross_weight_mt,
-                            'total_tare_weight_mt' => $rakeWeighment->total_tare_weight_mt,
-                            'total_net_weight_mt' => $rakeWeighment->total_net_weight_mt,
-                            'total_cc_weight_mt' => $rakeWeighment->total_cc_weight_mt,
-                            'total_under_load_mt' => $rakeWeighment->total_under_load_mt,
-                            'total_over_load_mt' => $rakeWeighment->total_over_load_mt,
-                            'maximum_train_speed_kmph' => $rakeWeighment->maximum_train_speed_kmph,
-                            'maximum_weight_mt' => $rakeWeighment->maximum_weight_mt,
-                            'pdf_file_path' => $rakeWeighment->pdf_file_path,
-                        ],
-                    ],
-                ], 201);
-            }
+            $rake = Rake::query()->findOrFail($rakeId);
 
             $sidingIds = $user->isSuperAdmin()
                 ? Siding::query()->pluck('id')->all()
                 : $user->accessibleSidings()->get()->pluck('id')->all();
 
-            abort_if($sidingIds === [], 403, 'You have no assigned sidings for weighment import.');
+            abort_unless(in_array($rake->siding_id, $sidingIds, true), 403);
 
-            $weighment = $historicalImporter->import($pdf, (int) $user->id, $sidingIds);
+            $rakeWeighment = $isXlsx
+                ? $rakeImporter->importForRakeFromXlsx($rake, $pdf, (int) $user->id)
+                : $rakeImporter->importForRake($rake, $pdf, (int) $user->id);
 
             return response()->json([
                 'data' => [
-                    'mode' => 'historical',
-                    'weighment' => [
-                        'id' => $weighment->id,
-                        'rake_id' => $weighment->rake_id,
-                        'status' => $weighment->status,
+                    'mode' => 'existing_rake',
+                    'rake_weighment' => [
+                        'id' => $rakeWeighment->id,
+                        'rake_id' => $rakeWeighment->rake_id,
+                        'attempt_no' => $rakeWeighment->attempt_no,
+                        'gross_weighment_datetime' => $rakeWeighment->gross_weighment_datetime,
+                        'tare_weighment_datetime' => $rakeWeighment->tare_weighment_datetime,
+                        'status' => $rakeWeighment->status,
+                        'total_gross_weight_mt' => $rakeWeighment->total_gross_weight_mt,
+                        'total_tare_weight_mt' => $rakeWeighment->total_tare_weight_mt,
+                        'total_net_weight_mt' => $rakeWeighment->total_net_weight_mt,
+                        'total_cc_weight_mt' => $rakeWeighment->total_cc_weight_mt,
+                        'total_under_load_mt' => $rakeWeighment->total_under_load_mt,
+                        'total_over_load_mt' => $rakeWeighment->total_over_load_mt,
+                        'maximum_train_speed_kmph' => $rakeWeighment->maximum_train_speed_kmph,
+                        'maximum_weight_mt' => $rakeWeighment->maximum_weight_mt,
+                        'pdf_file_path' => $rakeWeighment->pdf_file_path,
                     ],
                 ],
             ], 201);
