@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\V1\IndentController;
 use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptUploadController;
 use App\Http\Controllers\Api\V1\RakeController;
+use App\Http\Controllers\Api\V1\RakeRrDiversionApiController;
+use App\Http\Controllers\Api\V1\RakeRrHubStateApiController;
 use App\Http\Controllers\Api\V1\RakeWeighmentApiController;
 use App\Http\Controllers\Api\V1\RakeWeighmentWorkflowApiController;
 use App\Http\Controllers\Api\V1\RolePermissionController;
@@ -75,6 +77,10 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('rakes', [RakeController::class, 'index'])->name('rakes.index');
         Route::get('rakes/export', [RakeController::class, 'export'])->name('rakes.export');
         Route::get('rakes/{rake}', [RakeController::class, 'show'])->name('rakes.show');
+        Route::get('rakes/{rake}/rr-hub-state', RakeRrHubStateApiController::class)->name('rakes.rr-hub-state');
+        Route::patch('rakes/{rake}/diversion-mode', [RakeRrDiversionApiController::class, 'updateDiversionMode'])->name('rakes.diversion-mode.update');
+        Route::post('rakes/{rake}/diverrt-destinations', [RakeRrDiversionApiController::class, 'storeDiverrtDestination'])->name('rakes.diverrt-destinations.store');
+        Route::delete('rakes/{rake}/diverrt-destinations/{diverrtDestination}', [RakeRrDiversionApiController::class, 'destroyDiverrtDestination'])->name('rakes.diverrt-destinations.destroy');
 
         // Rake weighments
         Route::get('rake-weighments', [RakeWeighmentApiController::class, 'index'])->name('rake-weighments.index');

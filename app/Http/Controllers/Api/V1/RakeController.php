@@ -118,10 +118,14 @@ final class RakeController extends Controller
             'wagonLoadings.loader:id,loader_name,code',
             'guardInspections',
             'rrDocument',
+            'rrDocuments',
+            'diverrtDestinations',
             'penalties',
             'appliedPenalties.penaltyType',
             'appliedPenalties.wagon',
         ]);
+
+        $rake->loadCount('diverrtDestinations');
 
         if ($rake->state !== 'completed' && $this->rakeWorkflowCoreComplete($rake)) {
             $rake->update(['state' => 'completed']);
@@ -157,6 +161,7 @@ final class RakeController extends Controller
             ->first();
 
         $rakeArray = $rake->toArray();
+        $rakeArray['diverrt_destinations_count'] = (int) $rake->diverrt_destinations_count;
         $rakeArray['loading_warning_minutes'] = $loadingSection?->warning_minutes;
         $rakeArray['loading_section_free_minutes'] = $loadingSection?->free_minutes ?? 180;
 
