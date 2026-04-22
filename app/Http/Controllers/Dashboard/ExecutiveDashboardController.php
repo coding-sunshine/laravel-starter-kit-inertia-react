@@ -109,7 +109,12 @@ final class ExecutiveDashboardController extends Controller
             'penaltyBySiding' => $this->buildPenaltyBySiding($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'notifications' => $this->buildDashboardNotifications($request),
             'notificationsUnreadCount' => $this->buildDashboardUnreadNotificationCount($request),
-            'liveRakeStatus' => $this->buildLiveRakeStatus($resolved['filteredSidingIds'], $resolved['filterContext']),
+            'liveRakeStatus' => $this->buildLiveRakeStatus(
+                $resolved['filteredSidingIds'],
+                $resolved['filterContext'],
+                $resolved['from'],
+                $resolved['to'],
+            ),
             'dailyRakeDetails' => $this->buildDailyRakeDetails($resolved['filteredSidingIds'], $resolved['dailyRakeDate']),
             'coalTransportReport' => $this->coalTransportReportDataBuilder->buildCoalTransportReport($resolved['filteredSidingIds'], $resolved['coalTransportDate'], $resolved['filterContext']['shift'] ?? null),
             'truckReceiptTrend' => $this->buildTruckReceiptTrend($resolved['filteredSidingIds'], $resolved['filterContext']),
@@ -1291,8 +1296,12 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array<int, array{rake_number: string, rake_serial_number: string|null, siding_name: string, state: string, workflow_steps: array{txr_done: bool, wagon_loading_done: bool, guard_done: bool, weighment_done: bool, rr_done: bool}, time_elapsed: string, loading_date: string, risk: string}>
      */
-    public function buildLiveRakeStatus(array $sidingIds, array $filterContext = []): array
-    {
+    public function buildLiveRakeStatus(
+        array $sidingIds,
+        array $filterContext = [],
+        ?CarbonInterface $from = null,
+        ?CarbonInterface $to = null,
+    ): array {
         if ($sidingIds === []) {
             return [];
         }
@@ -1314,6 +1323,13 @@ final class ExecutiveDashboardController extends Controller
                     ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
             })
             ->whereDoesntHave('rakeWeighments');
+        if ($from !== null && $to !== null) {
+            $rakeQuery->whereNotNull('loading_date')
+                ->whereRaw(
+                    $this->dateOnlyBetweenSql('loading_date', true),
+                    [$from->toDateString(), $to->toDateString()],
+                );
+        }
         if (! empty($filterContext['rake_number'])) {
             $rakeQuery->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
@@ -2410,7 +2426,7 @@ final class ExecutiveDashboardController extends Controller
                 });
             });
         }
-        $rakes = $rakeQuery->orderByRaw('COALESCE(rakes.loading_date, rakes.created_at) DESC')->limit(50)->get();
+        $rakes = $rakeQuery->orderByRaw('COALESCE(rakes.loading_date, rakes.created_at) DESC')->limit(200)->get();
 
         $rakeIds = $rakes->pluck('id')->all();
 
@@ -2548,7 +2564,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  CarbonInterface  $from  Dashboard filter start (inclusive), applied to `rakes.loading_date`.
      * @param  CarbonInterface  $to  Dashboard filter end (inclusive).
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, loader_operator_name?: string|null, shift: string|null, underload_threshold_percent?: float}  $filterContext
-     * @return array{loaders: array<int, array{id: int, name: string, siding: string}>, monthly: array<int, array<string, mixed>>}
+     * @return array{loaders: array<int, array{id: int, name: string, siding: string, operators: array<int, string>}>, monthly: array<int, array<string, mixed>>}
      */
     public function buildLoaderOverloadTrends(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
@@ -2576,6 +2592,26 @@ final class ExecutiveDashboardController extends Controller
 
         $loaderIds = $loaders->pluck('id')->all();
         $loaderMap = $loaders->mapWithKeys(fn (Loader $l): array => [$l->id => $l->loader_name])->all();
+        $loaderOperatorsByLoader = [];
+        if ($loaderIds !== []) {
+            $operatorRows = DB::table('wagon_loading')
+                ->whereIn('loader_id', $loaderIds)
+                ->whereNotNull('loader_operator_name')
+                ->where('loader_operator_name', '!=', '')
+                ->select('loader_id', 'loader_operator_name')
+                ->distinct()
+                ->orderBy('loader_id')
+                ->orderBy('loader_operator_name')
+                ->get();
+
+            foreach ($operatorRows as $operatorRow) {
+                $loaderId = (int) $operatorRow->loader_id;
+                if (! array_key_exists($loaderId, $loaderOperatorsByLoader)) {
+                    $loaderOperatorsByLoader[$loaderId] = [];
+                }
+                $loaderOperatorsByLoader[$loaderId][] = (string) $operatorRow->loader_operator_name;
+            }
+        }
 
         // PostgreSQL only (month buckets from `rakes.loading_date`).
         $yearMonthSql = 'EXTRACT(YEAR FROM r.loading_date)::int as y, EXTRACT(MONTH FROM r.loading_date)::int as m';
@@ -2616,6 +2652,7 @@ final class ExecutiveDashboardController extends Controller
                     'id' => $l->id,
                     'name' => $l->loader_name,
                     'siding' => $l->siding?->name ?? '—',
+                    'operators' => $loaderOperatorsByLoader[$l->id] ?? [],
                 ])->values()->all(),
                 'monthly' => [],
             ];
@@ -2657,6 +2694,7 @@ final class ExecutiveDashboardController extends Controller
                 'id' => $l->id,
                 'name' => $l->loader_name,
                 'siding' => $l->siding?->name ?? '—',
+                'operators' => $loaderOperatorsByLoader[$l->id] ?? [],
             ])->values()->all(),
             'monthly' => array_values($months),
         ];
