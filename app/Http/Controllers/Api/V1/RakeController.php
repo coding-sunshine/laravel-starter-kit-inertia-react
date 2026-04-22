@@ -10,10 +10,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\SectionTimer;
 use App\Models\Siding;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Maatwebsite\Excel\Facades\Excel;
+use Spatie\QueryBuilder\QueryBuilder;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 final class RakeController extends Controller
@@ -26,36 +28,31 @@ final class RakeController extends Controller
             abort(401);
         }
 
-        $query = RakeDataTable::tableBaseQuery();
+        $query = RakeDataTable::listQueryForRequest($request)
+            ->with(RakeDataTable::rakeListEagerLoads());
 
-        if ($request->filled('from_date')) {
-            $query->whereDate('placement_time', '>=', $request->date('from_date'));
-        }
+        // Mobile-friendly query params (kept additive) so app clients can
+        // use simple names while web canonical filter[...] behavior remains.
+        $query->when($request->filled('rake_number'), function (Builder $q) use ($request): void {
+            $q->where('rake_number', 'like', '%'.$request->string('rake_number')->toString().'%');
+        });
 
-        if ($request->filled('to_date')) {
-            $query->whereDate('placement_time', '<=', $request->date('to_date'));
-        }
+        $query->when($request->filled('siding_id'), function (Builder $q) use ($request): void {
+            $q->where('siding_id', $request->integer('siding_id'));
+        });
 
-        if ($request->filled('siding_id')) {
-            $query->where('siding_id', $request->integer('siding_id'));
-        }
-
-        if ($request->filled('state')) {
-            $query->where('state', $request->string('state'));
-        }
-
-        if ($request->filled('rake_number')) {
-            $search = $request->string('rake_number')->toString();
-            $query->where('rake_number', 'like', "%{$search}%");
-        }
-
-        if ($request->filled('data_source')) {
-            $query->where('data_source', $request->string('data_source'));
-        }
+        $query->when($request->filled('loading_date_start'), function (Builder $q) use ($request): void {
+            $q->whereDate('loading_date', '>=', $request->date('loading_date_start'));
+        });
+        $query->when($request->filled('loading_date_end'), function (Builder $q) use ($request): void {
+            $q->whereDate('loading_date', '<=', $request->date('loading_date_end'));
+        });
 
         /** @var LengthAwarePaginator $paginator */
-        $paginator = $query
-            ->orderByDesc('id')
+        $paginator = QueryBuilder::for($query, $request)
+            ->allowedFilters(RakeDataTable::tableAllowedFilters())
+            ->allowedSorts(RakeDataTable::tableAllowedSorts())
+            ->defaultSort(RakeDataTable::tableDefaultSort())
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
 
@@ -68,6 +65,7 @@ final class RakeController extends Controller
                 'rake_type' => $dto->rake_type,
                 'wagon_count' => $dto->wagon_count,
                 'state' => $dto->state,
+                'loading_date' => $dto->loading_date,
                 'placement_time' => $dto->placement_time,
                 'dispatch_time' => $dto->dispatch_time,
                 'siding_id' => $dto->siding_id,
@@ -120,10 +118,14 @@ final class RakeController extends Controller
             'wagonLoadings.loader:id,loader_name,code',
             'guardInspections',
             'rrDocument',
+            'rrDocuments',
+            'diverrtDestinations',
             'penalties',
             'appliedPenalties.penaltyType',
             'appliedPenalties.wagon',
         ]);
+
+        $rake->loadCount('diverrtDestinations');
 
         if ($rake->state !== 'completed' && $this->rakeWorkflowCoreComplete($rake)) {
             $rake->update(['state' => 'completed']);
@@ -159,6 +161,7 @@ final class RakeController extends Controller
             ->first();
 
         $rakeArray = $rake->toArray();
+        $rakeArray['diverrt_destinations_count'] = (int) $rake->diverrt_destinations_count;
         $rakeArray['loading_warning_minutes'] = $loadingSection?->warning_minutes;
         $rakeArray['loading_section_free_minutes'] = $loadingSection?->free_minutes ?? 180;
 
@@ -227,36 +230,26 @@ final class RakeController extends Controller
             abort(401);
         }
 
-        $query = RakeDataTable::tableBaseQuery();
+        $query = RakeDataTable::listQueryForRequest($request)
+            ->with(RakeDataTable::rakeListEagerLoads());
 
-        if ($request->filled('from_date')) {
-            $query->whereDate('placement_time', '>=', $request->date('from_date'));
-        }
+        /** @var array<string, mixed> $filterQuery */
+        $filterQuery = $request->query('filter', []);
+        $filterQuery = is_array($filterQuery) ? $filterQuery : [];
+        $query->when(
+            $request->filled('siding_id') && ! array_key_exists('siding_code', $filterQuery) && ! array_key_exists('siding', $filterQuery),
+            function (Builder $q) use ($request): void {
+                $q->where('siding_id', $request->integer('siding_id'));
+            }
+        );
 
-        if ($request->filled('to_date')) {
-            $query->whereDate('placement_time', '<=', $request->date('to_date'));
-        }
+        $rakes = QueryBuilder::for($query, $request)
+            ->allowedFilters(RakeDataTable::tableAllowedFilters())
+            ->allowedSorts(RakeDataTable::tableAllowedSorts())
+            ->defaultSort(RakeDataTable::tableDefaultSort())
+            ->get();
 
-        if ($request->filled('siding_id')) {
-            $query->where('siding_id', $request->integer('siding_id'));
-        }
-
-        if ($request->filled('state')) {
-            $query->where('state', $request->string('state'));
-        }
-
-        if ($request->filled('rake_number')) {
-            $search = $request->string('rake_number')->toString();
-            $query->where('rake_number', 'like', "%{$search}%");
-        }
-
-        if ($request->filled('data_source')) {
-            $query->where('data_source', $request->string('data_source'));
-        }
-
-        $rows = $query
-            ->orderByDesc('id')
-            ->get()
+        $rows = $rakes
             ->map(function (Rake $rake): array {
                 return [
                     $rake->rake_number,

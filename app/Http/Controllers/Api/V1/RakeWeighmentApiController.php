@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DataTables\WeighmentsRakeDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\Rake;
 use App\Models\RakeWeighment;
 use App\Models\Siding;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
+use Spatie\QueryBuilder\QueryBuilder;
 
 final class RakeWeighmentApiController extends Controller
 {
@@ -22,66 +26,60 @@ final class RakeWeighmentApiController extends Controller
             abort(401);
         }
 
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $this->applyDefaultLoadingDateFilter($request);
 
-        $query = RakeWeighment::query()
-            ->with(['rake.siding'])
-            ->whereHas('rake', function ($q) use ($sidingIds): void {
-                $q->whereIn('siding_id', $sidingIds);
-            });
+        $query = WeighmentsRakeDataTable::tableBaseQuery();
 
-        if ($request->filled('from_date')) {
-            $query->whereDate('gross_weighment_datetime', '>=', $request->date('from_date'));
-        }
+        // Mobile-friendly filters that map to same data as web table.
+        $query->when($request->filled('rake_number'), function (Builder $q) use ($request): void {
+            $q->where('rake_number', 'like', '%'.$request->string('rake_number')->toString().'%');
+        });
 
-        if ($request->filled('to_date')) {
-            $query->whereDate('gross_weighment_datetime', '<=', $request->date('to_date'));
-        }
+        $query->when($request->filled('siding_id'), function (Builder $q) use ($request): void {
+            $q->where('siding_id', $request->integer('siding_id'));
+        });
 
-        if ($request->filled('siding_id')) {
-            $query->whereHas('rake', function ($q) use ($request): void {
-                $q->where('siding_id', $request->integer('siding_id'));
-            });
-        }
-
-        if ($request->filled('rake_id')) {
-            $query->where('rake_id', $request->integer('rake_id'));
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->string('status'));
-        }
+        $query->when($request->filled('loading_date_start'), function (Builder $q) use ($request): void {
+            $q->whereDate('loading_date', '>=', $request->date('loading_date_start'));
+        });
+        $query->when($request->filled('loading_date_end'), function (Builder $q) use ($request): void {
+            $q->whereDate('loading_date', '<=', $request->date('loading_date_end'));
+        });
 
         /** @var LengthAwarePaginator $paginator */
-        $paginator = $query
-            ->orderByDesc('id')
+        $paginator = QueryBuilder::for($query, $request)
+            ->allowedFilters(WeighmentsRakeDataTable::tableAllowedFilters())
+            ->allowedSorts(WeighmentsRakeDataTable::tableAllowedSorts())
+            ->defaultSort(WeighmentsRakeDataTable::tableDefaultSort())
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
 
-        $items = $paginator->getCollection()->map(function (RakeWeighment $weighment): array {
-            $rake = $weighment->rake;
+        $items = $paginator->getCollection()->map(function (Rake $rake): array {
+            $dto = WeighmentsRakeDataTable::fromModel($rake);
 
             return [
-                'id' => $weighment->id,
-                'rake_id' => $weighment->rake_id,
-                'attempt_no' => $weighment->attempt_no,
-                'gross_weighment_datetime' => $weighment->gross_weighment_datetime,
-                'tare_weighment_datetime' => $weighment->tare_weighment_datetime,
-                'status' => $weighment->status,
-                'total_gross_weight_mt' => $weighment->total_gross_weight_mt,
-                'total_tare_weight_mt' => $weighment->total_tare_weight_mt,
-                'total_net_weight_mt' => $weighment->total_net_weight_mt,
-                'total_cc_weight_mt' => $weighment->total_cc_weight_mt,
-                'total_under_load_mt' => $weighment->total_under_load_mt,
-                'total_over_load_mt' => $weighment->total_over_load_mt,
-                'maximum_train_speed_kmph' => $weighment->maximum_train_speed_kmph,
-                'maximum_weight_mt' => $weighment->maximum_weight_mt,
-                'rake_number' => $rake?->rake_number,
-                'siding_id' => $rake?->siding_id,
-                'siding_code' => $rake?->siding?->code,
-                'siding_name' => $rake?->siding?->name,
+                'id' => $dto->id,
+                'rake_number' => $dto->rake_number,
+                'rake_serial_number' => $dto->rake_serial_number,
+                'indent_number' => $dto->indent_number,
+                'loading_date' => $dto->loading_date,
+                'siding_id' => $dto->siding_id,
+                'siding_code' => $dto->siding_code,
+                'siding_name' => $dto->siding_name,
+                'destination' => $dto->destination,
+                'rake_destination_code' => $dto->rake_destination_code,
+                'rake_priority_number' => $dto->rake_priority_number,
+                'weighment_row_state' => $dto->weighment_row_state,
+                'latest_weighment_id' => $dto->latest_weighment_id,
+                'latest_attempt_no' => $dto->latest_attempt_no,
+                'latest_total_net_weight_mt' => $dto->latest_total_net_weight_mt,
+                'latest_total_gross_weight_mt' => $dto->latest_total_gross_weight_mt,
+                'latest_total_tare_weight_mt' => $dto->latest_total_tare_weight_mt,
+                'latest_from_station' => $dto->latest_from_station,
+                'latest_to_station' => $dto->latest_to_station,
+                'latest_priority_number' => $dto->latest_priority_number,
+                'latest_wagon_weighments_count' => $dto->latest_wagon_weighments_count,
+                'latest_has_pdf_path' => $dto->latest_has_pdf_path,
             ];
         })->values();
 
@@ -146,6 +144,7 @@ final class RakeWeighmentApiController extends Controller
                 'rake' => [
                     'id' => $rake->id,
                     'rake_number' => $rake->rake_number,
+                    'rake_serial_number' => $rake->rake_serial_number,
                     'siding_id' => $rake->siding_id,
                     'siding' => [
                         'id' => $rake->siding?->id,
@@ -209,5 +208,27 @@ final class RakeWeighmentApiController extends Controller
         }
 
         return Storage::disk('public')->download($path);
+    }
+
+    /**
+     * Keep web parity: when no loading_date filter is supplied, default to today.
+     */
+    private function applyDefaultLoadingDateFilter(Request $request): void
+    {
+        if ($request->filled('loading_date_start') || $request->filled('loading_date_end')) {
+            return;
+        }
+
+        $filter = $request->input('filter', []);
+        if (! is_array($filter)) {
+            $filter = [];
+        }
+
+        if (array_key_exists('loading_date', $filter)) {
+            return;
+        }
+
+        $filter['loading_date'] = 'eq:'.now()->toDateString();
+        $request->merge(['filter' => $filter]);
     }
 }

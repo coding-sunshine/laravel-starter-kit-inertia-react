@@ -8,7 +8,10 @@ use App\Http\Controllers\Api\V1\IndentController;
 use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptUploadController;
 use App\Http\Controllers\Api\V1\RakeController;
+use App\Http\Controllers\Api\V1\RakeRrDiversionApiController;
+use App\Http\Controllers\Api\V1\RakeRrHubStateApiController;
 use App\Http\Controllers\Api\V1\RakeWeighmentApiController;
+use App\Http\Controllers\Api\V1\RakeWeighmentWorkflowApiController;
 use App\Http\Controllers\Api\V1\RolePermissionController;
 use App\Http\Controllers\Api\V1\SidingController;
 use App\Http\Controllers\Api\V1\SidingVehicleDispatchController;
@@ -48,7 +51,9 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         // Indents
         Route::get('indents', [IndentController::class, 'index'])->name('indents.index');
         Route::post('indents/upload', [IndentController::class, 'upload'])->name('indents.upload');
+        Route::post('indents', [IndentController::class, 'store'])->name('indents.store');
         Route::get('indents/{indent}', [IndentController::class, 'show'])->name('indents.show');
+        Route::patch('indents/{indent}/assign-rake-number', [IndentController::class, 'assignRakeNumber'])->name('indents.assign-rake-number');
         Route::get('indents/{indent}/download', [IndentController::class, 'download'])->name('indents.download');
 
         // Railway receipts
@@ -59,6 +64,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
 
         // Weighments
         Route::post('weighments/upload', [WeighmentUploadController::class, 'store'])->name('weighments.upload');
+        Route::get('weighments/template-xlsx', [RakeWeighmentWorkflowApiController::class, 'downloadTemplateXlsx'])->name('weighments.template-xlsx');
 
         Route::get('sidings', [SidingController::class, 'index'])->name('sidings.index');
 
@@ -71,16 +77,26 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('rakes', [RakeController::class, 'index'])->name('rakes.index');
         Route::get('rakes/export', [RakeController::class, 'export'])->name('rakes.export');
         Route::get('rakes/{rake}', [RakeController::class, 'show'])->name('rakes.show');
+        Route::get('rakes/{rake}/rr-hub-state', RakeRrHubStateApiController::class)->name('rakes.rr-hub-state');
+        Route::patch('rakes/{rake}/diversion-mode', [RakeRrDiversionApiController::class, 'updateDiversionMode'])->name('rakes.diversion-mode.update');
+        Route::post('rakes/{rake}/diverrt-destinations', [RakeRrDiversionApiController::class, 'storeDiverrtDestination'])->name('rakes.diverrt-destinations.store');
+        Route::delete('rakes/{rake}/diverrt-destinations/{diverrtDestination}', [RakeRrDiversionApiController::class, 'destroyDiverrtDestination'])->name('rakes.diverrt-destinations.destroy');
 
         // Rake weighments
         Route::get('rake-weighments', [RakeWeighmentApiController::class, 'index'])->name('rake-weighments.index');
         Route::get('rake-weighments/{rakeWeighment}', [RakeWeighmentApiController::class, 'show'])->name('rake-weighments.show');
         Route::get('rake-weighments/{rakeWeighment}/download', [RakeWeighmentApiController::class, 'download'])->name('rake-weighments.download');
+        Route::post('rakes/{rake}/weighments/manual', [RakeWeighmentWorkflowApiController::class, 'storeManual'])->name('rakes.weighments.manual');
+        Route::patch('rakes/{rake}/weighments/{rakeWeighment}/manual', [RakeWeighmentWorkflowApiController::class, 'updateManual'])->name('rakes.weighments.update-manual');
+        Route::delete('rakes/{rake}/weighments', [RakeWeighmentWorkflowApiController::class, 'destroy'])->name('rakes.weighments.destroy');
 
         // Management dashboard (mobile)
         Route::prefix('dashboard')->name('dashboard.')->group(function (): void {
             Route::get('filter-options', [MobileDashboardController::class, 'filterOptions'])->name('filter-options');
             Route::get('admin-kpis', [MobileDashboardController::class, 'adminKpis'])->name('admin-kpis');
+            Route::get('executive', [MobileDashboardController::class, 'executive'])->name('executive');
+            Route::get('executive/custom-range', [MobileDashboardController::class, 'executiveCustomRange'])->name('executive.custom-range');
+            Route::get('siding-overview', [MobileDashboardController::class, 'sidingOverview'])->name('siding-overview');
             Route::get('executive-overview', [MobileDashboardController::class, 'executiveOverview'])->name('executive-overview');
             Route::get('operations', [MobileDashboardController::class, 'operations'])->name('operations');
             Route::get('penalty-control', [MobileDashboardController::class, 'penaltyControl'])->name('penalty-control');

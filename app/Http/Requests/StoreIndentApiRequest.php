@@ -11,9 +11,10 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Validation\Rule;
 
 /**
- * Web create e-Demand (`POST /indents`). For Sanctum API create, see {@see StoreIndentApiRequest} (`pdf` required).
+ * API-only create e-Demand: same fields as {@see StoreIndentRequest}, but `pdf` is required
+ * so the confirmation PDF is stored and available via download like the web PDF modal flow.
  */
-final class StoreIndentRequest extends FormRequest
+final class StoreIndentApiRequest extends FormRequest
 {
     /** @var list<string> */
     private const INDENT_STATE_VALUES = [
@@ -134,7 +135,7 @@ final class StoreIndentRequest extends FormRequest
                     }
                 },
             ],
-            'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
+            'pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
         ];
     }
 

@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Dashboard\ExecutiveDashboardController;
 use App\Models\PenaltyType;
 use App\Support\Dashboard\DashboardFilterResolver;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -26,8 +28,8 @@ final class MobileDashboardController extends Controller
     {
         $resolved = $this->filters->resolve($request);
         $sidingIds = $resolved['filteredSidingIds'];
-
-        $opts = $this->dashboard->buildFilterOptions($sidingIds);
+        $section = $this->resolveSection($request);
+        $options = $this->resolveFilterOptionsForSection($section, $sidingIds);
 
         $penaltyTypes = PenaltyType::query()
             ->orderBy('code')
@@ -42,11 +44,15 @@ final class MobileDashboardController extends Controller
 
         return response()->json([
             'siding_ids' => array_values($sidingIds),
+            'meta' => [
+                'section' => $section,
+                'executive_local_filters' => null,
+            ],
             'data' => [
-                'power_plants' => $opts['powerPlants'],
-                'loaders' => $opts['loaders'],
-                'shifts' => $opts['shifts'],
-                'penalty_types' => $penaltyTypes,
+                'power_plants' => $options['power_plants'],
+                'loaders' => $options['loaders'],
+                'shifts' => $options['shifts'],
+                'penalty_types' => $options['penalty_types'] ? $penaltyTypes : [],
             ],
         ]);
     }
@@ -77,7 +83,7 @@ final class MobileDashboardController extends Controller
         ];
 
         $kpis = $this->dashboard->buildKpis($sidingIds, $from, $to, $filterContext);
-        $activeRakes = $this->dashboard->buildLiveRakeStatus($sidingIds, $filterContext);
+        $activeRakes = $this->dashboard->buildLiveRakeStatus($sidingIds, $filterContext, $from, $to);
         $sidingStocks = $this->dashboard->buildSidingStocks($sidingIds, $from, $to);
 
         $coalBalanceMt = 0.0;
@@ -99,10 +105,61 @@ final class MobileDashboardController extends Controller
         ]);
     }
 
+    public function executive(Request $request): JsonResponse
+    {
+        $resolved = $this->filters->resolve($request);
+        $anchorDate = $this->parseExecutiveYesterdayDate($request);
+        $customRanges = $this->parseExecutiveCustomRanges($request, $anchorDate);
+        $payload = $this->dashboard->buildExecutiveYesterdayData($resolved['allSidingIds'], $anchorDate, $customRanges);
+
+        return response()->json($this->buildExecutiveApiPayload($request, $payload));
+    }
+
+    public function executiveCustomRange(Request $request): JsonResponse
+    {
+        $resolved = $this->filters->resolve($request);
+        $anchorDate = $this->parseExecutiveYesterdayDate($request);
+        $customRanges = $this->parseExecutiveCustomRanges($request, $anchorDate);
+        $scopeRaw = $request->query('executive_apply_scope');
+
+        if (! is_string($scopeRaw) || $scopeRaw === '') {
+            return response()->json(
+                $this->dashboard->buildExecutiveYesterdayData($resolved['allSidingIds'], $anchorDate, $customRanges),
+            );
+        }
+
+        $scopes = array_values(array_filter(array_map('trim', explode(',', $scopeRaw))));
+        $allowed = ['road', 'rail', 'ob', 'coal'];
+        $scopes = array_values(array_intersect($scopes, $allowed));
+        if ($scopes === []) {
+            abort(422, 'Invalid executive_apply_scope.');
+        }
+
+        $payload = $this->dashboard->buildExecutiveYesterdayData($resolved['allSidingIds'], $anchorDate, $customRanges);
+        $allCustomRanges = is_array($payload['customRanges'] ?? null) ? $payload['customRanges'] : [];
+        $scopeToRangeKey = [
+            'road' => 'roadDispatch',
+            'rail' => 'railDispatch',
+            'ob' => 'obProduction',
+            'coal' => 'coalProduction',
+        ];
+        $scopedCustomRanges = [];
+        foreach ($scopes as $scope) {
+            $rangeKey = $scopeToRangeKey[$scope] ?? null;
+            if ($rangeKey !== null && array_key_exists($rangeKey, $allCustomRanges)) {
+                $scopedCustomRanges[$rangeKey] = $allCustomRanges[$rangeKey];
+            }
+        }
+
+        return response()->json([
+            'customRanges' => $scopedCustomRanges,
+        ]);
+    }
+
     /**
-     * Same widgets as web "Executive overview" section, plus KPI strip and coal-stock cards (shown above all sections on web).
+     * Same widgets as web "Siding overview" section.
      */
-    public function executiveOverview(Request $request): JsonResponse
+    public function sidingOverview(Request $request): JsonResponse
     {
         $resolved = $this->filters->resolve($request);
 
@@ -125,6 +182,14 @@ final class MobileDashboardController extends Controller
         ]);
     }
 
+    /**
+     * Backward-compatible alias for existing mobile clients.
+     */
+    public function executiveOverview(Request $request): JsonResponse
+    {
+        return $this->sidingOverview($request);
+    }
+
     public function operations(Request $request): JsonResponse
     {
         $resolved = $this->filters->resolve($request);
@@ -141,7 +206,12 @@ final class MobileDashboardController extends Controller
                 $resolved['filterContext']['shift'] ?? null,
             ),
             'dailyRakeDetails' => $this->dashboard->buildDailyRakeDetails($resolved['filteredSidingIds'], $resolved['dailyRakeDate']),
-            'liveRakeStatus' => $this->dashboard->buildLiveRakeStatus($resolved['filteredSidingIds'], $resolved['filterContext']),
+            'liveRakeStatus' => $this->dashboard->buildLiveRakeStatus(
+                $resolved['filteredSidingIds'],
+                [],
+                $resolved['from'],
+                $resolved['to'],
+            ),
         ];
 
         return response()->json([
@@ -234,11 +304,216 @@ final class MobileDashboardController extends Controller
             'power_plant' => $resolved['powerPlant'],
             'rake_number' => $resolved['rakeNumber'],
             'loader_id' => $resolved['loaderId'],
+            'loader_operator' => $resolved['loaderOperatorName'],
+            'underload_threshold' => $resolved['underloadThresholdPercent'],
             'shift' => $resolved['shift'],
             'penalty_type' => $resolved['penaltyTypeId'],
             'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
             'coal_transport_date' => $resolved['coalTransportDate']->toDateString(),
             'section' => $resolved['section'],
         ];
+    }
+
+    private function resolveSection(Request $request): string
+    {
+        $section = (string) ($request->query('section') ?? $request->input('section') ?? 'executive-overview');
+        $allowed = [
+            'executive-overview',
+            'siding-overview',
+            'operations',
+            'penalty-control',
+            'rake-performance',
+            'loader-overload',
+            'power-plant',
+        ];
+
+        if (! in_array($section, $allowed, true)) {
+            return 'executive-overview';
+        }
+
+        return $section;
+    }
+
+    /**
+     * @return array{power_plants: array<int, mixed>, loaders: array<int, mixed>, shifts: array<int, mixed>, penalty_types: bool}
+     */
+    private function resolveFilterOptionsForSection(string $section, array $sidingIds): array
+    {
+        $opts = $this->dashboard->buildFilterOptions($sidingIds);
+        $sectionFilterKeys = [
+            'executive-overview' => ['power_plant', 'rake_number', 'penalty_type'],
+            'siding-overview' => ['power_plant', 'rake_number', 'penalty_type'],
+            'operations' => ['shift', 'daily_rake_date', 'coal_transport_date'],
+            'penalty-control' => ['penalty_type'],
+            'rake-performance' => ['rake_number', 'power_plant', 'rake_penalty_scope'],
+            'loader-overload' => ['loader_id'],
+            'power-plant' => ['power_plant'],
+        ];
+        $keys = $sectionFilterKeys[$section] ?? [];
+
+        return [
+            'power_plants' => in_array('power_plant', $keys, true) ? $opts['powerPlants'] : [],
+            'loaders' => in_array('loader_id', $keys, true) ? $opts['loaders'] : [],
+            'shifts' => in_array('shift', $keys, true) ? $opts['shifts'] : [],
+            'penalty_types' => in_array('penalty_type', $keys, true),
+        ];
+    }
+
+    private function parseExecutiveYesterdayDate(Request $request): CarbonInterface
+    {
+        $tz = config('app.timezone', 'UTC');
+        $value = $request->query('executive_yesterday_date') ?? $request->input('executive_yesterday_date');
+        if ($value === null || $value === '') {
+            return now($tz)->startOfDay();
+        }
+
+        return Carbon::parse((string) $value, $tz)->startOfDay();
+    }
+
+    /**
+     * @return array{
+     *     roadDispatch: array{from: string, to: string},
+     *     railDispatch: array{from: string, to: string},
+     *     obProduction: array{from: string, to: string},
+     *     coalProduction: array{from: string, to: string}
+     * }
+     */
+    private function parseExecutiveCustomRanges(Request $request, CarbonInterface $anchorDate): array
+    {
+        $tz = config('app.timezone', 'UTC');
+        $anchor = Carbon::parse($anchorDate, $tz)->startOfDay();
+        $defaultDay = $anchor->copy()->subDay();
+        $defaultFrom = $defaultDay->copy()->startOfDay();
+        $defaultTo = $defaultDay->copy()->endOfDay();
+        $sharedFrom = $this->parseRequestDate($request, 'executive_from', $tz);
+        $sharedTo = $this->parseRequestDate($request, 'executive_to', $tz);
+        $roadRailDefaultFrom = $sharedFrom ?? $defaultFrom;
+        $roadRailDefaultTo = $sharedTo ?? $defaultTo;
+
+        $road = $this->parseRange($request, 'executive_road_from', 'executive_road_to', $roadRailDefaultFrom, $roadRailDefaultTo, $tz);
+        $rail = $this->parseRange($request, 'executive_rail_from', 'executive_rail_to', $roadRailDefaultFrom, $roadRailDefaultTo, $tz);
+        $ob = $this->parseRange($request, 'executive_ob_from', 'executive_ob_to', $defaultFrom, $defaultTo, $tz);
+        $coal = $this->parseRange($request, 'executive_coal_from', 'executive_coal_to', $defaultFrom, $defaultTo, $tz);
+
+        return [
+            'roadDispatch' => ['from' => $road['from']->toDateString(), 'to' => $road['to']->toDateString()],
+            'railDispatch' => ['from' => $rail['from']->toDateString(), 'to' => $rail['to']->toDateString()],
+            'obProduction' => ['from' => $ob['from']->toDateString(), 'to' => $ob['to']->toDateString()],
+            'coalProduction' => ['from' => $coal['from']->toDateString(), 'to' => $coal['to']->toDateString()],
+        ];
+    }
+
+    /**
+     * @return array{from: Carbon, to: Carbon}
+     */
+    private function parseRange(
+        Request $request,
+        string $fromKey,
+        string $toKey,
+        Carbon $defaultFrom,
+        Carbon $defaultTo,
+        string $tz,
+    ): array {
+        $from = $this->parseRequestDate($request, $fromKey, $tz) ?? $defaultFrom->copy();
+        $to = $this->parseRequestDate($request, $toKey, $tz) ?? $defaultTo->copy();
+
+        if ($from->gt($to)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+
+        return ['from' => $from->copy()->startOfDay(), 'to' => $to->copy()->endOfDay()];
+    }
+
+    private function parseRequestDate(Request $request, string $key, string $tz): ?Carbon
+    {
+        $value = $request->query($key) ?? $request->input($key);
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if ($value instanceof CarbonInterface) {
+            return Carbon::parse($value->format('Y-m-d'), $tz)->startOfDay();
+        }
+
+        return Carbon::parse((string) $value, $tz)->startOfDay();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function buildExecutiveApiPayload(Request $request, array $payload): array
+    {
+        $graphFilters = [
+            'road' => [
+                'period' => $this->readGraphEnum($request, 'road_period', ['yesterday', 'today', 'month', 'fy'], 'month'),
+                'metric' => $this->readGraphEnum($request, 'road_metric', ['count', 'qty'], 'qty'),
+            ],
+            'rail' => [
+                'period' => $this->readGraphEnum($request, 'rail_period', ['yesterday', 'today', 'month', 'fy'], 'month'),
+                'metric' => $this->readGraphEnum($request, 'rail_metric', ['count', 'qty'], 'qty'),
+            ],
+            'production' => [
+                'period' => $this->readGraphEnum($request, 'production_period', ['yesterday', 'today', 'month', 'fy'], 'month'),
+                'metric' => $this->readGraphEnum($request, 'production_metric', ['trips', 'qty'], 'qty'),
+            ],
+            'penalty' => [
+                'period' => $this->readGraphEnum($request, 'penalty_period', ['yesterday', 'today', 'month', 'fy'], 'month'),
+            ],
+            'power_plant' => [
+                'period' => $this->readGraphEnum($request, 'power_plant_period', ['yesterday', 'today', 'month', 'fy'], 'month'),
+                'metric' => $this->readGraphEnum($request, 'power_plant_metric', ['rakes', 'qty'], 'qty'),
+            ],
+        ];
+
+        $tables = [
+            'anchorDate' => $payload['anchorDate'] ?? null,
+            'fyLabel' => $payload['fyLabel'] ?? null,
+            'periods' => $payload['periods'] ?? [],
+            'roadDispatch' => $payload['roadDispatch'] ?? [],
+            'railDispatch' => $payload['railDispatch'] ?? [],
+            'obProduction' => $payload['obProduction'] ?? [],
+            'coalProduction' => $payload['coalProduction'] ?? [],
+            'customRanges' => $payload['customRanges'] ?? [],
+            'fySummary' => $payload['fySummary'] ?? [],
+        ];
+
+        $graphs = [
+            'roadDispatchByPeriod' => $payload['roadDispatch'] ?? [],
+            'railDispatchByPeriod' => $payload['railDispatch'] ?? [],
+            'productionByPeriod' => [
+                'obProduction' => $payload['obProduction'] ?? [],
+                'coalProduction' => $payload['coalProduction'] ?? [],
+            ],
+            'penaltyBySidingByPeriod' => $payload['penaltyBySidingByPeriod'] ?? [],
+            'powerPlantDispatchByPeriod' => $payload['powerPlantDispatchByPeriod'] ?? [],
+            'fyCharts' => $payload['fyCharts'] ?? [],
+        ];
+
+        return [
+            'meta' => [
+                'defaults' => [
+                    'period' => 'month',
+                    'view_mode' => 'charts',
+                ],
+                'graph_filters' => $graphFilters,
+            ],
+            'data' => [
+                'tables' => $tables,
+                'graphs' => $graphs,
+            ],
+        ];
+    }
+
+    /**
+     * @param  list<string>  $allowed
+     */
+    private function readGraphEnum(Request $request, string $key, array $allowed, string $default): string
+    {
+        $value = (string) ($request->query($key) ?? $request->input($key) ?? '');
+        if ($value === '' || ! in_array($value, $allowed, true)) {
+            return $default;
+        }
+
+        return $value;
     }
 }
