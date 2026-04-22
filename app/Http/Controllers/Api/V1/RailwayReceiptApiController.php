@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DataTables\RailwayReceiptsRakeDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\Rake;
 use App\Models\RrDocument;
 use App\Models\Siding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
+use Spatie\QueryBuilder\QueryBuilder;
 
 final class RailwayReceiptApiController extends Controller
 {
@@ -22,62 +25,50 @@ final class RailwayReceiptApiController extends Controller
             abort(401);
         }
 
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $this->applyDefaultLoadingDateFilter($request);
 
-        $query = RrDocument::query()
-            ->with(['rake.siding'])
-            ->whereHas('rake', static function ($q) use ($sidingIds): void {
-                $q->whereIn('siding_id', $sidingIds);
-            });
-
-        if ($request->filled('siding_id')) {
-            $query->whereHas('rake', static function ($q) use ($request): void {
-                $q->where('siding_id', $request->integer('siding_id'));
-            });
-        }
-
-        if ($request->filled('rake_id')) {
-            $query->where('rake_id', $request->integer('rake_id'));
-        }
-
-        if ($request->filled('rr_number')) {
-            $search = $request->string('rr_number')->toString();
-            $query->where('rr_number', 'like', "%{$search}%");
-        }
-
-        if ($request->filled('document_status')) {
-            $query->where('document_status', $request->string('document_status'));
-        }
-
-        if ($request->filled('from_date')) {
-            $query->whereDate('rr_received_date', '>=', $request->date('from_date'));
-        }
-
-        if ($request->filled('to_date')) {
-            $query->whereDate('rr_received_date', '<=', $request->date('to_date'));
-        }
+        $query = RailwayReceiptsRakeDataTable::tableBaseQuery();
+        $this->applySimpleFilters($request, $query);
 
         /** @var LengthAwarePaginator $paginator */
-        $paginator = $query
-            ->orderByDesc('id')
+        $paginator = QueryBuilder::for($query, $request)
+            ->allowedFilters(RailwayReceiptsRakeDataTable::tableAllowedFilters())
+            ->allowedSorts(RailwayReceiptsRakeDataTable::tableAllowedSorts())
+            ->defaultSort(RailwayReceiptsRakeDataTable::tableDefaultSort())
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
 
-        $items = $paginator->getCollection()->map(static function (RrDocument $doc): array {
-            $rake = $doc->rake;
+        $items = $paginator->getCollection()->map(static function (Rake $rake): array {
+            $dto = RailwayReceiptsRakeDataTable::fromModel($rake);
 
             return [
-                'id' => $doc->id,
-                'rake_id' => $doc->rake_id,
-                'rr_number' => $doc->rr_number,
-                'rr_received_date' => $doc->rr_received_date,
-                'rr_weight_mt' => $doc->rr_weight_mt,
-                'document_status' => $doc->document_status,
-                'rake_number' => $rake?->rake_number,
-                'siding_name' => $rake?->siding?->name,
-                'siding_code' => $rake?->siding?->code,
+                'id' => $dto->id,
+                'rake_number' => $dto->rake_number,
+                'rake_serial_number' => $dto->rake_serial_number,
+                'loading_date' => $dto->loading_date,
+                'siding_id' => $dto->siding_id,
+                'siding_code' => $dto->siding_code,
+                'siding_name' => $dto->siding_name,
+                'destination' => $dto->destination,
+                'has_diversion' => $dto->has_diversion,
+                'rr_document_id' => $dto->rr_document_id,
+                'rr_number' => $dto->rr_number,
+                'rr_received_date' => $dto->rr_received_date,
+                'rr_weight_mt' => $dto->rr_weight_mt,
+                'document_status' => $dto->document_status,
+                'has_discrepancy' => $dto->has_discrepancy,
+                'discrepancy_details' => $dto->discrepancy_details,
+                'fnr' => $dto->fnr,
+                'from_station_code' => $dto->from_station_code,
+                'to_station_code' => $dto->to_station_code,
+                'freight_total' => $dto->freight_total,
+                'distance_km' => $dto->distance_km,
+                'commodity_code' => $dto->commodity_code,
+                'commodity_description' => $dto->commodity_description,
+                'invoice_number' => $dto->invoice_number,
+                'invoice_date' => $dto->invoice_date,
+                'rate' => $dto->rate,
+                'document_class' => $dto->document_class,
             ];
         })->values();
 
@@ -208,5 +199,66 @@ final class RailwayReceiptApiController extends Controller
         }
 
         return $media;
+    }
+
+    private function applyDefaultLoadingDateFilter(Request $request): void
+    {
+        $filter = $request->input('filter', []);
+        if (! is_array($filter)) {
+            $filter = [];
+        }
+
+        if (array_key_exists('loading_date', $filter)) {
+            return;
+        }
+
+        if ($request->filled('loading_date_start') || $request->filled('loading_date_end')) {
+            return;
+        }
+
+        $filter['loading_date'] = 'eq:'.now()->toDateString();
+        $request->merge(['filter' => $filter]);
+    }
+
+    private function applySimpleFilters(Request $request, \Illuminate\Database\Eloquent\Builder $query): void
+    {
+        /** @var array<string, mixed> $filterQuery */
+        $filterQuery = $request->query('filter', []);
+        $filterQuery = is_array($filterQuery) ? $filterQuery : [];
+
+        if ($request->filled('rake_number') && ! array_key_exists('rake_number', $filterQuery)) {
+            $query->where('rake_number', 'like', '%'.$request->string('rake_number')->toString().'%');
+        }
+
+        if (
+            $request->filled('siding_id')
+            && ! array_key_exists('siding_code', $filterQuery)
+            && ! array_key_exists('siding', $filterQuery)
+        ) {
+            $query->where('siding_id', $request->integer('siding_id'));
+        }
+
+        if ($request->filled('destination') && ! array_key_exists('destination', $filterQuery)) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($request): void {
+                $value = $request->string('destination')->toString();
+                $q->where('destination', 'like', '%'.$value.'%')
+                    ->orWhere('destination_code', 'like', '%'.$value.'%');
+            });
+        }
+
+        if ($request->filled('rr_number') && ! array_key_exists('rr_number', $filterQuery)) {
+            $search = $request->string('rr_number')->toString();
+            $query->whereHas('rrDocument', static function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
+                $q->where('rr_number', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('loading_date_start')) {
+            $query->whereDate('loading_date', '>=', $request->date('loading_date_start'));
+        }
+
+        if ($request->filled('loading_date_end')) {
+            $query->whereDate('loading_date', '<=', $request->date('loading_date_end'));
+        }
     }
 }
