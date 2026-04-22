@@ -144,6 +144,7 @@ final class RakeWeighmentApiController extends Controller
                 'rake' => [
                     'id' => $rake->id,
                     'rake_number' => $rake->rake_number,
+                    'rake_serial_number' => $rake->rake_serial_number,
                     'siding_id' => $rake->siding_id,
                     'siding' => [
                         'id' => $rake->siding?->id,

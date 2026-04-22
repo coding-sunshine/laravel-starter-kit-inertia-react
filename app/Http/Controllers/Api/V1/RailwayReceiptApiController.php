@@ -111,6 +111,39 @@ final class RailwayReceiptApiController extends Controller
 
         $rake = $rrDocument->rake;
 
+        $charges = $rrDocument->rrCharges->map(static function ($charge): array {
+            return [
+                'id' => $charge->id,
+                'charge_code' => $charge->charge_code,
+                'charge_name' => $charge->charge_name,
+                'amount' => $charge->amount,
+            ];
+        })->values();
+
+        $wagonSnapshots = $rrDocument->wagonSnapshots->map(static function ($w): array {
+            return [
+                'id' => $w->id,
+                'wagon_sequence' => $w->wagon_sequence,
+                'wagon_number' => $w->wagon_number,
+                'wagon_type' => $w->wagon_type,
+                'pcc_weight_mt' => $w->pcc_weight_mt,
+                'loaded_weight_mt' => $w->loaded_weight_mt,
+                'permissible_weight_mt' => $w->permissible_weight_mt,
+                'overload_weight_mt' => $w->overload_weight_mt,
+            ];
+        })->values();
+
+        $penaltySnapshots = $rrDocument->penaltySnapshots->map(static function ($p): array {
+            return [
+                'id' => $p->id,
+                'penalty_code' => $p->penalty_code,
+                'amount' => $p->amount,
+                'wagon_number' => $p->wagon_number,
+                'wagon_sequence' => $p->wagon_sequence,
+                'meta' => $p->meta,
+            ];
+        })->values();
+
         return response()->json([
             'data' => [
                 'header' => [
@@ -128,40 +161,21 @@ final class RailwayReceiptApiController extends Controller
                 'rake' => $rake ? [
                     'id' => $rake->id,
                     'rake_number' => $rake->rake_number,
+                    'rake_serial_number' => $rake->rake_serial_number,
                     'siding' => $rake->siding ? [
                         'id' => $rake->siding->id,
                         'name' => $rake->siding->name,
                         'code' => $rake->siding->code,
                     ] : null,
                 ] : null,
-                'charges' => $rrDocument->rrCharges->map(static function ($charge): array {
-                    return [
-                        'id' => $charge->id,
-                        'charge_code' => $charge->charge_code,
-                        'charge_name' => $charge->charge_name,
-                        'amount' => $charge->amount,
-                    ];
-                })->values(),
-                'wagonSnapshots' => $rrDocument->wagonSnapshots->map(static function ($w): array {
-                    return [
-                        'id' => $w->id,
-                        'wagon_sequence' => $w->wagon_sequence,
-                        'wagon_number' => $w->wagon_number,
-                        'wagon_type' => $w->wagon_type,
-                        'pcc_weight_mt' => $w->pcc_weight_mt,
-                        'loaded_weight_mt' => $w->loaded_weight_mt,
-                        'permissible_weight_mt' => $w->permissible_weight_mt,
-                        'overload_weight_mt' => $w->overload_weight_mt,
-                    ];
-                })->values(),
-                'penaltySnapshots' => $rrDocument->penaltySnapshots->map(static function ($p): array {
-                    return [
-                        'id' => $p->id,
-                        'penalty_code' => $p->penalty_code,
-                        'amount' => $p->amount,
-                        'meta' => $p->meta,
-                    ];
-                })->values(),
+                'charges' => $charges,
+                'rr_charges' => $charges,
+                // Legacy camelCase alias for backward compatibility. Prefer `wagon_snapshots`.
+                'wagonSnapshots' => $wagonSnapshots,
+                'wagon_snapshots' => $wagonSnapshots,
+                // Legacy camelCase alias for backward compatibility. Prefer `penalty_snapshots`.
+                'penaltySnapshots' => $penaltySnapshots,
+                'penalty_snapshots' => $penaltySnapshots,
             ],
         ]);
     }
