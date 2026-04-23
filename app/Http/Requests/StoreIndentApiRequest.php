@@ -68,7 +68,7 @@ final class StoreIndentApiRequest extends FormRequest
             'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'rake_serial_number' => [
-                'required',
+                'nullable',
                 'string',
                 'max:100',
                 function (string $attribute, mixed $value, Closure $fail): void {

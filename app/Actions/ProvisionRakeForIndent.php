@@ -48,7 +48,7 @@ final readonly class ProvisionRakeForIndent
      *
      * @param  ?string  $rakeNumber  Trimmed rake sq. from e-Demand (PDF) or manual entry.
      * @param  ?int  $priorityNumber  Optional override; defaults to indent primary key.
-     * @param  ?string  $rakeSerialNumber  Display / serial rake number (required at validation layer for new indents).
+     * @param  ?string  $rakeSerialNumber  Display / serial rake number (optional; stored null when omitted).
      */
     public function handle(Indent $indent, ?string $rakeNumber, int $userId, ?int $priorityNumber = null, ?string $rakeSerialNumber = null): Rake
     {
@@ -87,7 +87,7 @@ final readonly class ProvisionRakeForIndent
         $rake->rake_number = $rakeNumber;
         $rake->rake_serial_number = $rakeSerialNumber !== null && mb_trim($rakeSerialNumber) !== ''
             ? mb_trim($rakeSerialNumber)
-            : $rakeNumber;
+            : null;
         $rake->priority_number = $priorityNumber ?? (int) $indent->id;
         $rake->loading_date = $loadingDate;
         $rake->rake_type = $rakeType;
