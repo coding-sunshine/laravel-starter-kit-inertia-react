@@ -25,6 +25,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar, Download, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { nowTo12hParts, sheetDateAnd12hToReachedAtLocalString } from './reached-at-time';
 import ShiftReportDialog from './shift-report-dialog';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
@@ -155,7 +156,7 @@ function buildLocalDraftEntry(
         gross_wt: null,
         tare_wt: null,
         tare_wt_two: null,
-        reached_at: new Date().toISOString(),
+        reached_at: sheetDateAnd12hToReachedAtLocalString(entryDate, nowTo12hParts()),
         wb_no: null,
         d_challan_no: null,
         challan_mode: 'online',
