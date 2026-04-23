@@ -10,9 +10,14 @@ use App\Models\CoalStock;
 use App\Models\Siding;
 use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
+use App\Support\RoadDispatchShiftReport;
+use App\Support\StockLedgerDailyBalanceReport;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use InvalidArgumentException;
@@ -86,6 +91,14 @@ final class StockLedgerController extends Controller
                 ])->values()->all(),
             ],
             'sidings' => $sidings,
+            'stockReportSidings' => RoadDispatchShiftReport::orderedReportSidings()
+                ->map(fn (Siding $s): array => [
+                    'id' => (int) $s->id,
+                    'name' => (string) $s->name,
+                    'code' => (string) $s->code,
+                ])
+                ->values()
+                ->all(),
             'filters' => [
                 'siding_id' => $filters['siding_id'] ?? null,
                 'rake_number' => $rakeNumber !== '' ? $rakeNumber : null,
@@ -94,6 +107,46 @@ final class StockLedgerController extends Controller
                 'transaction_type' => $filters['transaction_type'] ?? null,
             ],
         ]);
+    }
+
+    /**
+     * JSON: read-only daily opening/closing per calendar day (PKUR/KURWA/DUMK sidings only).
+     */
+    public function stockReport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'siding_id' => ['required', 'integer', 'exists:sidings,id'],
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date', 'after_or_equal:from'],
+        ]);
+
+        $siding = Siding::query()->findOrFail((int) $validated['siding_id']);
+
+        if (! RoadDispatchShiftReport::isAllowedSidingCode((string) $siding->code)) {
+            throw ValidationException::withMessages([
+                'siding_id' => ['The selected siding is not included in the stock report.'],
+            ]);
+        }
+
+        $from = (string) $validated['from'];
+        $to = (string) $validated['to'];
+        $today = now()->toDateString();
+
+        if ($to > $today) {
+            $to = $today;
+        }
+
+        $fromDay = CarbonImmutable::parse($from)->startOfDay();
+        $toDay = CarbonImmutable::parse($to)->startOfDay();
+        $spanDays = $fromDay->diffInDays($toDay) + 1;
+
+        if ($spanDays > RoadDispatchShiftReport::MAX_SPAN_DAYS) {
+            throw ValidationException::withMessages([
+                'to' => ['Date range must not exceed '.RoadDispatchShiftReport::MAX_SPAN_DAYS.' days.'],
+            ]);
+        }
+
+        return response()->json(StockLedgerDailyBalanceReport::build($siding, $from, $to));
     }
 
     public function adjust(AdjustStockLedgerRequest $request): RedirectResponse

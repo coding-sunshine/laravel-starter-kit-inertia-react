@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
+import StockReportDialog, { type StockReportSidingOption } from './stock-report-dialog';
 
 const ALL_SIDINGS = '__all__';
 const ALL_TYPES = '__all__';
@@ -61,13 +62,21 @@ interface Props {
     to?: string | null;
     transaction_type?: string | null;
   };
+  stockReportSidings: StockReportSidingOption[];
 }
 
 function fmtMt(n: number): string {
   return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function Index({ flash, ledgers, sidings, filters }: Props) {
+export default function Index({
+  flash,
+  ledgers,
+  sidings,
+  filters,
+  stockReportSidings,
+}: Props) {
+  const [stockReportOpen, setStockReportOpen] = useState(false);
   const filterForm = useForm({
     siding_id: filters.siding_id ? String(filters.siding_id) : ALL_SIDINGS,
     rake_number: filters.rake_number ?? '',
@@ -142,13 +151,32 @@ export default function Index({ flash, ledgers, sidings, filters }: Props) {
       <Head title="Stock ledger" />
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Stock ledger</h1>
-          <p className="text-muted-foreground">
-            Filter by siding, rake number (matches any month), dates, and type. Manual add/deduct posts UI-only ledger
-            rows (separate from automated flows).
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Stock ledger</h1>
+            <p className="text-muted-foreground">
+              Filter by siding, rake number (matches any month), dates, and type. Manual add/deduct posts UI-only
+              ledger rows (separate from automated flows).
+            </p>
+          </div>
+          {stockReportSidings.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0 self-start"
+              onClick={() => setStockReportOpen(true)}
+              data-pan="stock-ledger-stock-report-open"
+            >
+              Stock report
+            </Button>
+          ) : null}
         </div>
+
+        <StockReportDialog
+          open={stockReportOpen}
+          onOpenChange={setStockReportOpen}
+          sidings={stockReportSidings}
+        />
 
         {successBanner ? (
           <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-100">
