@@ -11,6 +11,7 @@ use App\Models\StockLedger;
 use App\Models\VehicleWorkorder;
 use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
+use App\Support\RoadDispatchShiftReport;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -165,6 +167,17 @@ final class DailyVehicleEntryController extends Controller
 
         $sidings = $sidingsOrdered;
 
+        $shiftReportSidings = [];
+        if ($user?->access_to_siding_shift_data) {
+            $shiftReportSidings = RoadDispatchShiftReport::orderedReportSidings()
+                ->map(fn (Siding $s): array => [
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'code' => $s->code,
+                ])
+                ->all();
+        }
+
         return Inertia::render('road-dispatch/daily-vehicle-entries/index', [
             'entries' => $entries->values()->all(),
             'date' => $date,
@@ -181,6 +194,7 @@ final class DailyVehicleEntryController extends Controller
             'timeEditableShift' => $timeEditableShift,
             'shiftGraceEndsAtIso' => $shiftGraceEndsAtIso,
             'showCreatedByColumn' => $user?->canViewAllRoadDispatchDailyVehicleEntries() ?? false,
+            'shiftReportSidings' => $shiftReportSidings,
         ]);
     }
 
@@ -275,6 +289,62 @@ final class DailyVehicleEntryController extends Controller
             'siding_id' => $sidingId,
             'total' => $total,
             'rows' => $rows,
+        ]);
+    }
+
+    public function shiftReport(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->access_to_siding_shift_data, 403);
+
+        $validated = $request->validate([
+            'siding_id' => 'required|integer|exists:sidings,id',
+            'from' => 'required|date_format:Y-m-d',
+            'to' => 'required|date_format:Y-m-d|after_or_equal:from',
+        ]);
+
+        $from = Carbon::parse($validated['from'])->startOfDay();
+        $to = Carbon::parse($validated['to'])->startOfDay();
+        $spanDays = (int) $from->diffInDays($to) + 1;
+        if ($spanDays > RoadDispatchShiftReport::MAX_SPAN_DAYS) {
+            throw ValidationException::withMessages([
+                'to' => __('The date range may not exceed :days days.', ['days' => RoadDispatchShiftReport::MAX_SPAN_DAYS]),
+            ]);
+        }
+
+        $siding = Siding::query()->findOrFail((int) $validated['siding_id']);
+        if (! RoadDispatchShiftReport::isAllowedSidingCode((string) $siding->code)) {
+            abort(403, 'This siding is not available for shift report.');
+        }
+
+        try {
+            $report = $this->service->getShiftReportRows(
+                (int) $siding->id,
+                $from->toDateString(),
+                $to->toDateString()
+            );
+        } catch (Throwable $e) {
+            Log::error('Shift report failed', [
+                'exception' => $e,
+                'siding_id' => $siding->id,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to load shift report.',
+            ], 500);
+        }
+
+        return response()->json([
+            'siding' => [
+                'id' => $siding->id,
+                'name' => $siding->name,
+                'code' => $siding->code,
+            ],
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'days' => $report['days'],
         ]);
     }
 
