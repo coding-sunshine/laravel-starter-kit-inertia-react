@@ -86,7 +86,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: true),
-            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: false, filterable: false),
+            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: true, filterable: false),
             new Column(
                 id: 'indent_number',
                 label: 'Priority number',
@@ -195,6 +195,10 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     {
         return [
             'rake_number',
+            AllowedSort::callback('rake_serial_number', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $query->orderBy($query->qualifyColumn('rake_serial_number'), $direction);
+            }),
             AllowedSort::callback('indent_number', static function (Builder $query, bool $descending, string $_property): void {
                 $direction = $descending ? 'desc' : 'asc';
                 $rakesTable = $query->getModel()->getTable();
