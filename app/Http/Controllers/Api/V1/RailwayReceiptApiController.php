@@ -45,6 +45,7 @@ final class RailwayReceiptApiController extends Controller
                 'id' => $dto->id,
                 'rake_number' => $dto->rake_number,
                 'rake_serial_number' => $dto->rake_serial_number,
+                'indent_number' => $dto->indent_number,
                 'loading_date' => $dto->loading_date,
                 'siding_id' => $dto->siding_id,
                 'siding_code' => $dto->siding_code,

@@ -32,6 +32,8 @@ export interface RailwayReceiptsRakeRow {
     id: number;
     rake_number: string;
     rake_serial_number: string | null;
+    /** E-Demand / indent priority when the rake is linked to an indent */
+    indent_number: string | null;
     loading_date: string | null;
     siding_id: number | null;
     siding_code: string | null;
@@ -160,6 +162,7 @@ function RrHubDetailRows({ row }: { row: RailwayReceiptsRakeRow }): ReactNode {
     }
 
     const entries: { label: string; value: string }[] = [
+        { label: 'Priority number', value: row.indent_number ?? '—' },
         { label: 'RR number', value: row.rr_number ?? '—' },
         { label: 'Received date', value: row.rr_received_date ? new Date(row.rr_received_date).toLocaleDateString() : '—' },
         { label: 'Weight (MT)', value: row.rr_weight_mt ?? '—' },
@@ -619,6 +622,9 @@ export default function RailwayReceiptsIndex({
                                             }
 
                                             return '—';
+                                        }
+                                        if (columnId === 'indent_number') {
+                                            return row.indent_number ?? '—';
                                         }
                                         if (columnId === 'siding_code') {
                                             return row.siding_code && row.siding_name
