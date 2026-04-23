@@ -161,7 +161,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
             if ($sidingIds === []) {
                 $query->whereRaw('0 = 1');
             } else {
-                $query->whereIn('siding_id', $sidingIds);
+                $query->whereIn($query->qualifyColumn('siding_id'), $sidingIds);
             }
         }
 
@@ -359,22 +359,24 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
             return;
         }
 
+        $sidingIdColumn = $query->qualifyColumn('siding_id');
+
         if ($operator === 'in') {
             $ids = array_map(static fn (string $v): int => (int) $v, $values);
-            $query->whereIn('siding_id', $ids);
+            $query->whereIn($sidingIdColumn, $ids);
 
             return;
         }
 
         if ($operator === 'not_in') {
             $ids = array_map(static fn (string $v): int => (int) $v, $values);
-            $query->whereNotIn('siding_id', $ids);
+            $query->whereNotIn($sidingIdColumn, $ids);
 
             return;
         }
 
         if ($operator === 'eq') {
-            $query->where('siding_id', (int) $values[0]);
+            $query->where($sidingIdColumn, (int) $values[0]);
 
             return;
         }
