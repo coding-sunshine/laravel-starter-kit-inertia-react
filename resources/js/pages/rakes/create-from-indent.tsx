@@ -12,7 +12,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, Train, AlertCircle, CheckCircle } from 'lucide-react';
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 
 interface Siding {
     id: number;
@@ -71,8 +71,6 @@ export default function CreateRakeFromIndent({
     ];
 
     const totalUnits = indent.total_units;
-
-    const rakeSerialTouchedRef = useRef(false);
 
     const { data, setData, post, processing, errors: formErrors } = useForm({
         rake_number: '',
@@ -229,17 +227,9 @@ export default function CreateRakeFromIndent({
                                         id="rake_number"
                                         required
                                         value={data.rake_number}
-                                        onChange={(e) => {
-                                            const v = e.target.value;
-                                            setData({
-                                                ...data,
-                                                rake_number: v,
-                                                rake_serial_number:
-                                                    rakeSerialTouchedRef.current
-                                                        ? data.rake_serial_number
-                                                        : v,
-                                            });
-                                        }}
+                                        onChange={(e) =>
+                                            setData('rake_number', e.target.value)
+                                        }
                                         placeholder="e.g. 1"
                                         className={`${
                                             hasError('rake_number')
@@ -258,9 +248,12 @@ export default function CreateRakeFromIndent({
                                 <div>
                                     <Label
                                         htmlFor="rake_serial_number"
-                                        className="flex items-center gap-1"
+                                        className="flex flex-wrap items-center gap-1"
                                     >
-                                        Rake number *
+                                        <span>Rake number</span>
+                                        <span className="text-muted-foreground font-normal">
+                                            (optional)
+                                        </span>
                                         {hasError('rake_serial_number') && (
                                             <span className="text-destructive text-lg leading-none">
                                                 *
@@ -270,16 +263,14 @@ export default function CreateRakeFromIndent({
                                     <Input
                                         id="rake_serial_number"
                                         name="rake_serial_number"
-                                        required
                                         value={data.rake_serial_number}
-                                        onChange={(e) => {
-                                            rakeSerialTouchedRef.current = true;
+                                        onChange={(e) =>
                                             setData(
                                                 'rake_serial_number',
                                                 e.target.value,
-                                            );
-                                        }}
-                                        placeholder="Same as rake sequence by default"
+                                            )
+                                        }
+                                        placeholder="Leave blank if not applicable"
                                         className={`${
                                             hasError('rake_serial_number')
                                                 ? 'border-destructive focus-visible:ring-destructive'

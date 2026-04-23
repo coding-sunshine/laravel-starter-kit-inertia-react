@@ -441,7 +441,35 @@ final class IndentsController extends Controller
         }
 
         $validated = $request->validate([
-            'rake_serial_number' => ['required', 'string', 'max:100'],
+            'rake_serial_number' => [
+                'nullable',
+                'string',
+                'max:100',
+                function (string $attribute, mixed $value, Closure $fail) use ($indent, $request): void {
+                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
+                    if ($trimmed === null) {
+                        return;
+                    }
+                    $loadingDate = $request->input('loading_date');
+                    if ($loadingDate === null || $loadingDate === '') {
+                        return;
+                    }
+                    try {
+                        $reference = Date::parse($loadingDate);
+                    } catch (Throwable) {
+                        return;
+                    }
+                    $existsInMonth = Rake::query()
+                        ->where('rake_serial_number', $trimmed)
+                        ->where('siding_id', $indent->siding_id)
+                        ->whereYear('loading_date', $reference->year)
+                        ->whereMonth('loading_date', $reference->month)
+                        ->exists();
+                    if ($existsInMonth) {
+                        $fail('This rake number is already in use for this siding in the indent month.');
+                    }
+                },
+            ],
             'rake_number' => [
                 'required',
                 'string',
@@ -511,7 +539,9 @@ final class IndentsController extends Controller
         $rake->indent_id = $indent->id;
         $rake->siding_id = $indent->siding_id; // Use indent's siding
         $rake->rake_number = $validated['rake_number'];
-        $rake->rake_serial_number = mb_trim((string) $validated['rake_serial_number']);
+        $rake->rake_serial_number = isset($validated['rake_serial_number']) && mb_trim((string) $validated['rake_serial_number']) !== ''
+            ? mb_trim((string) $validated['rake_serial_number'])
+            : null;
         $rake->priority_number = isset($validated['rake_priority_number']) ? (int) $validated['rake_priority_number'] : ((int) Rake::query()->max('priority_number') + 1);
         $rake->loading_date = isset($validated['loading_date']) ? $validated['loading_date'] : null;
         $rake->rake_type = $validated['rake_type'] ?? null;

@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import type { InertiaFormProps } from '@inertiajs/react';
 import { router, useForm } from '@inertiajs/react';
 import { FileText, Plus } from 'lucide-react';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 
 export interface SidingOption {
     id: number;
@@ -31,7 +31,7 @@ export interface PowerPlantOption {
 export interface IndentCreatePrefill {
     siding_id?: number;
     rake_number?: string;
-    rake_serial_number?: string;
+    rake_serial_number?: string | null;
     expected_loading_date?: string | null;
     demanded_stock?: string;
     total_units?: number;
@@ -170,8 +170,7 @@ function fieldsFromPrefill(
         siding_id:
             prefill.siding_id !== undefined ? String(prefill.siding_id) : '',
         rake_number: prefill.rake_number ?? '',
-        rake_serial_number:
-            prefill.rake_serial_number ?? prefill.rake_number ?? '',
+        rake_serial_number: prefill.rake_serial_number ?? '',
         expected_loading_date: prefill.expected_loading_date ?? '',
         demanded_stock: prefill.demanded_stock ?? '',
         total_units:
@@ -224,8 +223,6 @@ function IndentCreateFormFields({
         () => mergeIndentFieldMessages(form.errors, fieldErrorOverrides),
         [form.errors, fieldErrorOverrides],
     );
-    const rakeSerialTouchedRef = useRef(false);
-
     return (
         <>
             {serverErrorBanner ? (
@@ -241,9 +238,9 @@ function IndentCreateFormFields({
                 <CardHeader>
                     <CardTitle className="text-base">Rake details</CardTitle>
                     <CardDescription>
-                        Siding, rake identifiers, stock and quantities, destination, and
-                        e-demand date. All fields in this section are required. A linked rake
-                        is created right after saving.
+                        Siding, rake sequence, optional rake number, stock and quantities,
+                        destination, and e-demand date. Required fields are marked with *.
+                        A linked rake is created right after saving.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -276,33 +273,29 @@ function IndentCreateFormFields({
                             required
                             placeholder="e.g. Rake Sq. Number"
                             value={form.data.rake_number}
-                            onChange={(e) => {
-                                const v = e.target.value;
-                                form.setData({
-                                    ...form.data,
-                                    rake_number: v,
-                                    rake_serial_number: rakeSerialTouchedRef.current
-                                        ? form.data.rake_serial_number
-                                        : v,
-                                });
-                            }}
+                            onChange={(e) =>
+                                form.setData('rake_number', e.target.value)
+                            }
                         />
                         <InputError message={errors.rake_number} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="rake_serial_number">Rake number *</Label>
+                        <Label htmlFor="rake_serial_number">
+                            Rake number{' '}
+                            <span className="text-muted-foreground font-normal">
+                                (optional)
+                            </span>
+                        </Label>
                         <Input
                             id="rake_serial_number"
-                            required
-                            placeholder="e.g. same as rake sequence"
+                            placeholder="Leave blank if not applicable"
                             value={form.data.rake_serial_number}
-                            onChange={(e) => {
-                                rakeSerialTouchedRef.current = true;
+                            onChange={(e) =>
                                 form.setData(
                                     'rake_serial_number',
                                     e.target.value,
-                                );
-                            }}
+                                )
+                            }
                         />
                         <InputError message={errors.rake_serial_number} />
                     </div>
