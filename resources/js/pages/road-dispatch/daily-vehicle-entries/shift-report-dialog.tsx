@@ -24,6 +24,8 @@ interface ShiftReportShiftRow {
     total: number;
     completed: number;
     pending: number;
+    /** Sum of gross_wt for non-completed rows (no net until tare). */
+    in_progress_gross_mt: number;
     net_weight_mt: number;
 }
 
@@ -34,6 +36,7 @@ interface ShiftReportDay {
         total: number;
         completed: number;
         pending: number;
+        in_progress_gross_mt: number;
         net_weight_mt: number;
     };
 }
@@ -209,7 +212,8 @@ export default function ShiftReportDialog({
                     <DialogTitle>Shift report</DialogTitle>
                     <DialogDescription>
                         By day (newest first) and shift: entry counts, pending
-                        rows, and net weight (MT) from completed trips only.
+                        rows, in-progress gross (MT) before tare, and net weight
+                        (MT) from completed trips only.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -328,6 +332,9 @@ export default function ShiftReportDialog({
                                         Pending
                                     </th>
                                     <th className="px-3 py-2 text-right font-medium">
+                                        In progress (gross MT)
+                                    </th>
+                                    <th className="px-3 py-2 text-right font-medium">
                                         Net wt (MT)
                                     </th>
                                 </tr>
@@ -336,7 +343,7 @@ export default function ShiftReportDialog({
                                 {payload == null || payload.days.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={6}
+                                            colSpan={7}
                                             className="px-3 py-8 text-center text-muted-foreground"
                                         >
                                             {loading
@@ -378,6 +385,11 @@ export default function ShiftReportDialog({
                                                     </td>
                                                     <td className="px-3 py-2 text-right tabular-nums">
                                                         {formatNetWeightMt(
+                                                            s.in_progress_gross_mt,
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right tabular-nums">
+                                                        {formatNetWeightMt(
                                                             s.net_weight_mt,
                                                         )}
                                                     </td>
@@ -404,6 +416,11 @@ export default function ShiftReportDialog({
                                                 </td>
                                                 <td className="px-3 py-2 text-right tabular-nums">
                                                     {formatNetWeightMt(
+                                                        t.in_progress_gross_mt,
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    {formatNetWeightMt(
                                                         t.net_weight_mt,
                                                     )}
                                                 </td>
@@ -415,20 +432,38 @@ export default function ShiftReportDialog({
                             </tbody>
                         </table>
                         {payload != null && payload.days.length > 0 && (
-                            <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/20 px-3 py-2 text-sm">
-                                <span className="text-muted-foreground">
-                                    Total net (MT) — range (completed only):
-                                </span>
-                                <span className="font-semibold tabular-nums">
-                                    {formatNetWeightMt(
-                                        payload.days.reduce(
-                                            (sum, d) =>
-                                                sum +
-                                                d.day_total.net_weight_mt,
-                                            0,
-                                        ),
-                                    )}
-                                </span>
+                            <div className="flex flex-col items-end gap-2 border-t bg-muted/20 px-3 py-2 text-sm sm:flex-row sm:flex-wrap sm:justify-end">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-muted-foreground">
+                                        Total in progress (gross MT) — range:
+                                    </span>
+                                    <span className="font-semibold tabular-nums">
+                                        {formatNetWeightMt(
+                                            payload.days.reduce(
+                                                (sum, d) =>
+                                                    sum +
+                                                    d.day_total
+                                                        .in_progress_gross_mt,
+                                                0,
+                                            ),
+                                        )}
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-muted-foreground">
+                                        Total net (MT) — range (completed only):
+                                    </span>
+                                    <span className="font-semibold tabular-nums">
+                                        {formatNetWeightMt(
+                                            payload.days.reduce(
+                                                (sum, d) =>
+                                                    sum +
+                                                    d.day_total.net_weight_mt,
+                                                0,
+                                            ),
+                                        )}
+                                    </span>
+                                </div>
                             </div>
                         )}
                     </div>

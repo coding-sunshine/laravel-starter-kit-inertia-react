@@ -145,8 +145,9 @@ final readonly class DailyVehicleEntryService
      * Road dispatch shift completion report: every calendar day in range (newest first), shifts 1–3 + day totals.
      * Counts all operators (no created_by filter). Only {@see DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH}.
      * {@see net_weight_mt} sums {@see DailyVehicleEntry::$net_wt} for {@see status} {@code completed} only.
+     * {@see in_progress_gross_mt} sums {@see DailyVehicleEntry::$gross_wt} for non-completed rows (e.g. draft, before tare).
      *
-     * @return array{days: list<array{date: string, shifts: list<array{shift: int, total: int, completed: int, pending: int, net_weight_mt: float}>, day_total: array{total: int, completed: int, pending: int, net_weight_mt: float}>}>}
+     * @return array{days: list<array{date: string, shifts: list<array{shift: int, total: int, completed: int, pending: int, in_progress_gross_mt: float, net_weight_mt: float}>, day_total: array{total: int, completed: int, pending: int, in_progress_gross_mt: float, net_weight_mt: float}>}>}
      */
     public function getShiftReportRows(int $sidingId, string $from, string $to): array
     {
@@ -158,13 +159,13 @@ final readonly class DailyVehicleEntryService
             ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
             ->whereBetween('entry_date', [$fromCarbon->toDateString(), $toCarbon->toDateString()])
             ->selectRaw(
-                'entry_date, shift, count(*) as total, sum(case when status = ? then 1 else 0 end) as completed, sum(case when status = ? then coalesce(net_wt, 0) else 0 end) as net_weight_mt',
-                ['completed', 'completed']
+                'entry_date, shift, count(*) as total, sum(case when status = ? then 1 else 0 end) as completed, sum(case when status = ? then coalesce(net_wt, 0) else 0 end) as net_weight_mt, sum(case when status != ? then coalesce(gross_wt, 0) else 0 end) as in_progress_gross_mt',
+                ['completed', 'completed', 'completed']
             )
             ->groupBy('entry_date', 'shift')
             ->get();
 
-        /** @var array<string, array{total: int, completed: int, net_weight_mt: float}> $map */
+        /** @var array<string, array{total: int, completed: int, net_weight_mt: float, in_progress_gross_mt: float}> $map */
         $map = [];
         foreach ($aggregates as $row) {
             $dateValue = $row->entry_date;
@@ -176,6 +177,7 @@ final readonly class DailyVehicleEntryService
                 'total' => (int) $row->total,
                 'completed' => (int) $row->completed,
                 'net_weight_mt' => round((float) ($row->net_weight_mt ?? 0), 2),
+                'in_progress_gross_mt' => round((float) ($row->in_progress_gross_mt ?? 0), 2),
             ];
         }
 
@@ -186,22 +188,26 @@ final readonly class DailyVehicleEntryService
             $dayTotal = 0;
             $dayCompleted = 0;
             $dayNetWeight = 0.0;
+            $dayInProgressGross = 0.0;
             for ($shift = 1; $shift <= 3; $shift++) {
                 $key = $dateStr.'|'.$shift;
                 $total = $map[$key]['total'] ?? 0;
                 $completed = $map[$key]['completed'] ?? 0;
                 $pending = $total - $completed;
                 $netWeight = $map[$key]['net_weight_mt'] ?? 0.0;
+                $inProgressGross = $map[$key]['in_progress_gross_mt'] ?? 0.0;
                 $shiftRows[] = [
                     'shift' => $shift,
                     'total' => $total,
                     'completed' => $completed,
                     'pending' => $pending,
+                    'in_progress_gross_mt' => round((float) $inProgressGross, 2),
                     'net_weight_mt' => round((float) $netWeight, 2),
                 ];
                 $dayTotal += $total;
                 $dayCompleted += $completed;
                 $dayNetWeight += (float) $netWeight;
+                $dayInProgressGross += (float) $inProgressGross;
             }
             $dayPending = $dayTotal - $dayCompleted;
             $days[] = [
@@ -211,6 +217,7 @@ final readonly class DailyVehicleEntryService
                     'total' => $dayTotal,
                     'completed' => $dayCompleted,
                     'pending' => $dayPending,
+                    'in_progress_gross_mt' => round($dayInProgressGross, 2),
                     'net_weight_mt' => round($dayNetWeight, 2),
                 ],
             ];
