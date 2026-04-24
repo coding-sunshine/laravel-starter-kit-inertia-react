@@ -27,7 +27,12 @@ final class UpdateManualRakeWeighmentRequest extends FormRequest
     }
 
     /**
-     * @return array{total_net_weight_mt: float, from_station: string|null, to_station: string|null, priority_number: string|null}
+     * @return array{
+     *     total_net_weight_mt: float,
+     *     from_station: string|null,
+     *     to_station: string|null,
+     *     priority_number?: string|null
+     * }
      */
     public function updatePayload(): array
     {
@@ -42,11 +47,16 @@ final class UpdateManualRakeWeighmentRequest extends FormRequest
             return $t === '' ? null : $t;
         };
 
-        return [
+        $payload = [
             'total_net_weight_mt' => (float) $validated['total_net_weight_mt'],
             'from_station' => $emptyToNull($validated['from_station'] ?? null),
             'to_station' => $emptyToNull($validated['to_station'] ?? null),
-            'priority_number' => $emptyToNull($validated['priority_number'] ?? null),
         ];
+
+        if ($this->has('priority_number')) {
+            $payload['priority_number'] = $emptyToNull($validated['priority_number'] ?? null);
+        }
+
+        return $payload;
     }
 }

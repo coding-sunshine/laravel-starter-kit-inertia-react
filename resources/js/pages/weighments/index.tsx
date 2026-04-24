@@ -111,7 +111,6 @@ export default function WeighmentsIndex({ tableData }: Props) {
         total_net_weight_mt: '',
         from_station: '',
         to_station: '',
-        priority_number: '',
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -140,7 +139,6 @@ export default function WeighmentsIndex({ tableData }: Props) {
             siding: { code: row.siding_code, name: row.siding_name },
             destination: row.destination,
             destination_code: row.rake_destination_code,
-            priority_number: row.rake_priority_number,
         });
 
         manualForm.setData({
@@ -148,7 +146,6 @@ export default function WeighmentsIndex({ tableData }: Props) {
             total_net_weight_mt: row.latest_total_net_weight_mt ?? '',
             from_station: hasWeighment ? (row.latest_from_station ?? '') : rakeManualDefaults.from_station,
             to_station: hasWeighment ? (row.latest_to_station ?? '') : rakeManualDefaults.to_station,
-            priority_number: hasWeighment ? (row.latest_priority_number ?? '') : rakeManualDefaults.priority_number,
         });
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -226,7 +223,6 @@ export default function WeighmentsIndex({ tableData }: Props) {
             total_net_weight_mt: manualForm.data.total_net_weight_mt,
             from_station: manualForm.data.from_station,
             to_station: manualForm.data.to_station,
-            priority_number: manualForm.data.priority_number,
         });
 
         const finish = (): void => {
@@ -784,16 +780,6 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                                 id="hub-manual-to"
                                                 value={manualForm.data.to_station}
                                                 onChange={(e) => manualForm.setData('to_station', e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="md:col-span-2">
-                                            <Label htmlFor="hub-manual-priority">Priority number</Label>
-                                            <Input
-                                                id="hub-manual-priority"
-                                                value={manualForm.data.priority_number}
-                                                onChange={(e) =>
-                                                    manualForm.setData('priority_number', e.target.value)
-                                                }
                                             />
                                         </div>
                                     </div>
