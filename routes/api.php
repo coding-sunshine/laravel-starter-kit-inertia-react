@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\Dashboard\MobileDashboardController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\IndentController;
+use App\Http\Controllers\Api\V1\PowerPlantApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptUploadController;
 use App\Http\Controllers\Api\V1\RakeController;
@@ -67,6 +68,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('weighments/template-xlsx', [RakeWeighmentWorkflowApiController::class, 'downloadTemplateXlsx'])->name('weighments.template-xlsx');
 
         Route::get('sidings', [SidingController::class, 'index'])->name('sidings.index');
+        Route::get('power-plants', [PowerPlantApiController::class, 'index'])->name('power-plants.index');
 
         // Siding vehicle dispatches
         Route::get('siding-vehicle-dispatches', [SidingVehicleDispatchController::class, 'index'])->name('siding-vehicle-dispatches.index');
