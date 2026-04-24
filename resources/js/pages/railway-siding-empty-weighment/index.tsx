@@ -27,6 +27,7 @@ import { Calendar, Download, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
+import { nowTo12hParts, sheetDateAnd12hToReachedAtLocalString } from './reached-at-time';
 
 /** “Add 5 rows” adds one editable draft plus this many non-interactive rows under it. */
 const PLAIN_ROWS_AFTER_ADD_FIVE = 4;
@@ -123,7 +124,6 @@ function buildLocalDraftEntry(
     entryDate: string,
     shift: number,
 ): EmptyWeighmentEntry {
-    const nowIso = new Date().toISOString();
     return {
         id,
         siding_id: siding.id,
@@ -133,8 +133,8 @@ function buildLocalDraftEntry(
         vehicle_no: null,
         transport_name: null,
         tare_wt_two: null,
-        reached_at: nowIso,
-        created_at: nowIso,
+        reached_at: sheetDateAnd12hToReachedAtLocalString(entryDate, nowTo12hParts()),
+        created_at: new Date().toISOString(),
         status: 'draft',
         inline_submitted_at: null,
     };

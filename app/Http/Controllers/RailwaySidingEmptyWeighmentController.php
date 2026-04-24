@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
 use App\Models\SidingShift;
+use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,7 @@ use Throwable;
 final class RailwaySidingEmptyWeighmentController extends Controller
 {
     public function __construct(
+        private DailyVehicleEntryService $service,
         private ShiftValidationService $shiftValidation
     ) {}
 
@@ -218,11 +220,17 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             'transport_name' => 'nullable|string|max:255',
             'tare_wt_two' => 'nullable|numeric|min:0',
             'status' => 'nullable|in:draft,completed',
+            'reached_at' => 'required|date',
             'inline_submit' => 'sometimes|boolean',
         ]);
 
         $inlineSubmit = $request->boolean('inline_submit');
         unset($data['inline_submit']);
+
+        $this->assertReachedAtDateMatchesEntryDate(
+            (string) $data['reached_at'],
+            (string) $data['entry_date'],
+        );
 
         if ($isShiftRestrictedUser) {
             $data['siding_id'] = $firstAssignment->siding_id;
@@ -248,7 +256,6 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             ...$data,
             'entry_type' => DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT,
             'status' => $shouldAutoComplete ? 'completed' : ($data['status'] ?? 'draft'),
-            'reached_at' => now(),
             'created_by' => auth()->id(),
         ]);
 
@@ -286,11 +293,21 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             'transport_name' => 'nullable|string|max:255',
             'tare_wt_two' => 'nullable|numeric|min:0',
             'status' => 'nullable|in:draft,completed',
+            'reached_at' => 'sometimes|date',
             'inline_submit' => 'sometimes|boolean',
         ]);
 
         $inlineSubmit = $request->boolean('inline_submit');
         unset($data['inline_submit']);
+
+        if (array_key_exists('reached_at', $data) && is_string($data['reached_at']) && $data['reached_at'] !== '') {
+            $this->assertReachedAtDateMatchesEntryDate(
+                (string) $data['reached_at'],
+                $this->formatEntryDateYmd($entry)
+            );
+        } else {
+            unset($data['reached_at']);
+        }
 
         $vehicleNo = mb_trim((string) ($data['vehicle_no'] ?? $entry->vehicle_no ?? ''));
         $tareWtTwo = (float) ($data['tare_wt_two'] ?? $entry->tare_wt_two ?? 0);
@@ -707,5 +724,37 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             'nextShiftStartAt' => $nextStart?->toIso8601String(),
             'now' => $now->toIso8601String(),
         ];
+    }
+
+    private function formatEntryDateYmd(DailyVehicleEntry $entry): string
+    {
+        $d = $entry->entry_date;
+
+        if ($d instanceof Carbon) {
+            return $d->format('Y-m-d');
+        }
+
+        return Carbon::parse((string) $d)->format('Y-m-d');
+    }
+
+    /**
+     * The calendar day of {@see $reachedAt} (app timezone) must match the shift sheet's {@see $entryDateYmd}.
+     */
+    private function assertReachedAtDateMatchesEntryDate(string $reachedAt, string $entryDateYmd): void
+    {
+        $tz = config('app.timezone') ?: 'UTC';
+        try {
+            $reached = Carbon::parse($reachedAt, $tz);
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'reached_at' => 'Invalid arrival time.',
+            ]);
+        }
+        $entryDay = Carbon::parse($entryDateYmd, $tz)->format('Y-m-d');
+        if ($reached->format('Y-m-d') !== $entryDay) {
+            throw ValidationException::withMessages([
+                'reached_at' => 'Arrival time must fall on the sheet date.',
+            ]);
+        }
     }
 }
