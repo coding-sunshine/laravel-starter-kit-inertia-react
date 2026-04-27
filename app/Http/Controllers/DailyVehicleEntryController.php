@@ -11,6 +11,7 @@ use App\Models\StockLedger;
 use App\Models\VehicleWorkorder;
 use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
+use App\Support\RoadDispatchShiftReport;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -165,6 +167,17 @@ final class DailyVehicleEntryController extends Controller
 
         $sidings = $sidingsOrdered;
 
+        $shiftReportSidings = [];
+        if ($user?->access_to_siding_shift_data) {
+            $shiftReportSidings = RoadDispatchShiftReport::orderedReportSidings()
+                ->map(fn (Siding $s): array => [
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'code' => $s->code,
+                ])
+                ->all();
+        }
+
         return Inertia::render('road-dispatch/daily-vehicle-entries/index', [
             'entries' => $entries->values()->all(),
             'date' => $date,
@@ -181,6 +194,7 @@ final class DailyVehicleEntryController extends Controller
             'timeEditableShift' => $timeEditableShift,
             'shiftGraceEndsAtIso' => $shiftGraceEndsAtIso,
             'showCreatedByColumn' => $user?->canViewAllRoadDispatchDailyVehicleEntries() ?? false,
+            'shiftReportSidings' => $shiftReportSidings,
         ]);
     }
 
@@ -278,6 +292,62 @@ final class DailyVehicleEntryController extends Controller
         ]);
     }
 
+    public function shiftReport(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->access_to_siding_shift_data, 403);
+
+        $validated = $request->validate([
+            'siding_id' => 'required|integer|exists:sidings,id',
+            'from' => 'required|date_format:Y-m-d',
+            'to' => 'required|date_format:Y-m-d|after_or_equal:from',
+        ]);
+
+        $from = Carbon::parse($validated['from'])->startOfDay();
+        $to = Carbon::parse($validated['to'])->startOfDay();
+        $spanDays = (int) $from->diffInDays($to) + 1;
+        if ($spanDays > RoadDispatchShiftReport::MAX_SPAN_DAYS) {
+            throw ValidationException::withMessages([
+                'to' => __('The date range may not exceed :days days.', ['days' => RoadDispatchShiftReport::MAX_SPAN_DAYS]),
+            ]);
+        }
+
+        $siding = Siding::query()->findOrFail((int) $validated['siding_id']);
+        if (! RoadDispatchShiftReport::isAllowedSidingCode((string) $siding->code)) {
+            abort(403, 'This siding is not available for shift report.');
+        }
+
+        try {
+            $report = $this->service->getShiftReportRows(
+                (int) $siding->id,
+                $from->toDateString(),
+                $to->toDateString()
+            );
+        } catch (Throwable $e) {
+            Log::error('Shift report failed', [
+                'exception' => $e,
+                'siding_id' => $siding->id,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to load shift report.',
+            ], 500);
+        }
+
+        return response()->json([
+            'siding' => [
+                'id' => $siding->id,
+                'name' => $siding->name,
+                'code' => $siding->code,
+            ],
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'days' => $report['days'],
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
@@ -307,11 +377,17 @@ final class DailyVehicleEntryController extends Controller
             'challan_mode' => 'nullable|in:offline,online',
             'status' => 'nullable|in:draft,completed',
             'remarks' => 'nullable|string|max:2000',
+            'reached_at' => 'required|date',
             'inline_submit' => 'sometimes|boolean',
         ]);
 
         $inlineSubmit = $request->boolean('inline_submit');
         unset($data['inline_submit']);
+
+        $this->assertReachedAtDateMatchesEntryDate(
+            (string) $data['reached_at'],
+            (string) $data['entry_date']
+        );
 
         if ($isShiftRestrictedUser) {
             $data['siding_id'] = $firstAssignment->siding_id;
@@ -381,12 +457,22 @@ final class DailyVehicleEntryController extends Controller
             'challan_mode' => 'nullable|in:offline,online',
             'status' => 'nullable|in:draft,completed',
             'remarks' => 'nullable|string|max:2000',
+            'reached_at' => 'sometimes|date',
             'inline_submit' => 'sometimes|boolean',
         ]);
 
         $inlineSubmit = $request->boolean('inline_submit');
 
         unset($data['inline_submit']);
+
+        if (array_key_exists('reached_at', $data) && is_string($data['reached_at']) && $data['reached_at'] !== '') {
+            $this->assertReachedAtDateMatchesEntryDate(
+                (string) $data['reached_at'],
+                $this->formatEntryDateYmd($entry)
+            );
+        } else {
+            unset($data['reached_at']);
+        }
 
         $this->service->updateEntry($entry, $data);
 
@@ -886,5 +972,37 @@ final class DailyVehicleEntryController extends Controller
             'nextShiftStartAt' => $nextStart?->toIso8601String(),
             'now' => $now->toIso8601String(),
         ];
+    }
+
+    private function formatEntryDateYmd(DailyVehicleEntry $entry): string
+    {
+        $d = $entry->entry_date;
+
+        if ($d instanceof Carbon) {
+            return $d->format('Y-m-d');
+        }
+
+        return Carbon::parse((string) $d)->format('Y-m-d');
+    }
+
+    /**
+     * The calendar day of {@see $reachedAt} (app timezone) must match the shift sheet's {@see $entryDateYmd}.
+     */
+    private function assertReachedAtDateMatchesEntryDate(string $reachedAt, string $entryDateYmd): void
+    {
+        $tz = config('app.timezone') ?: 'UTC';
+        try {
+            $reached = Carbon::parse($reachedAt, $tz);
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'reached_at' => 'Invalid arrival time.',
+            ]);
+        }
+        $entryDay = Carbon::parse($entryDateYmd, $tz)->format('Y-m-d');
+        if ($reached->format('Y-m-d') !== $entryDay) {
+            throw ValidationException::withMessages([
+                'reached_at' => 'Arrival time must fall on the sheet date.',
+            ]);
+        }
     }
 }

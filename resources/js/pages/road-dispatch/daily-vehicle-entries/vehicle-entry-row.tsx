@@ -12,6 +12,11 @@ import {
   grossDisplayFromMt,
   parseGrossInputToMt,
 } from './gross-weight-input';
+import {
+  type Meridiem,
+  reachedAtIsoTo12hParts,
+  sheetDateAnd12hToReachedAtLocalString,
+} from './reached-at-time';
 
 export interface DailyVehicleEntry {
   id: number;
@@ -121,6 +126,11 @@ type InlineFormState = {
   challan_mode: string;
   status: string;
   remarks: string;
+  /** 1–12 as string (Select values) */
+  reached_hour: string;
+  /** 0–59 */
+  reached_minute: string;
+  reached_meridiem: Meridiem;
 };
 
 function mergeVehicleHints(
@@ -145,6 +155,7 @@ function mergeVehicleHints(
 }
 
 function entryToFormState(entry: DailyVehicleEntry): InlineFormState {
+  const p = reachedAtIsoTo12hParts(entry.reached_at);
   return {
     e_challan_no: entry.e_challan_no || '',
     vehicle_no: entry.vehicle_no || '',
@@ -157,6 +168,9 @@ function entryToFormState(entry: DailyVehicleEntry): InlineFormState {
     challan_mode: entry.challan_mode || 'online',
     status: entry.status || 'draft',
     remarks: entry.remarks || '',
+    reached_hour: String(p.hour),
+    reached_minute: String(p.minute),
+    reached_meridiem: p.meridiem,
   };
 }
 
@@ -182,6 +196,99 @@ function formatChallanModeLabel(mode: string | null): string {
 function formatCreatorLabel(entry: DailyVehicleEntry): string {
   const name = entry.creator?.name?.trim();
   return name && name.length > 0 ? name : '—';
+}
+
+const HOUR_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i);
+
+/** Matches Submit — visible yellow ring when tabbing into arrival time selects. */
+const YELLOW_TAB_FOCUS_RING_CLASS =
+  'focus-visible:ring-4 focus-visible:ring-yellow-600 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+
+function buildReachedAtFromForm(fd: InlineFormState, sheetYmd: string): string {
+  const hour = Math.min(12, Math.max(1, parseInt(fd.reached_hour, 10) || 1));
+  const minute = Math.min(59, Math.max(0, parseInt(fd.reached_minute, 10) || 0));
+  return sheetDateAnd12hToReachedAtLocalString(sheetYmd, {
+    hour,
+    minute,
+    meridiem: fd.reached_meridiem,
+  });
+}
+
+type ReachedAt12hFieldsProps = {
+  formData: Pick<InlineFormState, 'reached_hour' | 'reached_minute' | 'reached_meridiem'>;
+  canUpdate: boolean;
+  onChange: (field: 'reached_hour' | 'reached_minute' | 'reached_meridiem', value: string) => void;
+  sheetDateYmd: string;
+  compact?: boolean;
+};
+
+function ReachedAt12hFields({ formData, canUpdate, onChange, sheetDateYmd, compact = true }: ReachedAt12hFieldsProps) {
+  return (
+    <div
+      className={compact ? 'flex flex-wrap items-center gap-1' : 'flex flex-wrap items-end gap-2'}
+    >
+      <span className="text-[10px] text-muted-foreground tabular-nums" title="Sheet date (not editable)">
+        {sheetDateYmd}
+      </span>
+      <Select
+        value={formData.reached_hour}
+        disabled={!canUpdate}
+        onValueChange={(v) => onChange('reached_hour', v)}
+      >
+        <SelectTrigger
+          className={`${compact ? 'h-8 w-[4.5rem] text-xs px-1' : 'h-9 w-[4.5rem] text-sm'} ${YELLOW_TAB_FOCUS_RING_CLASS}`}
+        >
+          <SelectValue placeholder="Hr" />
+        </SelectTrigger>
+        <SelectContent>
+          {HOUR_OPTIONS.map((h) => (
+            <SelectItem key={h} value={String(h)} className="text-xs">
+              {h}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <span className="text-muted-foreground text-xs">:</span>
+      <Select
+        value={formData.reached_minute}
+        disabled={!canUpdate}
+        onValueChange={(v) => onChange('reached_minute', v)}
+      >
+        <SelectTrigger
+          className={`${compact ? 'h-8 w-[4.5rem] text-xs px-1' : 'h-9 w-[4.5rem] text-sm'} ${YELLOW_TAB_FOCUS_RING_CLASS}`}
+        >
+          <SelectValue placeholder="Min" />
+        </SelectTrigger>
+        <SelectContent className="max-h-48">
+          {MINUTE_OPTIONS.map((m) => (
+            <SelectItem key={m} value={String(m)} className="text-xs">
+              {String(m).padStart(2, '0')}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={formData.reached_meridiem}
+        disabled={!canUpdate}
+        onValueChange={(v) => onChange('reached_meridiem', v as Meridiem)}
+      >
+        <SelectTrigger
+          className={`${compact ? 'h-8 w-[3.5rem] text-xs px-1' : 'h-9 w-14 text-sm'} ${YELLOW_TAB_FOCUS_RING_CLASS}`}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="AM" className="text-xs">
+            AM
+          </SelectItem>
+          <SelectItem value="PM" className="text-xs">
+            PM
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 interface VehicleEntryRowProps {
@@ -260,6 +367,7 @@ function VehicleEntryRow({
     entry.tare_wt,
     entry.net_wt,
     entry.wb_no,
+    entry.reached_at,
   ]);
 
   useEffect(() => {
@@ -343,6 +451,7 @@ function VehicleEntryRow({
             challan_mode: dataToSave.challan_mode || null,
             status: dataToSave.status || 'draft',
             remarks: dataToSave.remarks.trim() || null,
+            reached_at: buildReachedAtFromForm(dataToSave, date),
           };
           if (options?.inlineSubmit) {
             storeBody.inline_submit = true;
@@ -359,11 +468,15 @@ function VehicleEntryRow({
             credentials: 'include',
           });
         } else {
+          // Strip 12h parts; `reached_at` is sent as combined datetime.
+          const { reached_hour, reached_minute, reached_meridiem, ...patchRest } = dataToSave;
           const body: Record<string, unknown> = {
-            ...dataToSave,
+            ...patchRest,
             gross_wt: grossMt,
             tare_wt: numOrNull(dataToSave.tare_wt),
+            reached_at: buildReachedAtFromForm(dataToSave, date),
           };
+          void [reached_hour, reached_minute, reached_meridiem];
           if (options?.inlineSubmit) {
             body.inline_submit = true;
           }
@@ -532,6 +645,7 @@ function VehicleEntryRow({
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: true,
     });
   };
 
@@ -564,8 +678,7 @@ function VehicleEntryRow({
   const focusWithinCellClass =
     'focus-within:bg-green-100 focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-inset dark:focus-within:bg-green-950/30';
   const interactiveCellClass = `px-2 py-3 border-t border-r border-gray-300 min-h-[4rem] ${focusWithinCellClass}`;
-  const submitButtonFocusClass =
-    'focus-visible:ring-4 focus-visible:ring-yellow-600 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+  const submitButtonFocusClass = YELLOW_TAB_FOCUS_RING_CLASS;
   const deleteButtonFocusClass =
     'focus-visible:ring-4 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
@@ -594,7 +707,9 @@ function VehicleEntryRow({
             </TableCell>
             <TableCell className={`${readOnlyClass} font-medium text-blue-600 text-right`}>{formatEntryNetMt(entry)}</TableCell>
             <TableCell className={readOnlyClass}>{entry.wb_no?.trim() || '—'}</TableCell>
-            <TableCell className={`${readOnlyClass} text-gray-600 whitespace-nowrap`}>{formatDateTime(entry.reached_at)}</TableCell>
+            <TableCell className={`${readOnlyClass} text-gray-600 whitespace-nowrap`} title="Arrival (sheet + time)">
+              {formatDateTime(entry.reached_at)}
+            </TableCell>
             <TableCell className={readOnlyClass}>{formatChallanModeLabel(entry.challan_mode)}</TableCell>
             {showCreatedByColumn ? (
               <TableCell className={`${readOnlyClass} text-muted-foreground whitespace-nowrap`} title="Created by">
@@ -711,8 +826,17 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 text-xs text-gray-600 border-t border-r border-gray-300 min-h-[4rem] whitespace-nowrap">
-              {formatDateTime(entry.reached_at)}
+            <TableCell
+              className={`${interactiveCellClass} align-top !min-h-[4.5rem]`}
+              title="Arrival time (12h) — date follows sheet"
+            >
+              <ReachedAt12hFields
+                canUpdate={canUpdate}
+                formData={formData}
+                sheetDateYmd={date}
+                onChange={(field, v) => updateField(field, v)}
+                compact
+              />
             </TableCell>
 
             <TableCell className={interactiveCellClass}>
@@ -883,6 +1007,17 @@ function VehicleEntryRow({
                   disabled={!canUpdate}
                   onChange={(e) => updateField('wb_no', e.target.value)}
                   placeholder="Weighbridge slip / ref"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Arrival time (12-hour clock; sheet date {date})
+                </label>
+                <ReachedAt12hFields
+                  canUpdate={canUpdate}
+                  formData={formData}
+                  sheetDateYmd={date}
+                  onChange={(field, v) => updateField(field, v)}
                 />
               </div>
               <div className="col-span-2">

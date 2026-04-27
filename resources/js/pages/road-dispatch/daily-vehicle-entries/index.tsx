@@ -25,6 +25,8 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar, Download, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { nowTo12hParts, sheetDateAnd12hToReachedAtLocalString } from './reached-at-time';
+import ShiftReportDialog from './shift-report-dialog';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
 
@@ -154,7 +156,7 @@ function buildLocalDraftEntry(
         gross_wt: null,
         tare_wt: null,
         tare_wt_two: null,
-        reached_at: new Date().toISOString(),
+        reached_at: sheetDateAnd12hToReachedAtLocalString(entryDate, nowTo12hParts()),
         wb_no: null,
         d_challan_no: null,
         challan_mode: 'online',
@@ -215,6 +217,8 @@ interface Props {
     timeEditableShift?: number | null;
     /** ISO end of extended window (nominal end + grace) for {@see timeEditableShift}. */
     shiftGraceEndsAtIso?: string | null;
+    /** PKUR / KURWA / DUMK sidings for shift report; empty when user lacks access. */
+    shiftReportSidings?: { id: number; name: string; code: string }[];
 }
 
 interface InertiaAuthPageProps {
@@ -222,6 +226,7 @@ interface InertiaAuthPageProps {
         user?: {
             id?: number;
             name?: string;
+            access_to_siding_shift_data?: boolean;
         } | null;
     };
 }
@@ -251,12 +256,17 @@ export default function DailyVehicleEntriesIndex({
     shiftLock = null,
     timeEditableShift = null,
     shiftGraceEndsAtIso = null,
+    shiftReportSidings = [],
 }: Props) {
     const page = usePage<InertiaAuthPageProps>();
     const canCreate = useCan('sections.railway_siding_record_data.create');
     const canUpdate = useCan('sections.railway_siding_record_data.update');
     const canDelete = useCan('sections.railway_siding_record_data.delete');
     const canExport = useCan('sections.railway_siding_record_data.view');
+
+    const showShiftReport =
+        page.props.auth?.user?.access_to_siding_shift_data === true &&
+        shiftReportSidings.length > 0;
 
     const isShiftLocked = !!shiftLock?.isLocked && !canBypassShiftLock;
 
@@ -274,6 +284,7 @@ export default function DailyVehicleEntriesIndex({
     );
     const [isExporting, setIsExporting] = useState(false);
     const [hourlyOpen, setHourlyOpen] = useState(false);
+    const [shiftReportOpen, setShiftReportOpen] = useState(false);
     const [hourlyLoading, setHourlyLoading] = useState(false);
     const [hourlyError, setHourlyError] = useState<string | null>(null);
     const [hourlyLastUpdatedIso, setHourlyLastUpdatedIso] = useState<
@@ -916,6 +927,19 @@ export default function DailyVehicleEntriesIndex({
                                 >
                                     Hourly record
                                 </Button>
+                                {showShiftReport && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            setShiftReportOpen(true)
+                                        }
+                                        className="flex items-center gap-2"
+                                        data-pan="daily-vehicle-entries-shift-report"
+                                    >
+                                        Shift report
+                                    </Button>
+                                )}
                             </div>
                         )}
                         {restrictToAssignedShift && (
@@ -956,6 +980,19 @@ export default function DailyVehicleEntriesIndex({
                                 >
                                     Hourly record
                                 </Button>
+                                {showShiftReport && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            setShiftReportOpen(true)
+                                        }
+                                        className="flex items-center gap-2"
+                                        data-pan="daily-vehicle-entries-shift-report"
+                                    >
+                                        Shift report
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -1096,6 +1133,14 @@ export default function DailyVehicleEntriesIndex({
                     }
                 />
             </div>
+
+            {showShiftReport && (
+                <ShiftReportDialog
+                    open={shiftReportOpen}
+                    onOpenChange={setShiftReportOpen}
+                    sidings={shiftReportSidings}
+                />
+            )}
 
             <Dialog open={hourlyOpen} onOpenChange={setHourlyOpen}>
                 <DialogContent className="sm:max-w-2xl">

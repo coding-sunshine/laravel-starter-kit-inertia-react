@@ -320,6 +320,7 @@ return [
         'road-dispatch.daily-vehicle-entries.destroy' => 'sections.railway_siding_record_data.delete',
         'road-dispatch.daily-vehicle-entries.complete' => 'sections.railway_siding_record_data.update',
         'road-dispatch.daily-vehicle-entries.export' => 'sections.railway_siding_record_data.view',
+        'road-dispatch.daily-vehicle-entries.shift-report' => 'sections.railway_siding_record_data.view',
         'road-dispatch.vehicle-workorders.lookup' => 'sections.railway_siding_record_data.view',
         'road-dispatch.arrivals.index' => 'sections.railway_siding_record_data.view',
         'road-dispatch.arrivals.create' => 'sections.railway_siding_record_data.create',

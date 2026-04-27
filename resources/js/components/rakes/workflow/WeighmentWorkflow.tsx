@@ -59,14 +59,12 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
         total_net_weight_mt: '',
         from_station: '',
         to_station: '',
-        priority_number: '',
     });
 
     const editManualForm = useForm({
         total_net_weight_mt: '',
         from_station: '',
         to_station: '',
-        priority_number: '',
     });
 
     const latestWeighment = useMemo(() => {
@@ -84,7 +82,6 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
         const f = manualWeighmentFieldsFromRake(rake);
         manualForm.setData('from_station', f.from_station);
         manualForm.setData('to_station', f.to_station);
-        manualForm.setData('priority_number', f.priority_number);
     }, [rake.id]); // eslint-disable-line react-hooks/exhaustive-deps -- prefill when rake id changes only
 
     useEffect(() => {
@@ -98,10 +95,6 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                     : '',
             from_station: latestWeighment.from_station ?? '',
             to_station: latestWeighment.to_station ?? '',
-            priority_number:
-                latestWeighment.priority_number != null && latestWeighment.priority_number !== ''
-                    ? String(latestWeighment.priority_number)
-                    : '',
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server sends updated weighment
     }, [latestWeighment?.id, isPendingDocument, latestWeighment?.total_weight_mt]);
@@ -406,17 +399,6 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                                         disabled={disabled}
                                     />
                                     <InputError message={editManualForm.errors.to_station} />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <Label htmlFor="edit_priority_number">Priority number</Label>
-                                    <Input
-                                        id="edit_priority_number"
-                                        name="priority_number"
-                                        value={editManualForm.data.priority_number}
-                                        onChange={(e) => editManualForm.setData('priority_number', e.target.value)}
-                                        disabled={disabled}
-                                    />
-                                    <InputError message={editManualForm.errors.priority_number} />
                                 </div>
                             </div>
                             <div className="flex justify-end">

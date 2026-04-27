@@ -86,7 +86,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: true),
-            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: false, filterable: false),
+            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: true, filterable: false),
             new Column(
                 id: 'indent_number',
                 label: 'Priority number',
@@ -161,7 +161,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
             if ($sidingIds === []) {
                 $query->whereRaw('0 = 1');
             } else {
-                $query->whereIn('siding_id', $sidingIds);
+                $query->whereIn($query->qualifyColumn('siding_id'), $sidingIds);
             }
         }
 
@@ -195,6 +195,10 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     {
         return [
             'rake_number',
+            AllowedSort::callback('rake_serial_number', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $query->orderBy($query->qualifyColumn('rake_serial_number'), $direction);
+            }),
             AllowedSort::callback('indent_number', static function (Builder $query, bool $descending, string $_property): void {
                 $direction = $descending ? 'desc' : 'asc';
                 $rakesTable = $query->getModel()->getTable();
@@ -359,22 +363,24 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
             return;
         }
 
+        $sidingIdColumn = $query->qualifyColumn('siding_id');
+
         if ($operator === 'in') {
             $ids = array_map(static fn (string $v): int => (int) $v, $values);
-            $query->whereIn('siding_id', $ids);
+            $query->whereIn($sidingIdColumn, $ids);
 
             return;
         }
 
         if ($operator === 'not_in') {
             $ids = array_map(static fn (string $v): int => (int) $v, $values);
-            $query->whereNotIn('siding_id', $ids);
+            $query->whereNotIn($sidingIdColumn, $ids);
 
             return;
         }
 
         if ($operator === 'eq') {
-            $query->where('siding_id', (int) $values[0]);
+            $query->where($sidingIdColumn, (int) $values[0]);
 
             return;
         }

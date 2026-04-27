@@ -1,9 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Pencil, Trash2, X } from 'lucide-react';
+import {
+  type Meridiem,
+  reachedAtIsoTo12hParts,
+  sheetDateAnd12hToReachedAtLocalString,
+} from './reached-at-time';
 
 export interface EmptyWeighmentEntry {
   id: number;
@@ -40,6 +46,11 @@ type InlineFormState = {
   transport_name: string;
   tare_wt_two: string;
   status: string;
+  /** 1–12 as string (Select values) */
+  reached_hour: string;
+  /** 0–59 */
+  reached_minute: string;
+  reached_meridiem: Meridiem;
 };
 
 function tareDigitsOnly(value: string): string {
@@ -82,6 +93,7 @@ function parseTareInputToMt(value: string): number | null {
 }
 
 function entryToFormState(entry: EmptyWeighmentEntry): InlineFormState {
+  const p = reachedAtIsoTo12hParts(entry.reached_at);
   return {
     vehicle_no: entry.vehicle_no || '',
     transport_name: entry.transport_name || '',
@@ -92,7 +104,128 @@ function entryToFormState(entry: EmptyWeighmentEntry): InlineFormState {
           )
         : '',
     status: entry.status || 'draft',
+    reached_hour: String(p.hour),
+    reached_minute: String(p.minute).padStart(2, '0'),
+    reached_meridiem: p.meridiem,
   };
+}
+
+const HOUR_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i);
+
+const YELLOW_TAB_FOCUS_RING_CLASS =
+  'focus-visible:ring-4 focus-visible:ring-yellow-600 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+
+function buildReachedAtFromForm(fd: InlineFormState, sheetYmd: string): string {
+  const hour = Math.min(12, Math.max(1, parseInt(fd.reached_hour, 10) || 1));
+  const minute = Math.min(59, Math.max(0, parseInt(fd.reached_minute, 10) || 0));
+  return sheetDateAnd12hToReachedAtLocalString(sheetYmd, {
+    hour,
+    minute,
+    meridiem: fd.reached_meridiem,
+  });
+}
+
+type ReachedAt12hFieldsProps = {
+  formData: Pick<InlineFormState, 'reached_hour' | 'reached_minute' | 'reached_meridiem'>;
+  canUpdate: boolean;
+  onChange: (field: 'reached_hour' | 'reached_minute' | 'reached_meridiem', value: string) => void;
+  sheetDateYmd: string;
+  compact?: boolean;
+};
+
+/** Modal: wider triggers + tight padding override `SelectTrigger`’s `px-3`/`gap-2` so values aren’t clipped. */
+const REACHED_AT_MODAL_TRIGGER_HOUR_MIN =
+  'h-9 w-[5.5rem] min-w-[5.5rem] shrink-0 px-1.5 text-sm gap-1';
+const REACHED_AT_MODAL_TRIGGER_MERIDIEM = 'h-9 w-16 min-w-16 shrink-0 px-1.5 text-sm gap-1';
+
+function ReachedAt12hFields({
+  formData,
+  canUpdate,
+  onChange,
+  sheetDateYmd,
+  compact = true,
+}: ReachedAt12hFieldsProps) {
+  return (
+    <div
+      className={compact ? 'flex flex-wrap items-center gap-1' : 'flex flex-wrap items-end gap-2 w-full min-w-0'}
+    >
+      <span
+        className={`text-muted-foreground tabular-nums ${compact ? 'text-[10px]' : 'shrink-0 text-xs'}`}
+        title="Sheet date (not editable)"
+      >
+        {sheetDateYmd}
+      </span>
+      <Select
+        value={formData.reached_hour}
+        disabled={!canUpdate}
+        onValueChange={(v) => onChange('reached_hour', v)}
+      >
+        <SelectTrigger
+          className={
+            compact
+              ? `h-8 w-[4.5rem] text-xs px-1 ${YELLOW_TAB_FOCUS_RING_CLASS}`
+              : `${REACHED_AT_MODAL_TRIGGER_HOUR_MIN} ${YELLOW_TAB_FOCUS_RING_CLASS}`
+          }
+        >
+          <SelectValue placeholder="Hr" />
+        </SelectTrigger>
+        <SelectContent>
+          {HOUR_OPTIONS.map((h) => (
+            <SelectItem key={h} value={String(h)} className="text-xs">
+              {h}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <span className="text-muted-foreground text-xs">:</span>
+      <Select
+        value={formData.reached_minute}
+        disabled={!canUpdate}
+        onValueChange={(v) => onChange('reached_minute', v)}
+      >
+        <SelectTrigger
+          className={
+            compact
+              ? `h-8 w-[4.5rem] text-xs px-1 ${YELLOW_TAB_FOCUS_RING_CLASS}`
+              : `${REACHED_AT_MODAL_TRIGGER_HOUR_MIN} ${YELLOW_TAB_FOCUS_RING_CLASS}`
+          }
+        >
+          <SelectValue placeholder="Min" />
+        </SelectTrigger>
+        <SelectContent className="max-h-48">
+          {MINUTE_OPTIONS.map((m) => (
+            <SelectItem key={m} value={String(m)} className="text-xs">
+              {String(m).padStart(2, '0')}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={formData.reached_meridiem}
+        disabled={!canUpdate}
+        onValueChange={(v) => onChange('reached_meridiem', v as Meridiem)}
+      >
+        <SelectTrigger
+          className={
+            compact
+              ? `h-8 w-[3.5rem] text-xs px-1 ${YELLOW_TAB_FOCUS_RING_CLASS}`
+              : `${REACHED_AT_MODAL_TRIGGER_MERIDIEM} ${YELLOW_TAB_FOCUS_RING_CLASS}`
+          }
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="AM" className="text-xs">
+            AM
+          </SelectItem>
+          <SelectItem value="PM" className="text-xs">
+            PM
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 type VehicleLookupResponse = {
@@ -263,7 +396,7 @@ export default function VehicleEntryRow({
       const wasTareFocused = tareFocusedRef.current;
       const tareCommitted = wasTareFocused
         ? digitsToTareDisplay(tareDigitsLocalRef.current)
-        : formDataRef.current.tare_wt_two;
+        : formData.tare_wt_two;
       if (wasTareFocused) {
         tareFocusedRef.current = false;
         setIsTareFocused(false);
@@ -271,7 +404,8 @@ export default function VehicleEntryRow({
         setTareDigitsLocal(tareDigitsOnly(tareCommitted));
       }
 
-      const dataToSave = { ...formDataRef.current, tare_wt_two: tareCommitted };
+      // Use `formData` (state), not only `formDataRef`, so hour/min/AM-PM always match the last render (ref can lag by one effect tick).
+      const dataToSave: InlineFormState = { ...formData, tare_wt_two: tareCommitted };
       const tareMt = parseTareInputToMt(dataToSave.tare_wt_two);
 
       try {
@@ -286,6 +420,7 @@ export default function VehicleEntryRow({
             transport_name: dataToSave.transport_name.trim() || null,
             tare_wt_two: tareMt,
             status: dataToSave.status || 'draft',
+            reached_at: buildReachedAtFromForm(dataToSave, date),
           };
           if (options?.inlineSubmit) {
             storeBody.inline_submit = true;
@@ -303,12 +438,16 @@ export default function VehicleEntryRow({
             credentials: 'include',
           });
         } else {
+          const { reached_hour, reached_minute, reached_meridiem, ...patchRest } = dataToSave;
           const body: Record<string, unknown> = {
+            ...patchRest,
             vehicle_no: dataToSave.vehicle_no.trim() || null,
             transport_name: dataToSave.transport_name.trim() || null,
             tare_wt_two: tareMt,
             status: dataToSave.status || 'draft',
+            reached_at: buildReachedAtFromForm(dataToSave, date),
           };
+          void [reached_hour, reached_minute, reached_meridiem];
           if (options?.inlineSubmit) {
             body.inline_submit = true;
           }
@@ -375,7 +514,17 @@ export default function VehicleEntryRow({
         setIsSaving(false);
       }
     },
-    [canUpdate, date, entry.id, entry.siding_id, isLocalDraft, onEntryDeleted, onEntryUpdated, shift],
+    [
+      canUpdate,
+      date,
+      entry.id,
+      entry.siding_id,
+      formData,
+      isLocalDraft,
+      onEntryDeleted,
+      onEntryUpdated,
+      shift,
+    ],
   );
 
   const shouldShowDeleteButton = () => {
@@ -454,6 +603,7 @@ export default function VehicleEntryRow({
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: true,
     });
   };
 
@@ -561,8 +711,23 @@ export default function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 text-xs text-gray-600 border-t border-r border-gray-300 min-h-[4rem] whitespace-nowrap">
-              {entryTime ? formatDateTime(entryTime) : '—'}
+            <TableCell
+              className={`px-2 py-3 border-t border-r border-gray-300 min-h-[4rem] align-top !min-h-[4.5rem] ${!canUpdate ? 'text-muted-foreground' : ''}`}
+              title="Entry time (12h) — date follows sheet"
+            >
+              {canUpdate ? (
+                <ReachedAt12hFields
+                  canUpdate={canUpdate}
+                  formData={formData}
+                  sheetDateYmd={date}
+                  onChange={(field, v) => updateField(field, v)}
+                  compact
+                />
+              ) : entryTime ? (
+                <span className="text-xs text-gray-600 whitespace-nowrap">{formatDateTime(entryTime)}</span>
+              ) : (
+                '—'
+              )}
             </TableCell>
 
             <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
@@ -585,7 +750,7 @@ export default function VehicleEntryRow({
                   <Button
                     type="button"
                     size="sm"
-                    className="h-8 text-xs"
+                    className={`h-8 text-xs ${YELLOW_TAB_FOCUS_RING_CLASS}`}
                     disabled={isSaving}
                     onClick={() => void save({ inlineSubmit: true })}
                   >
@@ -688,7 +853,17 @@ export default function VehicleEntryRow({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Entry time</label>
-                <p className="text-sm text-muted-foreground">{entryTime ? formatDateTime(entryTime) : '—'}</p>
+                {canUpdate ? (
+                  <ReachedAt12hFields
+                    canUpdate={canUpdate}
+                    formData={formData}
+                    sheetDateYmd={date}
+                    onChange={(field, v) => updateField(field, v)}
+                    compact={false}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">{entryTime ? formatDateTime(entryTime) : '—'}</p>
+                )}
               </div>
             </div>
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\DataTables;
 
+use App\Models\Indent;
 use App\Models\Rake;
 use App\Models\RrDocument;
 use App\Models\Siding;
@@ -24,6 +25,8 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
         public int $id,
         public string $rake_number,
         public ?string $rake_serial_number,
+        /** `indents.indent_number` when rake is linked to an indent. */
+        public ?string $indent_number,
         public ?string $loading_date,
         public ?int $siding_id,
         public ?string $siding_code,
@@ -59,6 +62,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             id: $model->id,
             rake_number: $model->rake_number,
             rake_serial_number: $model->rake_serial_number,
+            indent_number: self::nullableTrimmedString($model->indent?->indent_number),
             loading_date: $model->loading_date?->toDateString(),
             siding_id: $model->siding_id,
             siding_code: $model->siding?->code,
@@ -90,7 +94,14 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: true),
-            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: false, filterable: false),
+            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: true, filterable: false),
+            new Column(
+                id: 'indent_number',
+                label: 'Priority number',
+                type: 'text',
+                sortable: true,
+                filterable: false,
+            ),
             new Column(
                 id: 'siding_code',
                 label: 'Siding',
@@ -120,6 +131,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             ->withCount('diverrtDestinations')
             ->with([
                 'siding:id,code,name',
+                'indent:id,indent_number',
                 'rrDocument:id,rake_id,diverrt_destination_id,rr_number,rr_received_date,rr_weight_mt,document_status,has_discrepancy,discrepancy_details,fnr,from_station_code,to_station_code,freight_total,distance_km,commodity_code,commodity_description,invoice_number,invoice_date,rate,class',
             ]);
 
@@ -139,7 +151,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             if ($sidingIds === []) {
                 $query->whereRaw('0 = 1');
             } else {
-                $query->whereIn('siding_id', $sidingIds);
+                $query->whereIn($query->qualifyColumn('siding_id'), $sidingIds);
             }
         }
 
@@ -174,7 +186,22 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
     public static function tableAllowedSorts(): array
     {
         return [
-            'rake_number',
+            AllowedSort::callback('rake_number', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $query->orderBy($query->qualifyColumn('rake_number'), $direction);
+            }),
+            AllowedSort::callback('rake_serial_number', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $query->orderBy($query->qualifyColumn('rake_serial_number'), $direction);
+            }),
+            AllowedSort::callback('indent_number', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $rakesTable = $query->getModel()->getTable();
+                $indentsTable = (new Indent)->getTable();
+                $query->leftJoin($indentsTable, "{$indentsTable}.id", '=', "{$rakesTable}.indent_id")
+                    ->select("{$rakesTable}.*")
+                    ->orderBy("{$indentsTable}.indent_number", $direction);
+            }),
             AllowedSort::callback('siding_code', static function (Builder $query, bool $descending, string $_property): void {
                 $direction = $descending ? 'desc' : 'asc';
                 $rakesTable = $query->getModel()->getTable();
@@ -290,22 +317,24 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             return;
         }
 
+        $sidingIdColumn = $query->qualifyColumn('siding_id');
+
         if ($operator === 'in') {
             $ids = array_map(static fn (string $v): int => (int) $v, $values);
-            $query->whereIn('siding_id', $ids);
+            $query->whereIn($sidingIdColumn, $ids);
 
             return;
         }
 
         if ($operator === 'not_in') {
             $ids = array_map(static fn (string $v): int => (int) $v, $values);
-            $query->whereNotIn('siding_id', $ids);
+            $query->whereNotIn($sidingIdColumn, $ids);
 
             return;
         }
 
         if ($operator === 'eq') {
-            $query->where('siding_id', (int) $values[0]);
+            $query->where($sidingIdColumn, (int) $values[0]);
 
             return;
         }
@@ -315,5 +344,16 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             $sidingQuery->where('code', 'LIKE', '%'.$needle.'%')
                 ->orWhere('name', 'LIKE', '%'.$needle.'%');
         });
+    }
+
+    private static function nullableTrimmedString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $s = mb_trim((string) $value);
+
+        return $s === '' ? null : $s;
     }
 }

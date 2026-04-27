@@ -10,6 +10,8 @@ use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
 use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -47,7 +49,7 @@ final readonly class DailyVehicleEntryService
 
     public function createEntry(array $data): DailyVehicleEntry
     {
-        
+
         $entryType = $data['entry_type'] ?? DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
 
         return DailyVehicleEntry::create([
@@ -60,7 +62,7 @@ final readonly class DailyVehicleEntryService
 
     public function updateEntry(DailyVehicleEntry $entry, array $data): DailyVehicleEntry
     {
-        
+
         $oldStatus = $entry->status;
         $newStatus = $this->determineStatus($entry, $data);
 
@@ -140,6 +142,91 @@ final readonly class DailyVehicleEntryService
     }
 
     /**
+     * Road dispatch shift completion report: every calendar day in range (newest first), shifts 1–3 + day totals.
+     * Counts all operators (no created_by filter). Only {@see DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH}.
+     * {@see net_weight_mt} sums {@see DailyVehicleEntry::$net_wt} for {@see status} {@code completed} only.
+     * {@see in_progress_gross_mt} sums {@see DailyVehicleEntry::$gross_wt} for non-completed rows (e.g. draft, before tare).
+     *
+     * @return array{days: list<array{date: string, shifts: list<array{shift: int, total: int, completed: int, pending: int, in_progress_gross_mt: float, net_weight_mt: float}>, day_total: array{total: int, completed: int, pending: int, in_progress_gross_mt: float, net_weight_mt: float}>}>}
+     */
+    public function getShiftReportRows(int $sidingId, string $from, string $to): array
+    {
+        $fromCarbon = Carbon::parse($from)->startOfDay();
+        $toCarbon = Carbon::parse($to)->startOfDay();
+
+        $aggregates = DailyVehicleEntry::query()
+            ->where('siding_id', $sidingId)
+            ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+            ->whereBetween('entry_date', [$fromCarbon->toDateString(), $toCarbon->toDateString()])
+            ->selectRaw(
+                'entry_date, shift, count(*) as total, sum(case when status = ? then 1 else 0 end) as completed, sum(case when status = ? then coalesce(net_wt, 0) else 0 end) as net_weight_mt, sum(case when status != ? then coalesce(gross_wt, 0) else 0 end) as in_progress_gross_mt',
+                ['completed', 'completed', 'completed']
+            )
+            ->groupBy('entry_date', 'shift')
+            ->get();
+
+        /** @var array<string, array{total: int, completed: int, net_weight_mt: float, in_progress_gross_mt: float}> $map */
+        $map = [];
+        foreach ($aggregates as $row) {
+            $dateValue = $row->entry_date;
+            $dateStr = $dateValue instanceof DateTimeInterface
+                ? $dateValue->format('Y-m-d')
+                : (string) $dateValue;
+            $key = $dateStr.'|'.(int) $row->shift;
+            $map[$key] = [
+                'total' => (int) $row->total,
+                'completed' => (int) $row->completed,
+                'net_weight_mt' => round((float) ($row->net_weight_mt ?? 0), 2),
+                'in_progress_gross_mt' => round((float) ($row->in_progress_gross_mt ?? 0), 2),
+            ];
+        }
+
+        $days = [];
+        for ($d = $toCarbon->copy(); $d->gte($fromCarbon); $d->subDay()) {
+            $dateStr = $d->format('Y-m-d');
+            $shiftRows = [];
+            $dayTotal = 0;
+            $dayCompleted = 0;
+            $dayNetWeight = 0.0;
+            $dayInProgressGross = 0.0;
+            for ($shift = 1; $shift <= 3; $shift++) {
+                $key = $dateStr.'|'.$shift;
+                $total = $map[$key]['total'] ?? 0;
+                $completed = $map[$key]['completed'] ?? 0;
+                $pending = $total - $completed;
+                $netWeight = $map[$key]['net_weight_mt'] ?? 0.0;
+                $inProgressGross = $map[$key]['in_progress_gross_mt'] ?? 0.0;
+                $shiftRows[] = [
+                    'shift' => $shift,
+                    'total' => $total,
+                    'completed' => $completed,
+                    'pending' => $pending,
+                    'in_progress_gross_mt' => round((float) $inProgressGross, 2),
+                    'net_weight_mt' => round((float) $netWeight, 2),
+                ];
+                $dayTotal += $total;
+                $dayCompleted += $completed;
+                $dayNetWeight += (float) $netWeight;
+                $dayInProgressGross += (float) $inProgressGross;
+            }
+            $dayPending = $dayTotal - $dayCompleted;
+            $days[] = [
+                'date' => $dateStr,
+                'shifts' => $shiftRows,
+                'day_total' => [
+                    'total' => $dayTotal,
+                    'completed' => $dayCompleted,
+                    'pending' => $dayPending,
+                    'in_progress_gross_mt' => round($dayInProgressGross, 2),
+                    'net_weight_mt' => round($dayNetWeight, 2),
+                ],
+            ];
+        }
+
+        return ['days' => $days];
+    }
+
+    /**
      * @param  string|null  $entryType  When set, export only entries of this type (e.g. 'railway_siding_empty_weighment').
      */
     public function exportEntries(string $date, int $sidingId, string $shift, ?string $entryType = null, ?int $createdByUserId = null): string
@@ -164,33 +251,34 @@ final readonly class DailyVehicleEntryService
         if ($entry->entry_type !== DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH) {
             return;
         }
-    
+
         $grossWt = (float) ($entry->gross_wt ?? 0);
         $tareWt = (float) ($entry->tare_wt ?? 0);
         $netWeight = round($grossWt - $tareWt, 2);
-    
+
         if ($netWeight <= 0) {
             $entry->update(['net_wt' => null]);
+
             return;
         }
-    
+
         $closingBalance = 0;
         $openingBalance = 0;
-    
+
         DB::transaction(function () use ($entry, $netWeight, &$openingBalance, &$closingBalance) {
-    
+
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $entry->siding_id)
                 ->lockForUpdate()
                 ->latest('id')
                 ->first();
-    
+
             $openingBalance = $lastLedger
                 ? (float) $lastLedger->closing_balance_mt
                 : SidingOpeningBalance::getOpeningBalanceForSiding($entry->siding_id);
-    
+
             $closingBalance = round($openingBalance + $netWeight, 2);
-    
+
             StockLedger::create([
                 'siding_id' => $entry->siding_id,
                 'transaction_type' => 'receipt',
@@ -202,24 +290,24 @@ final readonly class DailyVehicleEntryService
                 'remarks' => "Vehicle {$entry->vehicle_no} — Entry #{$entry->id}",
                 'created_by' => auth()->id(),
             ]);
-    
+
             //  use model, not query
             $entry->update(['net_wt' => $netWeight]);
         });
-    
+
         // after transaction (safe to use values now)
         $req = self::STOCK_REQUIREMENT_MT_PER_RAKE;
-    
+
         if ($req > 0) {
             $oldCapacity = (int) floor($openingBalance / $req);
             $newCapacity = (int) floor($closingBalance / $req);
-    
+
             if ($newCapacity > 0 && $newCapacity > $oldCapacity) {
-    
+
                 $sidingName = Siding::query()
                     ->whereKey($entry->siding_id)
                     ->value('name');
-    
+
                 DB::afterCommit(function () use ($entry, $closingBalance, $newCapacity, $req, $sidingName) {
                     NotifySuperAdmins::dispatch(
                         \App\Notifications\StockCapacityIncreasedNotification::class,
@@ -267,29 +355,29 @@ final readonly class DailyVehicleEntryService
     ): void {
         $grossWt = (float) ($entry->gross_wt ?? 0);
         $tareWt = (float) ($entry->tare_wt ?? 0);
-    
+
         $newWeight = round($grossWt - $tareWt, 2);
         $delta = round($newWeight - $oldWeight, 2);
-    
+
         // nothing changed
-        if ($delta == 0) {
+        if ($delta === 0) {
             return;
         }
-    
+
         DB::transaction(function () use ($entry, $delta, $newWeight) {
-    
+
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $entry->siding_id)
                 ->lockForUpdate()
                 ->latest('id')
                 ->first();
-    
+
             $opening = $lastLedger
                 ? (float) $lastLedger->closing_balance_mt
                 : SidingOpeningBalance::getOpeningBalanceForSiding($entry->siding_id);
-    
+
             $closing = round($opening + $delta, 2);
-    
+
             StockLedger::create([
                 'siding_id' => $entry->siding_id,
                 'transaction_type' => 'correction',
@@ -301,7 +389,7 @@ final readonly class DailyVehicleEntryService
                 'remarks' => "Correction for entry #{$entry->id}",
                 'created_by' => auth()->id(),
             ]);
-    
+
             // ✅ update final value
             $entry->update(['net_wt' => $newWeight]);
         });

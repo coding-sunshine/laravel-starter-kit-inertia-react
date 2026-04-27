@@ -14,7 +14,7 @@ final readonly class UpdateManualRakeWeighment
     public function __construct(private UpdateStockLedger $updateStockLedger) {}
 
     /**
-     * @param  array{total_net_weight_mt: float|string, from_station: string|null, to_station: string|null, priority_number: string|null}  $data
+     * @param  array{total_net_weight_mt: float|string, from_station: string|null, to_station: string|null, priority_number?: string|null}  $data
      */
     public function handle(Rake $rake, RakeWeighment $weighment, array $data, int $userId): RakeWeighment
     {
@@ -46,12 +46,17 @@ final readonly class UpdateManualRakeWeighment
 
             $deltaMt = round($newNet - $oldNet, 2);
 
-            $weighment->update([
+            $update = [
                 'from_station' => $data['from_station'] ?? null,
                 'to_station' => $data['to_station'] ?? null,
-                'priority_number' => $data['priority_number'] ?? null,
                 'total_net_weight_mt' => $newNet,
-            ]);
+            ];
+
+            if (array_key_exists('priority_number', $data)) {
+                $update['priority_number'] = $data['priority_number'];
+            }
+
+            $weighment->update($update);
 
             $rake->update([
                 'loaded_weight_mt' => $newNet,
