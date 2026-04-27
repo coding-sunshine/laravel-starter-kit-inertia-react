@@ -7,10 +7,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\UpdateVehicleDispatchRequest;
 use App\Models\DispatchReport;
 use App\Models\Siding;
+use App\Models\User;
 use App\Models\VehicleDispatch;
+use Carbon\Carbon;
 use DateTimeImmutable;
 use DOMDocument;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,7 +41,9 @@ final class VehicleDispatchController extends Controller
 
     public function index(Request $request): Response|RedirectResponse
     {
+        /** @var User|null $user */
         $user = Auth::user();
+        abort_unless($user instanceof User, 403);
 
         // Default to current date when no date filters are provided
         if (! $request->date && ! $request->date_from && ! $request->date_to) {
@@ -48,9 +53,7 @@ final class VehicleDispatchController extends Controller
             ));
         }
 
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = $this->sidingIdsForUser($user);
 
         $query = VehicleDispatch::with(['siding', 'creator'])
             ->whereIn('siding_id', $sidingIds)
@@ -63,13 +66,6 @@ final class VehicleDispatchController extends Controller
             ->orderBy('created_at', 'desc');
 
         $vehicleDispatches = $query->paginate(25);
-        // dd($vehicleDispatches);
-        $availableDates = VehicleDispatch::selectRaw('DATE(issued_on) as date')
-            ->whereNotNull('issued_on')
-            ->whereIn('siding_id', $sidingIds)
-            ->distinct()
-            ->orderBy('date', 'desc')
-            ->pluck('date');
 
         // Get available sidings for import dropdown
         $sidings = Siding::query()
@@ -77,23 +73,10 @@ final class VehicleDispatchController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
-        $dispatchReportsQuery = DispatchReport::with('siding')
-            ->whereIn('siding_id', $sidingIds)
-            ->when($request->date_from, fn ($q) => $q->whereDate('issued_on', '>=', $request->date_from))
-            ->when($request->date_to, fn ($q) => $q->whereDate('issued_on', '<=', $request->date_to))
-            ->when($request->get('date') && ! $request->date_from && ! $request->date_to, fn ($q) => $q->whereDate('issued_on', $request->get('date')))
-            ->orderBy('issued_on', 'desc')
-            ->orderBy('id', 'asc');
-
-        $dispatchReports = $dispatchReportsQuery->get();
-
-        // dd($dispatchReports);
         return Inertia::render('VehicleDispatch/Index', [
             'vehicleDispatches' => $vehicleDispatches,
-            'dispatchReports' => $dispatchReports,
             'filters' => $request->only(['date_from', 'date_to', 'date', 'permit_no', 'truck_regd_no']),
             'tab' => $request->get('tab', 'main-data'),
-            'availableDates' => $availableDates,
             'sidings' => $sidings,
             'preview_data' => $request->session()->get('preview_data', []),
             'import_target_date' => $request->session()->get('import_target_date'),
@@ -104,6 +87,79 @@ final class VehicleDispatchController extends Controller
                 'import_errors' => $request->session()->get('import_errors'),
             ],
         ]);
+    }
+
+    /**
+     * Paginated dispatch reports (DPR) for the vehicle dispatch UI. JSON only — not loaded on Inertia index.
+     */
+    public function dprData(Request $request): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+
+        $validated = $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'date' => ['sometimes', 'nullable', 'date'],
+            'date_from' => ['sometimes', 'nullable', 'date'],
+            'date_to' => ['sometimes', 'nullable', 'date'],
+        ]);
+
+        $sidingIds = $this->sidingIdsForUser($user);
+
+        $query = DispatchReport::with('siding')
+            ->whereIn('siding_id', $sidingIds)
+            ->when($validated['date_from'] ?? null, fn ($q, $value) => $q->whereDate('issued_on', '>=', $value))
+            ->when($validated['date_to'] ?? null, fn ($q, $value) => $q->whereDate('issued_on', '<=', $value))
+            ->when(
+                ($validated['date'] ?? null) && empty($validated['date_from']) && empty($validated['date_to']),
+                fn ($q) => $q->whereDate('issued_on', (string) $validated['date'])
+            )
+            ->orderBy('issued_on', 'desc')
+            ->orderBy('id', 'asc');
+
+        $page = (int) ($validated['page'] ?? 1);
+        $paginator = $query->paginate(25, ['*'], 'page', $page);
+        $paginator->setPath(route('vehicle-dispatch.dpr-data', [], false));
+
+        return response()->json($paginator);
+    }
+
+    /**
+     * Distinct calendar days (Y-m-d) in a month that have vehicle dispatch data, for green-dot calendar hints.
+     */
+    public function calendarDays(Request $request): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+
+        $validated = $request->validate([
+            'month' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+        ]);
+
+        $sidingIds = $this->sidingIdsForUser($user);
+
+        $timezone = (string) config('app.timezone');
+        $start = Carbon::createFromFormat('Y-m', $validated['month'], $timezone)->startOfMonth()->startOfDay();
+        $end = Carbon::createFromFormat('Y-m', $validated['month'], $timezone)->endOfMonth()->endOfDay();
+
+        $driver = DB::connection()->getDriverName();
+        $dateExpr = $driver === 'sqlite' ? 'date(issued_on)' : 'DATE(issued_on)';
+
+        $days = VehicleDispatch::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('issued_on')
+            ->where('issued_on', '>=', $start)
+            ->where('issued_on', '<=', $end)
+            ->selectRaw("distinct {$dateExpr} as day")
+            ->orderBy('day')
+            ->pluck('day')
+            ->filter()
+            ->values()
+            ->all();
+
+        return response()->json(['days' => $days]);
     }
 
     public function update(UpdateVehicleDispatchRequest $request, VehicleDispatch $vehicleDispatch): RedirectResponse
@@ -277,6 +333,16 @@ final class VehicleDispatchController extends Controller
 
         return redirect()->route('vehicle-dispatch.index', ['date' => $targetDate])
             ->with('success', $success);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function sidingIdsForUser(User $user): array
+    {
+        return $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
     }
 
     private function getVehicleDispatches($request)

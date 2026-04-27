@@ -10,7 +10,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
@@ -27,8 +26,6 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowDown,
-    ArrowLeft,
-    ArrowRight,
     ArrowUp,
     BarChart3,
     Bell,
@@ -75,6 +72,9 @@ import SpeedometerGauge from '@/Components/Charts/SpeedometerGauge';
 import { SlidingNumber } from '@/components/SlidingNumber';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
+import { LoaderOverloadDashboardSection } from '@/components/dashboard/loader-overload-dashboard-section';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { laravelJsonFetch } from '@/lib/laravel-json-fetch';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
@@ -262,6 +262,7 @@ interface DateWiseDispatchData {
 
 interface RakePerformanceItem {
     id: number;
+    siding_id?: number;
     rake_number: string;
     rake_serial_number?: string | null;
     siding: string;
@@ -286,6 +287,11 @@ interface RakePerformanceItem {
         loader_operator_name?: string | null;
     }>;
 }
+
+/** List API row: no loading_minutes, no wagon_overloads, includes siding_id. */
+type RakePerformanceSummaryItem = Omit<RakePerformanceItem, 'loading_minutes' | 'wagon_overloads'> & {
+    siding_id: number;
+};
 
 interface LoaderInfo {
     id: number;
@@ -431,6 +437,75 @@ function buildDashboardGetParams(args: {
     if (currentSection) params.section = currentSection;
 
     return params;
+}
+
+function buildRakePerformanceApiSearchParams(args: {
+    filters: DashboardFilters;
+    allSidingIds: number[];
+    page?: number;
+    perPage?: number;
+    /** When set, list/detail are scoped to this siding (must be in current filter scope). */
+    sidingId?: number;
+}): string {
+    const params = buildDashboardGetParams({
+        overrides: { section: 'rake-performance' },
+        filters: args.filters,
+        currentSection: 'rake-performance',
+        allSidingIds: args.allSidingIds,
+        resolvedPeriod: args.filters.period,
+        resolvedFrom: args.filters.from,
+        resolvedTo: args.filters.to,
+    });
+    const u = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null) {
+            continue;
+        }
+        u.set(k, String(v));
+    }
+    if (args.page != null) {
+        u.set('page', String(args.page));
+    }
+    if (args.perPage != null) {
+        u.set('per_page', String(args.perPage));
+    }
+    if (args.sidingId != null && args.sidingId > 0) {
+        u.set('siding_id', String(args.sidingId));
+    }
+
+    return u.toString();
+}
+
+function buildLoaderOverloadApiSearchParams(args: {
+    filters: DashboardFilters;
+    allSidingIds: number[];
+    page?: number;
+    perPage?: number;
+}): string {
+    const params = buildDashboardGetParams({
+        overrides: { section: 'loader-overload' },
+        filters: args.filters,
+        currentSection: 'loader-overload',
+        allSidingIds: args.allSidingIds,
+        resolvedPeriod: args.filters.period,
+        resolvedFrom: args.filters.from,
+        resolvedTo: args.filters.to,
+    });
+    const u = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null) {
+            continue;
+        }
+        u.set(k, String(v));
+    }
+    if (args.page != null) {
+        u.set('page', String(args.page));
+    }
+    if (args.perPage != null) {
+        u.set('per_page', String(args.perPage));
+    }
+
+    return u.toString();
 }
 
 interface DailyRakeDetailsRow {
@@ -2274,30 +2349,19 @@ function DateWiseDispatchSection({ data }: { data: DateWiseDispatchData }) {
     );
 }
 
-function RakePerformanceSection({
-    rakes,
-    rakePenaltyScope,
-    onRakePenaltyScopeChange,
+function RakePerformanceDetailCharts({
+    r,
+    underloadThresholdPercent,
+    onUnderloadThresholdChange,
     onNavigateToLoader,
 }: {
-    rakes: RakePerformanceItem[];
-    rakePenaltyScope: 'all' | 'with_penalties';
-    onRakePenaltyScopeChange: (scope: 'all' | 'with_penalties') => void;
-    /** Second arg is the wagon chart’s underload threshold (% of CC) so loader trends can open with the same value. */
+    r: RakePerformanceItem;
+    underloadThresholdPercent: number;
+    onUnderloadThresholdChange: (v: number) => void;
     onNavigateToLoader: (loaderId: number, rakeUnderloadThresholdPercent: number) => void;
 }) {
-    const rakeOptions = useMemo(() => {
-        return rakes.map((r, i) => ({
-            idx: i,
-            label: `${r.rake_serial_number ?? r.rake_number} — ${r.siding} (${r.dispatch_date})`,
-        }));
-    }, [rakes]);
-
-    const [selectedIdx, setSelectedIdx] = useState(0);
-    const [underloadThresholdPercent, setUnderloadThresholdPercent] = useState(1);
     const [noLoaderDialogOpen, setNoLoaderDialogOpen] = useState(false);
     const [noLoaderWagonNumber, setNoLoaderWagonNumber] = useState<string | null>(null);
-    const r = rakes[selectedIdx] ?? rakes[0];
 
     const loadingHours = r.loading_minutes != null ? Math.floor(r.loading_minutes / 60) : null;
     const loadingMins = r.loading_minutes != null ? r.loading_minutes % 60 : null;
@@ -2380,78 +2444,9 @@ function RakePerformanceSection({
     const fmtMt = (n: number): string =>
         n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
-    const canPrev = selectedIdx > 0;
-    const canNext = selectedIdx < rakes.length - 1 && rakes.length > 1;
-
     return (
-        <div className="dashboard-card rounded-xl border-0 p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <SectionHeader
-                    icon={Train}
-                    title="Rake-wise performance"
-                    subtitle="Select a rake to view its details"
-                    action={
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedIdx((i) => Math.max(0, i - 1))}
-                                    disabled={!canPrev}
-                                    className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 disabled:opacity-40"
-                                    aria-label="Previous rake"
-                                >
-                                    <ArrowLeft className="size-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedIdx((i) => Math.min(rakes.length - 1, i + 1))}
-                                    disabled={!canNext}
-                                    className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 disabled:opacity-40"
-                                    aria-label="Next rake"
-                                >
-                                    <ArrowRight className="size-4" />
-                                </button>
-                            </div>
-                            <Select value={String(selectedIdx)} onValueChange={(v) => setSelectedIdx(Number(v))}>
-                                <SelectTrigger className="min-w-[200px] rounded-lg border border-gray-200 bg-white text-sm">
-                                    <SelectValue placeholder="Select rake" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {rakeOptions.map((opt) => (
-                                        <SelectItem key={opt.idx} value={String(opt.idx)}>
-                                            {opt.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select
-                                value={rakePenaltyScope}
-                                onValueChange={(v) =>
-                                    onRakePenaltyScopeChange(
-                                        v === 'with_penalties'
-                                            ? 'with_penalties'
-                                            : 'all',
-                                    )
-                                }
-                            >
-                                <SelectTrigger className="min-w-[160px] rounded-lg border border-gray-200 bg-white text-sm">
-                                    <SelectValue placeholder="Penalty scope" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        All
-                                    </SelectItem>
-                                    <SelectItem value="with_penalties">
-                                        With penalties
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    }
-                />
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
+        <div className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
                 <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
                     <p className="text-xs font-medium text-gray-600">Siding</p>
                     <p className="mt-1 font-bold text-gray-900">{r.siding}</p>
@@ -2607,13 +2602,13 @@ function RakePerformanceSection({
                             </Popover>
                             <div className="flex flex-col items-end gap-0.5">
                                 <label
-                                    htmlFor="underload-threshold"
+                                    htmlFor="rake-perf-modal-underload"
                                     className="text-[10px] font-medium leading-tight text-gray-600"
                                 >
                                     Underload threshold (% of CC)
                                 </label>
                                 <Input
-                                    id="underload-threshold"
+                                    id="rake-perf-modal-underload"
                                     type="number"
                                     inputMode="decimal"
                                     min={0}
@@ -2623,12 +2618,12 @@ function RakePerformanceSection({
                                     onChange={(e) => {
                                         const raw = e.target.value;
                                         if (raw === '') {
-                                            setUnderloadThresholdPercent(0);
+                                            onUnderloadThresholdChange(0);
                                             return;
                                         }
                                         const v = parseFloat(raw);
                                         if (!Number.isNaN(v)) {
-                                            setUnderloadThresholdPercent(Math.max(0, v));
+                                            onUnderloadThresholdChange(Math.max(0, v));
                                         }
                                     }}
                                 />
@@ -2636,7 +2631,7 @@ function RakePerformanceSection({
                         </div>
                     </div>
                     {wagonBarChartData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={260}>
+                        <ResponsiveContainer width="100%" height={400}>
                             <RechartsBarChart
                                 data={wagonBarChartData}
                                 margin={{ top: 8, right: 8, left: 8, bottom: 24 }}
@@ -2756,7 +2751,7 @@ function RakePerformanceSection({
                             </RechartsBarChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className={`flex h-[220px] flex-col items-center justify-center gap-3 rounded-xl p-6 ${r.over_load != null && r.over_load > 0 ? 'bg-[#FEF2F2]' : 'bg-gray-50'}`}>
+                        <div className={`flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-xl p-6 ${r.over_load != null && r.over_load > 0 ? 'bg-[#FEF2F2]' : 'bg-gray-50'}`}>
                             {r.over_load != null && r.over_load > 0 ? (
                                 <>
                                     <TriangleAlert className="size-10 text-red-600" aria-hidden />
@@ -2796,368 +2791,396 @@ function RakePerformanceSection({
     );
 }
 
-function LoaderOverloadSection({
-    loaders,
-    monthly,
-    loaderIdFromUrl,
-    loaderOperatorFromUrl,
-    operatorNamesForSelectedLoader,
-    underloadThresholdPercent,
-    dateRangeDescription,
-    onLoaderOverloadChange,
+/**
+ * Siding-specific display for the rake sequence column: P-/D-/K- + rake_number for known locations.
+ */
+function formatRakeSequenceForSiding(sidingName: string, rakeNumber: string): string {
+    const n = sidingName.trim().toLowerCase();
+    if (n.includes('pakur')) {
+        return `P-${rakeNumber}`;
+    }
+    if (n.includes('dumka')) {
+        return `D-${rakeNumber}`;
+    }
+    if (n.includes('kurwa') || n.includes('kurawa')) {
+        return `K-${rakeNumber}`;
+    }
+    return rakeNumber;
+}
+
+function RakePerformanceSection({
+    filters,
+    allSidingIds,
+    sidings,
+    rakePenaltyScope,
+    onRakePenaltyScopeChange,
+    onNavigateToLoader,
 }: {
-    loaders: LoaderInfo[];
-    monthly: Record<string, unknown>[];
-    loaderIdFromUrl: number | null;
-    loaderOperatorFromUrl: string | null;
-    operatorNamesForSelectedLoader: string[];
-    underloadThresholdPercent: number;
-    /** Main dashboard filter range label (rake `loading_date`). */
-    dateRangeDescription: string;
-    onLoaderOverloadChange: (patch: {
-        loader_id?: number | null;
-        loader_operator?: string | null;
-        underload_threshold?: number | null;
-    }) => void;
+    filters: DashboardFilters;
+    allSidingIds: number[];
+    /** Sidings in scope (for pills + siding_id filter). */
+    sidings: SidingOption[];
+    rakePenaltyScope: 'all' | 'with_penalties';
+    onRakePenaltyScopeChange: (scope: 'all' | 'with_penalties') => void;
+    onNavigateToLoader: (loaderId: number, rakeUnderloadThresholdPercent: number) => void;
 }) {
-    const selectedLoaderId = useMemo(() => {
-        if (loaderIdFromUrl != null && loaders.some((l) => l.id === loaderIdFromUrl)) {
-            return loaderIdFromUrl;
-        }
-        return loaders[0]?.id ?? 0;
-    }, [loaderIdFromUrl, loaders]);
-
-    const selectedLoader = loaders.find((l) => l.id === selectedLoaderId) ?? loaders[0];
-
-    useEffect(() => {
-        if (operatorNamesForSelectedLoader.length === 0 && loaderOperatorFromUrl) {
-            onLoaderOverloadChange({ loader_operator: null });
-        }
-    }, [operatorNamesForSelectedLoader.length, loaderOperatorFromUrl, onLoaderOverloadChange]);
-
-    const [underloadThresholdDraft, setUnderloadThresholdDraft] = useState(() => String(underloadThresholdPercent));
-    useEffect(() => {
-        setUnderloadThresholdDraft(String(underloadThresholdPercent));
-    }, [underloadThresholdPercent]);
-
-    const underloadThresholdDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    useEffect(
-        () => () => {
-            if (underloadThresholdDebounceRef.current !== null) {
-                clearTimeout(underloadThresholdDebounceRef.current);
-            }
-        },
-        [],
+    const filterKey = useMemo(
+        () =>
+            [
+                filters.period,
+                filters.from,
+                filters.to,
+                filters.siding_ids.join(','),
+                filters.power_plant,
+                filters.rake_number ?? '',
+                filters.rake_penalty_scope ?? 'all',
+            ].join('|'),
+        [
+            filters.period,
+            filters.from,
+            filters.to,
+            filters.siding_ids,
+            filters.power_plant,
+            filters.rake_number,
+            filters.rake_penalty_scope,
+        ],
     );
 
-    const scheduleUnderloadThresholdNavigate = useCallback(
-        (raw: string) => {
-            if (underloadThresholdDebounceRef.current !== null) {
-                clearTimeout(underloadThresholdDebounceRef.current);
-            }
-            underloadThresholdDebounceRef.current = setTimeout(() => {
-                underloadThresholdDebounceRef.current = null;
-                if (raw === '') {
-                    onLoaderOverloadChange({ underload_threshold: 1 });
-                    return;
-                }
-                const v = parseFloat(raw);
-                if (Number.isNaN(v)) {
-                    return;
-                }
-                const clamped = Math.max(0, Math.min(100, v));
-                onLoaderOverloadChange({ underload_threshold: clamped });
-            }, 400);
-        },
-        [onLoaderOverloadChange],
-    );
+    const [page, setPage] = useState(1);
+    const [selectedSidingTab, setSelectedSidingTab] = useState<'all' | number>('all');
+    const [rows, setRows] = useState<RakePerformanceSummaryItem[]>([]);
+    const [listMeta, setListMeta] = useState<{
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+    } | null>(null);
+    const [listLoading, setListLoading] = useState(true);
+    const [listError, setListError] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalRakeId, setModalRakeId] = useState<number | null>(null);
+    const [detail, setDetail] = useState<RakePerformanceItem | null>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState<string | null>(null);
+    const [modalUnderloadThreshold, setModalUnderloadThreshold] = useState(1);
 
-    const stats = useMemo(() => {
-        if (!selectedLoader) {
-            return {
-                totalWagons: 0,
-                totalOverload: 0,
-                totalUnderload: 0,
-                overloadRate: 0,
-                underloadRate: 0,
-                overloadTrend: 0,
-                underloadTrend: 0,
-            };
+    useEffect(() => {
+        setSelectedSidingTab('all');
+    }, [filterKey]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [filterKey, selectedSidingTab]);
+
+    useEffect(() => {
+        if (selectedSidingTab === 'all') {
+            return;
         }
-        const k = (suffix: string) => `loader_${selectedLoader.id}_${suffix}` as const;
-        const totalOverload = monthly.reduce((sum, m) => sum + ((m[k('overload')] as number) ?? 0), 0);
-        const totalUnderload = monthly.reduce((sum, m) => sum + ((m[k('underload')] as number) ?? 0), 0);
-        const totalWagons = monthly.reduce((sum, m) => sum + ((m[k('total')] as number) ?? 0), 0);
-        const overloadRate = totalWagons > 0 ? (totalOverload / totalWagons) * 100 : 0;
-        const underloadRate = totalWagons > 0 ? (totalUnderload / totalWagons) * 100 : 0;
-        const lastTwo = monthly.slice(-2);
-        const overloadTrend =
-            lastTwo.length === 2
-                ? ((lastTwo[1][k('overload')] as number) ?? 0) - ((lastTwo[0][k('overload')] as number) ?? 0)
-                : 0;
-        const underloadTrend =
-            lastTwo.length === 2
-                ? ((lastTwo[1][k('underload')] as number) ?? 0) - ((lastTwo[0][k('underload')] as number) ?? 0)
-                : 0;
-        return {
-            totalWagons,
-            totalOverload,
-            totalUnderload,
-            overloadRate,
-            underloadRate,
-            overloadTrend,
-            underloadTrend,
+        if (!sidings.some((s) => s.id === selectedSidingTab)) {
+            setSelectedSidingTab('all');
+        }
+    }, [sidings, selectedSidingTab]);
+
+    useEffect(() => {
+        let cancelled = false;
+        setListLoading(true);
+        setListError(null);
+        const qs = buildRakePerformanceApiSearchParams({
+            filters,
+            allSidingIds,
+            page,
+            perPage: 15,
+            sidingId: selectedSidingTab === 'all' ? undefined : selectedSidingTab,
+        });
+        laravelJsonFetch<{
+            data: RakePerformanceSummaryItem[];
+            meta: { current_page: number; last_page: number; per_page: number; total: number };
+        }>(`/dashboard/rake-performance/rakes?${qs}`)
+            .then((res) => {
+                if (!cancelled) {
+                    setRows(res.data);
+                    setListMeta(res.meta);
+                }
+            })
+            .catch((e: unknown) => {
+                if (!cancelled) {
+                    setListError(e instanceof Error ? e.message : 'Failed to load rakes');
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setListLoading(false);
+                }
+            });
+        return () => {
+            cancelled = true;
         };
-    }, [selectedLoader, monthly]);
+    }, [filterKey, allSidingIds, page, selectedSidingTab]);
 
-    const trendData = useMemo(() => {
-        if (!selectedLoader) return [];
-        return monthly.map((m) => ({
-            month: m.month as string,
-            overloaded: (m[`loader_${selectedLoader.id}_overload`] as number) ?? 0,
-            underloaded: (m[`loader_${selectedLoader.id}_underload`] as number) ?? 0,
-            total: (m[`loader_${selectedLoader.id}_total`] as number) ?? 0,
-        }));
-    }, [monthly, selectedLoader]);
+    useEffect(() => {
+        if (modalRakeId == null) {
+            setDetail(null);
+            return;
+        }
+        let cancelled = false;
+        setDetailLoading(true);
+        setDetailError(null);
+        const qs = buildRakePerformanceApiSearchParams({
+            filters,
+            allSidingIds,
+            sidingId: selectedSidingTab === 'all' ? undefined : selectedSidingTab,
+        });
+        laravelJsonFetch<{ data: RakePerformanceItem }>(`/dashboard/rake-performance/rakes/${modalRakeId}?${qs}`)
+            .then((res) => {
+                if (!cancelled) {
+                    setDetail(res.data);
+                }
+            })
+            .catch((e: unknown) => {
+                if (!cancelled) {
+                    setDetailError(e instanceof Error ? e.message : 'Failed to load');
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setDetailLoading(false);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [modalRakeId, filterKey, allSidingIds, selectedSidingTab]);
 
-    const overloadUnderloadByMonthData = useMemo(() => {
-        if (!selectedLoader) return [];
-        return monthly.map((m) => ({
-            month: m.month as string,
-            overloaded: (m[`loader_${selectedLoader.id}_overload`] as number) ?? 0,
-            underloaded: (m[`loader_${selectedLoader.id}_underload`] as number) ?? 0,
-        }));
-    }, [monthly, selectedLoader]);
+    const showSidingColumn = selectedSidingTab === 'all';
 
-    const avgOverload = useMemo(() => {
-        if (overloadUnderloadByMonthData.length === 0) return 0;
-        const sum = overloadUnderloadByMonthData.reduce((s, d) => s + d.overloaded, 0);
-        return sum / overloadUnderloadByMonthData.length;
-    }, [overloadUnderloadByMonthData]);
-
-    const avgUnderload = useMemo(() => {
-        if (overloadUnderloadByMonthData.length === 0) return 0;
-        const sum = overloadUnderloadByMonthData.reduce((s, d) => s + d.underloaded, 0);
-        return sum / overloadUnderloadByMonthData.length;
-    }, [overloadUnderloadByMonthData]);
-
-    if (!selectedLoader) return null;
-
-    const hasData = trendData.some((d) => d.total > 0 || d.overloaded > 0 || d.underloaded > 0);
+    const openRake = (id: number) => {
+        setModalRakeId(id);
+        setModalOpen(true);
+        setModalUnderloadThreshold(1);
+    };
 
     return (
         <div className="dashboard-card rounded-xl border-0 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <SectionHeader
-                    icon={AlertTriangle}
-                    title="Loader-wise overloading trends"
-                    subtitle={
-                        dateRangeDescription
-                            ? `${dateRangeDescription} (rake loading date). Monthly buckets. Operators shown only when recorded for that loader.`
-                            : 'Monthly trends by rake loading date. Operators shown only when recorded for that loader.'
-                    }
-                />
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                    <div className="flex flex-col gap-0.5">
-                        <label htmlFor="loader-trends-underload-threshold" className="text-[11px] text-gray-600">
-                            Underload threshold (% of CC)
-                        </label>
-                        <Input
-                            id="loader-trends-underload-threshold"
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            max={100}
-                            step={0.1}
-                            className="h-9 w-24 rounded-[8px] border border-gray-200 bg-white text-sm tabular-nums"
-                            value={underloadThresholdDraft}
-                            onChange={(e) => {
-                                const next = e.target.value;
-                                setUnderloadThresholdDraft(next);
-                                scheduleUnderloadThresholdNavigate(next);
-                            }}
-                            onBlur={() => {
-                                if (underloadThresholdDebounceRef.current !== null) {
-                                    clearTimeout(underloadThresholdDebounceRef.current);
-                                    underloadThresholdDebounceRef.current = null;
-                                }
-                                const raw = underloadThresholdDraft.trim();
-                                if (raw === '') {
-                                    onLoaderOverloadChange({ underload_threshold: 1 });
-                                    return;
-                                }
-                                const v = parseFloat(raw);
-                                if (Number.isNaN(v)) {
-                                    setUnderloadThresholdDraft(String(underloadThresholdPercent));
-                                    return;
-                                }
-                                const clamped = Math.max(0, Math.min(100, v));
-                                onLoaderOverloadChange({ underload_threshold: clamped });
-                            }}
-                        />
-                    </div>
-                    <Select
-                        value={String(selectedLoaderId)}
-                        onValueChange={(v) =>
-                            onLoaderOverloadChange({ loader_id: Number(v), loader_operator: null })
-                        }
-                    >
-                        <SelectTrigger className="min-w-[200px] rounded-[8px] border border-gray-200 bg-white text-sm">
-                            <SelectValue placeholder="Select loader" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {loaders.map((l) => (
-                                <SelectItem key={l.id} value={String(l.id)}>
-                                    {l.name} — {l.siding}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {operatorNamesForSelectedLoader.length > 0 && (
+                    icon={Train}
+                    title="Rake-wise performance"
+                    subtitle="Click a row to view weighment charts and details"
+                    action={
                         <Select
-                            value={loaderOperatorFromUrl ?? ALL_FILTER_VALUE}
+                            value={rakePenaltyScope}
                             onValueChange={(v) =>
-                                onLoaderOverloadChange({
-                                    loader_operator: v === ALL_FILTER_VALUE ? null : v,
-                                })
+                                onRakePenaltyScopeChange(
+                                    v === 'with_penalties' ? 'with_penalties' : 'all',
+                                )
                             }
                         >
-                            <SelectTrigger className="min-w-[160px] rounded-[8px] border border-gray-200 bg-white text-sm">
-                                <SelectValue placeholder="Operator" />
+                            <SelectTrigger className="min-w-[160px] rounded-lg border border-gray-200 bg-white text-sm">
+                                <SelectValue placeholder="Penalty scope" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value={ALL_FILTER_VALUE} className="text-xs">
-                                    All operators
-                                </SelectItem>
-                                {operatorNamesForSelectedLoader.map((name) => (
-                                    <SelectItem key={name} value={name} className="text-xs">
-                                        {name}
-                                    </SelectItem>
-                                ))}
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="with_penalties">With penalties</SelectItem>
                             </SelectContent>
                         </Select>
-                    )}
-                </div>
+                    }
+                />
             </div>
 
-            {!hasData ? (
-                <div className="mt-8 flex flex-col items-center justify-center py-12 text-center text-gray-600">
-                    <AlertTriangle className="mb-3 h-12 w-12 opacity-40" />
-                    <p className="font-medium">No overload data for this selection and date range</p>
-                </div>
-            ) : (
-                <>
-                    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                        <div className="rounded-xl border-0 bg-blue-50 p-4 shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                            <p className="text-xs font-medium text-blue-600">Total wagons loaded</p>
-                            <p className="mt-1 text-2xl font-bold tabular-nums text-blue-900">{stats.totalWagons}</p>
-                        </div>
-                        <div className="rounded-xl border-0 bg-red-50 p-4 shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                            <p className="text-xs font-medium text-red-600">Overloaded wagons</p>
-                            <p className="mt-1 text-2xl font-bold tabular-nums text-red-900">{stats.totalOverload}</p>
-                        </div>
-                        <div className="rounded-xl border-0 bg-amber-50 p-4 shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                            <p className="text-xs font-medium text-amber-800">Underloaded wagons</p>
-                            <p className="mt-1 text-2xl font-bold tabular-nums text-amber-950">{stats.totalUnderload}</p>
-                        </div>
-                        <div
-                            className={`rounded-xl border-0 p-4 shadow-sm ${stats.overloadRate > 15 ? 'bg-red-50' : stats.overloadRate > 5 ? 'bg-amber-50' : 'bg-green-50'}`}
-                            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-                        >
-                            <p
-                                className={`text-xs font-medium ${stats.overloadRate > 15 ? 'text-red-600' : stats.overloadRate > 5 ? 'text-amber-600' : 'text-green-600'}`}
-                            >
-                                Overload rate
-                            </p>
-                            <div className="mt-1 flex items-center gap-2">
-                                <span
-                                    className={`text-2xl font-bold tabular-nums ${stats.overloadRate > 15 ? 'text-red-900' : stats.overloadRate > 5 ? 'text-amber-900' : 'text-green-900'}`}
-                                >
-                                    {stats.overloadRate.toFixed(1)}%
-                                </span>
-                                {stats.overloadTrend !== 0 &&
-                                    (stats.overloadTrend > 0 ? (
-                                        <ArrowUp className="size-5 text-red-600" />
-                                    ) : (
-                                        <ArrowDown className="size-5 text-green-600" />
-                                    ))}
-                            </div>
-                        </div>
-                        <div
-                            className={`rounded-xl border-0 p-4 shadow-sm ${stats.underloadRate > 15 ? 'bg-amber-50' : stats.underloadRate > 5 ? 'bg-orange-50' : 'bg-green-50'}`}
-                            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-                        >
-                            <p
-                                className={`text-xs font-medium ${stats.underloadRate > 15 ? 'text-amber-800' : stats.underloadRate > 5 ? 'text-orange-700' : 'text-green-600'}`}
-                            >
-                                Underload rate
-                            </p>
-                            <div className="mt-1 flex items-center gap-2">
-                                <span
-                                    className={`text-2xl font-bold tabular-nums ${stats.underloadRate > 15 ? 'text-amber-950' : stats.underloadRate > 5 ? 'text-orange-900' : 'text-green-900'}`}
-                                >
-                                    {stats.underloadRate.toFixed(1)}%
-                                </span>
-                                {stats.underloadTrend !== 0 &&
-                                    (stats.underloadTrend > 0 ? (
-                                        <ArrowUp className="size-5 text-amber-700" />
-                                    ) : (
-                                        <ArrowDown className="size-5 text-green-600" />
-                                    ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                        <div>
-                            <p className="mb-2 text-xs font-medium text-gray-600">Total wagons vs overloaded / underloaded (monthly)</p>
-                            <ResponsiveContainer width="100%" height={240}>
-                                <RechartsBarChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                                    <Tooltip formatter={(v: number | undefined, name?: string) => [`${v ?? 0} wagons`, name ?? '']} />
-                                    <Legend />
-                                    <Bar dataKey="total" name="Total wagons" fill="#3B82F6" radius={[2, 2, 0, 0]} maxBarSize={22} />
-                                    <Bar dataKey="overloaded" name="Overloaded" fill="#DC2626" radius={[2, 2, 0, 0]} maxBarSize={22} />
-                                    <Bar dataKey="underloaded" name="Underloaded" fill="#D97706" radius={[2, 2, 0, 0]} maxBarSize={22} />
-                                </RechartsBarChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div>
-                            <p className="mb-2 text-xs font-medium text-gray-600">Overloaded vs underloaded wagons per month</p>
-                            <ResponsiveContainer width="100%" height={240}>
-                                <RechartsBarChart data={overloadUnderloadByMonthData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                                    <Tooltip formatter={(v: number | undefined, name?: string) => [`${v ?? 0} wagons`, name ?? '']} />
-                                    <Legend />
-                                    <ReferenceLine y={avgOverload} stroke="#9ca3af" strokeDasharray="5 5" label={{ value: 'Avg overload', position: 'insideTopRight', fill: '#6b7280', fontSize: 10 }} />
-                                    <ReferenceLine y={avgUnderload} stroke="#d6d3d1" strokeDasharray="3 3" label={{ value: 'Avg underload', position: 'insideBottomRight', fill: '#78716c', fontSize: 10 }} />
-                                    <Bar dataKey="overloaded" name="Overloaded" fill="#DC2626" radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive />
-                                    <Bar dataKey="underloaded" name="Underloaded" fill="#D97706" radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive />
-                                </RechartsBarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    <p className="mt-4 text-sm text-gray-600">
-                        {selectedLoader.name}:{' '}
-                        <span className="font-semibold">{stats.overloadRate.toFixed(1)}%</span> overload rate and{' '}
-                        <span className="font-semibold">{stats.underloadRate.toFixed(1)}%</span> underload rate (share of wagons with weighment flags).
-                        {overloadUnderloadByMonthData.length > 0 && avgOverload >= 0 ? (
-                            <>
-                                {' '}
-                                Monthly averages: ~{avgOverload.toFixed(0)} overloaded, ~{avgUnderload.toFixed(0)} underloaded.
-                            </>
-                        ) : null}
-                    </p>
-                </>
+            {listError != null && (
+                <p className="mt-4 text-sm text-red-600" role="alert">
+                    {listError}
+                </p>
             )}
+
+            {sidings.length > 0 && (
+                <div className="mt-4">
+                    <p className="mb-2 text-xs font-medium text-gray-600">Siding</p>
+                    <div className="flex flex-wrap items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedSidingTab('all');
+                            }}
+                            className={
+                                'rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ' +
+                                (selectedSidingTab === 'all'
+                                    ? 'bg-[#111827] text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
+                            }
+                        >
+                            All
+                        </button>
+                        {sidings.map((s) => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                    setSelectedSidingTab(s.id);
+                                }}
+                                className={
+                                    'rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ' +
+                                    (selectedSidingTab === s.id
+                                        ? 'bg-[#111827] text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
+                                }
+                            >
+                                {s.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <div className="mt-4 overflow-x-auto">
+                {listLoading ? (
+                    <p className="py-8 text-center text-sm text-gray-600">Loading rakes…</p>
+                ) : rows.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-gray-600">No rake performance data for this range.</p>
+                ) : (
+                    <Table className="w-full min-w-0 text-xs [border-spacing:0] [&_th]:h-8 [&_th]:px-1.5 [&_th]:py-1.5 [&_td]:px-1.5 [&_td]:py-1.5 sm:[&_th]:px-2 sm:[&_td]:px-2">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="whitespace-normal sm:whitespace-nowrap">
+                                    Rake sequence
+                                </TableHead>
+                                <TableHead className="whitespace-normal sm:whitespace-nowrap">Rake number</TableHead>
+                                <TableHead>Dispatch</TableHead>
+                                {showSidingColumn && <TableHead>Siding</TableHead>}
+                                <TableHead className="text-right">Net (MT)</TableHead>
+                                <TableHead className="text-right">Pred. penalty</TableHead>
+                                <TableHead className="text-right">Actual penalty</TableHead>
+                                <TableHead className="text-right">Overload</TableHead>
+                                <TableHead className="text-right">Underload</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rows.map((row) => (
+                                <TableRow
+                                    key={row.id}
+                                    className="cursor-pointer"
+                                    onClick={() => {
+                                        openRake(row.id);
+                                    }}
+                                >
+                                    <TableCell className="font-medium [overflow-wrap:anywhere] sm:whitespace-nowrap">
+                                        {formatRakeSequenceForSiding(row.siding, row.rake_number)}
+                                    </TableCell>
+                                    <TableCell className="[overflow-wrap:anywhere] sm:whitespace-nowrap">
+                                        {row.rake_serial_number != null && String(row.rake_serial_number).trim() !== '' ? (
+                                            <span className="text-gray-700">{row.rake_serial_number}</span>
+                                        ) : (
+                                            <span className="font-medium text-yellow-600 tabular-nums">
+                                                {row.rake_number}
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="tabular-nums [overflow-wrap:anywhere] sm:whitespace-nowrap">
+                                        {row.dispatch_date}
+                                    </TableCell>
+                                    {showSidingColumn && (
+                                        <TableCell className="[overflow-wrap:anywhere] text-gray-800 sm:whitespace-nowrap">
+                                            {row.siding}
+                                        </TableCell>
+                                    )}
+                                    <TableCell className="text-right tabular-nums text-gray-900">
+                                        {row.net_weight != null ? formatWeight(row.net_weight) : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums text-gray-900">
+                                        {row.predicted_penalty_amount > 0
+                                            ? formatCurrency(row.predicted_penalty_amount)
+                                            : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums text-gray-900">
+                                        {row.actual_penalty_amount > 0
+                                            ? formatCurrency(row.actual_penalty_amount)
+                                            : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums text-red-700">
+                                        {row.over_load != null && row.over_load > 0
+                                            ? row.over_load.toLocaleString()
+                                            : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums text-amber-800">
+                                        {row.under_load != null && row.under_load > 0
+                                            ? row.under_load.toLocaleString()
+                                            : '—'}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </div>
+
+            {listMeta != null && listMeta.total > 0 && (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
+                    <p>
+                        Page {listMeta.current_page} of {listMeta.last_page} ({listMeta.total} rakes)
+                    </p>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={listMeta.current_page <= 1}
+                            onClick={() => {
+                                setPage((p) => Math.max(1, p - 1));
+                            }}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={listMeta.current_page >= listMeta.last_page}
+                            onClick={() => {
+                                setPage((p) => p + 1);
+                            }}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            <Dialog
+                open={modalOpen}
+                onOpenChange={(open) => {
+                    setModalOpen(open);
+                    if (!open) {
+                        setModalRakeId(null);
+                    }
+                }}
+            >
+                <DialogContent className="max-h-[95vh] w-[min(96vw,1400px)] max-w-[min(96vw,1400px)] overflow-y-auto sm:max-w-[min(96vw,1400px)]">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {detail != null
+                                ? `${detail.rake_serial_number ?? detail.rake_number} — ${detail.siding}`
+                                : 'Rake performance'}
+                        </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Weighment breakdown and wagon-wise overload and underload for the selected rake.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {detailLoading && <p className="text-sm text-gray-600">Loading details…</p>}
+                    {detailError != null && <p className="text-sm text-red-600">{detailError}</p>}
+                    {detail != null && !detailLoading && (
+                        <RakePerformanceDetailCharts
+                            r={detail}
+                            underloadThresholdPercent={modalUnderloadThreshold}
+                            onUnderloadThresholdChange={setModalUnderloadThreshold}
+                            onNavigateToLoader={onNavigateToLoader}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
+
 
 const SIDING_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlueLight, DASHBOARD_PALETTE.successGreenLight];
 
@@ -4339,19 +4362,48 @@ export default function Dashboard() {
     const sidingWiseMonthly = props.sidingWiseMonthly ?? [];
     const sidingRadar = props.sidingRadar ?? { sidings: [] };
     const dateWiseDispatch = props.dateWiseDispatch ?? { sidingNames: {}, dates: [] };
-    const rakePerformance = props.rakePerformance ?? [];
-    const loaderOverloadTrends = props.loaderOverloadTrends ?? { loaders: [], monthly: [] };
-    const loaderOverloadOperatorNames = useMemo(() => {
-        const list = loaderOverloadTrends.loaders;
-        if (list.length === 0) {
-            return [];
-        }
-        const lid =
-            filters.loader_id != null && list.some((l) => l.id === filters.loader_id)
-                ? filters.loader_id
-                : list[0].id;
-        return filterOptions.loaderOperatorsByLoader?.[String(lid)] ?? [];
-    }, [filters.loader_id, loaderOverloadTrends.loaders, filterOptions.loaderOperatorsByLoader]);
+    const loaderOverloadFilterKey = useMemo(
+        () =>
+            JSON.stringify({
+                period: filters.period,
+                from: filters.from,
+                to: filters.to,
+                siding_ids: filters.siding_ids,
+                power_plant: filters.power_plant,
+                rake_number: filters.rake_number,
+                loader_id: filters.loader_id,
+                loader_operator: filters.loader_operator,
+                underload_threshold: filters.underload_threshold,
+                shift: filters.shift,
+                penalty_type: filters.penalty_type,
+                rake_penalty_scope: filters.rake_penalty_scope,
+            }),
+        [
+            filters.period,
+            filters.from,
+            filters.to,
+            filters.siding_ids,
+            filters.power_plant,
+            filters.rake_number,
+            filters.loader_id,
+            filters.loader_operator,
+            filters.underload_threshold,
+            filters.shift,
+            filters.penalty_type,
+            filters.rake_penalty_scope,
+        ],
+    );
+
+    const buildLoaderOverloadApiParams = useCallback(
+        (args: { page?: number; perPage?: number }) =>
+            buildLoaderOverloadApiSearchParams({
+                filters,
+                allSidingIds,
+                page: args.page,
+                perPage: args.perPage,
+            }),
+        [filters, allSidingIds],
+    );
 
     const navigateDashboard = useCallback(
         (overrides: Record<string, unknown> = {}) => {
@@ -4371,13 +4423,6 @@ export default function Dashboard() {
             });
         },
         [filters, activeSection, allSidingIds],
-    );
-
-    const onLoaderOverloadChange = useCallback(
-        (patch: { loader_id?: number | null; loader_operator?: string | null; underload_threshold?: number | null }) => {
-            navigateDashboard({ ...patch });
-        },
-        [navigateDashboard],
     );
 
     const onRakePenaltyScopeChange = useCallback(
@@ -5495,51 +5540,24 @@ export default function Dashboard() {
                         )}
 
                         {activeSection === 'rake-performance' && canWidget('dashboard.widgets.rake_performance') && (
-                            rakePerformance.length > 0
-                                ? (
-                                    <RakePerformanceSection
-                                        rakes={rakePerformance}
-                                        rakePenaltyScope={filters.rake_penalty_scope ?? 'all'}
-                                        onRakePenaltyScopeChange={onRakePenaltyScopeChange}
-                                        onNavigateToLoader={navigateToLoaderTrends}
-                                    />
-                                )
-                                : (
-                                    <div className="dashboard-card rounded-xl border-0 p-6">
-                                        <SectionHeader icon={Train} title="Rake-wise performance" subtitle="Top dispatched rakes" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
-                                            <Train className="mb-3 h-10 w-10 opacity-30" />
-                                            <p className="text-sm font-medium">No rake performance data available</p>
-                                            <p className="mt-1 text-xs">Apply filters or wait for dispatch data.</p>
-                                        </div>
-                                    </div>
-                                )
+                            <RakePerformanceSection
+                                filters={filters}
+                                allSidingIds={allSidingIds}
+                                sidings={filteredSidings}
+                                rakePenaltyScope={filters.rake_penalty_scope ?? 'all'}
+                                onRakePenaltyScopeChange={onRakePenaltyScopeChange}
+                                onNavigateToLoader={navigateToLoaderTrends}
+                            />
                         )}
 
                         {activeSection === 'loader-overload' && canWidget('dashboard.widgets.loader_overload_trends') && (
-                            loaderOverloadTrends.loaders.length > 0
-                                ? (
-                                    <LoaderOverloadSection
-                                        loaders={loaderOverloadTrends.loaders}
-                                        monthly={loaderOverloadTrends.monthly}
-                                        loaderIdFromUrl={filters.loader_id}
-                                        loaderOperatorFromUrl={filters.loader_operator}
-                                        operatorNamesForSelectedLoader={loaderOverloadOperatorNames}
-                                        underloadThresholdPercent={filters.underload_threshold}
-                                        dateRangeDescription={mainDateRangeLabel}
-                                        onLoaderOverloadChange={onLoaderOverloadChange}
-                                    />
-                                )
-                                : (
-                                    <div className="dashboard-card rounded-xl border-0 p-6">
-                                        <SectionHeader icon={AlertTriangle} title="Loader-wise overloading trends" subtitle="Overload cases by loader" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
-                                            <AlertTriangle className="mb-3 h-10 w-10 opacity-30" />
-                                            <p className="text-sm font-medium">No loader data available</p>
-                                            <p className="mt-1 text-xs">Apply filters or wait for weighment data.</p>
-                                        </div>
-                                    </div>
-                                )
+                            <LoaderOverloadDashboardSection
+                                buildApiSearchParams={buildLoaderOverloadApiParams}
+                                defaultDetailUnderloadPercent={filters.underload_threshold}
+                                mainDateRangeLabel={mainDateRangeLabel}
+                                loaderIdFromUrl={filters.loader_id}
+                                filterKey={loaderOverloadFilterKey}
+                            />
                         )}
 
                         {activeSection === 'power-plant' && canWidget('dashboard.widgets.power_plant_dispatch_section') && (

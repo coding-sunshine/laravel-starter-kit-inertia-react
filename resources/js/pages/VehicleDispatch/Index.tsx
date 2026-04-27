@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Filter, Upload, Calendar as CalendarIcon, AlertCircle, CheckCircle, FileSpreadsheet } from 'lucide-react';
-import { format } from 'date-fns';
+import { Filter, Upload, Calendar as CalendarIcon, AlertCircle, CheckCircle, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { format, subMonths } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import type { VehicleDispatch, Filters, ImportBatchSummary } from './types';
 import { toDatetimeLocal } from './utils';
@@ -34,7 +34,6 @@ interface Props {
         }>;
     };
     filters: Filters;
-    availableDates: string[];
     sidings: Array<{
         id: number;
         name: string;
@@ -45,7 +44,6 @@ interface Props {
     vehicle_dispatch_import_skipped?: number | null;
     vehicle_dispatch_import_total_rows?: number | null;
     flash?: { success?: string };
-    dispatchReports?: DispatchReport[];
     tab?: string;
 }
 
@@ -79,9 +77,7 @@ export interface DispatchReport {
 
 export default function VehicleDispatchIndex({
     vehicleDispatches,
-    dispatchReports = [],
     filters,
-    availableDates,
     sidings,
     preview_data,
     import_target_date,
@@ -137,6 +133,62 @@ export default function VehicleDispatchIndex({
     const [dprExportSidingId, setDprExportSidingId] = useState<string>('all');
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const prevFiltersRef = useRef<Filters>(filters);
+    const [calendarDaysByMonth, setCalendarDaysByMonth] = useState<Record<string, string[]>>({});
+    const [calendarLoadingCount, setCalendarLoadingCount] = useState(0);
+    const calendarInFlightRef = useRef<Set<string>>(new Set());
+    const calendarLoadedRef = useRef<Set<string>>(new Set());
+    const [isFilterNavigating, setIsFilterNavigating] = useState(false);
+
+    const fetchCalendarMonth = useCallback(async (monthKey: string) => {
+        if (calendarLoadedRef.current.has(monthKey) || calendarInFlightRef.current.has(monthKey)) {
+            return;
+        }
+        calendarInFlightRef.current.add(monthKey);
+        setCalendarLoadingCount((c) => c + 1);
+        try {
+            const res = await fetch(
+                `/vehicle-dispatch/calendar-days?month=${encodeURIComponent(monthKey)}`,
+                {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                },
+            );
+            if (!res.ok) {
+                return;
+            }
+            const body = (await res.json()) as { days?: string[] };
+            const days = Array.isArray(body.days) ? body.days : [];
+            calendarLoadedRef.current.add(monthKey);
+            setCalendarDaysByMonth((prev) => ({ ...prev, [monthKey]: days }));
+        } finally {
+            calendarInFlightRef.current.delete(monthKey);
+            setCalendarLoadingCount((c) => Math.max(0, c - 1));
+        }
+    }, []);
+
+    const availableCalendarDates = useMemo(() => {
+        const out: Date[] = [];
+        for (const days of Object.values(calendarDaysByMonth)) {
+            for (const d of days) {
+                const [y, mo, day] = d.split('-').map(Number);
+                out.push(new Date(y, mo - 1, day));
+            }
+        }
+        return out;
+    }, [calendarDaysByMonth]);
+
+    useEffect(() => {
+        const anchor = new Date();
+        const monthKeys = [
+            format(subMonths(anchor, 2), 'yyyy-MM'),
+            format(subMonths(anchor, 1), 'yyyy-MM'),
+            format(anchor, 'yyyy-MM'),
+        ];
+        void Promise.all(monthKeys.map((m) => fetchCalendarMonth(m)));
+    }, [fetchCalendarMonth]);
 
     const coalTransportReportDate = useMemo((): string | null => {
         const sf = searchFilters;
@@ -287,9 +339,14 @@ export default function VehicleDispatchIndex({
                     params[key] = String(value);
                 }
             });
+            if (activeTab === 'dpr') {
+                params.tab = 'dpr';
+            }
             router.get('/vehicle-dispatch', params, {
                 preserveState: true,
                 preserveScroll: true,
+                onStart: () => setIsFilterNavigating(true),
+                onFinish: () => setIsFilterNavigating(false),
             });
         }, 500);
 
@@ -298,7 +355,7 @@ export default function VehicleDispatchIndex({
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [searchFilters, filters]);
+    }, [searchFilters, filters, activeTab]);
 
     const handleImport = () => {
         setIsImporting(true);
@@ -472,6 +529,12 @@ export default function VehicleDispatchIndex({
                         <CardTitle className="flex items-center gap-2">
                             <Filter className="h-5 w-5" />
                             Filters
+                            {(isFilterNavigating || calendarLoadingCount > 0) && (
+                                <Loader2
+                                    className="h-4 w-4 animate-spin text-muted-foreground"
+                                    aria-label="Loading"
+                                />
+                            )}
                         </CardTitle>
                         <CardDescription>
                             Filter vehicle dispatch records by date, shift, and other criteria
@@ -481,7 +544,14 @@ export default function VehicleDispatchIndex({
                         <div className="grid grid-cols-1 gap-4">
                             <div>
                                 <Label htmlFor="date-range">Date Range</Label>
-                                <Popover>
+                                <Popover
+                                    onOpenChange={(open) => {
+                                        if (open) {
+                                            const anchor = tempDateRange?.from ?? new Date();
+                                            void fetchCalendarMonth(format(anchor, 'yyyy-MM'));
+                                        }
+                                    }}
+                                >
                                     <PopoverTrigger asChild>
                                         <Button
                                             id="date-range"
@@ -510,13 +580,12 @@ export default function VehicleDispatchIndex({
                                             defaultMonth={tempDateRange?.from}
                                             selected={tempDateRange}
                                             onSelect={(range) => setTempDateRange(range)}
+                                            onMonthChange={(month) => {
+                                                void fetchCalendarMonth(format(month, 'yyyy-MM'));
+                                            }}
                                             numberOfMonths={2}
                                             modifiers={{
-                                                available: availableDates.map(date => {
-                                                    // Handle date parsing more robustly to avoid timezone issues
-                                                    const [year, month, day] = date.split('-').map(Number);
-                                                    return new Date(year, month - 1, day); // month is 0-indexed in JS
-                                                }),
+                                                available: availableCalendarDates,
                                             }}
                                             modifiersStyles={{
                                                 available: {
@@ -538,19 +607,21 @@ export default function VehicleDispatchIndex({
                                                 variant="default" 
                                                 onClick={() => {
                                                     const from = tempDateRange?.from ? format(tempDateRange.from, 'yyyy-MM-dd') : undefined;
-                                                    const to = tempDateRange?.to ? format(tempDateRange.to, 'yyyy-MM-dd') : undefined;
-                                                    
-                                                    setDateRange(tempDateRange);
-                                                    
-                                                    // Only update date_from/date_to if not on DPR tab
-                                                    if (tab !== 'dpr') {
-                                                        setSearchFilters(prev => ({
+                                                    let to = tempDateRange?.to ? format(tempDateRange.to, 'yyyy-MM-dd') : undefined;
+                                                    if (from !== undefined && to === undefined) {
+                                                        to = from;
+                                                    }
+                                                    setDateRange(
+                                                        from !== undefined
+                                                            ? { from: tempDateRange!.from!, to: tempDateRange?.to ?? tempDateRange!.from! }
+                                                            : tempDateRange,
+                                                    );
+                                                    setSearchFilters((prev) => ({
                                                         ...prev,
                                                         date_from: from,
                                                         date_to: to,
                                                         date: undefined,
                                                     }));
-                                                    }
                                                 }}
                                                 className="flex-1"
                                             >
@@ -676,7 +747,6 @@ export default function VehicleDispatchIndex({
                     )}
                     {activeTab === 'dpr' && (
                         <DPRTab
-                            dispatchReports={dispatchReports}
                             filters={filters}
                             flashSuccess={flash?.success ?? pageProps.flash?.success}
                         />
