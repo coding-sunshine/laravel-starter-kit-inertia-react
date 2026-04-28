@@ -28,15 +28,17 @@ use App\Models\StockLedger;
 use App\Models\VehicleUnload;
 use App\Models\WagonLoading;
 use App\Services\CoalTransportReport\CoalTransportReportDataBuilder;
+use App\Services\Dashboard\LoaderOverloadMetricsService;
 use App\Support\Dashboard\DashboardFilterResolver;
 use App\Support\Dashboard\DashboardWidgetPermissions;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -57,6 +59,7 @@ final class ExecutiveDashboardController extends Controller
     public function __construct(
         private readonly DashboardFilterResolver $filters,
         private readonly CoalTransportReportDataBuilder $coalTransportReportDataBuilder,
+        private readonly LoaderOverloadMetricsService $loaderOverloadMetrics,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -127,8 +130,11 @@ final class ExecutiveDashboardController extends Controller
             'sidingPerformance' => $this->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'rakePerformance' => $this->buildRakePerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'rakePerformance' => [],
+            'loaderOverloadTrends' => [
+                'loaders' => [],
+                'monthly' => [],
+            ],
             'powerPlantDispatch' => $this->buildPowerPlantDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'allowedDashboardWidgets' => DashboardWidgetPermissions::allowedNamesForUser($user),
             // Executive Yesterday tab uses its own date picker and ignores main dashboard filters.
@@ -180,6 +186,69 @@ final class ExecutiveDashboardController extends Controller
         return response()->json(
             $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges),
         );
+    }
+
+    public function rakePerformanceList(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(DashboardWidgetPermissions::userCanSeeDashboardSection($user, 'rake-performance'), 403);
+
+        $resolved = $this->filters->resolve($request);
+        $perPage = min(50, max(1, (int) $request->query('per_page', 15)));
+        $page = max(1, (int) $request->query('page', 1));
+
+        $sidingIdFilter = $request->filled('siding_id') ? (int) $request->query('siding_id') : null;
+        if ($sidingIdFilter !== null && $sidingIdFilter > 0 && ! in_array($sidingIdFilter, $resolved['filteredSidingIds'], true)) {
+            abort(422, 'The selected siding is not in the current filter scope.');
+        }
+
+        $paginator = $this->paginateRakePerformanceSummary(
+            $resolved['filteredSidingIds'],
+            $resolved['from'],
+            $resolved['to'],
+            $resolved['filterContext'],
+            $perPage,
+            $page,
+            $sidingIdFilter,
+        );
+
+        return response()->json([
+            'filters' => $this->serializeRakePerformanceListFilters($resolved),
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    public function rakePerformanceDetail(Request $request, Rake $rake): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(DashboardWidgetPermissions::userCanSeeDashboardSection($user, 'rake-performance'), 403);
+
+        $resolved = $this->filters->resolve($request);
+        $row = $this->buildRakePerformanceDetail(
+            $resolved['filteredSidingIds'],
+            $resolved['from'],
+            $resolved['to'],
+            $resolved['filterContext'],
+            $rake,
+        );
+        if ($row === null) {
+            abort(404);
+        }
+
+        return response()->json([
+            'filters' => $this->serializeRakePerformanceListFilters($resolved),
+            'data' => $row,
+        ]);
     }
 
     /**
@@ -2381,175 +2450,80 @@ final class ExecutiveDashboardController extends Controller
             return [];
         }
 
-        $fromDate = $from->toDateString();
-        $toDate = $to->toDateString();
-        $rakeQuery = Rake::query()
+        $rakes = $this->rakePerformanceBaseQuery($sidingIds, $from, $to, $filterContext)
             ->with('siding:id,name,code')
-            ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('loading_date', [$fromDate, $toDate])
-            ->where(function ($q): void {
-                $q->whereNull('data_source')
-                    ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
-            })
-            ->whereExists(function ($subQuery): void {
-                $subQuery->selectRaw('1')
-                    ->from('rake_weighments')
-                    ->whereColumn('rake_weighments.rake_id', 'rakes.id');
-            })
-            ->whereExists(function ($subQuery): void {
-                $subQuery->selectRaw('1')
-                    ->from('rake_wagon_weighments')
-                    ->join(
-                        'rake_weighments',
-                        'rake_weighments.id',
-                        '=',
-                        'rake_wagon_weighments.rake_weighment_id',
-                    )
-                    ->whereColumn('rake_weighments.rake_id', 'rakes.id');
-            });
-        if (! empty($filterContext['rake_number'])) {
-            $rakeQuery->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
-        }
-        if (! empty($filterContext['power_plant'])) {
-            $rakeQuery->whereIn('id', RakeWeighment::query()->where('to_station', $filterContext['power_plant'])->select('rake_id'));
-        }
-        if (($filterContext['rake_penalty_scope'] ?? 'all') === 'with_penalties') {
-            $rakeQuery->where(static function ($query): void {
-                $query->whereExists(function ($subQuery): void {
-                    $subQuery->selectRaw('1')
-                        ->from('applied_penalties')
-                        ->whereColumn('applied_penalties.rake_id', 'rakes.id');
-                })->orWhereExists(function ($subQuery): void {
-                    $subQuery->selectRaw('1')
-                        ->from('rr_penalty_snapshots')
-                        ->whereColumn('rr_penalty_snapshots.rake_id', 'rakes.id');
-                });
-            });
-        }
-        $rakes = $rakeQuery->orderByRaw('COALESCE(rakes.loading_date, rakes.created_at) DESC')->limit(200)->get();
+            ->orderByRaw('COALESCE(rakes.loading_date, rakes.created_at) DESC')
+            ->limit(200)
+            ->get();
 
-        $rakeIds = $rakes->pluck('id')->all();
+        return $this->assembleRakePerformanceRows($rakes, true);
+    }
 
-        $weighmentTotals = RakeWeighment::query()
-            ->whereIn('rake_id', $rakeIds)
-            ->selectRaw('rake_id, max(total_net_weight_mt) as net_weight, max(total_over_load_mt) as over_load, max(total_under_load_mt) as under_load')
-            ->groupBy('rake_id')
-            ->get()
-            ->keyBy('rake_id');
-
-        $predictedPenaltyTotals = AppliedPenalty::query()
-            ->whereIn('rake_id', $rakeIds)
-            ->selectRaw('rake_id, sum(amount) as total_penalty, count(*) as penalty_count')
-            ->groupBy('rake_id')
-            ->get()
-            ->keyBy('rake_id');
-
-        $actualPenaltyTotals = RrPenaltySnapshot::query()
-            ->whereIn('rake_id', $rakeIds)
-            ->selectRaw('rake_id, sum(amount) as total_penalty, count(*) as penalty_count')
-            ->groupBy('rake_id')
-            ->get()
-            ->keyBy('rake_id');
-
-        $latestWeighmentIds = RakeWeighment::query()
-            ->whereIn('rake_id', $rakeIds)
-            ->orderByDesc('id')
-            ->get()
-            ->unique('rake_id')
-            ->pluck('id')
-            ->all();
-
-        $wagonOverloadsByRakeId = [];
-        if ($latestWeighmentIds !== []) {
-            $weighmentToRake = RakeWeighment::query()
-                ->whereIn('id', $latestWeighmentIds)
-                ->pluck('rake_id', 'id')
-                ->all();
-
-            $wagonLoadingByRakeAndWagon = [];
-            if ($rakeIds !== []) {
-                $wagonLoadingRows = WagonLoading::query()
-                    ->whereIn('rake_id', $rakeIds)
-                    ->with('loader:id,loader_name')
-                    ->get(['rake_id', 'wagon_id', 'loader_id', 'loader_operator_name']);
-                foreach ($wagonLoadingRows as $wl) {
-                    if ($wl->wagon_id === null) {
-                        continue;
-                    }
-                    $wagonLoadingByRakeAndWagon[$wl->rake_id.'|'.$wl->wagon_id] = [
-                        'loader_id' => $wl->loader_id,
-                        'loader_name' => $wl->loader?->loader_name,
-                        'loader_operator_name' => $wl->loader_operator_name !== null && $wl->loader_operator_name !== ''
-                            ? (string) $wl->loader_operator_name
-                            : null,
-                    ];
-                }
-            }
-
-            $wagonRows = RakeWagonWeighment::query()
-                ->whereIn('rake_weighment_id', $latestWeighmentIds)
-                ->with('wagon:id,wagon_number')
-                ->orderBy('wagon_sequence')
-                ->get();
-            foreach ($wagonRows as $row) {
-                $rakeId = $weighmentToRake[$row->rake_weighment_id] ?? null;
-                if ($rakeId === null) {
-                    continue;
-                }
-                if (! isset($wagonOverloadsByRakeId[$rakeId])) {
-                    $wagonOverloadsByRakeId[$rakeId] = [];
-                }
-                $wagonId = $row->wagon_id;
-                $loaderKey = $wagonId !== null ? $rakeId.'|'.$wagonId : null;
-                $wlMeta = $loaderKey !== null ? ($wagonLoadingByRakeAndWagon[$loaderKey] ?? null) : null;
-                $loaderId = $wlMeta['loader_id'] ?? null;
-                $loaderName = $wlMeta['loader_name'] ?? null;
-                $loaderOperatorName = $wlMeta['loader_operator_name'] ?? null;
-
-                $ccMt = $row->cc_capacity_mt !== null ? round((float) $row->cc_capacity_mt, 2) : null;
-                $wagonOverloadsByRakeId[$rakeId][] = [
-                    'wagon_number' => $row->wagon?->wagon_number ?? (string) $row->wagon_id,
-                    'over_load_mt' => round((float) ($row->over_load_mt ?? 0), 2),
-                    'under_load_mt' => $row->under_load_mt !== null ? round((float) $row->under_load_mt, 2) : null,
-                    'cc_capacity_mt' => $ccMt,
-                    'net_weight_mt' => $row->net_weight_mt !== null ? round((float) $row->net_weight_mt, 2) : null,
-                    'loader_id' => $loaderId,
-                    'loader_name' => $loaderName,
-                    'loader_operator_name' => $loaderOperatorName,
-                ];
-            }
+    /**
+     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null, rake_penalty_scope?: string|null}  $filterContext
+     */
+    public function paginateRakePerformanceSummary(
+        array $sidingIds,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $filterContext,
+        int $perPage,
+        int $page,
+        ?int $sidingIdFilter = null,
+    ): LengthAwarePaginator {
+        if ($sidingIds === []) {
+            return new LengthAwarePaginator([], 0, $perPage, $page);
         }
 
-        return $rakes->map(function (Rake $rake) use ($weighmentTotals, $predictedPenaltyTotals, $actualPenaltyTotals, $wagonOverloadsByRakeId): array {
-            $w = $weighmentTotals->get($rake->id);
-            $predictedPenalty = $predictedPenaltyTotals->get($rake->id);
-            $actualPenalty = $actualPenaltyTotals->get($rake->id);
+        $query = $this->rakePerformanceBaseQuery($sidingIds, $from, $to, $filterContext)
+            ->with('siding:id,name,code');
+        if ($sidingIdFilter !== null && $sidingIdFilter > 0) {
+            $query->where('rakes.siding_id', $sidingIdFilter);
+        }
+        $query
+            ->orderBy('rakes.siding_id')
+            ->orderByRaw('COALESCE(rakes.loading_date, rakes.created_at) DESC');
 
-            $loadingMinutes = null;
-            if ($rake->loading_start_time && $rake->loading_end_time) {
-                $loadingMinutes = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
-            }
+        /** @var LengthAwarePaginator<int, Rake> $paginator */
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+        $rakes = collect($paginator->items());
+        $rows = $this->assembleRakePerformanceRows($rakes, false);
 
-            $displayDate = $rake->loading_date ?? $rake->created_at;
+        return new LengthAwarePaginator(
+            $rows,
+            $paginator->total(),
+            $paginator->perPage(),
+            $paginator->currentPage(),
+            ['path' => $paginator->path(), 'pageName' => 'page'],
+        );
+    }
 
-            return [
-                'id' => $rake->id,
-                'rake_number' => $rake->rake_number,
-                'rake_serial_number' => $rake->rake_serial_number,
-                'siding' => $rake->siding?->name ?? '—',
-                'dispatch_date' => $displayDate ? Carbon::parse($displayDate)->format('d M Y') : '—',
-                'wagon_count' => $rake->wagon_count,
-                'net_weight' => $w ? round((float) $w->net_weight, 2) : null,
-                'over_load' => $w ? round((float) $w->over_load, 2) : null,
-                'under_load' => $w ? round((float) $w->under_load, 2) : null,
-                'loading_minutes' => $loadingMinutes,
-                'predicted_penalty_amount' => $predictedPenalty ? round((float) $predictedPenalty->total_penalty, 2) : 0,
-                'predicted_penalty_count' => $predictedPenalty ? (int) $predictedPenalty->penalty_count : 0,
-                'actual_penalty_amount' => $actualPenalty ? round((float) $actualPenalty->total_penalty, 2) : 0,
-                'actual_penalty_count' => $actualPenalty ? (int) $actualPenalty->penalty_count : 0,
-                'wagon_overloads' => $wagonOverloadsByRakeId[$rake->id] ?? [],
-            ];
-        })->values()->all();
+    /**
+     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null, rake_penalty_scope?: string|null}  $filterContext
+     * @return array<string, mixed>|null
+     */
+    public function buildRakePerformanceDetail(
+        array $sidingIds,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $filterContext,
+        Rake $rake,
+    ): ?array {
+        if ($sidingIds === []) {
+            return null;
+        }
+
+        $model = $this->rakePerformanceBaseQuery($sidingIds, $from, $to, $filterContext)
+            ->where('rakes.id', $rake->id)
+            ->with('siding:id,name,code')
+            ->first();
+        if ($model === null) {
+            return null;
+        }
+
+        $rows = $this->assembleRakePerformanceRows(collect([$model]), true);
+
+        return $rows[0] ?? null;
     }
 
     /**
@@ -2568,136 +2542,7 @@ final class ExecutiveDashboardController extends Controller
      */
     public function buildLoaderOverloadTrends(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
-        if ($sidingIds === []) {
-            return ['loaders' => [], 'monthly' => []];
-        }
-
-        $fromDate = Carbon::parse($from)->toDateString();
-        $toDate = Carbon::parse($to)->toDateString();
-
-        $underloadThresholdPercent = isset($filterContext['underload_threshold_percent'])
-            ? max(0.0, min(100.0, (float) $filterContext['underload_threshold_percent']))
-            : 1.0;
-
-        // Always return every loader in scope for the UI dropdown; do not narrow this list by `loader_id`.
-        $loaders = Loader::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->with('siding:id,name')
-            ->orderBy('loader_name')
-            ->get(['id', 'loader_name', 'siding_id']);
-
-        if ($loaders->isEmpty()) {
-            return ['loaders' => [], 'monthly' => []];
-        }
-
-        $loaderIds = $loaders->pluck('id')->all();
-        $loaderMap = $loaders->mapWithKeys(fn (Loader $l): array => [$l->id => $l->loader_name])->all();
-        $loaderOperatorsByLoader = [];
-        if ($loaderIds !== []) {
-            $operatorRows = DB::table('wagon_loading')
-                ->whereIn('loader_id', $loaderIds)
-                ->whereNotNull('loader_operator_name')
-                ->where('loader_operator_name', '!=', '')
-                ->select('loader_id', 'loader_operator_name')
-                ->distinct()
-                ->orderBy('loader_id')
-                ->orderBy('loader_operator_name')
-                ->get();
-
-            foreach ($operatorRows as $operatorRow) {
-                $loaderId = (int) $operatorRow->loader_id;
-                if (! array_key_exists($loaderId, $loaderOperatorsByLoader)) {
-                    $loaderOperatorsByLoader[$loaderId] = [];
-                }
-                $loaderOperatorsByLoader[$loaderId][] = (string) $operatorRow->loader_operator_name;
-            }
-        }
-
-        // PostgreSQL only (month buckets from `rakes.loading_date`).
-        $yearMonthSql = 'EXTRACT(YEAR FROM r.loading_date)::int as y, EXTRACT(MONTH FROM r.loading_date)::int as m';
-        $groupByYearMonthLoader = 'EXTRACT(YEAR FROM r.loading_date), EXTRACT(MONTH FROM r.loading_date), wl.loader_id';
-
-        // Effective CC: snapshot on `wagon_loading` when present; otherwise `wagons.pcc_weight_mt` (rake load often saves loaded qty but not cc_capacity_mt).
-        $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
-        $overloadCase = "sum(CASE WHEN wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0 AND wl.loaded_quantity_mt > {$ccEff} THEN 1 ELSE 0 END) as overloaded_wagons";
-        $underloadCase = "sum(CASE WHEN wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0 AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= ? THEN 1 ELSE 0 END) as underloaded_wagons";
-
-        $wlQuery = DB::table('wagon_loading as wl')
-            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
-            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
-            ->whereIn('r.siding_id', $sidingIds)
-            ->whereIn('wl.loader_id', $loaderIds)
-            ->whereNotNull('r.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('r.loading_date', true), [$fromDate, $toDate]);
-
-        if (! empty($filterContext['loader_id'])) {
-            $wlQuery->where('wl.loader_id', (int) $filterContext['loader_id']);
-        }
-
-        if (! empty($filterContext['loader_operator_name'])) {
-            $this->applyWagonLoadingLoaderOperatorFilter($wlQuery, (string) $filterContext['loader_operator_name']);
-        }
-
-        $rows = $wlQuery
-            ->selectRaw(
-                "{$yearMonthSql}, wl.loader_id, count(*) as wagons_loaded, {$overloadCase}, {$underloadCase}",
-                [$underloadThresholdPercent],
-            )
-            ->groupByRaw($groupByYearMonthLoader)
-            ->get();
-
-        if ($rows->isEmpty()) {
-            return [
-                'loaders' => $loaders->map(fn (Loader $l): array => [
-                    'id' => $l->id,
-                    'name' => $l->loader_name,
-                    'siding' => $l->siding?->name ?? '—',
-                    'operators' => $loaderOperatorsByLoader[$l->id] ?? [],
-                ])->values()->all(),
-                'monthly' => [],
-            ];
-        }
-
-        $minYm = null;
-        $maxYm = null;
-        foreach ($rows as $r) {
-            $ym = ((int) $r->y) * 100 + (int) $r->m;
-            $minYm = $minYm === null ? $ym : min($minYm, $ym);
-            $maxYm = $maxYm === null ? $ym : max($maxYm, $ym);
-        }
-
-        $months = [];
-        $cursor = Carbon::create(intdiv((int) $minYm, 100), (int) $minYm % 100, 1)->startOfMonth();
-        $endMonth = Carbon::create(intdiv((int) $maxYm, 100), (int) $maxYm % 100, 1)->startOfMonth();
-        while ($cursor->lte($endMonth)) {
-            $key = $cursor->format('Y-m');
-            $months[$key] = ['month' => $cursor->format('M Y')];
-            foreach ($loaderMap as $id => $name) {
-                $months[$key]["loader_{$id}_overload"] = 0;
-                $months[$key]["loader_{$id}_underload"] = 0;
-                $months[$key]["loader_{$id}_total"] = 0;
-            }
-            $cursor->addMonth();
-        }
-
-        foreach ($rows as $r) {
-            $key = sprintf('%04d-%02d', (int) $r->y, (int) $r->m);
-            if (isset($months[$key])) {
-                $months[$key]["loader_{$r->loader_id}_overload"] = (int) $r->overloaded_wagons;
-                $months[$key]["loader_{$r->loader_id}_underload"] = (int) $r->underloaded_wagons;
-                $months[$key]["loader_{$r->loader_id}_total"] = (int) $r->wagons_loaded;
-            }
-        }
-
-        return [
-            'loaders' => $loaders->map(fn (Loader $l): array => [
-                'id' => $l->id,
-                'name' => $l->loader_name,
-                'siding' => $l->siding?->name ?? '—',
-                'operators' => $loaderOperatorsByLoader[$l->id] ?? [],
-            ])->values()->all(),
-            'monthly' => array_values($months),
-        ];
+        return $this->loaderOverloadMetrics->buildLoaderOverloadTrends($sidingIds, $from, $to, $filterContext);
     }
 
     /**
@@ -2985,6 +2830,260 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * @param  array<string, mixed>  $resolved
+     * @return array<string, mixed>
+     */
+    private function serializeRakePerformanceListFilters(array $resolved): array
+    {
+        return [
+            'period' => $resolved['period'],
+            'from' => $resolved['from']->toDateString(),
+            'to' => $resolved['to']->toDateString(),
+            'siding_ids' => array_values($resolved['filteredSidingIds']),
+            'power_plant' => $resolved['powerPlant'],
+            'rake_number' => $resolved['rakeNumber'],
+            'rake_penalty_scope' => $resolved['rakePenaltyScope'],
+        ];
+    }
+
+    /**
+     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null, rake_penalty_scope?: string|null}  $filterContext
+     */
+    private function rakePerformanceBaseQuery(
+        array $sidingIds,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $filterContext,
+    ): Builder {
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
+
+        $rakeQuery = Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereBetween('loading_date', [$fromDate, $toDate])
+            ->where(function ($q): void {
+                $q->whereNull('data_source')
+                    ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
+            })
+            ->whereExists(function ($subQuery): void {
+                $subQuery->selectRaw('1')
+                    ->from('rake_weighments')
+                    ->whereColumn('rake_weighments.rake_id', 'rakes.id');
+            })
+            ->whereExists(function ($subQuery): void {
+                $subQuery->selectRaw('1')
+                    ->from('rake_wagon_weighments')
+                    ->join(
+                        'rake_weighments',
+                        'rake_weighments.id',
+                        '=',
+                        'rake_wagon_weighments.rake_weighment_id',
+                    )
+                    ->whereColumn('rake_weighments.rake_id', 'rakes.id');
+            });
+        if (! empty($filterContext['rake_number'])) {
+            $rakeQuery->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
+        }
+        if (! empty($filterContext['power_plant'])) {
+            $rakeQuery->whereIn('id', RakeWeighment::query()->where('to_station', $filterContext['power_plant'])->select('rake_id'));
+        }
+        if (($filterContext['rake_penalty_scope'] ?? 'all') === 'with_penalties') {
+            $rakeQuery->where(static function ($query): void {
+                $query->whereExists(function ($subQuery): void {
+                    $subQuery->selectRaw('1')
+                        ->from('applied_penalties')
+                        ->whereColumn('applied_penalties.rake_id', 'rakes.id');
+                })->orWhereExists(function ($subQuery): void {
+                    $subQuery->selectRaw('1')
+                        ->from('rr_penalty_snapshots')
+                        ->whereColumn('rr_penalty_snapshots.rake_id', 'rakes.id');
+                });
+            });
+        }
+
+        return $rakeQuery;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function assembleRakePerformanceRows(Collection $rakes, bool $includeWagonOverloads): array
+    {
+        if ($rakes->isEmpty()) {
+            return [];
+        }
+
+        $rakeIds = $rakes->pluck('id')->all();
+        $weighmentTotals = RakeWeighment::query()
+            ->whereIn('rake_id', $rakeIds)
+            ->selectRaw('rake_id, max(total_net_weight_mt) as net_weight, max(total_over_load_mt) as over_load, max(total_under_load_mt) as under_load')
+            ->groupBy('rake_id')
+            ->get()
+            ->keyBy('rake_id');
+
+        $predictedPenaltyTotals = AppliedPenalty::query()
+            ->whereIn('rake_id', $rakeIds)
+            ->selectRaw('rake_id, sum(amount) as total_penalty, count(*) as penalty_count')
+            ->groupBy('rake_id')
+            ->get()
+            ->keyBy('rake_id');
+
+        $actualPenaltyTotals = RrPenaltySnapshot::query()
+            ->whereIn('rake_id', $rakeIds)
+            ->selectRaw('rake_id, sum(amount) as total_penalty, count(*) as penalty_count')
+            ->groupBy('rake_id')
+            ->get()
+            ->keyBy('rake_id');
+
+        $wagonOverloadsByRakeId = $includeWagonOverloads
+            ? $this->buildWagonOverloadsByRakeIds($rakeIds)
+            : [];
+
+        return $rakes->map(function (Rake $rake) use ($weighmentTotals, $predictedPenaltyTotals, $actualPenaltyTotals, $wagonOverloadsByRakeId, $includeWagonOverloads): array {
+            return $this->mapRakeToPerformanceArray(
+                $rake,
+                $weighmentTotals,
+                $predictedPenaltyTotals,
+                $actualPenaltyTotals,
+                $includeWagonOverloads ? ($wagonOverloadsByRakeId[$rake->id] ?? []) : null,
+            );
+        })->values()->all();
+    }
+
+    /**
+     * @param  array<int>  $rakeIds
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    private function buildWagonOverloadsByRakeIds(array $rakeIds): array
+    {
+        if ($rakeIds === []) {
+            return [];
+        }
+
+        $latestWeighmentIds = RakeWeighment::query()
+            ->whereIn('rake_id', $rakeIds)
+            ->orderByDesc('id')
+            ->get()
+            ->unique('rake_id')
+            ->pluck('id')
+            ->all();
+
+        $wagonOverloadsByRakeId = [];
+        if ($latestWeighmentIds === []) {
+            return [];
+        }
+
+        $weighmentToRake = RakeWeighment::query()
+            ->whereIn('id', $latestWeighmentIds)
+            ->pluck('rake_id', 'id')
+            ->all();
+
+        $wagonLoadingByRakeAndWagon = [];
+        $wagonLoadingRows = WagonLoading::query()
+            ->whereIn('rake_id', $rakeIds)
+            ->with('loader:id,loader_name')
+            ->get(['rake_id', 'wagon_id', 'loader_id', 'loader_operator_name']);
+        foreach ($wagonLoadingRows as $wl) {
+            if ($wl->wagon_id === null) {
+                continue;
+            }
+            $wagonLoadingByRakeAndWagon[$wl->rake_id.'|'.$wl->wagon_id] = [
+                'loader_id' => $wl->loader_id,
+                'loader_name' => $wl->loader?->loader_name,
+                'loader_operator_name' => $wl->loader_operator_name !== null && $wl->loader_operator_name !== ''
+                    ? (string) $wl->loader_operator_name
+                    : null,
+            ];
+        }
+
+        $wagonRows = RakeWagonWeighment::query()
+            ->whereIn('rake_weighment_id', $latestWeighmentIds)
+            ->with('wagon:id,wagon_number')
+            ->orderBy('wagon_sequence')
+            ->get();
+        foreach ($wagonRows as $row) {
+            $rakeId = $weighmentToRake[$row->rake_weighment_id] ?? null;
+            if ($rakeId === null) {
+                continue;
+            }
+            if (! isset($wagonOverloadsByRakeId[$rakeId])) {
+                $wagonOverloadsByRakeId[$rakeId] = [];
+            }
+            $wagonId = $row->wagon_id;
+            $loaderKey = $wagonId !== null ? $rakeId.'|'.$wagonId : null;
+            $wlMeta = $loaderKey !== null ? ($wagonLoadingByRakeAndWagon[$loaderKey] ?? null) : null;
+            $loaderId = $wlMeta['loader_id'] ?? null;
+            $loaderName = $wlMeta['loader_name'] ?? null;
+            $loaderOperatorName = $wlMeta['loader_operator_name'] ?? null;
+
+            $ccMt = $row->cc_capacity_mt !== null ? round((float) $row->cc_capacity_mt, 2) : null;
+            $wagonOverloadsByRakeId[$rakeId][] = [
+                'wagon_number' => $row->wagon?->wagon_number ?? (string) $row->wagon_id,
+                'over_load_mt' => round((float) ($row->over_load_mt ?? 0), 2),
+                'under_load_mt' => $row->under_load_mt !== null ? round((float) $row->under_load_mt, 2) : null,
+                'cc_capacity_mt' => $ccMt,
+                'net_weight_mt' => $row->net_weight_mt !== null ? round((float) $row->net_weight_mt, 2) : null,
+                'loader_id' => $loaderId,
+                'loader_name' => $loaderName,
+                'loader_operator_name' => $loaderOperatorName,
+            ];
+        }
+
+        return $wagonOverloadsByRakeId;
+    }
+
+    /**
+     * @param  Collection<int|string, \Illuminate\Database\Eloquent\Model>  $weighmentTotals
+     * @param  Collection<int|string, \Illuminate\Database\Eloquent\Model>  $predictedPenaltyTotals
+     * @param  Collection<int|string, \Illuminate\Database\Eloquent\Model>  $actualPenaltyTotals
+     * @param  array<int, array<string, mixed>>|null  $wagonOverloads  null = summary row (no wagons, no loading_minutes)
+     * @return array<string, mixed>
+     */
+    private function mapRakeToPerformanceArray(
+        Rake $rake,
+        Collection $weighmentTotals,
+        Collection $predictedPenaltyTotals,
+        Collection $actualPenaltyTotals,
+        ?array $wagonOverloads,
+    ): array {
+        $w = $weighmentTotals->get($rake->id);
+        $predictedPenalty = $predictedPenaltyTotals->get($rake->id);
+        $actualPenalty = $actualPenaltyTotals->get($rake->id);
+
+        $displayDate = $rake->loading_date ?? $rake->created_at;
+        $row = [
+            'id' => $rake->id,
+            'siding_id' => $rake->siding_id,
+            'rake_number' => $rake->rake_number,
+            'rake_serial_number' => $rake->rake_serial_number,
+            'siding' => $rake->siding?->name ?? '—',
+            'dispatch_date' => $displayDate ? Carbon::parse($displayDate)->format('d M Y') : '—',
+            'wagon_count' => $rake->wagon_count,
+            'net_weight' => $w ? round((float) $w->net_weight, 2) : null,
+            'over_load' => $w ? round((float) $w->over_load, 2) : null,
+            'under_load' => $w ? round((float) $w->under_load, 2) : null,
+            'predicted_penalty_amount' => $predictedPenalty ? round((float) $predictedPenalty->total_penalty, 2) : 0,
+            'predicted_penalty_count' => $predictedPenalty ? (int) $predictedPenalty->penalty_count : 0,
+            'actual_penalty_amount' => $actualPenalty ? round((float) $actualPenalty->total_penalty, 2) : 0,
+            'actual_penalty_count' => $actualPenalty ? (int) $actualPenalty->penalty_count : 0,
+        ];
+
+        if ($wagonOverloads === null) {
+            return $row;
+        }
+
+        $loadingMinutes = null;
+        if ($rake->loading_start_time && $rake->loading_end_time) {
+            $loadingMinutes = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
+        }
+
+        $row['loading_minutes'] = $loadingMinutes;
+        $row['wagon_overloads'] = $wagonOverloads;
+
+        return $row;
+    }
+
+    /**
      * @param  array<int>  $sidingIds
      * @return array<int, array{value: string, label: string}>
      */
@@ -3167,16 +3266,6 @@ final class ExecutiveDashboardController extends Controller
     /**
      * Narrow `wagon_loading` rows by {@see WagonLoading::$loader_operator_name} (exact match; values come from dropdown).
      */
-    private function applyWagonLoadingLoaderOperatorFilter(QueryBuilder $wlQuery, string $loaderOperatorName): void
-    {
-        $normalized = mb_trim($loaderOperatorName);
-        if ($normalized === '') {
-            return;
-        }
-
-        $wlQuery->where('wl.loader_operator_name', $normalized);
-    }
-
     /**
      * Custom-range blocks for Executive Yesterday (road / rail / OB / coal).
      *

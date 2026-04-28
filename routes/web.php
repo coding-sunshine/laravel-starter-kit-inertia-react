@@ -193,6 +193,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', App\Http\Controllers\Dashboard\ExecutiveDashboardController::class)->name('dashboard');
     Route::get('dashboard/executive-yesterday-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'executiveYesterdayData'])
         ->name('dashboard.executive-yesterday-data');
+    Route::get('dashboard/rake-performance/rakes', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceList'])
+        ->name('dashboard.rake-performance.rakes.index');
+    Route::get('dashboard/rake-performance/rakes/{rake}', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceDetail'])
+        ->name('dashboard.rake-performance.rakes.show');
+    Route::get('dashboard/loader-overload/loaders', [App\Http\Controllers\Dashboard\LoaderOverloadWebController::class, 'loaders'])
+        ->name('dashboard.loader-overload.loaders.index');
+    Route::get('dashboard/loader-overload/loaders/{loader}', [App\Http\Controllers\Dashboard\LoaderOverloadWebController::class, 'loaderShow'])
+        ->name('dashboard.loader-overload.loaders.show');
+    Route::get('dashboard/loader-overload/operators', [App\Http\Controllers\Dashboard\LoaderOverloadWebController::class, 'operators'])
+        ->name('dashboard.loader-overload.operators.index');
+    Route::get('dashboard/loader-overload/operators/show', [App\Http\Controllers\Dashboard\LoaderOverloadWebController::class, 'operatorShow'])
+        ->name('dashboard.loader-overload.operators.show');
 
     Route::get('exports/coal-transport-report', CoalTransportReportExportController::class)
         ->name('exports.coal-transport-report');
@@ -393,6 +405,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Vehicle Dispatch Register
     Route::get('vehicle-dispatch', [VehicleDispatchController::class, 'index'])->name('vehicle-dispatch.index');
+    Route::get('vehicle-dispatch/dpr-data', [VehicleDispatchController::class, 'dprData'])->name('vehicle-dispatch.dpr-data');
+    Route::get('vehicle-dispatch/calendar-days', [VehicleDispatchController::class, 'calendarDays'])->name('vehicle-dispatch.calendar-days');
     Route::put('vehicle-dispatch/{vehicle_dispatch}', [VehicleDispatchController::class, 'update'])->name('vehicle-dispatch.update');
     Route::post('vehicle-dispatch/import', [VehicleDispatchController::class, 'import'])->name('vehicle-dispatch.import');
     Route::post('vehicle-dispatch/save', [VehicleDispatchController::class, 'saveImport'])->name('vehicle-dispatch.save');
