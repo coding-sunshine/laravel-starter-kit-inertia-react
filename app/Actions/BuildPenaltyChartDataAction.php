@@ -41,7 +41,7 @@ final readonly class BuildPenaltyChartDataAction
     private function filteredQuery(Request $request, bool $hasDateFilter): QueryBuilder
     {
         $query = QueryBuilder::for(PenaltyDataTable::tableBaseQuery())
-            ->allowedFilters(PenaltyDataTable::tableAllowedFilters());
+            ->allowedFilters(...PenaltyDataTable::tableAllowedFilters());
 
         if (! $hasDateFilter) {
             $query->where('penalty_date', '>=', now()->subMonths(12));
