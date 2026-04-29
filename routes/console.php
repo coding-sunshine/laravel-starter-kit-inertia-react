@@ -39,6 +39,9 @@ Schedule::command('rrmcs:aggregate-performance')->daily()->at('00:30');
 // RRMCS: generate AI-powered penalty insights weekly.
 Schedule::command('rrmcs:generate-penalty-insights')->weekly()->mondays()->at('06:00');
 
+// RRMCS: send weekly penalty report email to super-admin and admin users.
+Schedule::command('rrmcs:send-weekly-penalty-report')->weekly()->mondays()->at('08:00');
+
 // Billing jobs: metrics, credit expiration, trial reminders.
 Schedule::job(new App\Jobs\Billing\GenerateBillingMetrics)->daily()->at('02:00');
 Schedule::job(new App\Jobs\Billing\ExpireCredits)->daily()->at('03:00');
