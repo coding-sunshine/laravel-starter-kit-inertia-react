@@ -131,6 +131,7 @@ final class ExecutiveDashboardController extends Controller
             'sidingPerformance' => $this->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'penaltySummary' => $this->buildPenaltySummary($resolved['filteredSidingIds']),
+            'activeRakePipeline' => $this->buildActiveRakePipeline($resolved['filteredSidingIds']),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'rakePerformance' => [],
             'loaderOverloadTrends' => [
@@ -4044,6 +4045,66 @@ final class ExecutiveDashboardController extends Controller
             ];
         } catch (Throwable) {
             return ['today_rs' => 0.0, 'trend_7d' => [], 'preventable_pct' => 0.0];
+        }
+    }
+
+    private function buildActiveRakePipeline(array $sidingIds): array
+    {
+        try {
+            $rakes = Rake::whereIn('siding_id', $sidingIds)
+                ->with(['siding:id,name,code', 'wagonLoadings' => fn ($q) => $q->with('wagon:id,pcc_weight_mt')])
+                ->where(fn ($q) => $q
+                    ->whereNotIn('state', ['dispatched', 'completed', 'cancelled'])
+                    ->orWhere(fn ($q2) => $q2
+                        ->whereIn('siding_id', $sidingIds)
+                        ->where('state', 'dispatched')
+                        ->whereDate('dispatch_time', Carbon::today()))
+                )
+                ->orderByDesc('loading_date')
+                ->limit(50)
+                ->get();
+
+            $pipeline = ['loading' => [], 'awaiting_clearance' => [], 'dispatched' => []];
+
+            foreach ($rakes as $rake) {
+                $overloadedCount = 0;
+                $penaltyRiskRs = 0.0;
+
+                foreach ($rake->wagonLoadings as $wl) {
+                    $pcc = (float) ($wl->wagon?->pcc_weight_mt ?? $wl->cc_capacity_mt ?? 0);
+                    $loaded = (float) $wl->loaded_quantity_mt;
+                    if ($pcc > 0 && $loaded > $pcc) {
+                        $overloadedCount++;
+                        $excessMt = $loaded - $pcc;
+                        $penaltyRiskRs += round($excessMt * 1000 * 0.06, 2);
+                    }
+                }
+
+                $card = [
+                    'rake_id' => $rake->id,
+                    'rake_number' => $rake->rake_number,
+                    'siding_name' => $rake->siding?->name ?? '—',
+                    'siding_code' => $rake->siding?->code ?? '—',
+                    'wagon_count' => (int) ($rake->wagon_count ?? 0),
+                    'overloaded_count' => $overloadedCount,
+                    'penalty_risk_rs' => $penaltyRiskRs,
+                    'state' => $rake->state,
+                    'loading_date' => $rake->loading_date?->toDateString(),
+                ];
+
+                $state = (string) $rake->state;
+                $bucket = match (true) {
+                    str_contains($state, 'dispatch') => 'dispatched',
+                    str_contains($state, 'clearance') || str_contains($state, 'await') => 'awaiting_clearance',
+                    default => 'loading',
+                };
+
+                $pipeline[$bucket][] = $card;
+            }
+
+            return $pipeline;
+        } catch (Throwable) {
+            return ['loading' => [], 'awaiting_clearance' => [], 'dispatched' => []];
         }
     }
 }
