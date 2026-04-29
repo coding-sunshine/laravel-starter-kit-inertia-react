@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Events\WagonWeightUpdated;
 use App\Models\Rake;
 use App\Models\WagonLoading;
 use Illuminate\Bus\Queueable;
@@ -82,7 +83,7 @@ final class SyncLoadriteWeightJob implements ShouldQueue
 
         $refreshed = $wagonLoading->fresh();
 
-        \App\Events\WagonWeightUpdated::dispatch(
+        WagonWeightUpdated::dispatch(
             sidingId: $this->sidingId,
             wagonId: $wagonLoading->wagon_id,
             sequence: $this->event['Sequence'],
