@@ -26,7 +26,13 @@ final class LoadriteStartPolling extends Command
         }
 
         foreach ($settings as $setting) {
-            $lockKey = 'loadrite:polling:'.($setting->siding_id ?? 'global');
+            if ($setting->siding_id === null) {
+                $this->warn('Skipping global token (no siding_id): per-siding polling requires a siding.');
+
+                continue;
+            }
+
+            $lockKey = "loadrite:polling:{$setting->siding_id}";
 
             if (Cache::has($lockKey)) {
                 $this->info("Siding {$setting->siding_id}: already polling, skipping.");
@@ -34,7 +40,7 @@ final class LoadriteStartPolling extends Command
                 continue;
             }
 
-            PollLoadriteJob::dispatch($setting->siding_id ?? 0)->onQueue('loadrite-poll');
+            PollLoadriteJob::dispatch($setting->siding_id)->onQueue('loadrite-poll');
             $this->info("Siding {$setting->siding_id}: dispatched PollLoadriteJob.");
         }
 

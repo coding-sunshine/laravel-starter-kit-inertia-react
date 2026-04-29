@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Services\LoadriteTokenManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Throwable;
 
 final class LoadriteStoreToken extends Command
 {
@@ -21,7 +22,22 @@ final class LoadriteStoreToken extends Command
 
         $accessToken = $this->secret('Paste the Loadrite access token:');
         $refreshToken = $this->secret('Paste the Loadrite refresh token:');
-        $expiresAt = Carbon::parse($this->ask('Token expiry datetime (ISO8601):'));
+
+        if (! $accessToken || ! $refreshToken) {
+            $this->error('Access token and refresh token are required.');
+
+            return Command::FAILURE;
+        }
+
+        $expiresRaw = $this->ask('Token expiry datetime (ISO8601):');
+
+        try {
+            $expiresAt = Carbon::parse($expiresRaw);
+        } catch (Throwable) {
+            $this->error("Invalid datetime: {$expiresRaw}");
+
+            return Command::FAILURE;
+        }
 
         $manager->store($sidingId, $accessToken, $refreshToken, $expiresAt);
 
