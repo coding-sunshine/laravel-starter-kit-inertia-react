@@ -134,7 +134,7 @@ final class ExecutiveDashboardController extends Controller
             'penaltySummary' => $this->buildPenaltySummary($resolved['filteredSidingIds']),
             'activeRakePipeline' => $this->buildActiveRakePipeline($resolved['filteredSidingIds']),
             'riskScores' => $this->buildRiskScores($resolved['filteredSidingIds']),
-            'alerts' => $this->buildAlerts($resolved['filteredSidingIds']),
+            'alerts' => $this->buildCommandCenterAlerts($resolved['filteredSidingIds']),
             'operatorRake' => $this->buildOperatorRake($resolved['filteredSidingIds']),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'rakePerformance' => [],
@@ -4163,6 +4163,39 @@ final class ExecutiveDashboardController extends Controller
             ];
         } catch (Throwable) {
             return null;
+        }
+    }
+
+    /**
+     * Builds the AlertFeed-shaped alerts payload for the Command Center phase.
+     * Returns alerts grouped by severity, with `body` and `diffForHumans()` timestamps.
+     * This is intentionally separate from the public {@see self::buildAlerts()} flat-array method.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<string, array<int, array{id: int, type: string, title: string, body: string, severity: string, siding_id: int|null, rake_id: int|null, created_at: string}>>
+     */
+    private function buildCommandCenterAlerts(array $sidingIds): array
+    {
+        try {
+            return Alert::forSidings($sidingIds)
+                ->active()
+                ->orderByDesc('created_at')
+                ->limit(30)
+                ->get()
+                ->map(fn ($a) => [
+                    'id' => $a->id,
+                    'type' => $a->type,
+                    'title' => $a->title,
+                    'body' => $a->body ?? '',
+                    'severity' => $a->severity ?? 'low',
+                    'siding_id' => $a->siding_id,
+                    'rake_id' => $a->rake_id,
+                    'created_at' => $a->created_at?->diffForHumans() ?? '',
+                ])
+                ->groupBy('severity')
+                ->toArray();
+        } catch (Throwable) {
+            return [];
         }
     }
 }
