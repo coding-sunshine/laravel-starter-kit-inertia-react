@@ -146,6 +146,35 @@ interface ResponsiblePartyDetailItem {
     [type: string]: string | number;
 }
 
+interface ByOperatorItem {
+    operator: string;
+    penaltyCount: number;
+    totalAmount: number;
+    preventableCount: number;
+    preventablePct: number;
+}
+
+interface ByShiftItem {
+    shift: string;
+    penaltyCount: number;
+    totalAmount: number;
+    preventableCount: number;
+}
+
+interface ByWagonTypeItem {
+    wagonType: string;
+    penaltyCount: number;
+    totalAmount: number;
+}
+
+interface OperatorLeaderboardItem {
+    operator: string;
+    totalWagons: number;
+    overloadedWagons: number;
+    overloadRatePct: number;
+    totalExcessMt: number;
+}
+
 interface Props {
     summaryCards: SummaryCards;
     byResponsibleParty: NameValueCount[];
@@ -161,6 +190,10 @@ interface Props {
     responsiblePartyDetail: ResponsiblePartyDetailItem[];
     sidings: Siding[];
     aiInsights?: AiInsight[] | null;
+    byOperator: ByOperatorItem[];
+    byShift: ByShiftItem[];
+    byWagonType: ByWagonTypeItem[];
+    operatorLeaderboard: OperatorLeaderboardItem[];
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -238,6 +271,25 @@ function AiInsightsCard() {
     );
 }
 
+function overloadRateColor(pct: number): string {
+    if (pct < 5) return 'text-green-600 bg-green-50';
+    if (pct < 15) return 'text-amber-600 bg-amber-50';
+    return 'text-red-600 bg-red-50';
+}
+
+function overloadRateBarColor(pct: number): string {
+    if (pct < 5) return 'bg-green-500';
+    if (pct < 15) return 'bg-amber-500';
+    return 'bg-red-500';
+}
+
+function rankBadge(rank: number): string {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return `#${rank}`;
+}
+
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function formatCurrency(n: number): string {
@@ -273,6 +325,10 @@ export default function PenaltyAnalytics({
     penaltyTypeTrend,
     costSavingOpportunities,
     responsiblePartyDetail,
+    byOperator,
+    byShift,
+    byWagonType,
+    operatorLeaderboard,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Penalties', href: '/penalties' },
@@ -337,6 +393,24 @@ export default function PenaltyAnalytics({
         : [];
 
     const costs = costSavingOpportunities;
+
+    // Prepare operator chart data (top 15, map to xKey/yKey shape)
+    const operatorBarData = byOperator.slice(0, 15).map((o) => ({
+        name: o.operator,
+        total: o.totalAmount,
+    }));
+
+    // Prepare shift chart data
+    const shiftBarData = byShift.map((s) => ({
+        name: s.shift,
+        total: s.totalAmount,
+    }));
+
+    // Prepare wagon type chart data (top 10)
+    const wagonTypeBarData = byWagonType.slice(0, 10).map((w) => ({
+        name: w.wagonType,
+        total: w.totalAmount,
+    }));
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -898,6 +972,71 @@ export default function PenaltyAnalytics({
                     </Card>
                 </div>
 
+                {/* Penalty by Operator */}
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <h3 className="mb-1 text-base font-semibold text-gray-900">Penalty by Operator</h3>
+                    <p className="mb-4 text-sm text-gray-500">
+                        Top 15 loader operators by total penalty exposure.
+                    </p>
+                    {operatorBarData.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-gray-400">No operator data available.</p>
+                    ) : (
+                        <BarChart
+                            data={operatorBarData}
+                            xKey="name"
+                            yKey="total"
+                            layout="vertical"
+                            formatY={formatCurrency}
+                            formatTooltip={formatCurrency}
+                            color="var(--chart-1)"
+                            height={Math.max(200, operatorBarData.length * 40)}
+                        />
+                    )}
+                </div>
+
+                {/* Penalty by Shift */}
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <h3 className="mb-1 text-base font-semibold text-gray-900">Penalty by Shift</h3>
+                    <p className="mb-4 text-sm text-gray-500">
+                        Penalty exposure across 1st (06:00–14:00), 2nd (14:00–22:00), and 3rd (22:00–06:00) shifts.
+                    </p>
+                    {shiftBarData.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-gray-400">No shift data available.</p>
+                    ) : (
+                        <BarChart
+                            data={shiftBarData}
+                            xKey="name"
+                            yKey="total"
+                            formatY={formatCurrency}
+                            formatTooltip={formatCurrency}
+                            color="var(--chart-2)"
+                            height={280}
+                        />
+                    )}
+                </div>
+
+                {/* Penalty by Wagon Type */}
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <h3 className="mb-1 text-base font-semibold text-gray-900">Penalty by Wagon Type</h3>
+                    <p className="mb-4 text-sm text-gray-500">
+                        Top wagon types by penalty exposure (BOXN, BCN, etc.).
+                    </p>
+                    {wagonTypeBarData.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-gray-400">No wagon type data available.</p>
+                    ) : (
+                        <BarChart
+                            data={wagonTypeBarData}
+                            xKey="name"
+                            yKey="total"
+                            layout="vertical"
+                            formatY={formatCurrency}
+                            formatTooltip={formatCurrency}
+                            color="var(--chart-3)"
+                            height={Math.max(200, wagonTypeBarData.length * 40)}
+                        />
+                    )}
+                </div>
+
                 {/* Top Offenders Table */}
                 <Card>
                     <CardHeader>
@@ -962,6 +1101,74 @@ export default function PenaltyAnalytics({
                         )}
                     </CardContent>
                 </Card>
+                {/* Loader Performance Leaderboard */}
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="mb-4 flex items-start justify-between">
+                        <div>
+                            <h3 className="text-base font-semibold text-gray-900">Loader Performance Leaderboard</h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                                Ranked by lowest overload rate (overloaded wagons ÷ total wagons). Lower is better.
+                                Minimum 5 wagons loaded to qualify.
+                            </p>
+                        </div>
+                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+                            Lower is better
+                        </span>
+                    </div>
+
+                    {operatorLeaderboard.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-gray-400">
+                            No operator data available for the current period.
+                        </p>
+                    ) : (
+                        <div className="divide-y divide-gray-100">
+                            {operatorLeaderboard.map((row, index) => {
+                                const rank = index + 1;
+                                const colorClass = overloadRateColor(row.overloadRatePct);
+                                const barColor = overloadRateBarColor(row.overloadRatePct);
+                                const badge = rankBadge(rank);
+                                const isEmoji = rank <= 3;
+
+                                return (
+                                    <div key={row.operator} className="flex items-center gap-4 py-3">
+                                        <div className="w-10 shrink-0 text-center">
+                                            {isEmoji ? (
+                                                <span className="text-lg">{badge}</span>
+                                            ) : (
+                                                <span className="text-sm font-semibold text-gray-400">{badge}</span>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="truncate text-sm font-medium text-gray-900">
+                                                    {row.operator}
+                                                </span>
+                                                <span className={`ml-3 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${colorClass}`}>
+                                                    {row.overloadRatePct}% overload
+                                                </span>
+                                            </div>
+                                            <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-100">
+                                                <div
+                                                    className={`h-1.5 rounded-full transition-all ${barColor}`}
+                                                    style={{ width: `${Math.min(row.overloadRatePct, 100)}%` }}
+                                                />
+                                            </div>
+                                            <div className="mt-1 flex gap-4 text-xs text-gray-400">
+                                                <span>{row.totalWagons} wagons loaded</span>
+                                                <span>{row.overloadedWagons} overloaded</span>
+                                                <span>{row.totalExcessMt.toFixed(1)} MT excess</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <p className="mt-4 border-t border-gray-100 pt-3 text-xs text-gray-400">
+                        Rankings based on wagons loaded in current filtered period. Operators with fewer than 5 wagons are excluded.
+                    </p>
+                </div>
             </div>
         </AppLayout>
     );
