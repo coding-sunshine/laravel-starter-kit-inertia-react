@@ -57,9 +57,10 @@ type RakeHydrated = {
 
 interface Props {
     rake: RakeHydrated;
+    loadingRecommendation?: string | null;
 }
 
-export default function RakeLoaderLoading({ rake: initialRake }: Props) {
+export default function RakeLoaderLoading({ rake: initialRake, loadingRecommendation }: Props) {
     const [rake, setRake] = useState<RakeHydrated>(initialRake);
 
     // PCC live tracking: wagonId → loadedMt
@@ -128,6 +129,26 @@ export default function RakeLoaderLoading({ rake: initialRake }: Props) {
                         <Link href={rakeLoader.index.url()}>Back to list</Link>
                     </Button>
                 </div>
+
+                {/* AI Loading Recommendation */}
+                {loadingRecommendation === undefined ? (
+                    <div className="mb-4 animate-pulse rounded-lg border-l-4 border-[#2d6a4f] bg-white p-4 shadow-sm">
+                        <div className="mb-2 h-4 w-48 rounded bg-gray-200" />
+                        <div className="space-y-2">
+                            <div className="h-3 w-full rounded bg-gray-200" />
+                            <div className="h-3 w-5/6 rounded bg-gray-200" />
+                            <div className="h-3 w-4/6 rounded bg-gray-200" />
+                        </div>
+                    </div>
+                ) : loadingRecommendation ? (
+                    <div className="mb-4 rounded-lg border-l-4 border-[#2d6a4f] bg-white p-4 shadow-sm">
+                        <div className="mb-2 flex items-center gap-2">
+                            <span className="text-base">💡</span>
+                            <span className="text-sm font-semibold text-[#2d6a4f]">AI Recommendation</span>
+                        </div>
+                        <p className="text-sm leading-relaxed text-gray-700">{loadingRecommendation}</p>
+                    </div>
+                ) : null}
 
                 <Card>
                     <CardHeader>

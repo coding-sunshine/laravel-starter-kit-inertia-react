@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\Actions\GenerateLoadingRecommendationAction;
 use App\DataTables\RakeLoaderListDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\LoaderOperator;
@@ -64,6 +65,9 @@ final class RakeLoaderController extends Controller
 
         return Inertia::render('rake-loader/loading', [
             'rake' => self::buildRakeLoaderRakePayload($rake),
+            'loadingRecommendation' => Inertia::defer(
+                fn () => app(GenerateLoadingRecommendationAction::class)->handle($rake),
+            ),
         ]);
     }
 
