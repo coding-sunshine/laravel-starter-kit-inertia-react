@@ -80,6 +80,7 @@ import { AlertFeed } from '@/components/dashboard/alert-feed';
 import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
 import { PenaltyExposureStrip } from '@/components/dashboard/penalty-exposure-strip';
+import { PenaltyPredictionsWidget } from '@/components/dashboard/penalty-predictions-widget';
 import { SidingCoalStock } from '@/components/dashboard/siding-coal-stock';
 import { SidingRiskScoreWidget } from '@/components/dashboard/siding-risk-score';
 
@@ -868,6 +869,13 @@ type DashboardProps = SharedData & {
     riskScores?: Record<number, SidingRiskScoreData>;
     alerts?: Record<string, AlertRecord[]>;
     operatorRake?: OperatorRake | null;
+    penaltyPredictions?: Array<{
+        siding_name: string;
+        risk_level: 'high' | 'medium' | 'low';
+        predicted_amount_min: number;
+        predicted_amount_max: number;
+        top_recommendation: string | null;
+    }>;
 };
 
 function formatCurrency(n: number): string {
@@ -4405,6 +4413,7 @@ export default function Dashboard() {
     const riskScores         = props.riskScores ?? {};
     const alertsData         = props.alerts ?? {};
     const operatorRake       = props.operatorRake ?? null;
+    const penaltyPredictions = props.penaltyPredictions ?? [];
     const sidingStocksMap    = props.sidingStocks ?? {};
     const allowedWidgets     = props.allowedDashboardWidgets ?? [];
     const isExecutive        = allowedWidgets.some((w) =>
@@ -4675,6 +4684,8 @@ export default function Dashboard() {
                             <SidingRiskScoreWidget scores={riskScores} />
                             <AlertFeed alerts={alertsData} />
                         </div>
+
+                        <PenaltyPredictionsWidget predictions={penaltyPredictions} />
                     </>
                 )}
             </section>

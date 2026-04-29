@@ -135,6 +135,7 @@ final class ExecutiveDashboardController extends Controller
             'activeRakePipeline' => $this->buildActiveRakePipeline($resolved['filteredSidingIds']),
             'riskScores' => $this->buildRiskScores($resolved['filteredSidingIds']),
             'alerts' => $this->buildCommandCenterAlerts($resolved['filteredSidingIds']),
+            'penaltyPredictions' => $this->buildPenaltyPredictions($resolved['filteredSidingIds']),
             'operatorRake' => $this->buildOperatorRake($resolved['filteredSidingIds']),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'rakePerformance' => [],
@@ -4197,5 +4198,32 @@ final class ExecutiveDashboardController extends Controller
         } catch (Throwable) {
             return [];
         }
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @return list<array{siding_name: string, risk_level: string, predicted_amount_min: float, predicted_amount_max: float, top_recommendation: string|null}>
+     */
+    private function buildPenaltyPredictions(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        return PenaltyPrediction::query()
+            ->with('siding:id,name')
+            ->whereIn('siding_id', $sidingIds)
+            ->where('prediction_date', '>=', now()->toDateString())
+            ->orderByRaw("CASE risk_level WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END")
+            ->limit(5)
+            ->get()
+            ->map(fn (PenaltyPrediction $p): array => [
+                'siding_name' => $p->siding?->name ?? 'Unknown',
+                'risk_level' => $p->risk_level,
+                'predicted_amount_min' => (float) $p->predicted_amount_min,
+                'predicted_amount_max' => (float) $p->predicted_amount_max,
+                'top_recommendation' => isset($p->recommendations[0]) ? (string) $p->recommendations[0] : null,
+            ])
+            ->all();
     }
 }
