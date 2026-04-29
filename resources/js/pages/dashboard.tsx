@@ -75,6 +75,13 @@ import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
 import { LoaderOverloadDashboardSection } from '@/components/dashboard/loader-overload-dashboard-section';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { laravelJsonFetch } from '@/lib/laravel-json-fetch';
+import { ActiveRakePipeline } from '@/components/dashboard/active-rake-pipeline';
+import { AlertFeed } from '@/components/dashboard/alert-feed';
+import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
+import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
+import { PenaltyExposureStrip } from '@/components/dashboard/penalty-exposure-strip';
+import { SidingCoalStock } from '@/components/dashboard/siding-coal-stock';
+import { SidingRiskScoreWidget } from '@/components/dashboard/siding-risk-score';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
@@ -4393,6 +4400,16 @@ export default function Dashboard() {
     const stockGauge = props.stockGauge;
     const predictedVsActualPenalty = props.predictedVsActualPenalty ?? { predicted: 0, actual: 0, bySiding: [] };
     const baseSidingStocks = props.sidingStocks ?? {};
+    const penaltySummary     = props.penaltySummary;
+    const activeRakePipeline = props.activeRakePipeline;
+    const riskScores         = props.riskScores ?? {};
+    const alertsData         = props.alerts ?? {};
+    const operatorRake       = props.operatorRake ?? null;
+    const sidingStocksMap    = props.sidingStocks ?? {};
+    const allowedWidgets     = props.allowedDashboardWidgets ?? [];
+    const isExecutive        = allowedWidgets.some((w) =>
+        ['penalty_exposure_command', 'rake_pipeline_command', 'siding_risk_score'].includes(w),
+    );
     const sidingStocks = useMemo(() => {
         if (Object.keys(stockOverrides).length === 0) return baseSidingStocks;
         const merged: Record<number, SidingStock> = {};
@@ -4629,6 +4646,39 @@ export default function Dashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
+            {/* ── Operations Command Center ── */}
+            <section className="mb-6 flex flex-col gap-4 px-4 pt-4 lg:px-6">
+                <h2
+                    className="text-xs font-bold uppercase tracking-widest"
+                    style={{ color: 'oklch(0.22 0.06 150)' }}
+                >
+                    Operations Command Center
+                </h2>
+
+                {!isExecutive && <OperatorRakeWidget rake={operatorRake} />}
+
+                {isExecutive && (
+                    <>
+                        {penaltySummary && <PenaltyExposureStrip data={penaltySummary} />}
+
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                            {activeRakePipeline && (
+                                <div className="lg:col-span-2">
+                                    <ActiveRakePipeline data={activeRakePipeline} />
+                                </div>
+                            )}
+                            <DispatchSummary stocks={sidingStocksMap} />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                            <SidingCoalStock stocks={sidingStocksMap} />
+                            <SidingRiskScoreWidget scores={riskScores} />
+                            <AlertFeed alerts={alertsData} />
+                        </div>
+                    </>
+                )}
+            </section>
+            {/* ── End Command Center ── */}
             {/* AppSidebarLayout adds p-4/sm:p-6/lg:p-8 around pages; cancel it for dashboard full-bleed layout. */}
             <div className="-m-4 sm:-m-6 lg:-m-8">
                 <div className="dashboard-page flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#FAFAFA] p-3">
