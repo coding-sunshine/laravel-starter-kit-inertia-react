@@ -89,6 +89,6 @@ final class EvaluateOverloadAlertJob implements ShouldQueue
         }
 
         $notification = new LoadriteOverloadNotification($level, $wagonId, $wagonNumber, $this->sidingId, $weightMt, $ccMt, $percentage);
-        Notification::send(User::query()->get(), $notification);
+        User::chunkById(100, fn ($users) => Notification::send($users, $notification));
     }
 }
