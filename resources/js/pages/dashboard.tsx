@@ -80,6 +80,7 @@ import { AlertFeed } from '@/components/dashboard/alert-feed';
 import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
 import { PenaltyExposureStrip } from '@/components/dashboard/penalty-exposure-strip';
+import { OverloadPatternsWidget } from '@/components/dashboard/overload-patterns-widget';
 import { PenaltyPredictionsWidget } from '@/components/dashboard/penalty-predictions-widget';
 import { SidingCoalStock } from '@/components/dashboard/siding-coal-stock';
 import { SidingRiskScoreWidget } from '@/components/dashboard/siding-risk-score';
@@ -875,6 +876,15 @@ type DashboardProps = SharedData & {
         predicted_amount_min: number;
         predicted_amount_max: number;
         top_recommendation: string | null;
+    }>;
+    overloadPatterns?: Array<{
+        siding_name: string;
+        patterns: Array<{
+            wagon_type: string;
+            overload_rate_percent: number;
+            overloaded_count: number;
+            total_count: number;
+        }>;
     }>;
 };
 
@@ -4414,6 +4424,7 @@ export default function Dashboard() {
     const alertsData         = props.alerts ?? {};
     const operatorRake       = props.operatorRake ?? null;
     const penaltyPredictions = props.penaltyPredictions ?? [];
+    const overloadPatterns   = props.overloadPatterns ?? [];
     const sidingStocksMap    = props.sidingStocks ?? {};
     const allowedWidgets     = props.allowedDashboardWidgets ?? [];
     const isExecutive        = allowedWidgets.some((w) =>
@@ -4686,6 +4697,7 @@ export default function Dashboard() {
                         </div>
 
                         <PenaltyPredictionsWidget predictions={penaltyPredictions} />
+                        <OverloadPatternsWidget overloadPatterns={overloadPatterns ?? []} />
                     </>
                 )}
             </section>

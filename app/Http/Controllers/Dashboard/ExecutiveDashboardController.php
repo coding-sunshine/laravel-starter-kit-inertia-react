@@ -136,6 +136,7 @@ final class ExecutiveDashboardController extends Controller
             'riskScores' => $this->buildRiskScores($resolved['filteredSidingIds']),
             'alerts' => $this->buildCommandCenterAlerts($resolved['filteredSidingIds']),
             'penaltyPredictions' => $this->buildPenaltyPredictions($resolved['filteredSidingIds']),
+            'overloadPatterns' => $this->buildOverloadPatterns($resolved['filteredSidingIds']),
             'operatorRake' => $this->buildOperatorRake($resolved['filteredSidingIds']),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'rakePerformance' => [],
@@ -4225,5 +4226,71 @@ final class ExecutiveDashboardController extends Controller
                 'top_recommendation' => isset($p->recommendations[0]) ? (string) $p->recommendations[0] : null,
             ])
             ->all();
+    }
+
+    /**
+     * For each siding, find the top 3 wagon types by overload rate over last 30 days.
+     *
+     * @param  array<int>  $sidingIds
+     * @return list<array{siding_name: string, patterns: list<array{wagon_type: string, overload_rate_percent: float, overloaded_count: int, total_count: int}>}>
+     */
+    private function buildOverloadPatterns(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($sidingIds), '?'));
+
+        $rows = DB::select(
+            <<<SQL
+            SELECT
+                s.id   AS siding_id,
+                s.name AS siding_name,
+                w.wagon_type,
+                COUNT(wl.id)                                                   AS total_count,
+                SUM(CASE WHEN wl.loaded_quantity_mt > w.pcc_weight_mt THEN 1 ELSE 0 END) AS overloaded_count,
+                ROUND(
+                    SUM(CASE WHEN wl.loaded_quantity_mt > w.pcc_weight_mt THEN 1 ELSE 0 END)::numeric
+                    / GREATEST(COUNT(wl.id), 1) * 100,
+                    1
+                ) AS overload_rate_percent
+            FROM wagon_loading wl
+            JOIN wagons w  ON w.id  = wl.wagon_id
+            JOIN rakes  r  ON r.id  = wl.rake_id
+            JOIN sidings s ON s.id  = r.siding_id
+            WHERE r.siding_id IN ({$placeholders})
+              AND r.deleted_at  IS NULL
+              AND wl.created_at >= NOW() - INTERVAL '30 days'
+              AND w.wagon_type  IS NOT NULL
+              AND w.pcc_weight_mt IS NOT NULL
+            GROUP BY s.id, s.name, w.wagon_type
+            HAVING COUNT(wl.id) >= 3
+            ORDER BY s.id, overload_rate_percent DESC
+            SQL,
+            $sidingIds,
+        );
+
+        // Group by siding and keep top 3 per siding
+        $bySiding = [];
+        foreach ($rows as $row) {
+            $sid = (int) $row->siding_id;
+            if (! isset($bySiding[$sid])) {
+                $bySiding[$sid] = [
+                    'siding_name' => $row->siding_name,
+                    'patterns' => [],
+                ];
+            }
+            if (count($bySiding[$sid]['patterns']) < 3) {
+                $bySiding[$sid]['patterns'][] = [
+                    'wagon_type' => $row->wagon_type,
+                    'overload_rate_percent' => (float) $row->overload_rate_percent,
+                    'overloaded_count' => (int) $row->overloaded_count,
+                    'total_count' => (int) $row->total_count,
+                ];
+            }
+        }
+
+        return array_values($bySiding);
     }
 }
