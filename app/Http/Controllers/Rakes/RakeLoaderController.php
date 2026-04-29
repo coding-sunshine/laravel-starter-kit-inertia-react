@@ -67,6 +67,32 @@ final class RakeLoaderController extends Controller
         ]);
     }
 
+    public function storeOverride(Request $request, Rake $rake): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'in:reduced_load,equipment_constraint,railway_instruction,other'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'overload_mt' => ['required', 'numeric', 'min:0'],
+            'estimated_penalty_rs' => ['required', 'numeric', 'min:0'],
+            'wagon_loading_id' => ['nullable', 'integer'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        (new \App\Actions\LogLoadingOverride)->handle(
+            rake: $rake,
+            operator: $user,
+            reason: $validated['reason'],
+            overloadMt: (float) $validated['overload_mt'],
+            estimatedPenaltyRs: (float) $validated['estimated_penalty_rs'],
+            notes: $validated['notes'] ?? null,
+            wagonLoadingId: $validated['wagon_loading_id'] ?? null,
+        );
+
+        return response()->json(['logged' => true]);
+    }
+
     /**
      * @return array<string, mixed>
      */
