@@ -18,6 +18,10 @@ final readonly class GenerateLoadingRecommendationAction
 
     public function handle(Rake $rake): ?string
     {
+        if ($rake->siding_id === null) {
+            return null;
+        }
+
         $sidingId = (int) $rake->siding_id;
         $cacheKey = "loading_recommendation:rake:{$rake->id}:siding:{$sidingId}";
 
