@@ -764,6 +764,62 @@ interface StockGaugeSidingItem {
 
 type StockGaugeData = StockGaugeSidingItem[];
 
+interface PenaltySummary {
+    today_rs: number;
+    trend_7d: { date: string; rs: number }[];
+    preventable_pct: number;
+}
+
+interface RakePipelineCard {
+    rake_id: number;
+    rake_number: string;
+    siding_name: string;
+    siding_code: string;
+    wagon_count: number;
+    overloaded_count: number;
+    penalty_risk_rs: number;
+    state: string;
+    loading_date: string | null;
+}
+
+interface ActiveRakePipeline {
+    loading: RakePipelineCard[];
+    awaiting_clearance: RakePipelineCard[];
+    dispatched: RakePipelineCard[];
+}
+
+interface SidingRiskScoreData {
+    siding_id: number;
+    siding_name: string;
+    siding_code: string;
+    score: number;
+    trend: string;
+    risk_factors: string[];
+    calculated_at: string | null;
+}
+
+interface AlertRecord {
+    id: number;
+    type: string;
+    title: string;
+    body: string;
+    severity: string;
+    siding_id: number | null;
+    rake_id: number | null;
+    created_at: string;
+}
+
+interface OperatorRake {
+    rake_id: number;
+    rake_number: string;
+    siding_name: string;
+    state: string;
+    loaded: number;
+    total: number;
+    status: string;
+    loading_date: string | null;
+}
+
 type DashboardProps = SharedData & {
     sidings?: SidingOption[];
     section?: string;
@@ -800,6 +856,11 @@ type DashboardProps = SharedData & {
     executiveYesterday?: ExecutiveYesterdayData;
     /** Spatie permission names; omit or empty = no widgets (after deploy, always set for authenticated users). */
     allowedDashboardWidgets?: string[];
+    penaltySummary?: PenaltySummary;
+    activeRakePipeline?: ActiveRakePipeline;
+    riskScores?: Record<number, SidingRiskScoreData>;
+    alerts?: Record<string, AlertRecord[]>;
+    operatorRake?: OperatorRake | null;
 };
 
 function formatCurrency(n: number): string {
