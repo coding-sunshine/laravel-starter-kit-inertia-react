@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Events;
 
+use Carbon\Carbon;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -22,8 +23,8 @@ final class RakeStatusUpdated implements ShouldBroadcast
         public readonly string $status,
         public readonly int $wagonsLoaded,
         public readonly int $wagonCount,
-        public readonly ?string $placementTime,
-        public readonly ?string $loadingEndTime,
+        public readonly ?Carbon $placementTime,
+        public readonly ?Carbon $loadingEndTime,
     ) {}
 
     public function broadcastOn(): array
@@ -43,8 +44,8 @@ final class RakeStatusUpdated implements ShouldBroadcast
             'status' => $this->status,
             'wagons_loaded' => $this->wagonsLoaded,
             'wagon_count' => $this->wagonCount,
-            'placement_time' => $this->placementTime,
-            'loading_end_time' => $this->loadingEndTime,
+            'placement_time' => $this->placementTime?->toIso8601String(),
+            'loading_end_time' => $this->loadingEndTime?->toIso8601String(),
         ];
     }
 }
