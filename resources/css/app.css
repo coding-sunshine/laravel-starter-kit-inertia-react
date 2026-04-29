@@ -185,6 +185,38 @@
     background: #9ca3af;
 }
 
+/* BGR brand: active sidebar nav item uses gold, not dark-green accent */
+[data-sidebar="menu-button"][data-active="true"] {
+    background-color: var(--bgr-gold) !important;
+    color: oklch(0.22 0.06 150) !important;
+}
+[data-sidebar="menu-sub-button"][data-active="true"] {
+    background-color: var(--bgr-gold) !important;
+    color: oklch(0.22 0.06 150) !important;
+}
+
+/* BGR table row hover — green tint */
+tbody tr:hover td {
+    background-color: oklch(0.97 0.01 150);
+}
+
+/* BGR gold accent button — clearance/approval actions */
+.btn-bgr-gold {
+    background-color: oklch(0.72 0.12 80);
+    color: oklch(0.22 0.06 150);
+    font-weight: 600;
+}
+
+.btn-bgr-gold:hover {
+    background-color: oklch(0.68 0.12 80);
+}
+
+/* Fira Code utility for numeric/weight/₹ values */
+.font-weight-value {
+    font-family: 'Fira Code', 'Courier New', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+}
+
 @layer base {
     * {
         @apply border-border;
