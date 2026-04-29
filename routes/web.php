@@ -238,6 +238,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Siding context switcher
     Route::post('siding/switch', SidingSwitchController::class)->name('siding.switch');
 
+    // Siding monitor
+    Route::get('sidings/{siding}/monitor', [App\Http\Controllers\Sidings\SidingMonitorController::class, 'show'])
+        ->name('sidings.monitor');
+
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rake-loader', [RakeLoaderController::class, 'index'])->name('rake-loader.index');
     Route::get('rake-loader/rakes/{rake}/loading', [RakeLoaderController::class, 'loading'])->name('rake-loader.rakes.loading');
