@@ -151,6 +151,11 @@ final class Rake extends Model
         return $this->hasMany(RakeWagonLoading::class);
     }
 
+    public function rrPredictions(): HasMany
+    {
+        return $this->hasMany(RrPrediction::class);
+    }
+
     /**
      * Workflow status: every fit wagon has at least one loading row with quantity > 0.
      * Unfit wagons are ignored (may stay 0 or be filled only for audit).

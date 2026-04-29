@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PowerPlant;
 use App\Models\Rake;
 use App\Models\RrDocument;
+use App\Models\RrPrediction;
 use App\Models\Siding;
 use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
@@ -273,10 +274,30 @@ final class RrDocumentController extends Controller
             ->get(['id', 'name', 'code']);
         $preselectedRakeId = $request->input('rake_id');
 
+        $rrPredictions = $sidingIds !== []
+            ? RrPrediction::query()
+                ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds)->whereNull('deleted_at'))
+                ->with('rake:id,rake_number,siding_id')
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get()
+                ->map(fn (RrPrediction $p): array => [
+                    'rake_id' => $p->rake_id,
+                    'rake_number' => $p->rake?->rake_number,
+                    'predicted_weight_mt' => (float) $p->predicted_weight_mt,
+                    'predicted_rr_date' => $p->predicted_rr_date?->toDateString(),
+                    'prediction_confidence' => (float) $p->prediction_confidence,
+                    'prediction_status' => $p->prediction_status,
+                    'variance_percent' => $p->variance_percent !== null ? (float) $p->variance_percent : null,
+                ])
+                ->all()
+            : [];
+
         return Inertia::render('railway-receipts/create', [
             'rakes' => $rakes,
             'sidings' => $sidings,
             'preselectedRakeId' => $preselectedRakeId ? (int) $preselectedRakeId : null,
+            'rrPredictions' => $rrPredictions,
         ]);
     }
 

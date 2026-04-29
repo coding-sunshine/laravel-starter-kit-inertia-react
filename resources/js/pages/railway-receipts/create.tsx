@@ -1,4 +1,5 @@
 import InputError from '@/components/input-error';
+import { RrPredictionsPanel } from '@/components/railway-receipts/rr-predictions-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,15 +19,27 @@ interface Siding {
     code: string;
 }
 
+type RrPrediction = {
+    rake_id: number;
+    rake_number: string | null;
+    predicted_weight_mt: number;
+    predicted_rr_date: string | null;
+    prediction_confidence: number;
+    prediction_status: string;
+    variance_percent: number | null;
+};
+
 interface Props {
     rakes: Rake[];
     sidings: Siding[];
     preselectedRakeId: number | null;
+    rrPredictions: RrPrediction[];
 }
 
 export default function RailwayReceiptsCreate({
     rakes,
     preselectedRakeId,
+    rrPredictions,
 }: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const breadcrumbs: BreadcrumbItem[] = [
@@ -48,6 +61,7 @@ export default function RailwayReceiptsCreate({
             <Head title="Add RR document" />
             <div className="space-y-6">
                 <h2 className="text-lg font-medium">Add RR document</h2>
+                <RrPredictionsPanel rrPredictions={rrPredictions} />
                 <form
                     onSubmit={handleSubmit}
                     className="max-w-md space-y-4"
