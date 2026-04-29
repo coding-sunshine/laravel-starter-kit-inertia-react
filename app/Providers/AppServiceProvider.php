@@ -343,6 +343,7 @@ final class AppServiceProvider extends ServiceProvider
             'master-data-loader-operator-duplicate-confirm',
             'master-data-loaders-tab-loaders',
             'master-data-loaders-tab-operators',
+            'nav-penalty-analytics',
         ]);
     }
 

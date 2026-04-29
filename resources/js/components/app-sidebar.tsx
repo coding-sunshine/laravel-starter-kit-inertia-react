@@ -12,6 +12,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { analytics as penaltiesAnalytics } from '@/routes/penalties';
 import { dashboard } from '@/routes';
 import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
@@ -252,6 +253,13 @@ const platformNavItems: NavItem[] = [
     //     permission: 'sections.penalties.view',
     //     dataPan: 'nav-penalties',
     // },
+    {
+        title: 'Penalty Analytics',
+        href: penaltiesAnalytics().url,
+        icon: BarChart3,
+        permission: 'sections.penalties.view',
+        dataPan: 'nav-penalty-analytics',
+    },
     // {
     //     title: 'Alerts',
     //     href: '/alerts',
@@ -421,6 +429,7 @@ export function AppSidebar() {
 
         const analyticsItems: NavItem[] = [
             ...(historyNavItem ? [historyNavItem] : []),
+            ...visible([byTitle('Penalty Analytics')].filter(Boolean) as NavItem[]),
         ];
 
         // --- Group 5: Settings ---
