@@ -1,9 +1,4 @@
 <x-filament-panels::page>
-    <x-filament-widgets::widgets
-        :widgets="$this->getHeaderWidgets()"
-        :columns="$this->getHeaderWidgetsColumns()"
-    />
-
     <div class="mt-6">
         <x-filament::section>
             <x-slot name="heading">

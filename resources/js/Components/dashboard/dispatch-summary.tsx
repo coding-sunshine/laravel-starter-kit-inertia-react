@@ -14,28 +14,25 @@ export function DispatchSummary({ stocks }: { stocks: Record<number, SidingStock
     return (
         <Card className="shadow-sm">
             <CardHeader className="pb-2">
-                <CardTitle
-                    className="text-sm font-semibold uppercase tracking-wide"
-                    style={{ color: 'oklch(0.22 0.06 150)' }}
-                >
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-green-900 dark:text-green-400">
                     Today's Dispatch
                 </CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <p className="mb-1 text-[10px] uppercase tracking-wide text-gray-400">Total Dispatched</p>
-                        <p className="font-mono text-2xl font-bold tabular-nums text-gray-900">
+                        <p className="mb-1 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Total Dispatched</p>
+                        <p className="font-mono text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
                             {totalDispatched.toLocaleString('en-IN')}
                         </p>
-                        <p className="text-[11px] text-gray-400">MT</p>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">MT</p>
                     </div>
                     <div>
-                        <p className="mb-1 text-[10px] uppercase tracking-wide text-gray-400">Total Received</p>
-                        <p className="font-mono text-2xl font-bold tabular-nums text-gray-900">
+                        <p className="mb-1 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Total Received</p>
+                        <p className="font-mono text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
                             {totalReceived.toLocaleString('en-IN')}
                         </p>
-                        <p className="text-[11px] text-gray-400">MT</p>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">MT</p>
                     </div>
                 </div>
             </CardContent>

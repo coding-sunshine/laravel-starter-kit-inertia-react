@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem } from '@/types';
+import { index } from '@/routes/master-data/power-plants';
 
 interface PowerPlant {
   id: number;
@@ -20,9 +22,14 @@ interface Props {
   powerPlants: PowerPlant[];
 }
 
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Master Data', href: index.url() },
+    { title: 'Power Plants', href: index.url() },
+];
+
 export default function Index({ powerPlants }: Props) {
   return (
-    <AppLayout>
+    <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Power Plants" />
       
       <div className="space-y-6">

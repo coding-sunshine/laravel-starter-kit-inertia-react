@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem } from '@/types';
+import { index, show } from '@/routes/master-data/power-plants';
 
 interface PowerPlant {
   id: number;
@@ -20,8 +22,14 @@ interface Props {
 }
 
 export default function Show({ powerPlant }: Props) {
+  const breadcrumbs: BreadcrumbItem[] = [
+      { title: 'Master Data', href: index.url() },
+      { title: 'Power Plants', href: index.url() },
+      { title: powerPlant.name, href: show.url(powerPlant.id) },
+  ];
+
   return (
-    <AppLayout>
+    <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={`Power Plant - ${powerPlant.name}`} />
       
       <div className="space-y-6">

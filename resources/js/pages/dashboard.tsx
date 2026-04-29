@@ -3384,8 +3384,8 @@ function RakesPerPowerPlantExecutiveChart({
                                     }
 
                                     return valueKind === 'qty'
-                                        ? `${(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
-                                        : `${v ?? 0} rakes`;
+                                        ? [`${(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`, 'Qty']
+                                        : [v ?? 0, 'Rakes'];
                                 }}
                             />
                             <Bar
