@@ -79,5 +79,19 @@ final class SyncLoadriteWeightJob implements ShouldQueue
         }
 
         $wagonLoading->update($updates);
+
+        $refreshed = $wagonLoading->fresh();
+
+        \App\Events\WagonWeightUpdated::dispatch(
+            sidingId: $this->sidingId,
+            wagonId: $wagonLoading->wagon_id,
+            sequence: $this->event['Sequence'],
+            loadriteWeightMt: (float) $this->event['Weight'],
+            weightSource: $refreshed->weight_source,
+            percentage: $wagonLoading->cc_capacity_mt > 0
+                ? round(($this->event['Weight'] / (float) $wagonLoading->cc_capacity_mt) * 100, 1)
+                : 0.0,
+            status: $refreshed->weight_source === 'weighbridge' ? 'loaded' : 'loading',
+        );
     }
 }
