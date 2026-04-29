@@ -42,10 +42,14 @@ final class SendWeeklyPenaltyReport extends Command
             'sidings_summary' => $thisWeek['sidings_summary'],
         ];
 
-        $recipientEmails = User::query()
-            ->whereHas('roles', fn ($q) => $q->whereIn('name', ['super-admin', 'admin']))
-            ->pluck('email')
-            ->all();
+        /** @var list<string> $recipientEmails */
+        $recipientEmails = array_values(
+            User::query()
+                ->whereHas('roles', fn ($q) => $q->whereIn('name', ['super-admin', 'admin']))
+                ->pluck('email')
+                ->map(fn ($e): string => (string) $e)
+                ->all()
+        );
 
         if ($recipientEmails === []) {
             $this->warn('No eligible recipients found. Skipping dispatch.');

@@ -26,6 +26,7 @@ final readonly class GenerateLoadingRecommendationAction
         $cacheKey = "loading_recommendation:rake:{$rake->id}:siding:{$sidingId}";
 
         if (Cache::has($cacheKey)) {
+            /** @var string|null $cached */
             $cached = Cache::get($cacheKey);
 
             return $cached === '__unavailable__' ? null : $cached;
