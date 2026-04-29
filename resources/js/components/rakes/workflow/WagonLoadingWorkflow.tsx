@@ -1,3 +1,5 @@
+import { PccGaugeBar } from '@/components/loading/PccGaugeBar';
+import { calcPccPct, calcStatus, parseMt } from '@/utils/pcc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -86,6 +88,7 @@ interface WagonLoadingWorkflowProps {
     };
     disabled: boolean;
     onWagonLoadingsSaved?: (loadings: WagonLoadingRecord[]) => void;
+    onLoadedQtyChange?: (wagonId: number, loadedMt: number) => void;
     /**
      * By default the table scrolls internally to keep the page compact.
      * For dedicated screens (like Rake Loader) you may want full height.
@@ -642,6 +645,7 @@ export function WagonLoadingWorkflow({
     rake,
     disabled,
     onWagonLoadingsSaved,
+    onLoadedQtyChange,
     compact = true,
     tableVariant = 'default',
 }: WagonLoadingWorkflowProps) {
@@ -1221,13 +1225,16 @@ export function WagonLoadingWorkflow({
                                             <TableHead className="h-14 min-h-[4rem] border-r border-gray-300 px-2 py-3 text-center">
                                                 Loaded Qty (MT)
                                             </TableHead>
+                                            <TableHead className="h-14 min-h-[4rem] border-r border-gray-300 px-2 py-3 text-center">
+                                                Load vs PCC
+                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {rows.length === 0 && ensuring ? (
                                             <TableRow>
                                                 <TableCell
-                                                    colSpan={5}
+                                                    colSpan={6}
                                                     className="py-8 text-center text-sm text-muted-foreground"
                                                 >
                                                     Preparing rows…
@@ -1242,14 +1249,25 @@ export function WagonLoadingWorkflow({
                                                 const cellBase =
                                                     'min-h-[4rem] border-t border-r border-gray-300 align-middle';
 
+                                                const pccMt = parseMt(wagonForRow?.pcc_weight_mt);
+                                                const currentLoadedMt = parseMt(
+                                                    focusedQtyRowKey === row.key
+                                                        ? toDisplayDecimal(row.loaded_quantity_mt)
+                                                        : row.loaded_quantity_mt
+                                                );
+                                                const rowStatus = pccMt > 0 ? calcStatus(currentLoadedMt, pccMt) : 'empty';
+                                                const rowBg = isUnfitRow
+                                                    ? 'border-b border-red-900/55 bg-red-950/40 dark:bg-red-950/50'
+                                                    : rowStatus === 'over'
+                                                    ? 'bg-[#fff5f5]'
+                                                    : rowStatus === 'near'
+                                                    ? 'bg-[#fffdf0]'
+                                                    : undefined;
+
                                                 return (
                                                     <TableRow
                                                         key={row.key}
-                                                        className={
-                                                            isUnfitRow
-                                                                ? 'border-b border-red-900/55 bg-red-950/40 dark:bg-red-950/50'
-                                                                : undefined
-                                                        }
+                                                        className={rowBg}
                                                     >
                                                         <TableCell
                                                             className={cn(
@@ -1363,12 +1381,17 @@ export function WagonLoadingWorkflow({
                                                                 }
                                                                 onChange={(e) => {
                                                                     spreadsheetDirtyRef.current.add(row.key);
+                                                                    const digits = toEditDigits(e.target.value);
                                                                     updateRow(
                                                                         row.key,
                                                                         'loaded_quantity_mt',
-                                                                        toEditDigits(e.target.value),
+                                                                        digits,
                                                                     );
                                                                     scheduleSpreadsheetSave(row.key);
+                                                                    const wagonIdNum = Number(row.wagon_id);
+                                                                    if (wagonIdNum) {
+                                                                        onLoadedQtyChange?.(wagonIdNum, parseMt(toDisplayDecimal(digits)));
+                                                                    }
                                                                 }}
                                                                 onKeyDown={(e) => {
                                                                     if (e.key === 'Enter') {
@@ -1384,6 +1407,22 @@ export function WagonLoadingWorkflow({
                                                                 }
                                                                 className="h-12 w-24 px-2 text-xs"
                                                             />
+                                                        </TableCell>
+                                                        <TableCell
+                                                            className={cn(
+                                                                cellBase,
+                                                                'px-2 py-3 min-w-[100px]',
+                                                            )}
+                                                        >
+                                                            {pccMt > 0 ? (
+                                                                <PccGaugeBar
+                                                                    pct={calcPccPct(currentLoadedMt, pccMt)}
+                                                                    loadedMt={currentLoadedMt}
+                                                                    pccMt={pccMt}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-[11px] text-gray-400">No PCC</span>
+                                                            )}
                                                         </TableCell>
                                                     </TableRow>
                                                 );
@@ -1466,6 +1505,7 @@ export function WagonLoadingWorkflow({
                                                 <TableHead>Loader</TableHead>
                                                 <TableHead>Operator</TableHead>
                                                 <TableHead>Loaded Qty (MT)</TableHead>
+                                                <TableHead className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 text-center">Load vs PCC</TableHead>
                                                 <TableHead>Wagon Type</TableHead>
                                                 <TableHead>PCC Capacity</TableHead>
                                                 <TableHead>Loading Time</TableHead>
@@ -1477,7 +1517,7 @@ export function WagonLoadingWorkflow({
                                             {rows.length === 0 && ensuring ? (
                                                 <TableRow>
                                                     <TableCell
-                                                        colSpan={9}
+                                                        colSpan={10}
                                                         className="py-8 text-center text-sm text-muted-foreground"
                                                     >
                                                         Preparing rows…
@@ -1489,6 +1529,18 @@ export function WagonLoadingWorkflow({
                                                         (w) => String(w.id) === row.wagon_id
                                                     );
                                                     const isUnfitRow = wagonForRow?.is_unfit === true;
+
+                                                    const pccMtDefault = parseMt(row.pcc_capacity ?? wagonForRow?.pcc_weight_mt);
+                                                    const currentLoadedMtDefault = parseMt(row.loaded_quantity_mt);
+                                                    const rowStatusDefault = pccMtDefault > 0 ? calcStatus(currentLoadedMtDefault, pccMtDefault) : 'empty';
+                                                    const rowBgDefault = isUnfitRow
+                                                        ? 'border-b border-red-900/55 bg-red-950/40 dark:bg-red-950/50'
+                                                        : rowStatusDefault === 'over'
+                                                        ? 'bg-[#fff5f5]'
+                                                        : rowStatusDefault === 'near'
+                                                        ? 'bg-[#fffdf0]'
+                                                        : undefined;
+
                                                     const operatorSelectValues = new Set(loaderOperatorNames);
                                                     const currentOp = row.loader_operator_name.trim();
                                                     if (currentOp && !operatorSelectValues.has(currentOp)) {
@@ -1501,11 +1553,7 @@ export function WagonLoadingWorkflow({
                                                     return (
                                                         <TableRow
                                                             key={row.key}
-                                                            className={
-                                                                isUnfitRow
-                                                                    ? 'border-b border-red-900/55 bg-red-950/40 dark:bg-red-950/50'
-                                                                    : undefined
-                                                            }
+                                                            className={rowBgDefault}
                                                         >
                                                             <TableCell className="min-w-[140px]">
                                                                 <div className="flex flex-col gap-1">
@@ -1586,17 +1634,32 @@ export function WagonLoadingWorkflow({
                                                                     inputMode="decimal"
                                                                     pattern="[0-9]*[.,]?[0-9]*"
                                                                     value={row.loaded_quantity_mt}
-                                                                    onChange={(e) =>
+                                                                    onChange={(e) => {
                                                                         updateRow(
                                                                             row.key,
                                                                             'loaded_quantity_mt',
                                                                             e.target.value,
-                                                                        )
-                                                                    }
+                                                                        );
+                                                                        const wagonIdNum = Number(row.wagon_id);
+                                                                        if (wagonIdNum) {
+                                                                            onLoadedQtyChange?.(wagonIdNum, parseFloat(e.target.value) || 0);
+                                                                        }
+                                                                    }}
                                                                     placeholder="0"
                                                                     disabled={disabled || tableReadOnly}
                                                                     className="w-24"
                                                                 />
+                                                            </TableCell>
+                                                            <TableCell className="px-2 py-1 min-w-[100px]">
+                                                                {pccMtDefault > 0 ? (
+                                                                    <PccGaugeBar
+                                                                        pct={calcPccPct(currentLoadedMtDefault, pccMtDefault)}
+                                                                        loadedMt={currentLoadedMtDefault}
+                                                                        pccMt={pccMtDefault}
+                                                                    />
+                                                                ) : (
+                                                                    <span className="text-[11px] text-gray-400">No PCC</span>
+                                                                )}
                                                             </TableCell>
                                                             <TableCell className="min-w-[180px]">
                                                                 <Input
