@@ -30,6 +30,9 @@ Schedule::command('model:prune', [
     '--model' => [MartinPetricko\LaravelDatabaseMail\Models\MailException::class],
 ])->daily();
 
+// Loadrite: ensure polling jobs are dispatched for all configured sidings.
+Schedule::command('loadrite:start-polling')->everyFiveMinutes();
+
 // RRMCS: check loading rakes for demurrage threshold crossings.
 Schedule::command('rrmcs:check-demurrage')->everyFiveMinutes();
 
