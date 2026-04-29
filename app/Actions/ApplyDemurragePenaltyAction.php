@@ -15,24 +15,22 @@ use Illuminate\Support\Facades\DB;
 final readonly class ApplyDemurragePenaltyAction
 {
     /**
-     * Calculate and upsert the demurrage penalty for a rake based on loading times.
-     *
-     * @return array{applied: bool, chargedHours: int, excessMinutes: int, totalLoadingMinutes: int, freeMinutes: int, rate: float, amount: float}|null
+     * @return array{applied: bool, chargedHours: int, excessMinutes: int, totalMinutes: int, freeMinutes: int, baseRate: float, rateMultiplier: int, amount: float}|null
      */
     public function handle(Rake $rake): ?array
     {
-        if ($rake->loading_start_time === null || $rake->loading_end_time === null) {
+        if ($rake->placement_time === null || $rake->loading_end_time === null) {
             $this->removeDemurragePenalty($rake);
 
             return null;
         }
 
-        $totalLoadingMinutes = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
+        $totalMinutes = (int) $rake->placement_time->diffInMinutes($rake->loading_end_time);
         $freeMinutes = (int) (SectionTimer::query()
             ->where('section_name', 'loading')
-            ->value('free_minutes') ?? 180);
+            ->value('free_minutes') ?? 300);
 
-        $excessMinutes = $totalLoadingMinutes - $freeMinutes;
+        $excessMinutes = $totalMinutes - $freeMinutes;
 
         if ($excessMinutes <= 0) {
             $this->removeDemurragePenalty($rake);
@@ -41,9 +39,10 @@ final readonly class ApplyDemurragePenaltyAction
                 'applied' => false,
                 'chargedHours' => 0,
                 'excessMinutes' => 0,
-                'totalLoadingMinutes' => $totalLoadingMinutes,
+                'totalMinutes' => $totalMinutes,
                 'freeMinutes' => $freeMinutes,
-                'rate' => 0.0,
+                'baseRate' => 0.0,
+                'rateMultiplier' => 1,
                 'amount' => 0.0,
             ];
         }
@@ -57,13 +56,15 @@ final readonly class ApplyDemurragePenaltyAction
             return null;
         }
 
-        $rate = (float) ($penaltyType->default_rate ?? 0.0);
+        $baseRate = (float) ($penaltyType->default_rate ?? 0.0);
         $chargedHours = (int) ceil($excessMinutes / 60);
-        $amount = round($chargedHours * $rate, 2);
+        $rateMultiplier = $this->progressiveMultiplier($chargedHours);
+        $wagonCount = max(1, (int) $rake->wagon_count);
+        $amount = round($chargedHours * $baseRate * $rateMultiplier * $wagonCount, 2);
 
         $created = false;
 
-        DB::transaction(function () use ($rake, $penaltyType, $chargedHours, $rate, $amount, $totalLoadingMinutes, $freeMinutes, $excessMinutes, &$created): void {
+        DB::transaction(function () use ($rake, $penaltyType, $chargedHours, $baseRate, $rateMultiplier, $wagonCount, $amount, $totalMinutes, $freeMinutes, $excessMinutes, &$created): void {
             $rakeCharge = RakeCharge::query()->firstOrCreate(
                 [
                     'rake_id' => $rake->id,
@@ -89,16 +90,21 @@ final readonly class ApplyDemurragePenaltyAction
                     'wagon_number' => null,
                     'quantity' => $chargedHours,
                     'distance' => null,
-                    'rate' => $rate,
+                    'rate' => $baseRate * $rateMultiplier,
                     'amount' => $amount,
                     'meta' => [
                         'source' => 'demurrage',
-                        'total_loading_minutes' => $totalLoadingMinutes,
+                        'placement_time' => $rake->placement_time->toIso8601String(),
+                        'loading_end_time' => $rake->loading_end_time->toIso8601String(),
+                        'total_minutes' => $totalMinutes,
                         'free_minutes' => $freeMinutes,
                         'excess_minutes' => $excessMinutes,
-                        'charged_hours' => $chargedHours,
-                        'loading_start_time' => $rake->loading_start_time->toIso8601String(),
-                        'loading_end_time' => $rake->loading_end_time->toIso8601String(),
+                        'excess_hours' => $chargedHours,
+                        'wagon_count' => $wagonCount,
+                        'base_rate' => $baseRate,
+                        'rate_multiplier' => $rateMultiplier,
+                        'recalculated_at' => null,
+                        'correction_reason' => null,
                     ],
                 ],
             );
@@ -128,11 +134,26 @@ final readonly class ApplyDemurragePenaltyAction
             'applied' => true,
             'chargedHours' => $chargedHours,
             'excessMinutes' => $excessMinutes,
-            'totalLoadingMinutes' => $totalLoadingMinutes,
+            'totalMinutes' => $totalMinutes,
             'freeMinutes' => $freeMinutes,
-            'rate' => $rate,
+            'baseRate' => $baseRate,
+            'rateMultiplier' => $rateMultiplier,
             'amount' => $amount,
         ];
+    }
+
+    /**
+     * Indian Railways Board circular May 2022 progressive multiplier tiers.
+     */
+    private function progressiveMultiplier(int $excessHours): int
+    {
+        return match (true) {
+            $excessHours <= 6 => 1,
+            $excessHours <= 12 => 2,
+            $excessHours <= 24 => 3,
+            $excessHours <= 48 => 4,
+            default => 6,
+        };
     }
 
     private function removeDemurragePenalty(Rake $rake): void
