@@ -33,9 +33,9 @@ test('user model update creates activity log and does not store password in prop
         ->first();
 
     expect($activity)->not->toBeNull()
-        ->and($activity->properties->toArray())->not->toHaveKey('password')
-        ->and($activity->properties->get('attributes'))->toHaveKey('name')
-        ->and($activity->properties->get('attributes')['name'])->toBe('Updated Name');
+        ->and($activity->attribute_changes?->toArray() ?? [])->not->toHaveKey('password')
+        ->and($activity->attribute_changes->get('attributes'))->toHaveKey('name')
+        ->and($activity->attribute_changes->get('attributes')['name'])->toBe('Updated Name');
 });
 
 test('embedding demo update creates activity log and does not store embedding in properties', function (): void {
@@ -54,9 +54,9 @@ test('embedding demo update creates activity log and does not store embedding in
         ->first();
 
     expect($activity)->not->toBeNull()
-        ->and($activity->properties->toArray())->not->toHaveKey('embedding')
-        ->and($activity->properties->get('attributes'))->toHaveKey('content')
-        ->and($activity->properties->get('attributes')['content'])->toBe('Updated content');
+        ->and($activity->attribute_changes?->toArray() ?? [])->not->toHaveKey('embedding')
+        ->and($activity->attribute_changes->get('attributes'))->toHaveKey('content')
+        ->and($activity->attribute_changes->get('attributes')['content'])->toBe('Updated content');
 });
 
 test('two factor enable logs activity', function (): void {

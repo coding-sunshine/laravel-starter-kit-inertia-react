@@ -29,10 +29,8 @@ use App\Policies\ShareablePolicy;
 use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
-use Essa\APIToolKit\Exceptions\Handler as ApiToolKitExceptionHandler;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse as FilamentLoginResponseContract;
 use Filament\Http\Controllers\RedirectToHomeController;
-use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\DB;
@@ -55,8 +53,6 @@ final class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(PrismService::class, fn (): PrismService => new PrismService);
-
-        $this->app->singleton(ExceptionHandler::class, ApiToolKitExceptionHandler::class);
 
         $this->app->singleton(PaymentGatewayManager::class);
 

@@ -1,0 +1,562 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f8fafc; }
+
+.section { margin-bottom: 28px; }
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #64748b; margin-bottom: 12px; }
+
+/* Color swatches */
+.swatch-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.swatch { border-radius: 10px; overflow: hidden; width: 140px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.swatch-color { height: 64px; }
+.swatch-info { padding: 8px 10px; background: white; }
+.swatch-name { font-size: 11px; font-weight: 700; color: #1e293b; }
+.swatch-token { font-size: 10px; color: #64748b; font-family: 'Courier New', monospace; margin-top: 1px; }
+.swatch-hex { font-size: 10px; color: #94a3b8; font-family: 'Courier New', monospace; }
+
+/* Typography samples */
+.type-row { display: flex; flex-direction: column; gap: 10px; }
+.type-sample { background: white; border-radius: 10px; padding: 14px 18px; border: 1px solid #e2e8f0; }
+.type-label { font-size: 10px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+/* Sidebar preview */
+.sidebar-preview {
+  display: flex;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  height: 420px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.sidebar {
+  width: 220px;
+  background: #1E3A2F;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  padding: 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-mark {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.logo-text { }
+.logo-main { font-size: 14px; font-weight: 800; color: white; letter-spacing: -0.3px; line-height: 1; }
+.logo-sub { font-size: 9px; color: rgba(255,255,255,0.45); letter-spacing: 0.8px; text-transform: uppercase; margin-top: 2px; }
+
+.nav-group { padding: 14px 10px 6px; }
+.nav-group-label { font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(255,255,255,0.3); padding: 0 6px; margin-bottom: 4px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  margin-bottom: 1px;
+  transition: all 0.15s;
+}
+
+.nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+.nav-item.active { background: #C8A84B; color: #1E3A2F; font-weight: 700; }
+
+.nav-icon { width: 15px; height: 15px; opacity: 0.8; flex-shrink: 0; }
+.nav-item.active .nav-icon { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto;
+  background: rgba(239,68,68,0.85);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+
+.nav-item.active .nav-badge { background: rgba(30,58,47,0.3); color: #1E3A2F; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border-radius: 7px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #C8A84B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1E3A2F;
+  flex-shrink: 0;
+}
+
+.user-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8); }
+.user-role { font-size: 9px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+
+/* Main content area preview */
+.main-preview {
+  flex: 1;
+  background: #f0f4f1;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.topbar {
+  background: white;
+  border-radius: 8px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  border: 1px solid #e8eee9;
+}
+
+.page-heading { font-size: 15px; font-weight: 700; color: #1E3A2F; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.topbar-badge { background: #dcfce7; color: #166534; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+
+.widget-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+.widget {
+  background: white;
+  border-radius: 8px;
+  padding: 12px 14px;
+  border: 1px solid #e8eee9;
+}
+
+.widget-label { font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; }
+.widget-val { font-size: 20px; font-weight: 800; font-family: 'Courier New', monospace; }
+.widget-val-green { color: #16a34a; }
+.widget-val-red { color: #dc2626; }
+.widget-val-amber { color: #d97706; }
+.widget-sub { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+
+.table-preview {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e8eee9;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.table-head { background: #1E3A2F; }
+.table-head td { padding: 7px 12px; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.5px; text-transform: uppercase; }
+.table-row { border-bottom: 1px solid #f1f5f9; }
+.table-row td { padding: 7px 12px; font-size: 11px; color: #334155; }
+.table-row:hover td { background: #f0fdf4; }
+.table-row:last-child { border-bottom: none; }
+.td-mono { font-family: 'Courier New', monospace; font-weight: 600; }
+
+/* Buttons */
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary { background: #1E3A2F; color: white; }
+.btn-accent { background: #C8A84B; color: #1E3A2F; }
+.btn-outline { background: white; color: #1E3A2F; border: 1.5px solid #1E3A2F; }
+.btn-ghost { background: transparent; color: #64748b; border: 1.5px solid #e2e8f0; }
+.btn-danger { background: #fee2e2; color: #991b1b; }
+
+/* Login preview */
+.login-preview {
+  display: flex;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  max-width: 720px;
+}
+
+.login-left {
+  width: 280px;
+  background: #1E3A2F;
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.login-brand-logo { margin-bottom: 24px; }
+.login-tagline { font-size: 20px; font-weight: 800; color: white; line-height: 1.3; }
+.login-sub { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 8px; line-height: 1.6; }
+.login-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 20px 0; }
+.login-stat { margin-bottom: 10px; }
+.login-stat-val { font-size: 22px; font-weight: 800; color: #C8A84B; font-family: 'Courier New', monospace; }
+.login-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+
+.login-right {
+  flex: 1;
+  background: white;
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-title { font-size: 20px; font-weight: 800; color: #1E3A2F; }
+.login-desc { font-size: 12px; color: #64748b; margin-top: 4px; margin-bottom: 24px; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 4px; display: block; }
+.form-input {
+  width: 100%;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 8px 11px;
+  font-size: 13px;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.form-input:focus { outline: none; border-color: #1E3A2F; }
+
+.btn-login {
+  width: 100%;
+  padding: 10px;
+  background: #1E3A2F;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.login-footer { font-size: 11px; color: #94a3b8; margin-top: 14px; text-align: center; }
+</style>
+
+<h2 style="margin-bottom:4px">Section 2 — Design System: Brand, Colors, Typography & Components</h2>
+<p class="subtitle" style="margin-bottom:20px">The visual foundation everything else is built on.</p>
+
+<!-- COLOR TOKENS -->
+<div class="section">
+  <div class="section-title">Color Tokens — BGR Brand System</div>
+  <div class="swatch-row">
+    <div class="swatch">
+      <div class="swatch-color" style="background:#1E3A2F"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Forest Green</div>
+        <div class="swatch-token">--color-primary</div>
+        <div class="swatch-hex">#1E3A2F · oklch(0.22 0.06 150)</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#2D5540"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Green Mid</div>
+        <div class="swatch-token">--color-primary-hover</div>
+        <div class="swatch-hex">#2D5540 · sidebar hover state</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#C8A84B"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">BGR Gold</div>
+        <div class="swatch-token">--color-accent</div>
+        <div class="swatch-hex">#C8A84B · oklch(0.72 0.12 80)</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#F0E8C8"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Gold Light</div>
+        <div class="swatch-token">--color-accent-muted</div>
+        <div class="swatch-hex">#F0E8C8 · badge backgrounds</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#f0f4f1"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Page Background</div>
+        <div class="swatch-token">--color-background</div>
+        <div class="swatch-hex">#f0f4f1 · green-tinted canvas</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#dc2626"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Danger / Overload</div>
+        <div class="swatch-token">--color-danger</div>
+        <div class="swatch-hex">#dc2626 · PCC violations</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#d97706"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Warning / Near PCC</div>
+        <div class="swatch-token">--color-warning</div>
+        <div class="swatch-hex">#d97706 · >90% of PCC</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TYPOGRAPHY -->
+<div class="section">
+  <div class="section-title">Typography</div>
+  <div class="type-row">
+    <div class="type-sample">
+      <div class="type-label">Page Heading — System UI Bold 600 · #1E3A2F</div>
+      <div style="font-size:22px;font-weight:700;color:#1E3A2F">Wagon Loading — Rake 23411</div>
+    </div>
+    <div class="type-sample">
+      <div class="type-label">Body text — System UI Regular 400 · #334155</div>
+      <div style="font-size:13px;color:#334155;line-height:1.6">Fill loader and loaded quantity for each wagon. Set loading start and end times before submitting the rake for dispatch clearance.</div>
+    </div>
+    <div class="type-sample">
+      <div class="type-label">Numbers & Weights — Fira Code / Courier New Mono · used for all MT values, ₹ amounts, wagon IDs</div>
+      <div style="font-size:18px;font-weight:700;font-family:'Courier New',monospace;color:#1E3A2F">84.5 MT &nbsp; ₹ 24,480 &nbsp; WGN-84271 &nbsp; 108%</div>
+      <div style="font-size:13px;font-family:'Courier New',monospace;color:#64748b;margin-top:4px">PCC: 80.0 MT &nbsp;·&nbsp; Loaded: 86.4 MT &nbsp;·&nbsp; Overload: +6.4 MT</div>
+    </div>
+    <div class="type-sample">
+      <div class="type-label">Table header — 10px uppercase 700 · used on spreadsheet columns</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#94a3b8">Wagon &nbsp;·&nbsp; PCC (MT) &nbsp;·&nbsp; Loaded (MT) &nbsp;·&nbsp; Status &nbsp;·&nbsp; Penalty ₹</div>
+    </div>
+  </div>
+</div>
+
+<!-- BUTTONS -->
+<div class="section">
+  <div class="section-title">Button Hierarchy</div>
+  <div style="background:white;padding:16px 18px;border-radius:10px;border:1px solid #e2e8f0;">
+    <div class="btn-row">
+      <button class="btn btn-primary">Submit Rake</button>
+      <button class="btn btn-accent">Request Clearance</button>
+      <button class="btn btn-outline">Save Draft</button>
+      <button class="btn btn-ghost">Back to List</button>
+      <button class="btn btn-danger">Mark Unfit</button>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:#94a3b8">Primary (green) → Accent (gold, for clearance/approval actions) → Outline → Ghost → Danger</div>
+  </div>
+</div>
+
+<!-- SIDEBAR + APP SHELL -->
+<div class="section">
+  <div class="section-title">App Shell — Sidebar + Page Layout</div>
+  <div class="sidebar-preview">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <svg class="logo-mark" viewBox="0 0 34 34" fill="none">
+          <rect width="34" height="34" rx="7" fill="#C8A84B" opacity="0.15"/>
+          <polygon points="17,4 30,26 4,26" fill="none" stroke="#C8A84B" stroke-width="2" stroke-linejoin="round"/>
+          <polygon points="17,10 26,26 8,26" fill="#C8A84B" opacity="0.4"/>
+          <circle cx="17" cy="23" r="2" fill="#C8A84B"/>
+        </svg>
+        <div class="logo-text">
+          <div class="logo-main">SHAReReport</div>
+          <div class="logo-sub">BGR Mining & Infra</div>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Overview</div>
+        <div class="nav-item active">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+          Dashboard
+          <span class="nav-badge">3</span>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Loading Operations</div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h8v2H2z"/></svg>
+          Rake Loader
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+          Manual Weighment
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10l1 4H2zm0 4v8h10V6" stroke="currentColor" fill="none" stroke-width="1.2"/></svg>
+          Rake Management
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Finance & Compliance</div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5z"/></svg>
+          Penalties
+          <span class="nav-badge">7</span>
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5 8h6M5 5h6M5 11h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Railway Receipts
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 12l3-4 3 2 3-5 3 4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Stock Ledger
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Analytics</div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 14V8h3v6zm4 0V5h3v9zm4 0V2h3v12z" fill="currentColor" opacity="0.8"/></svg>
+          Penalty Analytics
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="avatar">RS</div>
+          <div>
+            <div class="user-name">Rajesh Singh</div>
+            <div class="user-role">Site Manager · Dumka</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-preview">
+      <div class="topbar">
+        <div class="page-heading">Operations Dashboard</div>
+        <div class="topbar-right">
+          <span class="topbar-badge">Dumka Siding</span>
+          <div style="width:28px;height:28px;border-radius:50%;background:#1E3A2F;display:flex;align-items:center;justify-content:center;">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="white"><path d="M8 1a3 3 0 100 6A3 3 0 008 1zM3 14a5 5 0 0110 0H3z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="widget-grid">
+        <div class="widget">
+          <div class="widget-label">Penalty Exposure Today</div>
+          <div class="widget-val widget-val-red">₹ 24,480</div>
+          <div class="widget-sub">3 rakes · preventable</div>
+        </div>
+        <div class="widget">
+          <div class="widget-label">Active Rakes Loading</div>
+          <div class="widget-val widget-val-amber">4</div>
+          <div class="widget-sub">2 near dispatch</div>
+        </div>
+        <div class="widget">
+          <div class="widget-label">Coal Stock — Dumka</div>
+          <div class="widget-val widget-val-green">3,840 MT</div>
+          <div class="widget-sub">Last receipt 2h ago</div>
+        </div>
+      </div>
+
+      <div class="table-preview">
+        <table style="width:100%;border-collapse:collapse">
+          <thead class="table-head">
+            <tr>
+              <td>Rake</td>
+              <td>Wagons</td>
+              <td>Status</td>
+              <td>Risk</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="table-row">
+              <td class="td-mono">23411</td>
+              <td>42</td>
+              <td><span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px">3 over PCC</span></td>
+              <td style="color:#dc2626;font-weight:700;font-size:11px">HIGH</td>
+            </tr>
+            <tr class="table-row">
+              <td class="td-mono">23412</td>
+              <td>58</td>
+              <td><span style="background:#fef9c3;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px">Loading</span></td>
+              <td style="color:#d97706;font-weight:700;font-size:11px">MED</td>
+            </tr>
+            <tr class="table-row">
+              <td class="td-mono">23410</td>
+              <td>42</td>
+              <td><span style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px">Ready</span></td>
+              <td style="color:#16a34a;font-weight:700;font-size:11px">LOW</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="padding:8px 12px;background:#f8fafc;border-top:1px solid #f1f5f9;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center">
+          <span>3 of 12 rakes shown</span>
+          <span>Rows per page: 10 ▾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="section">
+  <div class="section-title">Login Page Redesign — No "Sign Up" link, BGR identity panel on left</div>
+  <div class="login-preview">
+    <div class="login-left">
+      <div class="login-brand-logo">
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+          <rect width="44" height="44" rx="10" fill="rgba(200,168,75,0.15)"/>
+          <polygon points="22,6 38,34 6,34" fill="none" stroke="#C8A84B" stroke-width="2.5" stroke-linejoin="round"/>
+          <polygon points="22,14 34,34 10,34" fill="#C8A84B" opacity="0.35"/>
+          <circle cx="22" cy="30" r="3" fill="#C8A84B"/>
+        </svg>
+      </div>
+      <div class="login-tagline">Railway Rack Management System</div>
+      <div class="login-sub">BGR Mining & Infra Limited — Coal logistics intelligence platform</div>
+      <div class="login-divider"></div>
+      <div class="login-stat">
+        <div class="login-stat-val">3 Sidings</div>
+        <div class="login-stat-lbl">Dumka · Kurwa · Pakur</div>
+      </div>
+      <div class="login-stat">
+        <div class="login-stat-val">5 Plants</div>
+        <div class="login-stat-lbl">STPS · BTPC · KPPS · PSPM · BTMT</div>
+      </div>
+    </div>
+    <div class="login-right">
+      <div class="login-title">Sign in</div>
+      <div class="login-desc">Access your BGR Mining dashboard</div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input class="form-input" placeholder="you@bgrmining.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" placeholder="••••••••" />
+      </div>
+      <button class="btn-login">Sign in to SHAReReport</button>
+      <div class="login-footer">Forgot your password? Contact your administrator.</div>
+    </div>
+  </div>
+</div>

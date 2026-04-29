@@ -1,6 +1,6 @@
 # Saloon HTTP Client
 
-Third-party API integrations use **Saloon** (`saloonphp/saloon` v3) for a consistent, testable HTTP client layer.
+Third-party API integrations use **Saloon** (`saloonphp/saloon` v4) for a consistent, testable HTTP client layer.
 
 ## Where integrations live
 
@@ -53,5 +53,5 @@ No new connector is added until a specific API contract (base URL, auth, endpoin
 
 ## References
 
-- [Saloon v3 docs](https://docs.saloon.dev)
+- [Saloon docs](https://docs.saloon.dev)
 - Config: `config/services.php` → `example_api` (and your API keys as needed)

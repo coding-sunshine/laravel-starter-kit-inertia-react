@@ -136,7 +136,7 @@ final class MakeModelFullCommand extends Command
 
     private function injectActivityLogUseStatements(string $content): string
     {
-        $useLines = "use Spatie\\Activitylog\\LogOptions;\nuse Spatie\\Activitylog\\Traits\\LogsActivity;\n";
+        $useLines = "use Spatie\\Activitylog\\Support\\LogOptions;\nuse Spatie\\Activitylog\\Models\\Concerns\\LogsActivity;\n";
 
         return preg_replace(
             '/(use Illuminate\\\\Database\\\\Eloquent\\\\Model;)\n/',

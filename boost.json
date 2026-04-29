@@ -8,26 +8,29 @@
         "copilot",
         "codex"
     ],
+    "cloud": false,
     "guidelines": true,
     "herd_mcp": true,
     "mcp": true,
     "packages": [
         "filament/filament",
-        "laravel/fortify",
         "prism-php/prism",
-        "filament/blueprint",
-        "laravel/ai"
+        "filament/blueprint"
     ],
     "sail": false,
     "skills": [
+        "ai-sdk-development",
+        "fortify-development",
+        "laravel-best-practices",
+        "configuring-horizon",
         "mcp-development",
         "pennant-development",
+        "scout-development",
         "wayfinder-development",
         "pest-testing",
         "inertia-react-development",
+        "echo-development",
         "tailwindcss-development",
-        "developing-with-ai-sdk",
-        "developing-with-fortify",
         "developing-with-prism"
     ]
 }

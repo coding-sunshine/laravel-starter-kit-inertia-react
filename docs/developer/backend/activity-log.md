@@ -1,6 +1,6 @@
 # Activity Log
 
-The application uses [Spatie Laravel Activity Log](https://spatie.be/docs/laravel-activitylog/v4/introduction) and the [Filament Activity Log](https://filamentphp.com/plugins/alizharb-activity-log) plugin to record user and model changes.
+The application uses [Spatie Laravel Activity Log](https://spatie.be/docs/laravel-activitylog/v5/introduction) and the [Filament Activity Log](https://filamentphp.com/plugins/alizharb-activity-log) plugin to record user and model changes.
 
 ## What is logged
 
@@ -19,7 +19,7 @@ The application uses [Spatie Laravel Activity Log](https://spatie.be/docs/larave
 ## Adding logging to a new model
 
 1. **Preferred**: Create the model with `php artisan make:model:full {Name}`. The command injects the `LogsActivity` trait and a default `getActivitylogOptions()` that logs all attributes except those in `config('activitylog.sensitive_attributes')`.
-2. **Manual**: Add `use Spatie\Activitylog\Traits\LogsActivity` and implement `getActivitylogOptions()` returning `LogOptions::defaults()->logOnlyDirty()->logOnly([...])` or `->logAll()->logExcept([...])`. Exclude any attribute listed in `config('activitylog.sensitive_attributes')` (default: `password`, `remember_token`, `two_factor_secret`, `two_factor_recovery_codes`, `embedding`, `api_token`).
+2. **Manual**: Add `use Spatie\Activitylog\Models\Concerns\LogsActivity` and implement `getActivitylogOptions()` returning `LogOptions::defaults()->logOnlyDirty()->logOnly([...])` or `->logAll()->logExcept([...])`. Import `LogOptions` from `Spatie\Activitylog\Support\LogOptions`. Exclude any attribute listed in `config('activitylog.sensitive_attributes')` (default: `password`, `remember_token`, `two_factor_secret`, `two_factor_recovery_codes`, `embedding`, `api_token`).
 
 ## ActivityLogRbac service
 
@@ -36,7 +36,7 @@ When adding a **new module** (new model, new feature with Actions, or new Filame
 ### New Eloquent model
 
 1. **Preferred**: Create the model with `php artisan make:model:full {Name}` so `LogsActivity` and `getActivitylogOptions()` are injected and sensitive attributes are excluded.
-2. **If the model already exists**: Add `use Spatie\Activitylog\Traits\LogsActivity` and implement `getActivitylogOptions()` with `LogOptions::defaults()->logOnlyDirty()->logAll()->logExcept(config('activitylog.sensitive_attributes'))`. Do not log any attribute in that config list.
+2. **If the model already exists**: Add `use Spatie\Activitylog\Models\Concerns\LogsActivity` and implement `getActivitylogOptions()` with `LogOptions::defaults()->logOnlyDirty()->logAll()->logExcept(config('activitylog.sensitive_attributes'))` (`Spatie\Activitylog\Support\LogOptions`). Do not log any attribute in that config list.
 3. **New sensitive attribute**: Add the attribute name to `config('activitylog.sensitive_attributes')` so all models (and `make:model:full`) stay consistent.
 
 ### New custom event (e.g. in an Action)

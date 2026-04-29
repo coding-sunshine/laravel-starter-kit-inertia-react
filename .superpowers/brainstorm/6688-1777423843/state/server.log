@@ -1,0 +1,7 @@
+{"type":"server-started","port":61384,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:61384","screen_dir":"/Users/apple/Code/clients/shar/railwayrack/.superpowers/brainstorm/6688-1777423843/content","state_dir":"/Users/apple/Code/clients/shar/railwayrack/.superpowers/brainstorm/6688-1777423843/state"}
+{"type":"screen-added","file":"/Users/apple/Code/clients/shar/railwayrack/.superpowers/brainstorm/6688-1777423843/content/phases-overview.html"}
+{"type":"screen-added","file":"/Users/apple/Code/clients/shar/railwayrack/.superpowers/brainstorm/6688-1777423843/content/wagon-loading-ui.html"}
+{"type":"screen-added","file":"/Users/apple/Code/clients/shar/railwayrack/.superpowers/brainstorm/6688-1777423843/content/wagon-loading-combined.html"}
+{"type":"screen-added","file":"/Users/apple/Code/clients/shar/railwayrack/.superpowers/brainstorm/6688-1777423843/content/wagon-loading-v2.html"}
+{"type":"screen-added","file":"/Users/apple/Code/clients/shar/railwayrack/.superpowers/brainstorm/6688-1777423843/content/design-system.html"}
+{"type":"server-stopped","reason":"idle timeout"}

@@ -1,0 +1,641 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f0f4f0; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 0;
+  min-height: 100vh;
+}
+
+/* LEFT: card grid */
+.card-area {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.card-area-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.card-area-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E3A2F;
+}
+
+.status-strip {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.strip-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-green { background: #16a34a; }
+.dot-amber { background: #d97706; }
+.dot-red { background: #dc2626; }
+.dot-grey { background: #94a3b8; }
+
+.wagon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.wagon-card {
+  background: white;
+  border-radius: 12px;
+  padding: 14px;
+  border: 2px solid #e2e8f0;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+
+.wagon-card:hover { box-shadow: 0 4px 12px rgba(30,58,47,0.12); }
+.wagon-card.ok { border-color: #bbf7d0; }
+.wagon-card.warning { border-color: #fde68a; }
+.wagon-card.over { border-color: #fca5a5; background: #fff5f5; }
+.wagon-card.empty { border-color: #e2e8f0; }
+
+.wagon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.wagon-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.wagon-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+.badge-ok { background: #dcfce7; color: #166534; }
+.badge-warning { background: #fef9c3; color: #92400e; }
+.badge-over { background: #fee2e2; color: #991b1b; }
+.badge-empty { background: #f1f5f9; color: #64748b; }
+
+/* Arc gauge */
+.gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 6px 0 10px;
+}
+
+.gauge-svg { overflow: visible; }
+
+.gauge-bg { fill: none; stroke: #e2e8f0; stroke-width: 8; stroke-linecap: round; }
+.gauge-fill-ok { fill: none; stroke: #16a34a; stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.4s; }
+.gauge-fill-warning { fill: none; stroke: #d97706; stroke-width: 8; stroke-linecap: round; }
+.gauge-fill-over { fill: none; stroke: #dc2626; stroke-width: 8; stroke-linecap: round; }
+.gauge-fill-empty { fill: none; stroke: #cbd5e1; stroke-width: 8; stroke-linecap: round; }
+
+.gauge-center {
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.gauge-pct { font-size: 15px; font-weight: 800; }
+.gauge-pct-ok { fill: #15803d; }
+.gauge-pct-warning { fill: #b45309; }
+.gauge-pct-over { fill: #b91c1c; }
+.gauge-pct-empty { fill: #94a3b8; }
+
+.gauge-label { font-size: 8px; fill: #94a3b8; }
+
+.qty-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qty-input {
+  flex: 1;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: right;
+  background: #f8fafc;
+  width: 100%;
+}
+
+.qty-input:focus { outline: none; border-color: #1E3A2F; background: white; }
+.wagon-card.over .qty-input { border-color: #fca5a5; background: #fff5f5; }
+
+.pcc-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.pcc-val { font-family: 'Courier New', monospace; font-weight: 600; color: #475569; }
+
+.overload-warn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 7px;
+  background: #fee2e2;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.stop-icon { font-size: 12px; }
+
+/* RIGHT: penalty panel */
+.penalty-panel {
+  background: #1E3A2F;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.panel-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #C8A84B;
+  margin-bottom: 2px;
+}
+
+.panel-subtitle {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+}
+
+.panel-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.panel-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 10px;
+}
+
+.big-penalty {
+  font-size: 32px;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  color: #ef4444;
+  line-height: 1;
+}
+
+.big-penalty.zero { color: #22c55e; }
+
+.penalty-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.penalty-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.penalty-label { color: rgba(255,255,255,0.6); }
+.penalty-amt { font-family: 'Courier New', monospace; font-weight: 700; }
+.penalty-amt.red { color: #f87171; }
+.penalty-amt.green { color: #4ade80; }
+.penalty-amt.amber { color: #fbbf24; }
+
+.progress-mini {
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+
+.progress-mini-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #C8A84B;
+}
+
+.wagon-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wsl-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.wsl-row.problem { background: rgba(239,68,68,0.15); }
+.wsl-row.warning-bg { background: rgba(251,191,36,0.1); }
+
+.wsl-num { font-family: 'Courier New', monospace; font-weight: 700; color: rgba(255,255,255,0.9); min-width: 60px; font-size: 10px; }
+.wsl-bar-wrap { flex: 1; }
+.wsl-bar-bg { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+.wsl-bar-fill { height: 100%; border-radius: 2px; }
+.wsl-amt { font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; }
+
+.dispatch-section {
+  padding: 16px 20px;
+  margin-top: auto;
+}
+
+.dispatch-status {
+  padding: 14px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.dispatch-status.blocking {
+  background: rgba(239,68,68,0.2);
+  border: 1px solid rgba(239,68,68,0.4);
+}
+
+.dispatch-status.ready {
+  background: rgba(34,197,94,0.15);
+  border: 1px solid rgba(34,197,94,0.3);
+}
+
+.dispatch-status-icon { font-size: 24px; margin-bottom: 6px; }
+.dispatch-status-text { font-size: 12px; font-weight: 700; color: white; }
+.dispatch-status-sub { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 3px; }
+
+.btn-dispatch {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-dispatch.blocked {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.3);
+  cursor: not-allowed;
+}
+
+.btn-dispatch.clear {
+  background: #C8A84B;
+  color: #1E3A2F;
+}
+
+.note-box {
+  margin: 12px 20px;
+  padding: 10px 12px;
+  background: rgba(200,168,75,0.1);
+  border: 1px solid rgba(200,168,75,0.3);
+  border-radius: 8px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.5;
+}
+
+.note-box strong { color: #C8A84B; }
+</style>
+
+<h2 style="margin-bottom:4px">Combined Design: Card Grid + Live Penalty Panel</h2>
+<p class="subtitle" style="margin-bottom:16px">B's per-wagon visual gauges + C's real-time penalty intelligence sidebar. Click a wagon card to simulate entering a value.</p>
+
+<div class="layout">
+
+  <!-- LEFT: Wagon Cards -->
+  <div class="card-area">
+    <div class="card-area-header">
+      <div>
+        <h2>Wagon Loading — Rake 23411</h2>
+        <div style="font-size:12px;color:#64748b;margin-top:2px">Dumka Siding · 42 wagons · Loading in progress</div>
+      </div>
+      <div class="status-strip">
+        <div class="strip-item"><div class="dot dot-green"></div>28 OK</div>
+        <div class="strip-item"><div class="dot dot-amber"></div>4 Warning</div>
+        <div class="strip-item"><div class="dot dot-red"></div>3 Over PCC</div>
+        <div class="strip-item"><div class="dot dot-grey"></div>7 Empty</div>
+      </div>
+    </div>
+
+    <div class="wagon-grid">
+
+      <!-- Overloaded wagon -->
+      <div class="wagon-card over">
+        <div class="wagon-header">
+          <span class="wagon-num">W-001 · BCN</span>
+          <span class="wagon-badge badge-over">⚠ OVER PCC</span>
+        </div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" width="90" height="56" viewBox="0 0 90 56">
+            <path class="gauge-bg" d="M 15 50 A 30 30 0 0 1 75 50" />
+            <path class="gauge-fill-over" d="M 15 50 A 30 30 0 0 1 75 50" stroke-dasharray="94.2 94.2" />
+            <text class="gauge-center gauge-pct gauge-pct-over" x="45" y="42">108%</text>
+            <text class="gauge-center gauge-label" x="45" y="52">of PCC</text>
+          </svg>
+        </div>
+        <div class="qty-row">
+          <input class="qty-input" value="86.4" style="border-color:#fca5a5;background:#fff5f5" />
+          <span style="font-size:11px;color:#94a3b8">MT</span>
+        </div>
+        <div class="pcc-line">
+          <span>PCC limit</span>
+          <span class="pcc-val">80.0 MT</span>
+        </div>
+        <div class="overload-warn">
+          <span class="stop-icon">🛑</span> +6.4 MT over · ₹3,072 penalty
+        </div>
+      </div>
+
+      <!-- Near limit (warning) -->
+      <div class="wagon-card warning">
+        <div class="wagon-header">
+          <span class="wagon-num">W-002 · BCN</span>
+          <span class="wagon-badge badge-warning">Near limit</span>
+        </div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" width="90" height="56" viewBox="0 0 90 56">
+            <path class="gauge-bg" d="M 15 50 A 30 30 0 0 1 75 50" />
+            <path class="gauge-fill-warning" d="M 15 50 A 30 30 0 0 1 75 50" stroke-dasharray="87.9 94.2" />
+            <text class="gauge-center gauge-pct gauge-pct-warning" x="45" y="42">93%</text>
+            <text class="gauge-center gauge-label" x="45" y="52">of PCC</text>
+          </svg>
+        </div>
+        <div class="qty-row">
+          <input class="qty-input" value="78.5" style="border-color:#fde68a" />
+          <span style="font-size:11px;color:#94a3b8">MT</span>
+        </div>
+        <div class="pcc-line">
+          <span>PCC limit</span>
+          <span class="pcc-val">84.5 MT</span>
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:#b45309">Max safe: 84.5 MT · 6.0 MT remaining</div>
+      </div>
+
+      <!-- OK wagon -->
+      <div class="wagon-card ok">
+        <div class="wagon-header">
+          <span class="wagon-num">W-003 · BOXN</span>
+          <span class="wagon-badge badge-ok">✓ OK</span>
+        </div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" width="90" height="56" viewBox="0 0 90 56">
+            <path class="gauge-bg" d="M 15 50 A 30 30 0 0 1 75 50" />
+            <path class="gauge-fill-ok" d="M 15 50 A 30 30 0 0 1 75 50" stroke-dasharray="70.6 94.2" />
+            <text class="gauge-center gauge-pct gauge-pct-ok" x="45" y="42">75%</text>
+            <text class="gauge-center gauge-label" x="45" y="52">of PCC</text>
+          </svg>
+        </div>
+        <div class="qty-row">
+          <input class="qty-input" value="63.0" />
+          <span style="font-size:11px;color:#94a3b8">MT</span>
+        </div>
+        <div class="pcc-line">
+          <span>PCC limit</span>
+          <span class="pcc-val">84.0 MT</span>
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:#16a34a">✓ Within limits · 21.0 MT remaining</div>
+      </div>
+
+      <!-- Another OK -->
+      <div class="wagon-card ok">
+        <div class="wagon-header">
+          <span class="wagon-num">W-004 · BCN</span>
+          <span class="wagon-badge badge-ok">✓ OK</span>
+        </div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" width="90" height="56" viewBox="0 0 90 56">
+            <path class="gauge-bg" d="M 15 50 A 30 30 0 0 1 75 50" />
+            <path class="gauge-fill-ok" d="M 15 50 A 30 30 0 0 1 75 50" stroke-dasharray="79.7 94.2" />
+            <text class="gauge-center gauge-pct gauge-pct-ok" x="45" y="42">85%</text>
+            <text class="gauge-center gauge-label" x="45" y="52">of PCC</text>
+          </svg>
+        </div>
+        <div class="qty-row">
+          <input class="qty-input" value="72.0" />
+          <span style="font-size:11px;color:#94a3b8">MT</span>
+        </div>
+        <div class="pcc-line">
+          <span>PCC limit</span>
+          <span class="pcc-val">84.5 MT</span>
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:#16a34a">✓ Within limits · 12.5 MT remaining</div>
+      </div>
+
+      <!-- Empty wagon -->
+      <div class="wagon-card empty">
+        <div class="wagon-header">
+          <span class="wagon-num">W-005 · BOXN</span>
+          <span class="wagon-badge badge-empty">Not loaded</span>
+        </div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" width="90" height="56" viewBox="0 0 90 56">
+            <path class="gauge-bg" d="M 15 50 A 30 30 0 0 1 75 50" />
+            <path class="gauge-fill-empty" d="M 15 50 A 30 30 0 0 1 75 50" stroke-dasharray="0 94.2" />
+            <text class="gauge-center gauge-pct gauge-pct-empty" x="45" y="42">—</text>
+            <text class="gauge-center gauge-label" x="45" y="52">of PCC</text>
+          </svg>
+        </div>
+        <div class="qty-row">
+          <input class="qty-input" placeholder="Enter MT" style="color:#94a3b8" />
+          <span style="font-size:11px;color:#94a3b8">MT</span>
+        </div>
+        <div class="pcc-line">
+          <span>PCC limit</span>
+          <span class="pcc-val">80.0 MT</span>
+        </div>
+      </div>
+
+      <!-- Another overloaded -->
+      <div class="wagon-card over">
+        <div class="wagon-header">
+          <span class="wagon-num">W-006 · BCN</span>
+          <span class="wagon-badge badge-over">⚠ OVER PCC</span>
+        </div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" width="90" height="56" viewBox="0 0 90 56">
+            <path class="gauge-bg" d="M 15 50 A 30 30 0 0 1 75 50" />
+            <path class="gauge-fill-over" d="M 15 50 A 30 30 0 0 1 75 50" stroke-dasharray="94.2 94.2" />
+            <text class="gauge-center gauge-pct gauge-pct-over" x="45" y="42">112%</text>
+            <text class="gauge-center gauge-label" x="45" y="52">of PCC</text>
+          </svg>
+        </div>
+        <div class="qty-row">
+          <input class="qty-input" value="89.6" style="border-color:#fca5a5;background:#fff5f5" />
+          <span style="font-size:11px;color:#94a3b8">MT</span>
+        </div>
+        <div class="pcc-line">
+          <span>PCC limit</span>
+          <span class="pcc-val">80.0 MT</span>
+        </div>
+        <div class="overload-warn">
+          <span class="stop-icon">🛑</span> +9.6 MT over · ₹4,608 penalty
+        </div>
+      </div>
+
+    </div>
+
+    <div style="text-align:center;padding:20px;font-size:12px;color:#94a3b8">
+      Showing 6 of 42 wagons · Scroll to see all
+    </div>
+  </div>
+
+  <!-- RIGHT: Penalty Intelligence Panel -->
+  <div class="penalty-panel">
+    <div class="panel-header">
+      <div class="panel-title">Penalty Intelligence</div>
+      <div class="panel-subtitle">Live as you enter wagon weights</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Estimated Penalty This Rake</div>
+      <div class="big-penalty">₹ 24,480</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:4px">If dispatched as-is</div>
+
+      <div class="penalty-breakdown" style="margin-top:14px">
+        <div class="penalty-row">
+          <span class="penalty-label">Overload penalty</span>
+          <span class="penalty-amt red">₹24,480</span>
+        </div>
+        <div class="penalty-row">
+          <span class="penalty-label">Underload penalty</span>
+          <span class="penalty-amt green">₹0</span>
+        </div>
+        <div class="penalty-row" style="border-top:1px solid rgba(255,255,255,0.1);padding-top:6px;margin-top:4px">
+          <span class="penalty-label" style="color:rgba(255,255,255,0.8);font-weight:600">Total exposure</span>
+          <span class="penalty-amt red" style="font-size:13px">₹24,480</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Rake Progress</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:6px">
+        <span>35 / 42 wagons loaded</span>
+        <span style="color:#C8A84B;font-weight:700">83%</span>
+      </div>
+      <div class="progress-mini">
+        <div class="progress-mini-fill" style="width:83%"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+        <div style="text-align:center;padding:8px;background:rgba(34,197,94,0.1);border-radius:7px;border:1px solid rgba(34,197,94,0.2)">
+          <div style="font-size:20px;font-weight:800;color:#4ade80">28</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">Within PCC</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:rgba(239,68,68,0.15);border-radius:7px;border:1px solid rgba(239,68,68,0.3)">
+          <div style="font-size:20px;font-weight:800;color:#f87171">3</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">Over PCC</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:rgba(251,191,36,0.1);border-radius:7px;border:1px solid rgba(251,191,36,0.2)">
+          <div style="font-size:20px;font-weight:800;color:#fbbf24">4</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">Near Limit</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:rgba(255,255,255,0.04);border-radius:7px;border:1px solid rgba(255,255,255,0.1)">
+          <div style="font-size:20px;font-weight:800;color:rgba(255,255,255,0.4)">7</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">Not Loaded</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Problem Wagons</div>
+      <div class="wagon-status-list">
+        <div class="wsl-row problem">
+          <span class="wsl-num">W-001</span>
+          <div class="wsl-bar-wrap">
+            <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-bottom:2px">86.4 / 80.0 MT · +6.4 over</div>
+            <div class="wsl-bar-bg">
+              <div class="wsl-bar-fill" style="width:100%;background:#ef4444"></div>
+            </div>
+          </div>
+          <span class="wsl-amt" style="color:#f87171">₹3,072</span>
+        </div>
+        <div class="wsl-row problem">
+          <span class="wsl-num">W-006</span>
+          <div class="wsl-bar-wrap">
+            <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-bottom:2px">89.6 / 80.0 MT · +9.6 over</div>
+            <div class="wsl-bar-bg">
+              <div class="wsl-bar-fill" style="width:100%;background:#ef4444"></div>
+            </div>
+          </div>
+          <span class="wsl-amt" style="color:#f87171">₹4,608</span>
+        </div>
+        <div class="wsl-row warning-bg">
+          <span class="wsl-num">W-002</span>
+          <div class="wsl-bar-wrap">
+            <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-bottom:2px">78.5 / 84.5 MT · 93% full</div>
+            <div class="wsl-bar-bg">
+              <div class="wsl-bar-fill" style="width:93%;background:#d97706"></div>
+            </div>
+          </div>
+          <span class="wsl-amt" style="color:#fbbf24">watch</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <strong>AI Suggestion:</strong> Reduce W-001 by 6.4 MT and W-006 by 9.6 MT before dispatch to save <strong>₹24,480</strong> in penalties.
+    </div>
+
+    <div class="dispatch-section">
+      <div class="dispatch-status blocking">
+        <div class="dispatch-status-icon">🛑</div>
+        <div class="dispatch-status-text">Not Ready to Dispatch</div>
+        <div class="dispatch-status-sub">3 wagons exceed PCC limit · Manager clearance blocked</div>
+      </div>
+      <button class="btn-dispatch blocked" disabled>Request Manager Clearance</button>
+    </div>
+  </div>
+
+</div>

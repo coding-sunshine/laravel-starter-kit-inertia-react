@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Essa\APIToolKit\Enum\GeneratorFilesType;
-
 return [
     /*
     |--------------------------------------------------------------------------
@@ -66,60 +64,63 @@ return [
     | Users can assign classes to each generator type for both the 'default' and
     | custom groups, specifying where the generated files will be stored.
     |
+    | Keys must be string backed-enum values (essa/api-tool-kit v3+); enum cases
+    | cannot be used as array keys here under PHP 8.4 strict config loading.
+    |
     */
     'groups_files_paths' => [
         'default' => [
-            GeneratorFilesType::MODEL => [
+            'model' => [
                 'folder_path' => app_path('Models'),
                 'file_name' => '{ModelName}.php',
                 'namespace' => 'App\Models',
             ],
-            GeneratorFilesType::FACTORY => [
+            'factory' => [
                 'folder_path' => database_path('factories'),
                 'file_name' => '{ModelName}Factory.php',
                 'namespace' => 'Database\Factories',
             ],
-            GeneratorFilesType::SEEDER => [
+            'seeder' => [
                 'folder_path' => database_path('seeders'),
                 'file_name' => '{ModelName}Seeder.php',
                 'namespace' => 'Database\Seeders',
             ],
-            GeneratorFilesType::CONTROLLER => [
+            'controller' => [
                 'folder_path' => app_path('Http/Controllers/API'),
                 'file_name' => '{ModelName}Controller.php',
                 'namespace' => 'App\Http\Controllers\API',
             ],
-            GeneratorFilesType::RESOURCE => [
+            'resource' => [
                 'folder_path' => app_path('Http/Resources/{ModelName}'),
                 'file_name' => '{ModelName}Resource.php',
                 'namespace' => "App\Http\Resources\{ModelName}",
             ],
-            GeneratorFilesType::TEST => [
+            'test' => [
                 'folder_path' => base_path('tests/Feature'),
                 'file_name' => '{ModelName}Test.php',
                 'namespace' => 'Tests\Feature',
             ],
-            GeneratorFilesType::CREATE_REQUEST => [
+            'create-request' => [
                 'folder_path' => app_path('Http/Requests/{ModelName}'),
                 'file_name' => 'Create{ModelName}Request.php',
                 'namespace' => "App\Http\Requests\{ModelName}",
             ],
-            GeneratorFilesType::UPDATE_REQUEST => [
+            'update-request' => [
                 'folder_path' => app_path('Http/Requests/{ModelName}'),
                 'file_name' => 'Update{ModelName}Request.php',
                 'namespace' => "App\Http\Requests\{ModelName}",
             ],
-            GeneratorFilesType::FILTER => [
+            'filter' => [
                 'folder_path' => app_path('Filters'),
                 'file_name' => '{ModelName}Filters.php',
                 'namespace' => 'App\Filters',
             ],
-            GeneratorFilesType::MIGRATION => [
+            'migration' => [
                 'folder_path' => database_path('migrations'),
                 'file_name' => date('Y_m_d_His').'_create_{TableName}_table.php',
                 'namespace' => null,
             ],
-            GeneratorFilesType::ROUTES => [
+            'routes' => [
                 'folder_path' => base_path('routes'),
                 'file_name' => 'api.php',
                 'namespace' => null,
