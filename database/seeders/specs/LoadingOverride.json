@@ -1,6 +1,6 @@
 {
-    "model": "Txr",
-    "table": "txrs",
+    "model": "LoadingOverride",
+    "table": "loading_overrides",
     "fields": {
         "id": {
             "type": "integer",
@@ -12,33 +12,33 @@
             "nullable": true,
             "default": null
         },
-        "inspection_time": {
-            "type": "timestamp",
+        "wagon_loading_id": {
+            "type": "integer",
             "nullable": true,
             "default": null
         },
-        "inspection_end_time": {
-            "type": "timestamp",
+        "operator_id": {
+            "type": "integer",
             "nullable": true,
             "default": null
         },
-        "status": {
+        "reason": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "remarks": {
+        "notes": {
             "type": "text",
             "nullable": true,
             "default": null
         },
-        "created_by": {
-            "type": "integer",
+        "overload_mt": {
+            "type": "numeric",
             "nullable": true,
             "default": null
         },
-        "updated_by": {
-            "type": "integer",
+        "estimated_penalty_at_time": {
+            "type": "numeric",
             "nullable": true,
             "default": null
         },
@@ -58,25 +58,13 @@
             "type": "belongsTo",
             "model": "Rake"
         },
-        "wagonUnfitLogs": {
-            "type": "hasMany",
-            "model": "WagonUnfitLog"
-        },
-        "createdBy": {
+        "operator": {
             "type": "belongsTo",
-            "model": "CreatedBy"
+            "model": "Operator"
         },
-        "creator": {
+        "wagonLoading": {
             "type": "belongsTo",
-            "model": "Creator"
-        },
-        "editor": {
-            "type": "belongsTo",
-            "model": "Editor"
-        },
-        "destroyer": {
-            "type": "belongsTo",
-            "model": "Destroyer"
+            "model": "WagonLoading"
         }
     },
     "value_hints": [],

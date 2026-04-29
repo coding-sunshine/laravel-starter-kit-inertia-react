@@ -3,12 +3,12 @@
     "table": "rake_charges",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -48,7 +48,7 @@
             "default": null
         },
         "diverrt_destination_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         }

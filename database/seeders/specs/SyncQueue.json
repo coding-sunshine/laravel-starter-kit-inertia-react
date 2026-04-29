@@ -3,12 +3,12 @@
     "table": "sync_queue",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "user_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -28,7 +28,7 @@
             "default": null
         },
         "payload": {
-            "type": "json",
+            "type": "text",
             "nullable": true,
             "default": null
         },

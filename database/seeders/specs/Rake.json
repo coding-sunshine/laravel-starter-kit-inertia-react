@@ -3,17 +3,17 @@
     "table": "rakes",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "indent_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -103,17 +103,17 @@
             "default": null
         },
         "created_by": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "updated_by": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "deleted_by": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -291,6 +291,10 @@
             "type": "hasMany",
             "model": "WagonLoading"
         },
+        "rrPredictions": {
+            "type": "hasMany",
+            "model": "RrPrediction"
+        },
         "rakeLoad": {
             "type": "hasOne",
             "model": "RakeLoad"
@@ -334,6 +338,18 @@
         "updatedBy": {
             "type": "belongsTo",
             "model": "UpdatedBy"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        },
+        "editor": {
+            "type": "belongsTo",
+            "model": "Editor"
+        },
+        "destroyer": {
+            "type": "belongsTo",
+            "model": "Destroyer"
         }
     },
     "value_hints": [],

@@ -40,7 +40,7 @@ use Spatie\Sluggable\SlugOptions;
  * @property-read Collection<int, SubscriptionUsage> $usage
  * @property-read Model $subscriber
  */
-final class Subscription extends Model
+class Subscription extends Model
 {
     use BelongsToPlan;
     use HasFactory;

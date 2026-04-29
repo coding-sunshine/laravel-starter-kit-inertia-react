@@ -3,12 +3,12 @@
     "table": "indents",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -88,12 +88,12 @@
             "default": null
         },
         "created_by": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "updated_by": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -113,7 +113,7 @@
             "default": null
         },
         "deleted_by": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -143,6 +143,18 @@
         "deletedBy": {
             "type": "belongsTo",
             "model": "DeletedBy"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        },
+        "editor": {
+            "type": "belongsTo",
+            "model": "Editor"
+        },
+        "destroyer": {
+            "type": "belongsTo",
+            "model": "Destroyer"
         }
     },
     "value_hints": [],

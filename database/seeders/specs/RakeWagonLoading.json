@@ -3,22 +3,22 @@
     "table": "rake_wagon_loading",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "wagon_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "loader_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },

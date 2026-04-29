@@ -42,7 +42,7 @@ use Spatie\Sluggable\SlugOptions;
  * @property-read Collection<int, Feature> $features
  * @property-read Collection<int, Subscription> $subscriptions
  */
-final class Plan extends Model implements Sortable
+class Plan extends Model implements Sortable
 {
     use HasFactory;
     use HasSlug;

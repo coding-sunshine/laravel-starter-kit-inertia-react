@@ -3,17 +3,17 @@
     "table": "rake_wagon_weighments",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "rake_weighment_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "wagon_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },

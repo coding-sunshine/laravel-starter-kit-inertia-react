@@ -3,12 +3,12 @@
     "table": "penalties",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -58,7 +58,7 @@
             "default": null
         },
         "calculation_breakdown": {
-            "type": "json",
+            "type": "text",
             "nullable": true,
             "default": null
         },
@@ -104,6 +104,16 @@
         },
         "suggested_remediation": {
             "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "migrated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "migration_note": {
+            "type": "string",
             "nullable": true,
             "default": null
         }
