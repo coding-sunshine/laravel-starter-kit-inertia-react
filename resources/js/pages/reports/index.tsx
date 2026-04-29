@@ -10,7 +10,11 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import axios from 'axios';
+// axios removed in Inertia v3 — use native fetch with XSRF-TOKEN cookie
+function csrfToken(): string {
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
 import {
     CalendarRange,
     ChevronDown,
@@ -322,12 +326,14 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         setError(null);
         setData(null);
         try {
-            const resp = await axios.post('/reports/generate', {
-                ...requestPayload,
-                preview: true,
-                preview_limit: 25,
+            const resp = await fetch('/reports/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrfToken() },
+                body: JSON.stringify({ ...requestPayload, preview: true, preview_limit: 25 }),
             });
-            setData(resp.data.data ?? []);
+            if (!resp.ok) throw new Error('Failed to generate report');
+            const json = await resp.json();
+            setData(json.data ?? []);
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Failed to generate report';
             setError(msg);
@@ -338,15 +344,14 @@ export default function ReportsIndex({ reports, sidings }: Props) {
 
     const downloadXlsx = useCallback(async () => {
         try {
-            const resp = await axios.post(
-                '/reports/generate',
-                {
-                    ...requestPayload,
-                    export_xlsx: true,
-                },
-                { responseType: 'blob' },
-            );
-            const url = window.URL.createObjectURL(new Blob([resp.data]));
+            const resp = await fetch('/reports/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrfToken() },
+                body: JSON.stringify({ ...requestPayload, export_xlsx: true }),
+            });
+            if (!resp.ok) throw new Error('XLSX download failed');
+            const blob = await resp.blob();
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `${activeReport?.name ?? activeKey}_${new Date().toISOString().slice(0, 10)}.xlsx`;
