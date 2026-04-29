@@ -63,6 +63,10 @@ final class PenaltyController extends Controller
         $penaltyTypeTrend = $this->buildPenaltyTypeTrend($sidingIds);
         $costSavingOpportunities = $this->buildCostSavingOpportunities($sidingIds);
         $responsiblePartyDetail = $this->buildResponsiblePartyDetail($sidingIds);
+        $byOperator = $this->buildByOperator($sidingIds);
+        $byShift = $this->buildByShift($sidingIds);
+        $byWagonType = $this->buildByWagonType($sidingIds);
+        $operatorLeaderboard = $this->buildOperatorLeaderboard($sidingIds);
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -82,6 +86,10 @@ final class PenaltyController extends Controller
             'penaltyTypeTrend' => $penaltyTypeTrend,
             'costSavingOpportunities' => $costSavingOpportunities,
             'responsiblePartyDetail' => $responsiblePartyDetail,
+            'byOperator' => $byOperator,
+            'byShift' => $byShift,
+            'byWagonType' => $byWagonType,
+            'operatorLeaderboard' => $operatorLeaderboard,
             'sidings' => $sidings,
             'aiInsights' => Inertia::defer(fn () => resolve(GeneratePenaltyInsightsAction::class)->handle($sidingIds)),
         ]);
@@ -693,5 +701,138 @@ final class PenaltyController extends Controller
         usort($result, fn ($a, $b) => $b['total'] <=> $a['total']);
 
         return $result;
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildByOperator(array $sidingIds): array
+    {
+        $rows = DB::table('wagon_loading as wl')
+            ->join('rakes', 'rakes.id', '=', 'wl.rake_id')
+            ->join('penalties', 'penalties.rake_id', '=', 'rakes.id')
+            ->whereIn('rakes.siding_id', $sidingIds)
+            ->whereNull('penalties.deleted_at')
+            ->select(
+                'wl.loader_operator_name as operator',
+                DB::raw('COUNT(DISTINCT penalties.id) as penalty_count'),
+                DB::raw('SUM(penalties.penalty_amount) as total_amount'),
+                DB::raw('SUM(CASE WHEN penalties.is_preventable THEN 1 ELSE 0 END) as preventable_count'),
+            )
+            ->groupBy('wl.loader_operator_name')
+            ->orderByDesc('total_amount')
+            ->limit(15)
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            'operator' => $r->operator ?: 'Unknown',
+            'penaltyCount' => (int) $r->penalty_count,
+            'totalAmount' => (float) $r->total_amount,
+            'preventableCount' => (int) $r->preventable_count,
+            'preventablePct' => $r->penalty_count > 0
+                ? round(($r->preventable_count / $r->penalty_count) * 100, 1)
+                : 0,
+        ])->values()->all();
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildByShift(array $sidingIds): array
+    {
+        $rows = DB::table('wagon_loading as wl')
+            ->join('rakes', 'rakes.id', '=', 'wl.rake_id')
+            ->join('penalties', 'penalties.rake_id', '=', 'rakes.id')
+            ->whereIn('rakes.siding_id', $sidingIds)
+            ->whereNull('penalties.deleted_at')
+            ->whereNotNull('wl.loading_time')
+            ->select(
+                DB::raw("CASE
+                WHEN EXTRACT(HOUR FROM wl.loading_time) >= 6 AND EXTRACT(HOUR FROM wl.loading_time) < 14 THEN '1st Shift'
+                WHEN EXTRACT(HOUR FROM wl.loading_time) >= 14 AND EXTRACT(HOUR FROM wl.loading_time) < 22 THEN '2nd Shift'
+                ELSE '3rd Shift'
+            END as shift"),
+                DB::raw('COUNT(DISTINCT penalties.id) as penalty_count'),
+                DB::raw('SUM(penalties.penalty_amount) as total_amount'),
+                DB::raw('SUM(CASE WHEN penalties.is_preventable THEN 1 ELSE 0 END) as preventable_count'),
+            )
+            ->groupBy('shift')
+            ->orderBy('shift')
+            ->get();
+
+        $shiftOrder = ['1st Shift' => 0, '2nd Shift' => 1, '3rd Shift' => 2];
+
+        return $rows->sortBy(fn ($r) => $shiftOrder[$r->shift] ?? 99)
+            ->map(fn ($r) => [
+                'shift' => $r->shift,
+                'penaltyCount' => (int) $r->penalty_count,
+                'totalAmount' => (float) $r->total_amount,
+                'preventableCount' => (int) $r->preventable_count,
+            ])->values()->all();
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildByWagonType(array $sidingIds): array
+    {
+        $rows = DB::table('wagons')
+            ->join('rakes', 'rakes.id', '=', 'wagons.rake_id')
+            ->join('penalties', 'penalties.rake_id', '=', 'rakes.id')
+            ->whereIn('rakes.siding_id', $sidingIds)
+            ->whereNull('penalties.deleted_at')
+            ->select(
+                DB::raw("COALESCE(NULLIF(wagons.wagon_type, ''), 'Unknown') as wagon_type"),
+                DB::raw('COUNT(DISTINCT penalties.id) as penalty_count'),
+                DB::raw('SUM(penalties.penalty_amount) as total_amount'),
+            )
+            ->groupBy('wagons.wagon_type')
+            ->orderByDesc('total_amount')
+            ->limit(10)
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            'wagonType' => $r->wagon_type,
+            'penaltyCount' => (int) $r->penalty_count,
+            'totalAmount' => (float) $r->total_amount,
+        ])->values()->all();
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildOperatorLeaderboard(array $sidingIds): array
+    {
+        $rows = DB::table('wagon_loading as wl')
+            ->join('wagons', 'wagons.id', '=', 'wl.wagon_id')
+            ->join('rakes', 'rakes.id', '=', 'wl.rake_id')
+            ->whereIn('rakes.siding_id', $sidingIds)
+            ->whereNotNull('wl.loader_operator_name')
+            ->where('wl.loader_operator_name', '!=', '')
+            ->select(
+                'wl.loader_operator_name as operator',
+                DB::raw('COUNT(*) as total_wagons'),
+                DB::raw('SUM(CASE WHEN wl.loaded_quantity_mt > wagons.pcc_weight_mt AND wagons.pcc_weight_mt > 0 THEN 1 ELSE 0 END) as overloaded_wagons'),
+                DB::raw('SUM(GREATEST(wl.loaded_quantity_mt - wagons.pcc_weight_mt, 0)) as total_excess_mt'),
+            )
+            ->groupBy('wl.loader_operator_name')
+            ->having(DB::raw('COUNT(*)'), '>=', 5)
+            ->orderBy(DB::raw('SUM(CASE WHEN wl.loaded_quantity_mt > wagons.pcc_weight_mt AND wagons.pcc_weight_mt > 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*)'))
+            ->limit(20)
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            'operator' => $r->operator,
+            'totalWagons' => (int) $r->total_wagons,
+            'overloadedWagons' => (int) $r->overloaded_wagons,
+            'overloadRatePct' => $r->total_wagons > 0
+                ? round(($r->overloaded_wagons / $r->total_wagons) * 100, 1)
+                : 0,
+            'totalExcessMt' => round((float) $r->total_excess_mt, 2),
+        ])->values()->all();
     }
 }
