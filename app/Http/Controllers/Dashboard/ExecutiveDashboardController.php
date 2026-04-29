@@ -42,6 +42,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 final class ExecutiveDashboardController extends Controller
 {
@@ -129,6 +130,7 @@ final class ExecutiveDashboardController extends Controller
             'sidingRadar' => $this->buildSidingRadar($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'sidingPerformance' => $this->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
+            'penaltySummary' => $this->buildPenaltySummary($resolved['filteredSidingIds']),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'rakePerformance' => [],
             'loaderOverloadTrends' => [
@@ -3993,5 +3995,55 @@ final class ExecutiveDashboardController extends Controller
         }
 
         return $q->pluck('id')->all();
+    }
+
+    /**
+     * Build a penalty summary for the dashboard KPI widget.
+     *
+     * Returns today's total penalty (Rs), a 7-day daily trend, and the
+     * percentage of preventable penalties in that period.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{today_rs: float, trend_7d: list<array{date: string, rs: float}>, preventable_pct: float}
+     */
+    private function buildPenaltySummary(array $sidingIds): array
+    {
+        try {
+            $today = Carbon::today();
+            $sevenDaysAgo = $today->copy()->subDays(6);
+
+            $base = Penalty::whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+            $todayTotal = (float) $base->clone()
+                ->whereDate('penalty_date', $today)
+                ->sum('penalty_amount');
+
+            $trend = $base->clone()
+                ->whereBetween('penalty_date', [$sevenDaysAgo, $today])
+                ->selectRaw('DATE(penalty_date) as date, SUM(penalty_amount) as rs')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->map(fn ($r) => ['date' => $r->date, 'rs' => (float) $r->rs])
+                ->toArray();
+
+            $totalInPeriod = array_sum(array_column($trend, 'rs'));
+            $preventableInPeriod = (float) $base->clone()
+                ->whereBetween('penalty_date', [$sevenDaysAgo, $today])
+                ->where('is_preventable', true)
+                ->sum('penalty_amount');
+
+            $preventablePct = $totalInPeriod > 0
+                ? round(($preventableInPeriod / $totalInPeriod) * 100, 1)
+                : 0.0;
+
+            return [
+                'today_rs' => $todayTotal,
+                'trend_7d' => $trend,
+                'preventable_pct' => $preventablePct,
+            ];
+        } catch (Throwable) {
+            return ['today_rs' => 0.0, 'trend_7d' => [], 'preventable_pct' => 0.0];
+        }
     }
 }
