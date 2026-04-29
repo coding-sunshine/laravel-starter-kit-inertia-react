@@ -92,6 +92,32 @@ it('uses placement_time not loading_start_time for window start', function (): v
     expect($result['chargedHours'])->toBe(5);
 });
 
+it('applies tier 4 rate (4x) for 30 excess hours', function (): void {
+    $rake = Rake::factory()->create([
+        'placement_time' => now()->subMinutes(300 + 1800),
+        'loading_end_time' => now(),
+        'wagon_count' => 10,
+    ]);
+    $result = app(ApplyDemurragePenaltyAction::class)->handle($rake);
+    expect($result['chargedHours'])->toBe(30);
+    expect($result['rateMultiplier'])->toBe(4);
+    // 30 × 225 × 4 × 10 = 270,000
+    expect($result['amount'])->toBe(270000.0);
+});
+
+it('applies tier 5 rate (6x) for 60 excess hours', function (): void {
+    $rake = Rake::factory()->create([
+        'placement_time' => now()->subMinutes(300 + 3600),
+        'loading_end_time' => now(),
+        'wagon_count' => 10,
+    ]);
+    $result = app(ApplyDemurragePenaltyAction::class)->handle($rake);
+    expect($result['chargedHours'])->toBe(60);
+    expect($result['rateMultiplier'])->toBe(6);
+    // 60 × 225 × 6 × 10 = 810,000
+    expect($result['amount'])->toBe(810000.0);
+});
+
 it('stores expanded meta snapshot', function (): void {
     $rake = Rake::factory()->create([
         'placement_time' => now()->subMinutes(480),

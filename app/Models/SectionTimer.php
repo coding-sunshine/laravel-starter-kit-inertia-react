@@ -6,10 +6,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class SectionTimer extends Model
+final class SectionTimer extends Model
 {
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
-
 
     protected $fillable = [
         'section_name',
