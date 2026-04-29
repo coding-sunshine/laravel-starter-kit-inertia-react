@@ -56,5 +56,6 @@ return [
         App\Events\Billing\InvoicePaid::class,
         App\Events\NewTermsVersionPublished::class,
         App\Events\DemurrageThresholdCrossed::class,
+        App\Events\WeeklyPenaltyReportReady::class,
     ],
 ];
