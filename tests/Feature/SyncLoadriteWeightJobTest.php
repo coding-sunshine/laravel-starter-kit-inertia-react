@@ -48,7 +48,9 @@ it('logs warning and skips when no matching wagon loading found', function (): v
     $siding = Siding::factory()->create();
     $rake = Rake::factory()->create(['siding_id' => $siding->id, 'state' => 'loading']);
 
-    Illuminate\Support\Facades\Log::shouldReceive('warning')->once();
+    Illuminate\Support\Facades\Log::shouldReceive('warning')
+        ->once()
+        ->with('Loadrite sync: no matching WagonLoading for sequence', Mockery::any());
 
     (new SyncLoadriteWeightJob(['Sequence' => 99, 'Weight' => 50.0, 'Timestamp' => now()->toIso8601String()], $siding->id))->handle();
 });

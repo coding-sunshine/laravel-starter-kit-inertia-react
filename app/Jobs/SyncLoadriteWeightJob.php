@@ -62,6 +62,10 @@ final class SyncLoadriteWeightJob implements ShouldQueue
         }
 
         if ($wagonLoading->weight_source === 'weighbridge') {
+            Log::debug('Loadrite sync: skipping weighbridge record', [
+                'wagon_loading_id' => $wagonLoading->id,
+            ]);
+
             return;
         }
 
