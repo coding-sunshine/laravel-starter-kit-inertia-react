@@ -41,8 +41,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
     return (
         <AuthLayout
-            title="Log in to your account"
-            description="Enter your email and password below to log in"
+            title="Sign in"
+            description="Access your BGR Mining dashboard"
         >
             <Head title="Log in" />
 
