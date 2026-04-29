@@ -6,7 +6,6 @@ use App\Actions\ApplyDemurragePenaltyAction;
 use App\Models\AppliedPenalty;
 use App\Models\PenaltyType;
 use App\Models\Rake;
-use App\Models\RakeCharge;
 use App\Models\SectionTimer;
 
 beforeEach(function (): void {
