@@ -23,6 +23,7 @@ use App\Models\RakeWeighment;
 use App\Models\RrPenaltySnapshot;
 use App\Models\Siding;
 use App\Models\SidingOpeningBalance;
+use App\Models\SidingRiskScore;
 use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
 use App\Models\VehicleUnload;
@@ -132,6 +133,9 @@ final class ExecutiveDashboardController extends Controller
             'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'penaltySummary' => $this->buildPenaltySummary($resolved['filteredSidingIds']),
             'activeRakePipeline' => $this->buildActiveRakePipeline($resolved['filteredSidingIds']),
+            'riskScores' => $this->buildRiskScores($resolved['filteredSidingIds']),
+            'alerts' => $this->buildAlerts($resolved['filteredSidingIds']),
+            'operatorRake' => $this->buildOperatorRake($resolved['filteredSidingIds']),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'rakePerformance' => [],
             'loaderOverloadTrends' => [
@@ -4105,6 +4109,60 @@ final class ExecutiveDashboardController extends Controller
             return $pipeline;
         } catch (Throwable) {
             return ['loading' => [], 'awaiting_clearance' => [], 'dispatched' => []];
+        }
+    }
+
+    private function buildRiskScores(array $sidingIds): array
+    {
+        try {
+            return SidingRiskScore::whereIn('siding_id', $sidingIds)
+                ->with('siding:id,name,code')
+                ->get()
+                ->map(fn ($r) => [
+                    'siding_id' => $r->siding_id,
+                    'siding_name' => $r->siding?->name ?? '—',
+                    'siding_code' => $r->siding?->code ?? '—',
+                    'score' => (int) $r->score,
+                    'trend' => $r->trend,
+                    'risk_factors' => $r->risk_factors ?? [],
+                    'calculated_at' => $r->calculated_at?->toDateTimeString(),
+                ])
+                ->keyBy('siding_id')
+                ->toArray();
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    private function buildOperatorRake(array $sidingIds): ?array
+    {
+        try {
+            $rake = Rake::whereIn('siding_id', $sidingIds)
+                ->whereNotIn('state', ['dispatched', 'completed', 'cancelled'])
+                ->with('siding:id,name,code')
+                ->orderByDesc('loading_date')
+                ->first();
+
+            if (! $rake) {
+                return null;
+            }
+
+            $metrics = method_exists($rake, 'rakeLoaderProgressMetrics')
+                ? $rake->rakeLoaderProgressMetrics()
+                : ['loaded' => 0, 'total' => 0, 'status' => 'none'];
+
+            return [
+                'rake_id' => $rake->id,
+                'rake_number' => $rake->rake_number,
+                'siding_name' => $rake->siding?->name ?? '—',
+                'state' => $rake->state,
+                'loaded' => (int) ($metrics['loaded'] ?? 0),
+                'total' => (int) ($metrics['total'] ?? 0),
+                'status' => $metrics['status'] ?? 'none',
+                'loading_date' => $rake->loading_date?->toDateString(),
+            ];
+        } catch (Throwable) {
+            return null;
         }
     }
 }
