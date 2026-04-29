@@ -20,7 +20,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | Page | Route | Documented |
 |------|-------|------------|
 | [appearance/update](./appearance-update.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
-| [dashboard](./dashboard.md) | dashboard | ✅ |
+| [dashboard](./dashboard.md) | dashboard, dashboard.executive-yesterday-data | ✅ |
 | [session/create](./session-create.md) | login, login.store | ✅ |
 | [user-email-reset-notification/create](./user-email-reset-notification-create.md) | password.request, password.email | ✅ |
 | [user-email-verification-notification/create](./user-email-verification-notification-create.md) | verification.notice, verification.send | ✅ |
@@ -55,12 +55,12 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [terms/accept](./terms-accept.md) | terms.accept, terms.accept.store | ✅ |
 | [enterprise-inquiries/create](./enterprise-inquiries-create.md) | enterprise-inquiries.create, enterprise-inquiries.store | ✅ |
 | [alerts/index](./alerts/index.md) | alerts.index, alerts.resolve | ✅ |
-| [indents/index](./indents/index.md) | indents.index, indents.create | ✅ |
+| [indents/index](./indents/index.md) | indents.index, indents.import | ✅ |
 | [mobile/SidingDashboard](./mobile/SidingDashboard.md) | N/A | ✅ |
 | [penalties/index](./penalties/index.md) | penalties.index, penalties.analytics | ✅ |
-| [railway-receipts/create](./railway-receipts/create.md) | railway-receipts.index, railway-receipts.create | ✅ |
-| [railway-receipts/index](./railway-receipts/index.md) | railway-receipts.index, railway-receipts.create | ✅ |
-| [railway-receipts/show](./railway-receipts/show.md) | railway-receipts.index, railway-receipts.create | ✅ |
+| [railway-receipts/create](./railway-receipts/create.md) | railway-receipts.index, railway-receipts.upload | ✅ |
+| [railway-receipts/index](./railway-receipts/index.md) | railway-receipts.index, railway-receipts.upload | ✅ |
+| [railway-receipts/show](./railway-receipts/show.md) | railway-receipts.index, railway-receipts.upload | ✅ |
 | [rakes/index](./rakes/index.md) | rakes.index, rakes.show | ✅ |
 | [rakes/show](./rakes/show.md) | rakes.index, rakes.show | ✅ |
 | [reconciliation/index](./reconciliation/index.md) | reconciliation.index, reconciliation.show | ✅ |
@@ -72,11 +72,11 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [road-dispatch/arrivals/index](./road-dispatch/arrivals/index.md) | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ✅ |
 | [road-dispatch/unloads/create](./road-dispatch/unloads/create.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
 | [road-dispatch/unloads/index](./road-dispatch/unloads/index.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
-| [indents/create](./indents/create.md) | indents.index, indents.create | ✅ |
-| [indents/edit](./indents/edit.md) | indents.index, indents.create | ✅ |
-| [indents/show](./indents/show.md) | indents.index, indents.create | ✅ |
+| [indents/create](./indents/create.md) | indents.index, indents.import | ✅ |
+| [indents/edit](./indents/edit.md) | indents.index, indents.import | ✅ |
+| [indents/show](./indents/show.md) | indents.index, indents.import | ✅ |
 | [penalties/analytics](./penalties/analytics.md) | penalties.index, penalties.analytics | ✅ |
-| rakes/create-from-indent | indents.index, indents.create | ❌ |
+| rakes/create-from-indent | indents.index, indents.import | ❌ |
 | road-dispatch/arrivals/show | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ❌ |
 | road-dispatch/components/WeighmentHistory | N/A | ❌ |
 | road-dispatch/stepper/track-timeline | N/A | ❌ |
@@ -101,11 +101,49 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | road-dispatch/daily-vehicle-entries/vehicle-entry-table | N/A | ❌ |
 | VehicleDispatch/DPRTab | N/A | ❌ |
 | VehicleDispatch/ImportPreviewCard | N/A | ❌ |
-| VehicleDispatch/Index | vehicle-dispatch.index, vehicle-dispatch.update | ❌ |
+| VehicleDispatch/Index | vehicle-dispatch.index, vehicle-dispatch.dpr-data | ❌ |
 | VehicleDispatch/MainDataTab | N/A | ❌ |
 | VehicleDispatch/VehicleDispatchTable | N/A | ❌ |
 | VehicleDispatch/VehicleDispatchTabs | N/A | ❌ |
-| VehicleWorkorders/Edit | vehicle-workorders.index, vehicle-workorders.edit | ❌ |
-| VehicleWorkorders/Index | vehicle-workorders.index, vehicle-workorders.edit | ❌ |
+| VehicleWorkorders/Edit | vehicle-workorders.index, vehicle-workorders.export | ❌ |
+| VehicleWorkorders/Index | vehicle-workorders.index, vehicle-workorders.export | ❌ |
+| MasterData/DailyStockDetails/Create | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
+| MasterData/DailyStockDetails/Edit | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
+| MasterData/DailyStockDetails/Index | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
+| MasterData/DistanceMatrix/Edit | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ❌ |
+| MasterData/DistanceMatrix/Show | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ❌ |
+| MasterData/Loaders/Edit | master-data.loaders.index, master-data.loaders.create | ❌ |
+| MasterData/Loaders/Show | master-data.loaders.index, master-data.loaders.create | ❌ |
+| MasterData/OpeningCoalStock/Edit | master-data.opening-coal-stock.index, master-data.opening-coal-stock.edit | ❌ |
+| MasterData/OpeningCoalStock/Index | master-data.opening-coal-stock.index, master-data.opening-coal-stock.edit | ❌ |
+| MasterData/PenaltyTypes/Edit | master-data.penalty-types.index, master-data.penalty-types.create | ❌ |
+| MasterData/PenaltyTypes/Show | master-data.penalty-types.index, master-data.penalty-types.create | ❌ |
+| MasterData/SectionTimers/Edit | master-data.section-timers.index, master-data.section-timers.create | ❌ |
+| MasterData/SectionTimers/Show | master-data.section-timers.index, master-data.section-timers.create | ❌ |
+| MasterData/ShiftTimings/Edit | master-data.shift-timings.index, master-data.shift-timings.edit | ❌ |
+| MasterData/ShiftTimings/Index | master-data.shift-timings.index, master-data.shift-timings.edit | ❌ |
+| MasterData/Sidings/Create | master-data.sidings.index, master-data.sidings.create | ❌ |
+| MasterData/Sidings/Edit | master-data.sidings.index, master-data.sidings.create | ❌ |
+| MasterData/Sidings/Show | master-data.sidings.index, master-data.sidings.create | ❌ |
+| MasterData/StockLedger/Index | master-data.stock-ledger.index, master-data.stock-ledger.stock-report | ❌ |
+| MasterData/StockLedger/stock-report-dialog | N/A | ❌ |
+| VehicleWorkorders/Create | vehicle-workorders.index, vehicle-workorders.export | ❌ |
+| historical/mines/index | historical.mines.index, historical.mines.store | ❌ |
+| historical/railway-siding/index | historical.railway-siding.index, historical.railway-siding.export | ❌ |
+| production/edit | production.coal.index, production.coal.store | ❌ |
+| production/index | production.coal.index, production.coal.store | ❌ |
+| railway-siding-empty-weighment/index | railway-siding-empty-weighment.index, railway-siding-empty-weighment.store | ❌ |
+| railway-siding-empty-weighment/shift-tabs | N/A | ❌ |
+| railway-siding-empty-weighment/vehicle-entry-row | N/A | ❌ |
+| railway-siding-empty-weighment/vehicle-entry-table | N/A | ❌ |
+| rake-loader/index | rake-loader.index, rake-loader.rakes.loading | ❌ |
+| rake-loader/loading | rake-loader.index, rake-loader.rakes.loading | ❌ |
+| road-dispatch/daily-vehicle-entries/shift-report-dialog | N/A | ❌ |
+| siding-pre-indent-reports/create | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
+| siding-pre-indent-reports/edit | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
+| siding-pre-indent-reports/index | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
+| siding-pre-indent-reports/show | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
+| weighments/index | weighments.index, weighments.show | ❌ |
+| weighments/show | weighments.index, weighments.show | ❌ |
 
 

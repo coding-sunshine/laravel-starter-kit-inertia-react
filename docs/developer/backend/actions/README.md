@@ -69,5 +69,22 @@ All Actions:
 | [RecommendDisputeAction](./RecommendDisputeAction.md) | N/A | ✅ |
 | CreateUnloadFromArrival | N/A | ❌ |
 | GenerateDispatchReport | N/A | ❌ |
+| ApplyDemurragePenaltyAction | N/A | ❌ |
+| ApplyWeighmentPenaltiesAction | N/A | ❌ |
+| CreateApiUser | N/A | ❌ |
+| CreateIndentAndProvisionRakeAction | N/A | ❌ |
+| DeleteIndentAction | N/A | ❌ |
+| DeleteRrDocumentAction | N/A | ❌ |
+| DeleteStandaloneHistoricalWeighmentAction | N/A | ❌ |
+| EndTxrAction | N/A | ❌ |
+| ImportHistoricalMinesDataFromExcelAction | N/A | ❌ |
+| ImportSidingDispatchFromExcel | N/A | ❌ |
+| ProvisionRakeForIndent | N/A | ❌ |
+| RecordManualRakeWeighment | N/A | ❌ |
+| StartTxrAction | N/A | ❌ |
+| StoreTyrUnfitLogsAction | N/A | ❌ |
+| SyncTxrUnfitFlagsToWagonsAction | N/A | ❌ |
+| UpdateManualRakeWeighment | N/A | ❌ |
+| UpdateTxrHeaderAction | N/A | ❌ |
 
 

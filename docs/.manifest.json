@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-03-05",
+    "lastGenerated": "2026-04-28",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -97,6 +97,11 @@
                     "User"
                 ],
                 "relatedRoutes": [
+                    "api.v1.auth.login",
+                    "api.v1.auth.register",
+                    "api.v1.auth.refresh",
+                    "api.v1.auth.logout",
+                    "api.v1.auth.me.delete",
                     "api.v1.users.index",
                     "api.v1.users.batch",
                     "api.v1.users.search",
@@ -115,8 +120,7 @@
             "path": "./UpdateUser.md",
             "relationships": {
                 "usedBy": [
-                    "UserPasswordController",
-                    "UserProfileController"
+                    "UserPasswordController"
                 ],
                 "usesModels": [
                     "User"
@@ -129,8 +133,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "user-profile.edit",
-                    "user-profile.update",
                     "password.edit",
                     "password.update",
                     "password.reset",
@@ -447,7 +449,26 @@
                     "Indent",
                     "Siding"
                 ],
-                "relatedRoutes": []
+                "relatedRoutes": [
+                    "api.v1.indents.index",
+                    "api.v1.indents.upload",
+                    "api.v1.indents.store",
+                    "api.v1.indents.show",
+                    "api.v1.indents.assign-rake-number",
+                    "api.v1.indents.download",
+                    "indents.index",
+                    "indents.import",
+                    "indents.create",
+                    "indents.store",
+                    "indents.pdf",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
+                    "indents.create-rake",
+                    "indents.store-rake"
+                ]
             }
         },
         "CreateRake": {
@@ -531,10 +552,14 @@
                 ],
                 "relatedRoutes": [
                     "railway-receipts.index",
+                    "railway-receipts.upload",
                     "railway-receipts.create",
+                    "railway-receipts.rakes",
                     "railway-receipts.store",
                     "railway-receipts.show",
-                    "railway-receipts.update"
+                    "railway-receipts.pdf",
+                    "railway-receipts.update",
+                    "railway-receipts.destroy"
                 ]
             }
         },
@@ -573,14 +598,16 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
+                    "AppliedPenalty",
+                    "DailyVehicleEntry",
                     "Indent",
-                    "Penalty",
-                    "Rake",
+                    "RakeCharge",
+                    "RakeWagonWeighment",
                     "RrDocument",
+                    "RrPenaltySnapshot",
                     "Txr",
-                    "VehicleUnload",
-                    "Wagon",
-                    "Weighment"
+                    "WagonLoading",
+                    "WagonUnfitLog"
                 ],
                 "relatedRoutes": [
                     "reports.index",
@@ -597,9 +624,7 @@
                     "Alert",
                     "Rake"
                 ],
-                "relatedRoutes": [
-                    "dashboard"
-                ]
+                "relatedRoutes": []
             }
         },
         "UatUtilities": {
@@ -622,14 +647,41 @@
             "documented": true,
             "path": "./updatestockledger.md",
             "relationships": {
-                "usedBy": [],
+                "usedBy": [
+                    "StockLedgerController"
+                ],
                 "usesModels": [
                     "Siding",
+                    "SidingOpeningBalance",
                     "StockLedger",
                     "VehicleArrival",
                     "VehicleUnload"
                 ],
-                "relatedRoutes": []
+                "relatedRoutes": [
+                    "api.v1.weighments.template-xlsx",
+                    "api.v1.rakes.weighments.manual",
+                    "api.v1.rakes.weighments.update-manual",
+                    "api.v1.rakes.weighments.destroy",
+                    "rakes.weighments.store",
+                    "rakes.weighments.manual",
+                    "rakes.weighments.update-manual",
+                    "rakes.weighments.destroy",
+                    "indents.index",
+                    "indents.import",
+                    "indents.create",
+                    "indents.store",
+                    "indents.pdf",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
+                    "indents.create-rake",
+                    "indents.store-rake",
+                    "master-data.stock-ledger.index",
+                    "master-data.stock-ledger.stock-report",
+                    "master-data.stock-ledger.adjust"
+                ]
             }
         },
         "ImportRakeDataFromExcelAction": {
@@ -733,9 +785,7 @@
                     "Penalty",
                     "Rake"
                 ],
-                "relatedRoutes": [
-                    "dashboard"
-                ]
+                "relatedRoutes": []
             }
         },
         "GeneratePenaltyInsightsAction": {
@@ -858,6 +908,361 @@
                 ],
                 "relatedRoutes": [
                     "dispatch-reports.generate"
+                ]
+            }
+        },
+        "ApplyDemurragePenaltyAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "1": "AppliedPenalty",
+                    "2": "PenaltyType",
+                    "4": "RakeCharge",
+                    "5": "SectionTimer"
+                },
+                "relatedRoutes": [
+                    "rakes.index",
+                    "rakes.show",
+                    "rakes.edit",
+                    "rakes.update",
+                    "rakes.destroy",
+                    "rakes.generate-wagons",
+                    "rakes.loading.start",
+                    "rakes.loading.reset",
+                    "rakes.loading.stop",
+                    "rakes.loading-times.update",
+                    "rakes.comparison"
+                ]
+            }
+        },
+        "ApplyWeighmentPenaltiesAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "1": "RakeWeighment",
+                    "2": "AppliedPenalty",
+                    "3": "PenaltyType",
+                    "5": "RakeCharge",
+                    "6": "RakeWagonWeighment"
+                },
+                "relatedRoutes": []
+            }
+        },
+        "CreateApiUser": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "api.v1.auth.login",
+                    "api.v1.auth.register",
+                    "api.v1.auth.refresh",
+                    "api.v1.auth.logout",
+                    "api.v1.auth.me.delete"
+                ]
+            }
+        },
+        "CreateIndentAndProvisionRakeAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User",
+                    "Indent",
+                    "Rake"
+                ],
+                "relatedRoutes": [
+                    "api.v1.indents.index",
+                    "api.v1.indents.upload",
+                    "api.v1.indents.store",
+                    "api.v1.indents.show",
+                    "api.v1.indents.assign-rake-number",
+                    "api.v1.indents.download",
+                    "indents.index",
+                    "indents.import",
+                    "indents.create",
+                    "indents.store",
+                    "indents.pdf",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
+                    "indents.create-rake",
+                    "indents.store-rake"
+                ]
+            }
+        },
+        "DeleteIndentAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Indent",
+                    "2": "Rake",
+                    "3": "StockLedger"
+                },
+                "relatedRoutes": [
+                    "indents.index",
+                    "indents.import",
+                    "indents.create",
+                    "indents.store",
+                    "indents.pdf",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
+                    "indents.create-rake",
+                    "indents.store-rake"
+                ]
+            }
+        },
+        "DeleteRrDocumentAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "RrDocument",
+                    "Rake"
+                ],
+                "relatedRoutes": [
+                    "railway-receipts.index",
+                    "railway-receipts.upload",
+                    "railway-receipts.create",
+                    "railway-receipts.rakes",
+                    "railway-receipts.store",
+                    "railway-receipts.show",
+                    "railway-receipts.pdf",
+                    "railway-receipts.update",
+                    "railway-receipts.destroy"
+                ]
+            }
+        },
+        "DeleteStandaloneHistoricalWeighmentAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Weighment",
+                    "AppliedPenalty"
+                ],
+                "relatedRoutes": [
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx"
+                ]
+            }
+        },
+        "EndTxrAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "2": "Txr"
+                },
+                "relatedRoutes": [
+                    "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.upload-note"
+                ]
+            }
+        },
+        "ImportHistoricalMinesDataFromExcelAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "HistoricalMine"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "ImportSidingDispatchFromExcel": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "HistoricalMine",
+                    "Siding"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "ProvisionRakeForIndent": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Indent",
+                    "2": "PowerPlant",
+                    "3": "Rake",
+                    "4": "Wagon"
+                },
+                "relatedRoutes": [
+                    "indents.index",
+                    "indents.import",
+                    "indents.create",
+                    "indents.store",
+                    "indents.pdf",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
+                    "indents.create-rake",
+                    "indents.store-rake"
+                ]
+            }
+        },
+        "RecordManualRakeWeighment": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "2": "RakeWeighment"
+                },
+                "relatedRoutes": [
+                    "api.v1.weighments.template-xlsx",
+                    "api.v1.rakes.weighments.manual",
+                    "api.v1.rakes.weighments.update-manual",
+                    "api.v1.rakes.weighments.destroy",
+                    "rakes.weighments.store",
+                    "rakes.weighments.manual",
+                    "rakes.weighments.update-manual",
+                    "rakes.weighments.destroy",
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx"
+                ]
+            }
+        },
+        "StartTxrAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "2": "Txr"
+                },
+                "relatedRoutes": [
+                    "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.upload-note"
+                ]
+            }
+        },
+        "StoreTyrUnfitLogsAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Rake"
+                ],
+                "relatedRoutes": [
+                    "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.upload-note"
+                ]
+            }
+        },
+        "SyncTxrUnfitFlagsToWagonsAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "1": "Txr",
+                    "4": "Wagon"
+                },
+                "relatedRoutes": [
+                    "rakes.index",
+                    "rakes.show",
+                    "rakes.edit",
+                    "rakes.update",
+                    "rakes.destroy",
+                    "rakes.generate-wagons",
+                    "rakes.loading.start",
+                    "rakes.loading.reset",
+                    "rakes.loading.stop",
+                    "rakes.loading-times.update",
+                    "rakes.comparison"
+                ]
+            }
+        },
+        "UpdateManualRakeWeighment": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Rake",
+                    "RakeWeighment"
+                ],
+                "relatedRoutes": [
+                    "api.v1.weighments.template-xlsx",
+                    "api.v1.rakes.weighments.manual",
+                    "api.v1.rakes.weighments.update-manual",
+                    "api.v1.rakes.weighments.destroy",
+                    "rakes.weighments.store",
+                    "rakes.weighments.manual",
+                    "rakes.weighments.update-manual",
+                    "rakes.weighments.destroy"
+                ]
+            }
+        },
+        "UpdateTxrHeaderAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "2": "Txr"
+                },
+                "relatedRoutes": [
+                    "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.upload-note"
                 ]
             }
         }
@@ -1029,12 +1434,8 @@
             "documented": true,
             "path": "./UserProfileController.md",
             "relationships": {
-                "usesActions": [
-                    "UpdateUser"
-                ],
-                "usesFormRequests": [
-                    "UpdateUserRequest"
-                ],
+                "usesActions": [],
+                "usesFormRequests": [],
                 "relatedRoutes": [
                     "user-profile.edit",
                     "user-profile.update"
@@ -1373,10 +1774,7 @@
             "documented": true,
             "path": "./executivedashboardcontroller.md",
             "relationships": {
-                "usesActions": [
-                    "GenerateDailyBriefingAction",
-                    "SyncDemurrageAlertsAction"
-                ],
+                "usesActions": [],
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": [
@@ -1388,8 +1786,15 @@
             "documented": true,
             "path": "./indentscontroller.md",
             "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
+                "usesActions": [
+                    "CreateIndentAndProvisionRakeAction",
+                    "DeleteIndentAction",
+                    "ProvisionRakeForIndent",
+                    "UpdateStockLedger"
+                ],
+                "usesFormRequests": [
+                    "StoreIndentRequest"
+                ],
                 "relatedRoutes": [],
                 "rendersPages": [
                     "indents/index",
@@ -1424,6 +1829,7 @@
             "path": "./rrdocumentcontroller.md",
             "relationships": {
                 "usesActions": [
+                    "DeleteRrDocumentAction",
                     "ProcessRrDocument"
                 ],
                 "usesFormRequests": [],
@@ -1449,8 +1855,15 @@
             "documented": true,
             "path": "./raketxrcontroller.md",
             "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
+                "usesActions": [
+                    "EndTxrAction",
+                    "StartTxrAction",
+                    "StoreTyrUnfitLogsAction",
+                    "UpdateTxrHeaderAction"
+                ],
+                "usesFormRequests": [
+                    "UpdateTxrRequest"
+                ],
                 "relatedRoutes": [],
                 "rendersPages": []
             }
@@ -1459,8 +1872,15 @@
             "documented": true,
             "path": "./rakeweighmentcontroller.md",
             "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
+                "usesActions": [
+                    "RecordManualRakeWeighment",
+                    "UpdateManualRakeWeighment",
+                    "UpdateStockLedger"
+                ],
+                "usesFormRequests": [
+                    "StoreManualRakeWeighmentRequest",
+                    "UpdateManualRakeWeighmentRequest"
+                ],
                 "relatedRoutes": [],
                 "rendersPages": []
             }
@@ -1469,7 +1889,10 @@
             "documented": true,
             "path": "./rakescontroller.md",
             "relationships": {
-                "usesActions": [],
+                "usesActions": [
+                    "ApplyDemurragePenaltyAction",
+                    "SyncTxrUnfitFlagsToWagonsAction"
+                ],
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": [
@@ -1496,7 +1919,9 @@
             "documented": true,
             "path": "./reconciliationcontroller.md",
             "relationships": {
-                "usesActions": [],
+                "usesActions": [
+                    "ReconcileRakeAction"
+                ],
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": [
@@ -1598,7 +2023,11 @@
                     "road-dispatch.daily-vehicle-entries.update",
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
-                    "road-dispatch.daily-vehicle-entries.export"
+                    "road-dispatch.daily-vehicle-entries.hourly-summary",
+                    "road-dispatch.daily-vehicle-entries.shift-report",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary.export",
+                    "road-dispatch.daily-vehicle-entries.export",
+                    "road-dispatch.vehicle-workorders.lookup"
                 ],
                 "rendersPages": [
                     "road-dispatch/daily-vehicle-entries/index"
@@ -1763,9 +2192,7 @@
                 "usesFormRequests": [
                     "StoreTxrRequest"
                 ],
-                "relatedRoutes": [
-                    "rakes.txr.store"
-                ],
+                "relatedRoutes": [],
                 "rendersPages": []
             }
         },
@@ -1807,6 +2234,8 @@
                 ],
                 "relatedRoutes": [
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.dpr-data",
+                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save"
@@ -1822,16 +2251,543 @@
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
+                    "IndexVehicleWorkorderRequest",
+                    "StoreVehicleWorkorderRequest",
                     "UpdateVehicleWorkorderRequest"
                 ],
                 "relatedRoutes": [
                     "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
                     "vehicle-workorders.update"
                 ],
                 "rendersPages": [
                     "VehicleWorkorders/Index",
+                    "VehicleWorkorders/Create",
                     "VehicleWorkorders/Edit"
+                ]
+            }
+        },
+        "AccountDeletionRequestController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "account.request-deletion.show",
+                    "account.request-deletion.store"
+                ],
+                "rendersPages": []
+            }
+        },
+        "MobileDashboardController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "AuthController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "CreateApiUser",
+                    "DeleteUser"
+                ],
+                "usesFormRequests": [
+                    "CreateSessionRequest"
+                ],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "IndentController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "CreateIndentAndProvisionRakeAction"
+                ],
+                "usesFormRequests": [
+                    "StoreIndentApiRequest"
+                ],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "PowerPlantApiController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RailwayReceiptApiController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RailwayReceiptUploadController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeRrDiversionApiController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeRrHubStateApiController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeWeighmentApiController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeWeighmentWorkflowApiController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "RecordManualRakeWeighment",
+                    "UpdateManualRakeWeighment",
+                    "UpdateStockLedger"
+                ],
+                "usesFormRequests": [
+                    "StoreManualRakeWeighmentRequest",
+                    "UpdateManualRakeWeighmentRequest"
+                ],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RolePermissionController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "SidingController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "SidingVehicleDispatchController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "WeighmentUploadController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "CoalStockApproxDetailController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy"
+                ],
+                "rendersPages": [
+                    "MasterData/DailyStockDetails/Index",
+                    "MasterData/DailyStockDetails/Create",
+                    "MasterData/DailyStockDetails/Edit"
+                ]
+            }
+        },
+        "LoaderOverloadWebController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "CoalTransportReportExportController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "DispatchReportDprExportController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RedirectAdminHomeController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "HistoricalMineController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "historical.mines.index",
+                    "historical.mines.store",
+                    "historical.mines.update",
+                    "historical.mines.destroy"
+                ],
+                "rendersPages": [
+                    "historical/mines/index"
+                ]
+            }
+        },
+        "HistoricalRakeController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "historical.railway-siding.index",
+                    "historical.railway-siding.export",
+                    "historical.railway-siding.store",
+                    "historical.railway-siding.update",
+                    "historical.railway-siding.destroy"
+                ],
+                "rendersPages": [
+                    "historical/railway-siding/index"
+                ]
+            }
+        },
+        "LoaderOperatorsController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "StoreLoaderOperatorRequest",
+                    "UpdateLoaderOperatorRequest"
+                ],
+                "relatedRoutes": [
+                    "master-data.loader-operators.store",
+                    "master-data.loader-operators.update"
+                ],
+                "rendersPages": []
+            }
+        },
+        "NotificationReadController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "OpeningCoalStockController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix"
+                ],
+                "rendersPages": [
+                    "MasterData/OpeningCoalStock/Index",
+                    "MasterData/OpeningCoalStock/Edit"
+                ]
+            }
+        },
+        "ProductionEntryController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "StoreProductionEntryRequest",
+                    "UpdateProductionEntryRequest"
+                ],
+                "relatedRoutes": [
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy"
+                ],
+                "rendersPages": [
+                    "production/index",
+                    "production/edit"
+                ]
+            }
+        },
+        "RrUploadController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "StoreRrUploadRequest"
+                ],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RailwaySidingEmptyWeighmentController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "railway-siding-empty-weighment.index",
+                    "railway-siding-empty-weighment.store",
+                    "railway-siding-empty-weighment.hourly-summary",
+                    "railway-siding-empty-weighment.update",
+                    "railway-siding-empty-weighment.destroy",
+                    "railway-siding-empty-weighment.complete",
+                    "railway-siding-empty-weighment.export"
+                ],
+                "rendersPages": [
+                    "railway-siding-empty-weighment/index"
+                ]
+            }
+        },
+        "PreRrController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeDiverrtDestinationController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeDiversionModeController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeLoaderController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "rake-loader/index",
+                    "rake-loader/loading"
+                ]
+            }
+        },
+        "RakePowerPlantReceiptController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeRrHubStateController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "ShiftTimingsController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update"
+                ],
+                "rendersPages": [
+                    "MasterData/ShiftTimings/Index",
+                    "MasterData/ShiftTimings/Edit"
+                ]
+            }
+        },
+        "SidingPreIndentReportController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "IndexSidingPreIndentReportRequest",
+                    "StoreSidingPreIndentReportRequest",
+                    "UpdateSidingPreIndentReportRequest"
+                ],
+                "relatedRoutes": [
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy"
+                ],
+                "rendersPages": [
+                    "siding-pre-indent-reports/index",
+                    "siding-pre-indent-reports/create",
+                    "siding-pre-indent-reports/show",
+                    "siding-pre-indent-reports/edit"
+                ]
+            }
+        },
+        "StockLedgerController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "AdjustStockLedgerRequest"
+                ],
+                "relatedRoutes": [
+                    "master-data.stock-ledger.index",
+                    "master-data.stock-ledger.stock-report",
+                    "master-data.stock-ledger.adjust"
+                ],
+                "rendersPages": [
+                    "MasterData/StockLedger/Index"
+                ]
+            }
+        },
+        "WeighmentsController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "DeleteStandaloneHistoricalWeighmentAction",
+                    "RecordManualRakeWeighment"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "weighments/index",
+                    "weighments/show"
                 ]
             }
         }
@@ -1848,81 +2804,23 @@
                     "filament.imports.failed-rows.download",
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
-                    "filament.admin.pages.dashboard",
+                    "filament.admin.home",
                     "filament.admin.pages.user-activities-page",
-                    "filament.admin.pages.api-docs",
-                    "filament.admin.pages.billing.revenue-analytics",
-                    "filament.admin.pages.manage-app",
-                    "filament.admin.pages.manage-auth",
-                    "filament.admin.pages.manage-seo",
+                    "filament.admin.pages.dashboard",
                     "filament.admin.pages.analytics.product",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
-                    "filament.admin.resources.billing.affiliates.index",
-                    "filament.admin.resources.categories.index",
-                    "filament.admin.resources.changelog-entries.index",
-                    "filament.admin.resources.changelog-entries.create",
-                    "filament.admin.resources.changelog-entries.view",
-                    "filament.admin.resources.changelog-entries.edit",
-                    "filament.admin.resources.contact-submissions.index",
-                    "filament.admin.resources.contact-submissions.view",
-                    "filament.admin.resources.contact-submissions.edit",
-                    "filament.admin.resources.credit-packs.index",
-                    "filament.admin.resources.credit-packs.create",
-                    "filament.admin.resources.credit-packs.edit",
-                    "filament.admin.resources.enterprise-inquiries.index",
-                    "filament.admin.resources.enterprise-inquiries.view",
-                    "filament.admin.resources.enterprise-inquiries.edit",
-                    "filament.admin.resources.freight-rate-masters.index",
-                    "filament.admin.resources.freight-rate-masters.create",
-                    "filament.admin.resources.freight-rate-masters.edit",
-                    "filament.admin.resources.help-articles.index",
-                    "filament.admin.resources.help-articles.create",
-                    "filament.admin.resources.help-articles.view",
-                    "filament.admin.resources.help-articles.edit",
-                    "filament.admin.resources.loaders.index",
-                    "filament.admin.resources.loaders.create",
-                    "filament.admin.resources.loaders.edit",
-                    "filament.admin.resources.mail-templates.index",
-                    "filament.admin.resources.mail-templates.edit",
-                    "filament.admin.resources.organization-invitations.index",
-                    "filament.admin.resources.organization-invitations.create",
-                    "filament.admin.resources.organization-invitations.edit",
-                    "filament.admin.resources.organizations.index",
-                    "filament.admin.resources.organizations.create",
-                    "filament.admin.resources.organizations.edit",
-                    "filament.admin.resources.permissions.index",
-                    "filament.admin.resources.permissions.view",
-                    "filament.admin.resources.posts.index",
-                    "filament.admin.resources.posts.create",
-                    "filament.admin.resources.posts.view",
-                    "filament.admin.resources.posts.edit",
-                    "filament.admin.resources.power-plants.index",
-                    "filament.admin.resources.power-plants.create",
-                    "filament.admin.resources.power-plants.edit",
-                    "filament.admin.resources.roles.index",
-                    "filament.admin.resources.roles.create",
-                    "filament.admin.resources.roles.view",
-                    "filament.admin.resources.roles.edit",
-                    "filament.admin.resources.routes.index",
-                    "filament.admin.resources.routes.create",
-                    "filament.admin.resources.routes.edit",
-                    "filament.admin.resources.sidings.index",
-                    "filament.admin.resources.sidings.create",
-                    "filament.admin.resources.sidings.edit",
-                    "filament.admin.resources.terms-versions.index",
-                    "filament.admin.resources.terms-versions.create",
-                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
-                    "filament.admin.resources.vehicles.index",
-                    "filament.admin.resources.vehicles.view",
-                    "filament.admin.resources.vouchers.index",
-                    "filament.admin.resources.vouchers.create",
-                    "filament.admin.resources.vouchers.edit",
+                    "filament.admin.resources.roles.index",
+                    "filament.admin.resources.roles.create",
+                    "filament.admin.resources.roles.view",
+                    "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.permissions.index",
+                    "filament.admin.resources.permissions.view",
                     "referralLink",
                     "generateReferralCodes",
                     "login",
@@ -1967,6 +2865,11 @@
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
+                    "api.v1.auth.login",
+                    "api.v1.auth.register",
+                    "api.v1.auth.refresh",
+                    "api.v1.auth.logout",
+                    "api.v1.auth.me.delete",
                     "api.v1.users.index",
                     "api.v1.users.batch",
                     "api.v1.users.search",
@@ -1974,9 +2877,51 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "api.v1.indents.index",
+                    "api.v1.indents.upload",
+                    "api.v1.indents.store",
+                    "api.v1.indents.show",
+                    "api.v1.indents.assign-rake-number",
+                    "api.v1.indents.download",
+                    "api.v1.railway-receipts.upload",
+                    "api.v1.railway-receipts.index",
+                    "api.v1.railway-receipts.show",
+                    "api.v1.railway-receipts.download",
+                    "api.v1.weighments.upload",
+                    "api.v1.weighments.template-xlsx",
+                    "api.v1.sidings.index",
+                    "api.v1.power-plants.index",
+                    "api.v1.siding-vehicle-dispatches.index",
+                    "api.v1.roles.permissions.index",
+                    "api.v1.rakes.index",
+                    "api.v1.rakes.export",
+                    "api.v1.rakes.show",
+                    "api.v1.rakes.rr-hub-state",
+                    "api.v1.rakes.diversion-mode.update",
+                    "api.v1.rakes.diverrt-destinations.store",
+                    "api.v1.rakes.diverrt-destinations.destroy",
+                    "api.v1.rake-weighments.index",
+                    "api.v1.rake-weighments.show",
+                    "api.v1.rake-weighments.download",
+                    "api.v1.rakes.weighments.manual",
+                    "api.v1.rakes.weighments.update-manual",
+                    "api.v1.rakes.weighments.destroy",
+                    "api.v1.dashboard.filter-options",
+                    "api.v1.dashboard.admin-kpis",
+                    "api.v1.dashboard.executive",
+                    "api.v1.dashboard.executive.custom-range",
+                    "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.executive-overview",
+                    "api.v1.dashboard.operations",
+                    "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance",
+                    "api.v1.dashboard.loader-overload",
+                    "api.v1.dashboard.power-plant",
                     "invitations.show",
                     "invitations.accept",
                     "cookie-consent.accept",
+                    "account.request-deletion.show",
+                    "account.request-deletion.store",
                     "blog.index",
                     "blog.show",
                     "changelog.index",
@@ -1991,6 +2936,16 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
+                    "dashboard.executive-yesterday-data",
+                    "dashboard.rake-performance.rakes.index",
+                    "dashboard.rake-performance.rakes.show",
+                    "dashboard.loader-overload.loaders.index",
+                    "dashboard.loader-overload.loaders.show",
+                    "dashboard.loader-overload.operators.index",
+                    "dashboard.loader-overload.operators.show",
+                    "exports.coal-transport-report",
+                    "notifications.read-all",
+                    "notifications.read-one",
                     "organizations.switch",
                     "organizations.index",
                     "organizations.create",
@@ -2012,35 +2967,60 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading",
                     "rakes.index",
                     "rakes.show",
+                    "rakes.rr-hub-state",
+                    "rakes.pre-rr.show",
+                    "rakes.diversion-mode.update",
+                    "rakes.diverrt-destinations.store",
+                    "rakes.diverrt-destinations.destroy",
                     "rakes.edit",
                     "rakes.update",
                     "rakes.destroy",
                     "rakes.generate-wagons",
+                    "rakes.loading.start",
+                    "rakes.loading.reset",
+                    "rakes.loading.stop",
+                    "rakes.loading-times.update",
                     "rakes.wagons.update",
+                    "rakes.wagons.bulk-update",
                     "rakes.txr.update",
                     "rakes.txr.start",
                     "rakes.txr.end",
                     "rakes.txr.unfit-logs",
-                    "rakes.txr.store",
+                    "rakes.txr.upload-note",
                     "txr.unfit-wagons.store",
                     "rakes.load.show",
                     "rakes.load.confirm-placement",
                     "rakes.load.wagon",
                     "rakes.load.wagons",
+                    "rakes.load.wagon-loadings",
+                    "rakes.load.wagon-rows.ensure-all",
+                    "rakes.load.wagon-rows.store",
+                    "rakes.load.wagon-rows.update",
+                    "rakes.load.wagon-rows.destroy",
                     "rakes.load.guard-inspection",
-                    "rakes.load.weighment",
                     "rakes.load.confirm-dispatch",
                     "rakes.weighments.store",
+                    "rakes.weighments.manual",
+                    "rakes.weighments.update-manual",
+                    "rakes.weighments.destroy",
+                    "rakes.power-plant-receipts.store",
+                    "rakes.power-plant-receipts.destroy",
                     "rakes.comparison",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake",
                     "master-data.power-plants.index",
@@ -2064,6 +3044,8 @@
                     "master-data.loaders.edit",
                     "master-data.loaders.update",
                     "master-data.loaders.destroy",
+                    "master-data.loader-operators.store",
+                    "master-data.loader-operators.update",
                     "master-data.penalty-types.index",
                     "master-data.penalty-types.create",
                     "master-data.penalty-types.store",
@@ -2078,6 +3060,23 @@
                     "master-data.section-timers.edit",
                     "master-data.section-timers.update",
                     "master-data.section-timers.destroy",
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update",
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix",
+                    "master-data.stock-ledger.index",
+                    "master-data.stock-ledger.stock-report",
+                    "master-data.stock-ledger.adjust",
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy",
                     "master-data.master-data.distance-matrix.index",
                     "master-data.master-data.distance-matrix.create",
                     "master-data.master-data.distance-matrix.store",
@@ -2104,20 +3103,69 @@
                     "road-dispatch.daily-vehicle-entries.update",
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary",
+                    "road-dispatch.daily-vehicle-entries.shift-report",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary.export",
                     "road-dispatch.daily-vehicle-entries.export",
+                    "road-dispatch.vehicle-workorders.lookup",
+                    "railway-siding-empty-weighment.index",
+                    "railway-siding-empty-weighment.store",
+                    "railway-siding-empty-weighment.hourly-summary",
+                    "railway-siding-empty-weighment.update",
+                    "railway-siding-empty-weighment.destroy",
+                    "railway-siding-empty-weighment.complete",
+                    "railway-siding-empty-weighment.export",
+                    "historical.railway-siding.index",
+                    "historical.railway-siding.export",
+                    "historical.railway-siding.store",
+                    "historical.railway-siding.update",
+                    "historical.railway-siding.destroy",
+                    "historical.mines.index",
+                    "historical.mines.store",
+                    "historical.mines.update",
+                    "historical.mines.destroy",
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy",
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.dpr-data",
+                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save",
                     "dispatch-reports.generate",
+                    "vehicle-dispatch.dpr-export",
                     "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import",
+                    "railway-receipts.upload",
                     "railway-receipts.create",
+                    "railway-receipts.rakes",
                     "railway-receipts.store",
                     "railway-receipts.show",
+                    "railway-receipts.pdf",
                     "railway-receipts.update",
+                    "railway-receipts.destroy",
                     "penalties.index",
                     "penalties.analytics",
                     "penalties.update",
@@ -2131,6 +3179,13 @@
                     "reconciliation.power-plant-receipts.store",
                     "reports.index",
                     "reports.generate",
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx",
                     "chat.conversations.index",
                     "chat.conversations.show",
                     "chat.demurrage-warnings",
@@ -2170,7 +3225,10 @@
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
-                    "dashboard"
+                    "dashboard",
+                    "dashboard.executive-yesterday-data",
+                    "dashboard.rake-performance.rakes.index",
+                    "dashboard.rake-performance.rakes.show"
                 ]
             }
         },
@@ -2402,81 +3460,23 @@
                     "filament.imports.failed-rows.download",
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
-                    "filament.admin.pages.dashboard",
+                    "filament.admin.home",
                     "filament.admin.pages.user-activities-page",
-                    "filament.admin.pages.api-docs",
-                    "filament.admin.pages.billing.revenue-analytics",
-                    "filament.admin.pages.manage-app",
-                    "filament.admin.pages.manage-auth",
-                    "filament.admin.pages.manage-seo",
+                    "filament.admin.pages.dashboard",
                     "filament.admin.pages.analytics.product",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
-                    "filament.admin.resources.billing.affiliates.index",
-                    "filament.admin.resources.categories.index",
-                    "filament.admin.resources.changelog-entries.index",
-                    "filament.admin.resources.changelog-entries.create",
-                    "filament.admin.resources.changelog-entries.view",
-                    "filament.admin.resources.changelog-entries.edit",
-                    "filament.admin.resources.contact-submissions.index",
-                    "filament.admin.resources.contact-submissions.view",
-                    "filament.admin.resources.contact-submissions.edit",
-                    "filament.admin.resources.credit-packs.index",
-                    "filament.admin.resources.credit-packs.create",
-                    "filament.admin.resources.credit-packs.edit",
-                    "filament.admin.resources.enterprise-inquiries.index",
-                    "filament.admin.resources.enterprise-inquiries.view",
-                    "filament.admin.resources.enterprise-inquiries.edit",
-                    "filament.admin.resources.freight-rate-masters.index",
-                    "filament.admin.resources.freight-rate-masters.create",
-                    "filament.admin.resources.freight-rate-masters.edit",
-                    "filament.admin.resources.help-articles.index",
-                    "filament.admin.resources.help-articles.create",
-                    "filament.admin.resources.help-articles.view",
-                    "filament.admin.resources.help-articles.edit",
-                    "filament.admin.resources.loaders.index",
-                    "filament.admin.resources.loaders.create",
-                    "filament.admin.resources.loaders.edit",
-                    "filament.admin.resources.mail-templates.index",
-                    "filament.admin.resources.mail-templates.edit",
-                    "filament.admin.resources.organization-invitations.index",
-                    "filament.admin.resources.organization-invitations.create",
-                    "filament.admin.resources.organization-invitations.edit",
-                    "filament.admin.resources.organizations.index",
-                    "filament.admin.resources.organizations.create",
-                    "filament.admin.resources.organizations.edit",
-                    "filament.admin.resources.permissions.index",
-                    "filament.admin.resources.permissions.view",
-                    "filament.admin.resources.posts.index",
-                    "filament.admin.resources.posts.create",
-                    "filament.admin.resources.posts.view",
-                    "filament.admin.resources.posts.edit",
-                    "filament.admin.resources.power-plants.index",
-                    "filament.admin.resources.power-plants.create",
-                    "filament.admin.resources.power-plants.edit",
-                    "filament.admin.resources.roles.index",
-                    "filament.admin.resources.roles.create",
-                    "filament.admin.resources.roles.view",
-                    "filament.admin.resources.roles.edit",
-                    "filament.admin.resources.routes.index",
-                    "filament.admin.resources.routes.create",
-                    "filament.admin.resources.routes.edit",
-                    "filament.admin.resources.sidings.index",
-                    "filament.admin.resources.sidings.create",
-                    "filament.admin.resources.sidings.edit",
-                    "filament.admin.resources.terms-versions.index",
-                    "filament.admin.resources.terms-versions.create",
-                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
-                    "filament.admin.resources.vehicles.index",
-                    "filament.admin.resources.vehicles.view",
-                    "filament.admin.resources.vouchers.index",
-                    "filament.admin.resources.vouchers.create",
-                    "filament.admin.resources.vouchers.edit",
+                    "filament.admin.resources.roles.index",
+                    "filament.admin.resources.roles.create",
+                    "filament.admin.resources.roles.view",
+                    "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.permissions.index",
+                    "filament.admin.resources.permissions.view",
                     "referralLink",
                     "generateReferralCodes",
                     "login",
@@ -2521,6 +3521,11 @@
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
+                    "api.v1.auth.login",
+                    "api.v1.auth.register",
+                    "api.v1.auth.refresh",
+                    "api.v1.auth.logout",
+                    "api.v1.auth.me.delete",
                     "api.v1.users.index",
                     "api.v1.users.batch",
                     "api.v1.users.search",
@@ -2528,9 +3533,51 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "api.v1.indents.index",
+                    "api.v1.indents.upload",
+                    "api.v1.indents.store",
+                    "api.v1.indents.show",
+                    "api.v1.indents.assign-rake-number",
+                    "api.v1.indents.download",
+                    "api.v1.railway-receipts.upload",
+                    "api.v1.railway-receipts.index",
+                    "api.v1.railway-receipts.show",
+                    "api.v1.railway-receipts.download",
+                    "api.v1.weighments.upload",
+                    "api.v1.weighments.template-xlsx",
+                    "api.v1.sidings.index",
+                    "api.v1.power-plants.index",
+                    "api.v1.siding-vehicle-dispatches.index",
+                    "api.v1.roles.permissions.index",
+                    "api.v1.rakes.index",
+                    "api.v1.rakes.export",
+                    "api.v1.rakes.show",
+                    "api.v1.rakes.rr-hub-state",
+                    "api.v1.rakes.diversion-mode.update",
+                    "api.v1.rakes.diverrt-destinations.store",
+                    "api.v1.rakes.diverrt-destinations.destroy",
+                    "api.v1.rake-weighments.index",
+                    "api.v1.rake-weighments.show",
+                    "api.v1.rake-weighments.download",
+                    "api.v1.rakes.weighments.manual",
+                    "api.v1.rakes.weighments.update-manual",
+                    "api.v1.rakes.weighments.destroy",
+                    "api.v1.dashboard.filter-options",
+                    "api.v1.dashboard.admin-kpis",
+                    "api.v1.dashboard.executive",
+                    "api.v1.dashboard.executive.custom-range",
+                    "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.executive-overview",
+                    "api.v1.dashboard.operations",
+                    "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance",
+                    "api.v1.dashboard.loader-overload",
+                    "api.v1.dashboard.power-plant",
                     "invitations.show",
                     "invitations.accept",
                     "cookie-consent.accept",
+                    "account.request-deletion.show",
+                    "account.request-deletion.store",
                     "blog.index",
                     "blog.show",
                     "changelog.index",
@@ -2545,6 +3592,16 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
+                    "dashboard.executive-yesterday-data",
+                    "dashboard.rake-performance.rakes.index",
+                    "dashboard.rake-performance.rakes.show",
+                    "dashboard.loader-overload.loaders.index",
+                    "dashboard.loader-overload.loaders.show",
+                    "dashboard.loader-overload.operators.index",
+                    "dashboard.loader-overload.operators.show",
+                    "exports.coal-transport-report",
+                    "notifications.read-all",
+                    "notifications.read-one",
                     "organizations.switch",
                     "organizations.index",
                     "organizations.create",
@@ -2566,35 +3623,60 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading",
                     "rakes.index",
                     "rakes.show",
+                    "rakes.rr-hub-state",
+                    "rakes.pre-rr.show",
+                    "rakes.diversion-mode.update",
+                    "rakes.diverrt-destinations.store",
+                    "rakes.diverrt-destinations.destroy",
                     "rakes.edit",
                     "rakes.update",
                     "rakes.destroy",
                     "rakes.generate-wagons",
+                    "rakes.loading.start",
+                    "rakes.loading.reset",
+                    "rakes.loading.stop",
+                    "rakes.loading-times.update",
                     "rakes.wagons.update",
+                    "rakes.wagons.bulk-update",
                     "rakes.txr.update",
                     "rakes.txr.start",
                     "rakes.txr.end",
                     "rakes.txr.unfit-logs",
-                    "rakes.txr.store",
+                    "rakes.txr.upload-note",
                     "txr.unfit-wagons.store",
                     "rakes.load.show",
                     "rakes.load.confirm-placement",
                     "rakes.load.wagon",
                     "rakes.load.wagons",
+                    "rakes.load.wagon-loadings",
+                    "rakes.load.wagon-rows.ensure-all",
+                    "rakes.load.wagon-rows.store",
+                    "rakes.load.wagon-rows.update",
+                    "rakes.load.wagon-rows.destroy",
                     "rakes.load.guard-inspection",
-                    "rakes.load.weighment",
                     "rakes.load.confirm-dispatch",
                     "rakes.weighments.store",
+                    "rakes.weighments.manual",
+                    "rakes.weighments.update-manual",
+                    "rakes.weighments.destroy",
+                    "rakes.power-plant-receipts.store",
+                    "rakes.power-plant-receipts.destroy",
                     "rakes.comparison",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake",
                     "master-data.power-plants.index",
@@ -2618,6 +3700,8 @@
                     "master-data.loaders.edit",
                     "master-data.loaders.update",
                     "master-data.loaders.destroy",
+                    "master-data.loader-operators.store",
+                    "master-data.loader-operators.update",
                     "master-data.penalty-types.index",
                     "master-data.penalty-types.create",
                     "master-data.penalty-types.store",
@@ -2632,6 +3716,23 @@
                     "master-data.section-timers.edit",
                     "master-data.section-timers.update",
                     "master-data.section-timers.destroy",
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update",
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix",
+                    "master-data.stock-ledger.index",
+                    "master-data.stock-ledger.stock-report",
+                    "master-data.stock-ledger.adjust",
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy",
                     "master-data.master-data.distance-matrix.index",
                     "master-data.master-data.distance-matrix.create",
                     "master-data.master-data.distance-matrix.store",
@@ -2658,20 +3759,69 @@
                     "road-dispatch.daily-vehicle-entries.update",
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary",
+                    "road-dispatch.daily-vehicle-entries.shift-report",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary.export",
                     "road-dispatch.daily-vehicle-entries.export",
+                    "road-dispatch.vehicle-workorders.lookup",
+                    "railway-siding-empty-weighment.index",
+                    "railway-siding-empty-weighment.store",
+                    "railway-siding-empty-weighment.hourly-summary",
+                    "railway-siding-empty-weighment.update",
+                    "railway-siding-empty-weighment.destroy",
+                    "railway-siding-empty-weighment.complete",
+                    "railway-siding-empty-weighment.export",
+                    "historical.railway-siding.index",
+                    "historical.railway-siding.export",
+                    "historical.railway-siding.store",
+                    "historical.railway-siding.update",
+                    "historical.railway-siding.destroy",
+                    "historical.mines.index",
+                    "historical.mines.store",
+                    "historical.mines.update",
+                    "historical.mines.destroy",
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy",
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.dpr-data",
+                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save",
                     "dispatch-reports.generate",
+                    "vehicle-dispatch.dpr-export",
                     "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import",
+                    "railway-receipts.upload",
                     "railway-receipts.create",
+                    "railway-receipts.rakes",
                     "railway-receipts.store",
                     "railway-receipts.show",
+                    "railway-receipts.pdf",
                     "railway-receipts.update",
+                    "railway-receipts.destroy",
                     "penalties.index",
                     "penalties.analytics",
                     "penalties.update",
@@ -2685,6 +3835,13 @@
                     "reconciliation.power-plant-receipts.store",
                     "reports.index",
                     "reports.generate",
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx",
                     "chat.conversations.index",
                     "chat.conversations.show",
                     "chat.demurrage-warnings",
@@ -2742,81 +3899,23 @@
                     "filament.imports.failed-rows.download",
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
-                    "filament.admin.pages.dashboard",
+                    "filament.admin.home",
                     "filament.admin.pages.user-activities-page",
-                    "filament.admin.pages.api-docs",
-                    "filament.admin.pages.billing.revenue-analytics",
-                    "filament.admin.pages.manage-app",
-                    "filament.admin.pages.manage-auth",
-                    "filament.admin.pages.manage-seo",
+                    "filament.admin.pages.dashboard",
                     "filament.admin.pages.analytics.product",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
-                    "filament.admin.resources.billing.affiliates.index",
-                    "filament.admin.resources.categories.index",
-                    "filament.admin.resources.changelog-entries.index",
-                    "filament.admin.resources.changelog-entries.create",
-                    "filament.admin.resources.changelog-entries.view",
-                    "filament.admin.resources.changelog-entries.edit",
-                    "filament.admin.resources.contact-submissions.index",
-                    "filament.admin.resources.contact-submissions.view",
-                    "filament.admin.resources.contact-submissions.edit",
-                    "filament.admin.resources.credit-packs.index",
-                    "filament.admin.resources.credit-packs.create",
-                    "filament.admin.resources.credit-packs.edit",
-                    "filament.admin.resources.enterprise-inquiries.index",
-                    "filament.admin.resources.enterprise-inquiries.view",
-                    "filament.admin.resources.enterprise-inquiries.edit",
-                    "filament.admin.resources.freight-rate-masters.index",
-                    "filament.admin.resources.freight-rate-masters.create",
-                    "filament.admin.resources.freight-rate-masters.edit",
-                    "filament.admin.resources.help-articles.index",
-                    "filament.admin.resources.help-articles.create",
-                    "filament.admin.resources.help-articles.view",
-                    "filament.admin.resources.help-articles.edit",
-                    "filament.admin.resources.loaders.index",
-                    "filament.admin.resources.loaders.create",
-                    "filament.admin.resources.loaders.edit",
-                    "filament.admin.resources.mail-templates.index",
-                    "filament.admin.resources.mail-templates.edit",
-                    "filament.admin.resources.organization-invitations.index",
-                    "filament.admin.resources.organization-invitations.create",
-                    "filament.admin.resources.organization-invitations.edit",
-                    "filament.admin.resources.organizations.index",
-                    "filament.admin.resources.organizations.create",
-                    "filament.admin.resources.organizations.edit",
-                    "filament.admin.resources.permissions.index",
-                    "filament.admin.resources.permissions.view",
-                    "filament.admin.resources.posts.index",
-                    "filament.admin.resources.posts.create",
-                    "filament.admin.resources.posts.view",
-                    "filament.admin.resources.posts.edit",
-                    "filament.admin.resources.power-plants.index",
-                    "filament.admin.resources.power-plants.create",
-                    "filament.admin.resources.power-plants.edit",
-                    "filament.admin.resources.roles.index",
-                    "filament.admin.resources.roles.create",
-                    "filament.admin.resources.roles.view",
-                    "filament.admin.resources.roles.edit",
-                    "filament.admin.resources.routes.index",
-                    "filament.admin.resources.routes.create",
-                    "filament.admin.resources.routes.edit",
-                    "filament.admin.resources.sidings.index",
-                    "filament.admin.resources.sidings.create",
-                    "filament.admin.resources.sidings.edit",
-                    "filament.admin.resources.terms-versions.index",
-                    "filament.admin.resources.terms-versions.create",
-                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
-                    "filament.admin.resources.vehicles.index",
-                    "filament.admin.resources.vehicles.view",
-                    "filament.admin.resources.vouchers.index",
-                    "filament.admin.resources.vouchers.create",
-                    "filament.admin.resources.vouchers.edit",
+                    "filament.admin.resources.roles.index",
+                    "filament.admin.resources.roles.create",
+                    "filament.admin.resources.roles.view",
+                    "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.permissions.index",
+                    "filament.admin.resources.permissions.view",
                     "referralLink",
                     "generateReferralCodes",
                     "login",
@@ -2861,6 +3960,11 @@
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
+                    "api.v1.auth.login",
+                    "api.v1.auth.register",
+                    "api.v1.auth.refresh",
+                    "api.v1.auth.logout",
+                    "api.v1.auth.me.delete",
                     "api.v1.users.index",
                     "api.v1.users.batch",
                     "api.v1.users.search",
@@ -2868,9 +3972,51 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "api.v1.indents.index",
+                    "api.v1.indents.upload",
+                    "api.v1.indents.store",
+                    "api.v1.indents.show",
+                    "api.v1.indents.assign-rake-number",
+                    "api.v1.indents.download",
+                    "api.v1.railway-receipts.upload",
+                    "api.v1.railway-receipts.index",
+                    "api.v1.railway-receipts.show",
+                    "api.v1.railway-receipts.download",
+                    "api.v1.weighments.upload",
+                    "api.v1.weighments.template-xlsx",
+                    "api.v1.sidings.index",
+                    "api.v1.power-plants.index",
+                    "api.v1.siding-vehicle-dispatches.index",
+                    "api.v1.roles.permissions.index",
+                    "api.v1.rakes.index",
+                    "api.v1.rakes.export",
+                    "api.v1.rakes.show",
+                    "api.v1.rakes.rr-hub-state",
+                    "api.v1.rakes.diversion-mode.update",
+                    "api.v1.rakes.diverrt-destinations.store",
+                    "api.v1.rakes.diverrt-destinations.destroy",
+                    "api.v1.rake-weighments.index",
+                    "api.v1.rake-weighments.show",
+                    "api.v1.rake-weighments.download",
+                    "api.v1.rakes.weighments.manual",
+                    "api.v1.rakes.weighments.update-manual",
+                    "api.v1.rakes.weighments.destroy",
+                    "api.v1.dashboard.filter-options",
+                    "api.v1.dashboard.admin-kpis",
+                    "api.v1.dashboard.executive",
+                    "api.v1.dashboard.executive.custom-range",
+                    "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.executive-overview",
+                    "api.v1.dashboard.operations",
+                    "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance",
+                    "api.v1.dashboard.loader-overload",
+                    "api.v1.dashboard.power-plant",
                     "invitations.show",
                     "invitations.accept",
                     "cookie-consent.accept",
+                    "account.request-deletion.show",
+                    "account.request-deletion.store",
                     "blog.index",
                     "blog.show",
                     "changelog.index",
@@ -2885,6 +4031,16 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
+                    "dashboard.executive-yesterday-data",
+                    "dashboard.rake-performance.rakes.index",
+                    "dashboard.rake-performance.rakes.show",
+                    "dashboard.loader-overload.loaders.index",
+                    "dashboard.loader-overload.loaders.show",
+                    "dashboard.loader-overload.operators.index",
+                    "dashboard.loader-overload.operators.show",
+                    "exports.coal-transport-report",
+                    "notifications.read-all",
+                    "notifications.read-one",
                     "organizations.switch",
                     "organizations.index",
                     "organizations.create",
@@ -2906,35 +4062,60 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading",
                     "rakes.index",
                     "rakes.show",
+                    "rakes.rr-hub-state",
+                    "rakes.pre-rr.show",
+                    "rakes.diversion-mode.update",
+                    "rakes.diverrt-destinations.store",
+                    "rakes.diverrt-destinations.destroy",
                     "rakes.edit",
                     "rakes.update",
                     "rakes.destroy",
                     "rakes.generate-wagons",
+                    "rakes.loading.start",
+                    "rakes.loading.reset",
+                    "rakes.loading.stop",
+                    "rakes.loading-times.update",
                     "rakes.wagons.update",
+                    "rakes.wagons.bulk-update",
                     "rakes.txr.update",
                     "rakes.txr.start",
                     "rakes.txr.end",
                     "rakes.txr.unfit-logs",
-                    "rakes.txr.store",
+                    "rakes.txr.upload-note",
                     "txr.unfit-wagons.store",
                     "rakes.load.show",
                     "rakes.load.confirm-placement",
                     "rakes.load.wagon",
                     "rakes.load.wagons",
+                    "rakes.load.wagon-loadings",
+                    "rakes.load.wagon-rows.ensure-all",
+                    "rakes.load.wagon-rows.store",
+                    "rakes.load.wagon-rows.update",
+                    "rakes.load.wagon-rows.destroy",
                     "rakes.load.guard-inspection",
-                    "rakes.load.weighment",
                     "rakes.load.confirm-dispatch",
                     "rakes.weighments.store",
+                    "rakes.weighments.manual",
+                    "rakes.weighments.update-manual",
+                    "rakes.weighments.destroy",
+                    "rakes.power-plant-receipts.store",
+                    "rakes.power-plant-receipts.destroy",
                     "rakes.comparison",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake",
                     "master-data.power-plants.index",
@@ -2958,6 +4139,8 @@
                     "master-data.loaders.edit",
                     "master-data.loaders.update",
                     "master-data.loaders.destroy",
+                    "master-data.loader-operators.store",
+                    "master-data.loader-operators.update",
                     "master-data.penalty-types.index",
                     "master-data.penalty-types.create",
                     "master-data.penalty-types.store",
@@ -2972,6 +4155,23 @@
                     "master-data.section-timers.edit",
                     "master-data.section-timers.update",
                     "master-data.section-timers.destroy",
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update",
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix",
+                    "master-data.stock-ledger.index",
+                    "master-data.stock-ledger.stock-report",
+                    "master-data.stock-ledger.adjust",
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy",
                     "master-data.master-data.distance-matrix.index",
                     "master-data.master-data.distance-matrix.create",
                     "master-data.master-data.distance-matrix.store",
@@ -2998,20 +4198,69 @@
                     "road-dispatch.daily-vehicle-entries.update",
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary",
+                    "road-dispatch.daily-vehicle-entries.shift-report",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary.export",
                     "road-dispatch.daily-vehicle-entries.export",
+                    "road-dispatch.vehicle-workorders.lookup",
+                    "railway-siding-empty-weighment.index",
+                    "railway-siding-empty-weighment.store",
+                    "railway-siding-empty-weighment.hourly-summary",
+                    "railway-siding-empty-weighment.update",
+                    "railway-siding-empty-weighment.destroy",
+                    "railway-siding-empty-weighment.complete",
+                    "railway-siding-empty-weighment.export",
+                    "historical.railway-siding.index",
+                    "historical.railway-siding.export",
+                    "historical.railway-siding.store",
+                    "historical.railway-siding.update",
+                    "historical.railway-siding.destroy",
+                    "historical.mines.index",
+                    "historical.mines.store",
+                    "historical.mines.update",
+                    "historical.mines.destroy",
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy",
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.dpr-data",
+                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save",
                     "dispatch-reports.generate",
+                    "vehicle-dispatch.dpr-export",
                     "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import",
+                    "railway-receipts.upload",
                     "railway-receipts.create",
+                    "railway-receipts.rakes",
                     "railway-receipts.store",
                     "railway-receipts.show",
+                    "railway-receipts.pdf",
                     "railway-receipts.update",
+                    "railway-receipts.destroy",
                     "penalties.index",
                     "penalties.analytics",
                     "penalties.update",
@@ -3025,6 +4274,13 @@
                     "reconciliation.power-plant-receipts.store",
                     "reports.index",
                     "reports.generate",
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx",
                     "chat.conversations.index",
                     "chat.conversations.show",
                     "chat.demurrage-warnings",
@@ -3068,81 +4324,23 @@
                     "filament.imports.failed-rows.download",
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
-                    "filament.admin.pages.dashboard",
+                    "filament.admin.home",
                     "filament.admin.pages.user-activities-page",
-                    "filament.admin.pages.api-docs",
-                    "filament.admin.pages.billing.revenue-analytics",
-                    "filament.admin.pages.manage-app",
-                    "filament.admin.pages.manage-auth",
-                    "filament.admin.pages.manage-seo",
+                    "filament.admin.pages.dashboard",
                     "filament.admin.pages.analytics.product",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
-                    "filament.admin.resources.billing.affiliates.index",
-                    "filament.admin.resources.categories.index",
-                    "filament.admin.resources.changelog-entries.index",
-                    "filament.admin.resources.changelog-entries.create",
-                    "filament.admin.resources.changelog-entries.view",
-                    "filament.admin.resources.changelog-entries.edit",
-                    "filament.admin.resources.contact-submissions.index",
-                    "filament.admin.resources.contact-submissions.view",
-                    "filament.admin.resources.contact-submissions.edit",
-                    "filament.admin.resources.credit-packs.index",
-                    "filament.admin.resources.credit-packs.create",
-                    "filament.admin.resources.credit-packs.edit",
-                    "filament.admin.resources.enterprise-inquiries.index",
-                    "filament.admin.resources.enterprise-inquiries.view",
-                    "filament.admin.resources.enterprise-inquiries.edit",
-                    "filament.admin.resources.freight-rate-masters.index",
-                    "filament.admin.resources.freight-rate-masters.create",
-                    "filament.admin.resources.freight-rate-masters.edit",
-                    "filament.admin.resources.help-articles.index",
-                    "filament.admin.resources.help-articles.create",
-                    "filament.admin.resources.help-articles.view",
-                    "filament.admin.resources.help-articles.edit",
-                    "filament.admin.resources.loaders.index",
-                    "filament.admin.resources.loaders.create",
-                    "filament.admin.resources.loaders.edit",
-                    "filament.admin.resources.mail-templates.index",
-                    "filament.admin.resources.mail-templates.edit",
-                    "filament.admin.resources.organization-invitations.index",
-                    "filament.admin.resources.organization-invitations.create",
-                    "filament.admin.resources.organization-invitations.edit",
-                    "filament.admin.resources.organizations.index",
-                    "filament.admin.resources.organizations.create",
-                    "filament.admin.resources.organizations.edit",
-                    "filament.admin.resources.permissions.index",
-                    "filament.admin.resources.permissions.view",
-                    "filament.admin.resources.posts.index",
-                    "filament.admin.resources.posts.create",
-                    "filament.admin.resources.posts.view",
-                    "filament.admin.resources.posts.edit",
-                    "filament.admin.resources.power-plants.index",
-                    "filament.admin.resources.power-plants.create",
-                    "filament.admin.resources.power-plants.edit",
-                    "filament.admin.resources.roles.index",
-                    "filament.admin.resources.roles.create",
-                    "filament.admin.resources.roles.view",
-                    "filament.admin.resources.roles.edit",
-                    "filament.admin.resources.routes.index",
-                    "filament.admin.resources.routes.create",
-                    "filament.admin.resources.routes.edit",
-                    "filament.admin.resources.sidings.index",
-                    "filament.admin.resources.sidings.create",
-                    "filament.admin.resources.sidings.edit",
-                    "filament.admin.resources.terms-versions.index",
-                    "filament.admin.resources.terms-versions.create",
-                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
-                    "filament.admin.resources.vehicles.index",
-                    "filament.admin.resources.vehicles.view",
-                    "filament.admin.resources.vouchers.index",
-                    "filament.admin.resources.vouchers.create",
-                    "filament.admin.resources.vouchers.edit",
+                    "filament.admin.resources.roles.index",
+                    "filament.admin.resources.roles.create",
+                    "filament.admin.resources.roles.view",
+                    "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.permissions.index",
+                    "filament.admin.resources.permissions.view",
                     "referralLink",
                     "generateReferralCodes",
                     "login",
@@ -3187,6 +4385,11 @@
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
+                    "api.v1.auth.login",
+                    "api.v1.auth.register",
+                    "api.v1.auth.refresh",
+                    "api.v1.auth.logout",
+                    "api.v1.auth.me.delete",
                     "api.v1.users.index",
                     "api.v1.users.batch",
                     "api.v1.users.search",
@@ -3194,9 +4397,51 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "api.v1.indents.index",
+                    "api.v1.indents.upload",
+                    "api.v1.indents.store",
+                    "api.v1.indents.show",
+                    "api.v1.indents.assign-rake-number",
+                    "api.v1.indents.download",
+                    "api.v1.railway-receipts.upload",
+                    "api.v1.railway-receipts.index",
+                    "api.v1.railway-receipts.show",
+                    "api.v1.railway-receipts.download",
+                    "api.v1.weighments.upload",
+                    "api.v1.weighments.template-xlsx",
+                    "api.v1.sidings.index",
+                    "api.v1.power-plants.index",
+                    "api.v1.siding-vehicle-dispatches.index",
+                    "api.v1.roles.permissions.index",
+                    "api.v1.rakes.index",
+                    "api.v1.rakes.export",
+                    "api.v1.rakes.show",
+                    "api.v1.rakes.rr-hub-state",
+                    "api.v1.rakes.diversion-mode.update",
+                    "api.v1.rakes.diverrt-destinations.store",
+                    "api.v1.rakes.diverrt-destinations.destroy",
+                    "api.v1.rake-weighments.index",
+                    "api.v1.rake-weighments.show",
+                    "api.v1.rake-weighments.download",
+                    "api.v1.rakes.weighments.manual",
+                    "api.v1.rakes.weighments.update-manual",
+                    "api.v1.rakes.weighments.destroy",
+                    "api.v1.dashboard.filter-options",
+                    "api.v1.dashboard.admin-kpis",
+                    "api.v1.dashboard.executive",
+                    "api.v1.dashboard.executive.custom-range",
+                    "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.executive-overview",
+                    "api.v1.dashboard.operations",
+                    "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance",
+                    "api.v1.dashboard.loader-overload",
+                    "api.v1.dashboard.power-plant",
                     "invitations.show",
                     "invitations.accept",
                     "cookie-consent.accept",
+                    "account.request-deletion.show",
+                    "account.request-deletion.store",
                     "blog.index",
                     "blog.show",
                     "changelog.index",
@@ -3211,6 +4456,16 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
+                    "dashboard.executive-yesterday-data",
+                    "dashboard.rake-performance.rakes.index",
+                    "dashboard.rake-performance.rakes.show",
+                    "dashboard.loader-overload.loaders.index",
+                    "dashboard.loader-overload.loaders.show",
+                    "dashboard.loader-overload.operators.index",
+                    "dashboard.loader-overload.operators.show",
+                    "exports.coal-transport-report",
+                    "notifications.read-all",
+                    "notifications.read-one",
                     "organizations.switch",
                     "organizations.index",
                     "organizations.create",
@@ -3232,35 +4487,60 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading",
                     "rakes.index",
                     "rakes.show",
+                    "rakes.rr-hub-state",
+                    "rakes.pre-rr.show",
+                    "rakes.diversion-mode.update",
+                    "rakes.diverrt-destinations.store",
+                    "rakes.diverrt-destinations.destroy",
                     "rakes.edit",
                     "rakes.update",
                     "rakes.destroy",
                     "rakes.generate-wagons",
+                    "rakes.loading.start",
+                    "rakes.loading.reset",
+                    "rakes.loading.stop",
+                    "rakes.loading-times.update",
                     "rakes.wagons.update",
+                    "rakes.wagons.bulk-update",
                     "rakes.txr.update",
                     "rakes.txr.start",
                     "rakes.txr.end",
                     "rakes.txr.unfit-logs",
-                    "rakes.txr.store",
+                    "rakes.txr.upload-note",
                     "txr.unfit-wagons.store",
                     "rakes.load.show",
                     "rakes.load.confirm-placement",
                     "rakes.load.wagon",
                     "rakes.load.wagons",
+                    "rakes.load.wagon-loadings",
+                    "rakes.load.wagon-rows.ensure-all",
+                    "rakes.load.wagon-rows.store",
+                    "rakes.load.wagon-rows.update",
+                    "rakes.load.wagon-rows.destroy",
                     "rakes.load.guard-inspection",
-                    "rakes.load.weighment",
                     "rakes.load.confirm-dispatch",
                     "rakes.weighments.store",
+                    "rakes.weighments.manual",
+                    "rakes.weighments.update-manual",
+                    "rakes.weighments.destroy",
+                    "rakes.power-plant-receipts.store",
+                    "rakes.power-plant-receipts.destroy",
                     "rakes.comparison",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake",
                     "master-data.power-plants.index",
@@ -3284,6 +4564,8 @@
                     "master-data.loaders.edit",
                     "master-data.loaders.update",
                     "master-data.loaders.destroy",
+                    "master-data.loader-operators.store",
+                    "master-data.loader-operators.update",
                     "master-data.penalty-types.index",
                     "master-data.penalty-types.create",
                     "master-data.penalty-types.store",
@@ -3298,6 +4580,23 @@
                     "master-data.section-timers.edit",
                     "master-data.section-timers.update",
                     "master-data.section-timers.destroy",
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update",
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix",
+                    "master-data.stock-ledger.index",
+                    "master-data.stock-ledger.stock-report",
+                    "master-data.stock-ledger.adjust",
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy",
                     "master-data.master-data.distance-matrix.index",
                     "master-data.master-data.distance-matrix.create",
                     "master-data.master-data.distance-matrix.store",
@@ -3324,20 +4623,69 @@
                     "road-dispatch.daily-vehicle-entries.update",
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary",
+                    "road-dispatch.daily-vehicle-entries.shift-report",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary.export",
                     "road-dispatch.daily-vehicle-entries.export",
+                    "road-dispatch.vehicle-workorders.lookup",
+                    "railway-siding-empty-weighment.index",
+                    "railway-siding-empty-weighment.store",
+                    "railway-siding-empty-weighment.hourly-summary",
+                    "railway-siding-empty-weighment.update",
+                    "railway-siding-empty-weighment.destroy",
+                    "railway-siding-empty-weighment.complete",
+                    "railway-siding-empty-weighment.export",
+                    "historical.railway-siding.index",
+                    "historical.railway-siding.export",
+                    "historical.railway-siding.store",
+                    "historical.railway-siding.update",
+                    "historical.railway-siding.destroy",
+                    "historical.mines.index",
+                    "historical.mines.store",
+                    "historical.mines.update",
+                    "historical.mines.destroy",
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy",
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.dpr-data",
+                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save",
                     "dispatch-reports.generate",
+                    "vehicle-dispatch.dpr-export",
                     "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import",
+                    "railway-receipts.upload",
                     "railway-receipts.create",
+                    "railway-receipts.rakes",
                     "railway-receipts.store",
                     "railway-receipts.show",
+                    "railway-receipts.pdf",
                     "railway-receipts.update",
+                    "railway-receipts.destroy",
                     "penalties.index",
                     "penalties.analytics",
                     "penalties.update",
@@ -3351,6 +4699,13 @@
                     "reconciliation.power-plant-receipts.store",
                     "reports.index",
                     "reports.generate",
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx",
                     "chat.conversations.index",
                     "chat.conversations.show",
                     "chat.demurrage-warnings",
@@ -3576,11 +4931,15 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake"
                 ]
@@ -3617,10 +4976,14 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "railway-receipts.index",
+                    "railway-receipts.upload",
                     "railway-receipts.create",
+                    "railway-receipts.rakes",
                     "railway-receipts.store",
                     "railway-receipts.show",
-                    "railway-receipts.update"
+                    "railway-receipts.pdf",
+                    "railway-receipts.update",
+                    "railway-receipts.destroy"
                 ]
             }
         },
@@ -3632,10 +4995,14 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "railway-receipts.index",
+                    "railway-receipts.upload",
                     "railway-receipts.create",
+                    "railway-receipts.rakes",
                     "railway-receipts.store",
                     "railway-receipts.show",
-                    "railway-receipts.update"
+                    "railway-receipts.pdf",
+                    "railway-receipts.update",
+                    "railway-receipts.destroy"
                 ]
             }
         },
@@ -3647,10 +5014,14 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "railway-receipts.index",
+                    "railway-receipts.upload",
                     "railway-receipts.create",
+                    "railway-receipts.rakes",
                     "railway-receipts.store",
                     "railway-receipts.show",
-                    "railway-receipts.update"
+                    "railway-receipts.pdf",
+                    "railway-receipts.update",
+                    "railway-receipts.destroy"
                 ]
             }
         },
@@ -3667,6 +5038,10 @@
                     "rakes.update",
                     "rakes.destroy",
                     "rakes.generate-wagons",
+                    "rakes.loading.start",
+                    "rakes.loading.reset",
+                    "rakes.loading.stop",
+                    "rakes.loading-times.update",
                     "rakes.comparison"
                 ]
             }
@@ -3684,6 +5059,10 @@
                     "rakes.update",
                     "rakes.destroy",
                     "rakes.generate-wagons",
+                    "rakes.loading.start",
+                    "rakes.loading.reset",
+                    "rakes.loading.stop",
+                    "rakes.loading-times.update",
                     "rakes.comparison"
                 ]
             }
@@ -3826,11 +5205,15 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake"
                 ]
@@ -3844,11 +5227,15 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake"
                 ]
@@ -3862,11 +5249,15 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake"
                 ]
@@ -3894,11 +5285,15 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "indents.index",
+                    "indents.import",
                     "indents.create",
                     "indents.store",
+                    "indents.pdf",
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake"
                 ]
@@ -4214,8 +5609,12 @@
                     "rakes.load.confirm-placement",
                     "rakes.load.wagon",
                     "rakes.load.wagons",
+                    "rakes.load.wagon-loadings",
+                    "rakes.load.wagon-rows.ensure-all",
+                    "rakes.load.wagon-rows.store",
+                    "rakes.load.wagon-rows.update",
+                    "rakes.load.wagon-rows.destroy",
                     "rakes.load.guard-inspection",
-                    "rakes.load.weighment",
                     "rakes.load.confirm-dispatch"
                 ]
             }
@@ -4234,7 +5633,11 @@
                     "road-dispatch.daily-vehicle-entries.update",
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
-                    "road-dispatch.daily-vehicle-entries.export"
+                    "road-dispatch.daily-vehicle-entries.hourly-summary",
+                    "road-dispatch.daily-vehicle-entries.shift-report",
+                    "road-dispatch.daily-vehicle-entries.hourly-summary.export",
+                    "road-dispatch.daily-vehicle-entries.export",
+                    "road-dispatch.vehicle-workorders.lookup"
                 ]
             }
         },
@@ -4293,6 +5696,8 @@
                 ],
                 "relatedRoutes": [
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.dpr-data",
+                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save"
@@ -4336,7 +5741,11 @@
                 ],
                 "relatedRoutes": [
                     "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
                     "vehicle-workorders.update"
                 ]
             }
@@ -4351,8 +5760,649 @@
                 ],
                 "relatedRoutes": [
                     "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
                     "vehicle-workorders.update"
+                ]
+            }
+        },
+        "MasterData/DailyStockDetails/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "CoalStockApproxDetailController"
+                ],
+                "relatedRoutes": [
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy"
+                ]
+            }
+        },
+        "MasterData/DailyStockDetails/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "CoalStockApproxDetailController"
+                ],
+                "relatedRoutes": [
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy"
+                ]
+            }
+        },
+        "MasterData/DailyStockDetails/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "CoalStockApproxDetailController"
+                ],
+                "relatedRoutes": [
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy"
+                ]
+            }
+        },
+        "MasterData/DistanceMatrix/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PowerplantSidingDistancesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy"
+                ]
+            }
+        },
+        "MasterData/DistanceMatrix/Show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PowerplantSidingDistancesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy"
+                ]
+            }
+        },
+        "MasterData/Loaders/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "LoadersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy"
+                ]
+            }
+        },
+        "MasterData/Loaders/Show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "LoadersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy"
+                ]
+            }
+        },
+        "MasterData/OpeningCoalStock/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "OpeningCoalStockController"
+                ],
+                "relatedRoutes": [
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix"
+                ]
+            }
+        },
+        "MasterData/OpeningCoalStock/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "OpeningCoalStockController"
+                ],
+                "relatedRoutes": [
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix"
+                ]
+            }
+        },
+        "MasterData/PenaltyTypes/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PenaltyTypesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy"
+                ]
+            }
+        },
+        "MasterData/PenaltyTypes/Show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PenaltyTypesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy"
+                ]
+            }
+        },
+        "MasterData/SectionTimers/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SectionTimersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy"
+                ]
+            }
+        },
+        "MasterData/SectionTimers/Show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SectionTimersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy"
+                ]
+            }
+        },
+        "MasterData/ShiftTimings/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "ShiftTimingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update"
+                ]
+            }
+        },
+        "MasterData/ShiftTimings/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "ShiftTimingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update"
+                ]
+            }
+        },
+        "MasterData/Sidings/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SidingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy"
+                ]
+            }
+        },
+        "MasterData/Sidings/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SidingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy"
+                ]
+            }
+        },
+        "MasterData/Sidings/Show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SidingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy"
+                ]
+            }
+        },
+        "MasterData/StockLedger/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "StockLedgerController"
+                ],
+                "relatedRoutes": [
+                    "master-data.stock-ledger.index",
+                    "master-data.stock-ledger.stock-report",
+                    "master-data.stock-ledger.adjust"
+                ]
+            }
+        },
+        "MasterData/StockLedger/stock-report-dialog": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "VehicleWorkorders/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "VehicleWorkorderController"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
+                    "vehicle-workorders.update"
+                ]
+            }
+        },
+        "historical/mines/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "HistoricalMineController"
+                ],
+                "relatedRoutes": [
+                    "historical.mines.index",
+                    "historical.mines.store",
+                    "historical.mines.update",
+                    "historical.mines.destroy"
+                ]
+            }
+        },
+        "historical/railway-siding/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "HistoricalRakeController"
+                ],
+                "relatedRoutes": [
+                    "historical.railway-siding.index",
+                    "historical.railway-siding.export",
+                    "historical.railway-siding.store",
+                    "historical.railway-siding.update",
+                    "historical.railway-siding.destroy"
+                ]
+            }
+        },
+        "production/edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "ProductionEntryController"
+                ],
+                "relatedRoutes": [
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy"
+                ]
+            }
+        },
+        "production/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "ProductionEntryController"
+                ],
+                "relatedRoutes": [
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy"
+                ]
+            }
+        },
+        "railway-siding-empty-weighment/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "RailwaySidingEmptyWeighmentController"
+                ],
+                "relatedRoutes": [
+                    "railway-siding-empty-weighment.index",
+                    "railway-siding-empty-weighment.store",
+                    "railway-siding-empty-weighment.hourly-summary",
+                    "railway-siding-empty-weighment.update",
+                    "railway-siding-empty-weighment.destroy",
+                    "railway-siding-empty-weighment.complete",
+                    "railway-siding-empty-weighment.export"
+                ]
+            }
+        },
+        "railway-siding-empty-weighment/shift-tabs": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "railway-siding-empty-weighment/vehicle-entry-row": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "railway-siding-empty-weighment/vehicle-entry-table": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "rake-loader/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading"
+                ]
+            }
+        },
+        "rake-loader/loading": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading"
+                ]
+            }
+        },
+        "road-dispatch/daily-vehicle-entries/shift-report-dialog": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "siding-pre-indent-reports/create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SidingPreIndentReportController"
+                ],
+                "relatedRoutes": [
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy"
+                ]
+            }
+        },
+        "siding-pre-indent-reports/edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SidingPreIndentReportController"
+                ],
+                "relatedRoutes": [
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy"
+                ]
+            }
+        },
+        "siding-pre-indent-reports/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SidingPreIndentReportController"
+                ],
+                "relatedRoutes": [
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy"
+                ]
+            }
+        },
+        "siding-pre-indent-reports/show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SidingPreIndentReportController"
+                ],
+                "relatedRoutes": [
+                    "siding-pre-indent-reports.index",
+                    "siding-pre-indent-reports.create",
+                    "siding-pre-indent-reports.store",
+                    "siding-pre-indent-reports.show",
+                    "siding-pre-indent-reports.edit",
+                    "siding-pre-indent-reports.update",
+                    "siding-pre-indent-reports.destroy"
+                ]
+            }
+        },
+        "weighments/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx"
+                ]
+            }
+        },
+        "weighments/show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx"
                 ]
             }
         }
