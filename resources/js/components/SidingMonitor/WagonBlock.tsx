@@ -16,7 +16,7 @@ function getBlockStyle(wagon: WagonSlice): { bg: string; border: string } {
     return { bg: 'bg-slate-800', border: 'border-slate-600' };
 }
 
-function getAnimateVariant(wagon: WagonSlice) {
+function getAnimateVariant(wagon: WagonSlice): 'idle' | 'warning' | 'critical' {
     if (wagon.percentage >= 100) return 'critical';
     if (wagon.percentage >= 90) return 'warning';
     return 'idle';
@@ -42,7 +42,12 @@ export function WagonBlock({ wagon }: Props) {
             onMouseEnter={() => setTooltipVisible(true)}
             onMouseLeave={() => setTooltipVisible(false)}
             onClick={() => setTooltipVisible((v) => !v)}
-            onKeyDown={(e) => e.key === 'Enter' && setTooltipVisible((v) => !v)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setTooltipVisible((v) => !v);
+                }
+            }}
         >
             <motion.div
                 key={`${wagon.sequence}-${wagon.loadriteWeightMt}`}
