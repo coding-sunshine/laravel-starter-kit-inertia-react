@@ -51,6 +51,12 @@ final class RecalculatePenalties extends Command
             ->where('is_active', true)
             ->first();
 
+        if ($penaltyType === null) {
+            $this->error('No active DEM penalty type found. Aborting.');
+
+            return Command::FAILURE;
+        }
+
         foreach ($rakes as $rake) {
             $existing = AppliedPenalty::query()
                 ->where('rake_id', $rake->id)
@@ -72,8 +78,7 @@ final class RecalculatePenalties extends Command
                     number_format($newAmount - $oldAmount, 2, '.', ''),
                 ]));
             } else {
-                $result = $action->handle($rake);
-                $newAmount = $result ? (float) $result['amount'] : 0.0;
+                $action->handle($rake);
 
                 // Fetch the record that was just upserted and update meta in PHP
                 // (avoids JSON path update syntax which is not supported on SQLite)

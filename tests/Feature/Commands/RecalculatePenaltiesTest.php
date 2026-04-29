@@ -80,4 +80,5 @@ it('limits to single rake with --rake option', function (): void {
     $this->artisan("penalties:recalculate --rake={$rakeA->id}")->assertExitCode(0);
 
     expect((float) AppliedPenalty::where('rake_id', $rakeB->id)->value('amount'))->toBe(1.0);
+    expect(AppliedPenalty::where('rake_id', $rakeA->id)->first()->meta['correction_reason'])->toBe('formula_fix_2026-04-29');
 });
