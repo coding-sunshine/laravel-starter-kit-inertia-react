@@ -48,6 +48,12 @@ final class DashboardWidgetPermissions
             'dashboard.widgets.power_plant_dispatch_section' => 'Power plant wise dispatch',
             'dashboard.widgets.global_coal_stock_strip' => 'Global — Coal stock strip',
             'dashboard.widgets.global_kpi_sidebar' => 'Global — KPI sidebar',
+            'penalty_exposure_command' => 'Command Center — Penalty exposure',
+            'rake_pipeline_command' => 'Command Center — Rake pipeline',
+            'siding_risk_score' => 'Command Center — Siding risk score',
+            'alert_feed_command' => 'Command Center — Alert feed',
+            'dispatch_summary_command' => 'Command Center — Dispatch summary',
+            'operator_rake_command' => 'Command Center — Operator rake',
         ];
     }
 
@@ -68,6 +74,11 @@ final class DashboardWidgetPermissions
             'dashboard.widgets.executive_chart_penalty_by_siding',
             'dashboard.widgets.executive_chart_powerplant_dispatch',
             'dashboard.widgets.executive_chart_fy',
+            'penalty_exposure_command',
+            'rake_pipeline_command',
+            'siding_risk_score',
+            'alert_feed_command',
+            'dispatch_summary_command',
         ];
     }
 
@@ -233,6 +244,17 @@ final class DashboardWidgetPermissions
                 'names' => [
                     'dashboard.widgets.global_coal_stock_strip',
                     'dashboard.widgets.global_kpi_sidebar',
+                ],
+            ],
+            'command_center' => [
+                'label' => __('Command Center'),
+                'names' => [
+                    'penalty_exposure_command',
+                    'rake_pipeline_command',
+                    'siding_risk_score',
+                    'alert_feed_command',
+                    'dispatch_summary_command',
+                    'operator_rake_command',
                 ],
             ],
         ];
