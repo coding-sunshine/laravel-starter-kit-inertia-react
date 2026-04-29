@@ -120,7 +120,9 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
         <>
             {groups.map((group) => (
                 <SidebarGroup key={group.title} className="px-2 py-0">
-                    <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+                    <SidebarGroupLabel className="text-[9px] font-bold uppercase tracking-widest text-sidebar-foreground/30">
+                        {group.title}
+                    </SidebarGroupLabel>
                     <SidebarMenu>
                         <NavMenuItems items={group.items} />
                     </SidebarMenu>

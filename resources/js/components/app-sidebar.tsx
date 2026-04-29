@@ -368,29 +368,73 @@ export function AppSidebar() {
     );
 
     const navGroups = useMemo((): NavGroup[] => {
-        const [dashboardItem, settingsItem, ...restPlatform] = platformNavItems;
+        // Helper to filter a list and return only visible items
+        const visible = (items: NavItem[]) => items.filter(canShow);
+
+        // Filter Settings sub-items
+        const settingsItem = platformNavItems.find(
+            (i) => i.title === 'Settings' && i.collapsible,
+        );
         const visibleSettingsSubItems =
-            settingsItem?.collapsible && settingsItem.subItems
-                ? settingsItem.subItems.filter(canShow)
-                : [];
-        const showSettings = visibleSettingsSubItems.length > 0;
+            settingsItem?.subItems ? settingsItem.subItems.filter(canShow) : [];
+        const settingsNavItem: NavItem | null =
+            visibleSettingsSubItems.length > 0 && settingsItem
+                ? { ...settingsItem, subItems: visibleSettingsSubItems }
+                : null;
 
-        const platformItems: NavItem[] = [];
-        if (dashboardItem && canShow(dashboardItem)) {
-            platformItems.push(dashboardItem);
-        }
-        if (showSettings && settingsItem) {
-            platformItems.push({
-                ...settingsItem,
-                subItems: visibleSettingsSubItems,
-            });
-        }
-        restPlatform
-            .filter(canShow)
-            .forEach((item) => platformItems.push(item));
+        // Helper to find a named item from the flat list
+        const byTitle = (title: string) =>
+            platformNavItems.find((i) => i.title === title) ?? null;
 
-        if (platformItems.length === 0) return [];
-        return [{ title: 'Platform', items: platformItems }];
+        // --- Group 1: Overview ---
+        const overviewItems: NavItem[] = visible([
+            byTitle('Dashboard'),
+        ].filter(Boolean) as NavItem[]);
+
+        // --- Group 2: Loading Operations ---
+        const loadingItems: NavItem[] = visible([
+            byTitle('Rake Loader'),
+            byTitle('Rake Progress'),
+            byTitle('Rake Weighments'),
+            byTitle('Railway Siding Record Data'),
+            byTitle('Railway Siding Empty Weighment'),
+            byTitle('Mines Dispatch Data'),
+        ].filter(Boolean) as NavItem[]);
+
+        // --- Group 3: Finance & Compliance ---
+        const financeItems: NavItem[] = visible([
+            byTitle('Railway Receipts'),
+            byTitle('Indent'),
+            byTitle('E-Demand'),
+        ].filter(Boolean) as NavItem[]);
+
+        // --- Group 4: Analytics ---
+        const historyItem = platformNavItems.find(
+            (i) => i.title === 'Historic' && i.collapsible,
+        );
+        const visibleHistorySubItems =
+            historyItem?.subItems ? historyItem.subItems.filter(canShow) : [];
+        const historyNavItem: NavItem | null =
+            visibleHistorySubItems.length > 0 && historyItem
+                ? { ...historyItem, subItems: visibleHistorySubItems }
+                : null;
+
+        const analyticsItems: NavItem[] = [
+            ...(historyNavItem ? [historyNavItem] : []),
+        ];
+
+        // --- Group 5: Settings ---
+        const settingsItems: NavItem[] = settingsNavItem ? [settingsNavItem] : [];
+
+        const groups: NavGroup[] = [
+            { title: 'Overview', items: overviewItems },
+            { title: 'Loading Operations', items: loadingItems },
+            { title: 'Finance & Compliance', items: financeItems },
+            { title: 'Analytics', items: analyticsItems },
+            { title: 'Settings', items: settingsItems },
+        ];
+
+        return groups.filter((g) => g.items.length > 0);
     }, [canShow]);
 
     const visibleFooterNavItems = useMemo(() => {
