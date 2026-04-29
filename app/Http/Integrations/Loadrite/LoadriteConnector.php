@@ -22,7 +22,6 @@ final class LoadriteConnector extends Connector
     {
         return [
             'Authorization' => 'Bearer '.$this->accessToken,
-            'Content-Type' => 'application/json',
         ];
     }
 }
