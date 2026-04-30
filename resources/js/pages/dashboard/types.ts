@@ -1,3 +1,5 @@
+import type { WorkflowSteps } from '@/components/rake-workflow-progress';
+
 export interface SidingOption {
     id: number;
     name: string;
@@ -40,9 +42,14 @@ export interface SidingComparisonData {
     sidings: SidingComparisonItem[];
 }
 
+export interface DateWiseDateEntry {
+    date: string;
+    [sidingId: string]: string | number;
+}
+
 export interface DateWiseDispatchData {
     sidingNames: Record<number, string>;
-    dates: Record<string, unknown>[];
+    dates: DateWiseDateEntry[];
 }
 
 export interface RakePerformanceItem {
@@ -83,9 +90,14 @@ export interface LoaderInfo {
     siding: string;
 }
 
+export interface LoaderMonthlyEntry {
+    month: string;
+    [loaderId: string]: string | number;
+}
+
 export interface LoaderOverloadTrends {
     loaders: LoaderInfo[];
-    monthly: Record<string, unknown>[];
+    monthly: LoaderMonthlyEntry[];
 }
 
 export interface PowerPlantSidingBreakdown {
@@ -94,7 +106,6 @@ export interface PowerPlantSidingBreakdown {
 }
 
 export interface PowerPlantDispatchItem {
-    [key: string]: unknown;
     name: string;
     rakes: number;
     weight_mt: number;
@@ -181,6 +192,8 @@ export interface ExecutiveTimelineSeries {
     fyWise: ExecutiveTimelineValue;
 }
 
+export type ExecutiveChartPeriodKey = 'yesterday' | 'today' | 'week' | 'month' | 'fy';
+
 export interface ExecutiveYesterdayData {
     anchorDate: string;
     fyLabel: string;
@@ -266,7 +279,7 @@ export interface LiveRakeStatusRow {
     rake_serial_number?: string | null;
     siding_name: string;
     state: string;
-    workflow_steps?: import('@/components/rake-workflow-progress').WorkflowSteps;
+    workflow_steps?: WorkflowSteps;
     time_elapsed: string;
     loading_date?: string;
     risk: string;
@@ -395,4 +408,3 @@ export interface OperatorRake {
     loading_date: string | null;
 }
 
-export type ExecutiveChartPeriodKey = 'yesterday' | 'today' | 'month' | 'fy';
