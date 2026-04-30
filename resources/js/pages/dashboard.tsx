@@ -73,6 +73,9 @@ import { ExecutiveOverview } from '@/pages/dashboard/ExecutiveOverview';
 import { Operations } from '@/pages/dashboard/Operations';
 import { SidingOverview } from '@/pages/dashboard/SidingOverview';
 import { PenaltyControl } from '@/pages/dashboard/PenaltyControl';
+import { RakePerformance } from '@/pages/dashboard/RakePerformance';
+import { LoaderOverloading } from '@/pages/dashboard/LoaderOverloading';
+import { PowerPlant } from '@/pages/dashboard/PowerPlant';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
 import { LoaderOverloadDashboardSection } from '@/components/dashboard/loader-overload-dashboard-section';
@@ -2897,7 +2900,7 @@ function formatRakeSequenceForSiding(sidingName: string, rakeNumber: string): st
     return rakeNumber;
 }
 
-function RakePerformanceSection({
+export function RakePerformanceSection({
     filters,
     allSidingIds,
     sidings,
@@ -3430,7 +3433,7 @@ function RakesPerPowerPlantExecutiveChart({
     );
 }
 
-function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] }) {
+export function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] }) {
     const [stacked, setStacked] = useState(true);
     const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
@@ -4845,29 +4848,30 @@ export default function Dashboard() {
                                 )
                         )}
 
-                        {activeSection === 'rake-performance' && canWidget('dashboard.widgets.rake_performance') && (
-                            <RakePerformanceSection
+                        {activeSection === 'rake-performance' && (
+                            <RakePerformance
+                                canWidget={canWidget}
                                 filters={filters}
                                 allSidingIds={allSidingIds}
-                                sidings={filteredSidings}
-                                rakePenaltyScope={filters.rake_penalty_scope ?? 'all'}
+                                filteredSidings={filteredSidings}
                                 onRakePenaltyScopeChange={onRakePenaltyScopeChange}
-                                onNavigateToLoader={navigateToLoaderTrends}
+                                navigateToLoaderTrends={navigateToLoaderTrends}
                             />
                         )}
 
-                        {activeSection === 'loader-overload' && canWidget('dashboard.widgets.loader_overload_trends') && (
-                            <LoaderOverloadDashboardSection
-                                buildApiSearchParams={buildLoaderOverloadApiParams}
+                        {activeSection === 'loader-overload' && (
+                            <LoaderOverloading
+                                canWidget={canWidget}
+                                buildLoaderOverloadApiParams={buildLoaderOverloadApiParams}
                                 defaultDetailUnderloadPercent={filters.underload_threshold}
                                 mainDateRangeLabel={mainDateRangeLabel}
                                 loaderIdFromUrl={filters.loader_id}
-                                filterKey={loaderOverloadFilterKey}
+                                loaderOverloadFilterKey={loaderOverloadFilterKey}
                             />
                         )}
 
-                        {activeSection === 'power-plant' && canWidget('dashboard.widgets.power_plant_dispatch_section') && (
-                            <PowerPlantDispatchSection data={powerPlantDispatch} />
+                        {activeSection === 'power-plant' && (
+                            <PowerPlant canWidget={canWidget} powerPlantDispatch={powerPlantDispatch} />
                         )}
                         </div>
                     </>
