@@ -46,9 +46,10 @@ final class PollLoadriteJob implements ShouldQueue
 
             $site = $setting->site_name;
             $fromLocalTime = Cache::get($cursorKey, now()->subHour()->format('Y-m-d H:i:s'));
+            $toLocalTime = now()->format('Y-m-d H:i:s');
 
             $connector = $tokenManager->getConnector($this->sidingId);
-            $response = $connector->send(new GetNewWeightEventsRequest($site, $fromLocalTime));
+            $response = $connector->send(new GetNewWeightEventsRequest($site, $fromLocalTime, $toLocalTime));
 
             if (! $response->successful()) {
                 Log::warning('Loadrite poll failed', [
