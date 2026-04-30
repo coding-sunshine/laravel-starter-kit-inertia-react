@@ -129,17 +129,29 @@ final readonly class ProvisionRakeForIndent
 
     public function assertRakeNumberFreeForSidingInIndentMonth(string $rakeNumber, int $sidingId, CarbonInterface $reference): void
     {
-        $existsInMonth = Rake::query()
+        $existing = Rake::query()
+            ->with('indent:id,indent_number,e_demand_reference_id')
             ->where('rake_number', $rakeNumber)
             ->where('siding_id', $sidingId)
             ->whereYear('loading_date', $reference->year)
             ->whereMonth('loading_date', $reference->month)
-            ->exists();
-        if ($existsInMonth) {
-            throw new InvalidArgumentException(
-                'This rake number is already in use for this siding in the indent month.'
-            );
+            ->first();
+
+        if ($existing === null) {
+            return;
         }
+
+        $context = '';
+        if ($existing->indent !== null) {
+            $ref = $existing->indent->e_demand_reference_id ?? $existing->indent->indent_number;
+            if ($ref !== null && $ref !== '') {
+                $context = " (indent: {$ref})";
+            }
+        }
+
+        throw new InvalidArgumentException(
+            "This rake number is already in use for this siding in the indent month{$context}. Open the existing indent to continue."
+        );
     }
 
     public function assertPriorityNumberFreeForSidingInIndentMonth(int $priorityNumber, int $sidingId, CarbonInterface $reference): void
