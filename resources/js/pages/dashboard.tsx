@@ -4743,10 +4743,9 @@ export default function Dashboard() {
                                         onClick={() => setActiveSection(s.id)}
                                         className={
                                             s.id === activeSection
-                                                ? 'cursor-pointer rounded-full px-4 py-1 text-sm font-semibold transition-colors'
-                                                : 'cursor-pointer rounded-full border border-slate-700 px-4 py-1 text-sm text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200'
+                                                ? 'cursor-pointer rounded-full bg-[#1a1a2e] px-4 py-1 text-sm font-semibold text-[#d4af37] transition-colors'
+                                                : 'cursor-pointer rounded-full border border-slate-700 px-4 py-1 text-sm text-slate-300 transition-colors hover:border-slate-500 hover:text-slate-200'
                                         }
-                                        style={s.id === activeSection ? { background: '#1a1a2e', color: '#d4af37' } : undefined}
                                     >
                                         {s.label}
                                     </button>
