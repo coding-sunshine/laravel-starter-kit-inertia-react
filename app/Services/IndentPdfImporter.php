@@ -86,14 +86,6 @@ final readonly class IndentPdfImporter
             ? $parsed['expected_loading_date']
             : null;
 
-        $referenceMonth = ProvisionRakeForIndent::referenceDateFromParsedPdf($indentDateParsed, $expectedLoadingParsed);
-
-        app(ProvisionRakeForIndent::class)->assertRakeNumberFreeForSidingInIndentMonth(
-            $rakeSqNumber,
-            (int) $siding->id,
-            $referenceMonth
-        );
-
         $rakePriorityNumber = $this->suggestedRakePriorityNumber((int) $siding->id, $indentDateParsed, $expectedLoadingParsed);
 
         Log::info('Indent PDF preview: parsed and siding detected', [

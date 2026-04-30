@@ -18,7 +18,6 @@ use App\Models\Siding;
 use App\Models\Wagon;
 use App\Services\IndentPdfImporter;
 use App\Support\IndentPdfImportScope;
-use Closure;
 use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -327,34 +326,7 @@ final class IndentsController extends Controller
             ], 422);
         }
 
-        if ($indent->rake->loading_date === null) {
-            return response()->json([
-                'message' => 'Cannot validate rake number uniqueness because loading date is missing.',
-                'errors' => [
-                    'rake_serial_number' => ['Cannot validate rake number uniqueness because loading date is missing.'],
-                ],
-            ], 422);
-        }
-
-        $reference = Date::parse($indent->rake->loading_date);
         $trimmedSerial = mb_trim((string) $validated['rake_serial_number']);
-        $existsInMonth = Rake::query()
-            ->where('rake_serial_number', $trimmedSerial)
-            ->where('siding_id', $indent->rake->siding_id)
-            ->whereYear('loading_date', $reference->year)
-            ->whereMonth('loading_date', $reference->month)
-            ->whereKeyNot($indent->rake->id)
-            ->exists();
-
-        if ($existsInMonth) {
-            return response()->json([
-                'message' => 'This rake number is already in use for this siding in the loading month.',
-                'errors' => [
-                    'rake_serial_number' => ['This rake number is already in use for this siding in the loading month.'],
-                ],
-            ], 422);
-        }
-
         $indent->rake->rake_serial_number = $trimmedSerial;
         $indent->rake->updated_by = $user->id;
         $indent->rake->save();
@@ -433,93 +405,10 @@ final class IndentsController extends Controller
                 ->with('info', 'This indent already has a rake.');
         }
 
-        $indentReference = null;
-        try {
-            $indentReference = ProvisionRakeForIndent::referenceDateFromIndent($indent);
-        } catch (InvalidArgumentException) {
-            $indentReference = null;
-        }
-
         $validated = $request->validate([
-            'rake_serial_number' => [
-                'nullable',
-                'string',
-                'max:100',
-                function (string $attribute, mixed $value, Closure $fail) use ($indent, $request): void {
-                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
-                    if ($trimmed === null) {
-                        return;
-                    }
-                    $loadingDate = $request->input('loading_date');
-                    if ($loadingDate === null || $loadingDate === '') {
-                        return;
-                    }
-                    try {
-                        $reference = Date::parse($loadingDate);
-                    } catch (Throwable) {
-                        return;
-                    }
-                    $existsInMonth = Rake::query()
-                        ->where('rake_serial_number', $trimmed)
-                        ->where('siding_id', $indent->siding_id)
-                        ->whereYear('loading_date', $reference->year)
-                        ->whereMonth('loading_date', $reference->month)
-                        ->exists();
-                    if ($existsInMonth) {
-                        $fail('This rake number is already in use for this siding in the indent month.');
-                    }
-                },
-            ],
-            'rake_number' => [
-                'required',
-                'string',
-                'max:100',
-                function (string $attribute, mixed $value, Closure $fail) use ($indent, $indentReference) {
-                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
-                    if ($trimmed === null) {
-                        return;
-                    }
-                    if ($indentReference === null) {
-                        $fail('Cannot validate rake number: indent must have an indent date or expected loading date.');
-
-                        return;
-                    }
-                    $existsInMonth = Rake::query()
-                        ->where('rake_number', $trimmed)
-                        ->where('siding_id', $indent->siding_id)
-                        ->whereYear('loading_date', $indentReference->year)
-                        ->whereMonth('loading_date', $indentReference->month)
-                        ->exists();
-                    if ($existsInMonth) {
-                        $fail('This rake number is already in use for this siding in the indent month.');
-                    }
-                },
-            ],
-            'rake_priority_number' => [
-                'required',
-                'integer',
-                'min:0',
-                function (string $attribute, mixed $value, Closure $fail) use ($indent, $indentReference) {
-                    if (! is_numeric($value)) {
-                        return;
-                    }
-                    $num = (int) $value;
-                    if ($indentReference === null) {
-                        $fail('Cannot validate rake priority: indent must have an indent date or expected loading date.');
-
-                        return;
-                    }
-                    $existsInMonth = Rake::query()
-                        ->where('priority_number', $num)
-                        ->where('siding_id', $indent->siding_id)
-                        ->whereYear('loading_date', $indentReference->year)
-                        ->whereMonth('loading_date', $indentReference->month)
-                        ->exists();
-                    if ($existsInMonth) {
-                        $fail('This rake priority number is already in use for this siding in the indent month.');
-                    }
-                },
-            ],
+            'rake_serial_number' => ['nullable', 'string', 'max:100'],
+            'rake_number' => ['required', 'string', 'max:100'],
+            'rake_priority_number' => ['required', 'integer', 'min:0'],
             'loading_date' => ['required', 'date'],
             'rake_type' => ['required', 'string', 'max:50'],
             'wagon_count' => ['required', 'integer', 'min:0'],

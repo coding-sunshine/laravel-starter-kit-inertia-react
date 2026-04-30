@@ -18,7 +18,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -238,34 +237,7 @@ final class IndentController extends Controller
             ], 422);
         }
 
-        if ($indent->rake->loading_date === null) {
-            return response()->json([
-                'message' => 'Cannot validate rake number uniqueness because loading date is missing.',
-                'errors' => [
-                    'rake_serial_number' => ['Cannot validate rake number uniqueness because loading date is missing.'],
-                ],
-            ], 422);
-        }
-
-        $reference = Date::parse($indent->rake->loading_date);
         $trimmedSerial = mb_trim((string) $validated['rake_serial_number']);
-        $existsInMonth = Rake::query()
-            ->where('rake_serial_number', $trimmedSerial)
-            ->where('siding_id', $indent->rake->siding_id)
-            ->whereYear('loading_date', $reference->year)
-            ->whereMonth('loading_date', $reference->month)
-            ->whereKeyNot($indent->rake->id)
-            ->exists();
-
-        if ($existsInMonth) {
-            return response()->json([
-                'message' => 'This rake number is already in use for this siding in the loading month.',
-                'errors' => [
-                    'rake_serial_number' => ['This rake number is already in use for this siding in the loading month.'],
-                ],
-            ], 422);
-        }
-
         $indent->rake->rake_serial_number = $trimmedSerial;
         $indent->rake->updated_by = $user->id;
         $indent->rake->save();
