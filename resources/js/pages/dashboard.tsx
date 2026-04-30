@@ -772,11 +772,6 @@ interface RakePipelineCard {
     loading_date: string | null;
 }
 
-interface ActiveRakePipeline {
-    loading: RakePipelineCard[];
-    awaiting_clearance: RakePipelineCard[];
-    dispatched: RakePipelineCard[];
-}
 
 interface SidingRiskScoreData {
     siding_id: number;
