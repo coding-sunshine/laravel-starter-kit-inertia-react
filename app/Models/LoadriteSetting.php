@@ -14,6 +14,7 @@ final class LoadriteSetting extends Model
 
     protected $fillable = [
         'siding_id',
+        'site_name',
         'access_token',
         'refresh_token',
         'expires_at',

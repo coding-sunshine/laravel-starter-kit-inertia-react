@@ -36,7 +36,9 @@ it('refreshes token when expired and stores new tokens', function (): void {
         MockResponse::make([
             'accessToken' => 'new-token',
             'refreshToken' => 'new-refresh',
-            'expiresAt' => now()->addHour()->toIso8601String(),
+            'tokenType' => 'Bearer',
+            'accessTokenExpiryInSeconds' => 3600,
+            'refreshTokenExpiryInSeconds' => 86400,
         ], 200),
     ]);
 
@@ -50,6 +52,7 @@ it('refreshes token when expired and stores new tokens', function (): void {
 it('stores new tokens via store method', function (): void {
     $result = app(LoadriteTokenManager::class)->store(
         null,
+        'Dumka',
         'access-123',
         'refresh-123',
         now()->addHour()
@@ -57,4 +60,5 @@ it('stores new tokens via store method', function (): void {
 
     expect($result)->toBeInstanceOf(LoadriteSetting::class);
     expect(LoadriteSetting::where('siding_id', null)->count())->toBe(1);
+    expect($result->site_name)->toBe('Dumka');
 });

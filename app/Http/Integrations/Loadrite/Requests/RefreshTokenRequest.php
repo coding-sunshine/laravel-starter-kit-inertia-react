@@ -9,9 +9,12 @@ use Saloon\Http\Request;
 
 final class RefreshTokenRequest extends Request
 {
-    protected Method $method = Method::POST;
+    protected Method $method = Method::PUT;
 
-    public function __construct(private readonly string $refreshToken) {}
+    public function __construct(
+        private readonly string $accessToken,
+        private readonly string $refreshToken,
+    ) {}
 
     public function resolveEndpoint(): string
     {
@@ -20,6 +23,9 @@ final class RefreshTokenRequest extends Request
 
     protected function defaultBody(): array
     {
-        return ['refreshToken' => $this->refreshToken];
+        return [
+            'accessToken' => $this->accessToken,
+            'refreshToken' => $this->refreshToken,
+        ];
     }
 }

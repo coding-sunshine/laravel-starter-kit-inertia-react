@@ -11,7 +11,11 @@ final class GetLoadingEventsRequest extends Request
 {
     protected Method $method = Method::GET;
 
-    public function __construct(private readonly string $from) {}
+    public function __construct(
+        private readonly string $site,
+        private readonly ?string $fromLocalTime = null,
+        private readonly ?string $toLocalTime = null,
+    ) {}
 
     public function resolveEndpoint(): string
     {
@@ -20,6 +24,10 @@ final class GetLoadingEventsRequest extends Request
 
     protected function defaultQuery(): array
     {
-        return ['from' => $this->from];
+        return array_filter([
+            'Site' => $this->site,
+            'FromLocalTime' => $this->fromLocalTime,
+            'ToLocalTime' => $this->toLocalTime,
+        ], fn ($v) => $v !== null);
     }
 }

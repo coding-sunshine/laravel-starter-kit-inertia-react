@@ -20,6 +20,14 @@ final class LoadriteStoreToken extends Command
     {
         $sidingId = $this->option('siding') ? (int) $this->option('siding') : null;
 
+        $siteName = $this->ask('Loadrite site name (from /api/v2/context/get-sites):');
+
+        if (! $siteName) {
+            $this->error('Site name is required.');
+
+            return Command::FAILURE;
+        }
+
         $accessToken = $this->secret('Paste the Loadrite access token:');
         $refreshToken = $this->secret('Paste the Loadrite refresh token:');
 
@@ -29,7 +37,7 @@ final class LoadriteStoreToken extends Command
             return Command::FAILURE;
         }
 
-        $expiresRaw = $this->ask('Token expiry datetime (ISO8601):');
+        $expiresRaw = $this->ask('Token expiry datetime (e.g. 2027-04-30 10:22:00):');
 
         try {
             $expiresAt = Carbon::parse($expiresRaw);
@@ -39,7 +47,7 @@ final class LoadriteStoreToken extends Command
             return Command::FAILURE;
         }
 
-        $manager->store($sidingId, $accessToken, $refreshToken, $expiresAt);
+        $manager->store($sidingId, $siteName, $accessToken, $refreshToken, $expiresAt);
 
         $this->info('Token stored and encrypted successfully.');
 

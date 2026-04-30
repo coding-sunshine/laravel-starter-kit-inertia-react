@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Http\Integrations\Loadrite\Requests\GetNewWeightEventsRequest;
+use App\Models\LoadriteSetting;
 use App\Services\LoadriteTokenManager;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -39,9 +40,15 @@ final class PollLoadriteJob implements ShouldQueue
         }
 
         try {
-            $from = Cache::get($cursorKey, now()->subHour()->toIso8601String());
+            $setting = LoadriteSetting::query()
+                ->where('siding_id', $this->sidingId)
+                ->firstOrFail();
+
+            $site = $setting->site_name;
+            $fromLocalTime = Cache::get($cursorKey, now()->subHour()->format('Y-m-d H:i:s'));
+
             $connector = $tokenManager->getConnector($this->sidingId);
-            $response = $connector->send(new GetNewWeightEventsRequest($from));
+            $response = $connector->send(new GetNewWeightEventsRequest($site, $fromLocalTime));
 
             if (! $response->successful()) {
                 Log::warning('Loadrite poll failed', [
@@ -53,7 +60,7 @@ final class PollLoadriteJob implements ShouldQueue
             }
 
             $events = $response->json() ?? [];
-            $lastTimestamp = $from;
+            $lastTimestamp = $fromLocalTime;
 
             foreach ($events as $event) {
                 SyncLoadriteWeightJob::dispatch($event, $this->sidingId)->onQueue('loadrite-sync');

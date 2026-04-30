@@ -22,6 +22,7 @@ beforeEach(function (): void {
 
     LoadriteSetting::factory()->create([
         'siding_id' => $siding->id,
+        'site_name' => 'Dumka',
         'access_token' => 'token',
         'refresh_token' => 'refresh',
         'expires_at' => now()->addHour(),

@@ -12,6 +12,7 @@ final class LoadriteSettingFactory extends Factory
     {
         return [
             'siding_id' => null,
+            'site_name' => fake()->word(),
             'access_token' => 'test-access-token-'.fake()->uuid(),
             'refresh_token' => 'test-refresh-token-'.fake()->uuid(),
             'expires_at' => now()->addHour(),
