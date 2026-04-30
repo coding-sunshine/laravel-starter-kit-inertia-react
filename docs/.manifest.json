@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-04-29",
+    "lastGenerated": "2026-04-30",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -1263,6 +1263,38 @@
                     "rakes.txr.end",
                     "rakes.txr.unfit-logs",
                     "rakes.txr.upload-note"
+                ]
+            }
+        },
+        "GenerateLoadingRecommendationAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Rake"
+                ],
+                "relatedRoutes": [
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading",
+                    "rake-loader.rakes.override"
+                ]
+            }
+        },
+        "LogLoadingOverride": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Rake",
+                    "User",
+                    "LoadingOverride"
+                ],
+                "relatedRoutes": [
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading",
+                    "rake-loader.rakes.override"
                 ]
             }
         }
@@ -2684,7 +2716,9 @@
             "documented": false,
             "path": null,
             "relationships": {
-                "usesActions": [],
+                "usesActions": [
+                    "GenerateLoadingRecommendationAction"
+                ],
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": [
@@ -2788,6 +2822,18 @@
                 "rendersPages": [
                     "weighments/index",
                     "weighments/show"
+                ]
+            }
+        },
+        "SidingMonitorController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "sidings/monitor"
                 ]
             }
         }
@@ -2987,8 +3033,10 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
+                    "sidings.monitor",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
+                    "rake-loader.rakes.override",
                     "rakes.index",
                     "rakes.show",
                     "rakes.rr-hub-state",
@@ -3663,8 +3711,10 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
+                    "sidings.monitor",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
+                    "rake-loader.rakes.override",
                     "rakes.index",
                     "rakes.show",
                     "rakes.rr-hub-state",
@@ -4122,8 +4172,10 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
+                    "sidings.monitor",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
+                    "rake-loader.rakes.override",
                     "rakes.index",
                     "rakes.show",
                     "rakes.rr-hub-state",
@@ -4567,8 +4619,10 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
+                    "sidings.monitor",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
+                    "rake-loader.rakes.override",
                     "rakes.index",
                     "rakes.show",
                     "rakes.rr-hub-state",
@@ -6351,7 +6405,8 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "rake-loader.index",
-                    "rake-loader.rakes.loading"
+                    "rake-loader.rakes.loading",
+                    "rake-loader.rakes.override"
                 ]
             }
         },
@@ -6363,7 +6418,8 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "rake-loader.index",
-                    "rake-loader.rakes.loading"
+                    "rake-loader.rakes.loading",
+                    "rake-loader.rakes.override"
                 ]
             }
         },
@@ -6483,6 +6539,17 @@
                     "weighments.import",
                     "weighments.manual",
                     "weighments.template-xlsx"
+                ]
+            }
+        },
+        "sidings/monitor": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "sidings.monitor"
                 ]
             }
         }

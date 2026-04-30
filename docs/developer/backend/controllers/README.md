@@ -115,5 +115,6 @@ All Controllers:
 | SidingPreIndentReportController | N/A | ❌ |
 | StockLedgerController | N/A | ❌ |
 | WeighmentsController | N/A | ❌ |
+| SidingMonitorController | N/A | ❌ |
 
 

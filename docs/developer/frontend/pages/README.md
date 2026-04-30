@@ -145,5 +145,6 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | siding-pre-indent-reports/show | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
 | weighments/index | weighments.index, weighments.show | ❌ |
 | weighments/show | weighments.index, weighments.show | ❌ |
+| sidings/monitor | sidings.monitor | ❌ |
 
 

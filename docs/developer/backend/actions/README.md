@@ -86,5 +86,7 @@ All Actions:
 | SyncTxrUnfitFlagsToWagonsAction | N/A | ❌ |
 | UpdateManualRakeWeighment | N/A | ❌ |
 | UpdateTxrHeaderAction | N/A | ❌ |
+| GenerateLoadingRecommendationAction | N/A | ❌ |
+| LogLoadingOverride | N/A | ❌ |
 
 
