@@ -4638,10 +4638,10 @@ export default function Dashboard() {
                 <div className="dashboard-page flex h-full flex-1 flex-col overflow-x-auto">
 
                     {/* ── Dark Header ── */}
-                    <div className="sticky top-0 z-10 flex flex-col" style={{ background: '#1a1a2e' }}>
+                    <div className="sticky top-0 z-10 flex flex-col shadow-[0_2px_12px_rgba(0,0,0,0.35)]" style={{ background: '#1a1a2e' }}>
                         {/* Title row */}
                         <div className="flex items-center justify-between px-4 py-3 lg:px-6">
-                            <h2 className="text-lg font-semibold tracking-tight text-white">
+                            <h2 className="text-lg font-bold tracking-tight text-white">
                                 Management Dashboard
                             </h2>
                             <div className="flex items-center gap-2">
@@ -4700,7 +4700,7 @@ export default function Dashboard() {
                         </div>
 
                         {/* Pill nav row */}
-                        <div className="flex flex-wrap gap-2 px-4 pb-3 lg:px-6" style={{ background: '#0f0f1e' }}>
+                        <div className="flex flex-wrap gap-2 px-4 pt-2 pb-3 lg:px-6" style={{ background: '#0f0f1e' }}>
                             {visibleSections.length === 0 ? (
                                 <span className="text-xs text-slate-400">No dashboard sections enabled for your role.</span>
                             ) : (
@@ -4708,11 +4708,12 @@ export default function Dashboard() {
                                     <button
                                         key={s.id}
                                         type="button"
+                                        aria-current={s.id === activeSection ? 'page' : undefined}
                                         onClick={() => setActiveSection(s.id)}
                                         className={
                                             s.id === activeSection
-                                                ? 'cursor-pointer rounded-full bg-[#1a1a2e] px-4 py-1 text-sm font-semibold text-[#d4af37] transition-colors'
-                                                : 'cursor-pointer rounded-full border border-slate-700 px-4 py-1 text-sm text-slate-300 transition-colors hover:border-slate-500 hover:text-slate-200'
+                                                ? 'cursor-pointer rounded-full bg-[#1a1a2e] px-4 py-1.5 text-sm font-semibold text-[#d4af37] shadow-[inset_0_-2px_0_0_#d4af37] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0f0f1e]'
+                                                : 'cursor-pointer rounded-full border border-slate-700 px-4 py-1.5 text-sm text-slate-300 transition-all duration-200 hover:border-slate-400 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0f0f1e]'
                                         }
                                     >
                                         {s.label}
@@ -4737,7 +4738,7 @@ export default function Dashboard() {
                     </div>
                     {/* ── End Dark Header ── */}
 
-                    <div className="flex min-w-0 flex-1 gap-3 bg-[#FAFAFA] p-3">
+                    <div className="flex min-w-0 flex-1 gap-3 bg-[#F4F5F7] p-4 lg:p-5">
                         <div className="min-w-0 flex-1 space-y-6">
                 {sidings.length === 0 ? (
                     <div className="dashboard-card rounded-xl border-0 p-8 text-center text-sm text-gray-600">

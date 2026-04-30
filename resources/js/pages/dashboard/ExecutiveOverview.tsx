@@ -161,11 +161,9 @@ export function ExecutiveOverview({
 
             {/* ── Coal stock strip (Executive-only) ── */}
             {canWidget('dashboard.widgets.global_coal_stock_strip') && filteredSidings.length > 0 && (
-                <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                        <p className="text-[10px] text-gray-500">Coal stock updates live from the ledger (and real-time events when connected).</p>
-                    </div>
-                    <div className="flex gap-2 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-3 lg:gap-2 lg:overflow-visible">
+                <div className="space-y-1.5">
+                    <p className="text-[10px] text-gray-500">Coal stock updates live from the ledger (and real-time events when connected).</p>
+                    <div className="flex gap-3 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-3 lg:gap-3 lg:overflow-visible">
                         {filteredSidings.map((s) => {
                             const stock = sidingStocks[s.id];
                             const stockMt = stock?.closing_balance_mt ?? 0;
@@ -174,46 +172,46 @@ export function ExecutiveOverview({
                             return (
                                 <div
                                     key={s.id}
-                                    className="dashboard-card flex min-w-[220px] flex-1 flex-col rounded-lg border-0 p-2 sm:min-w-0"
+                                    className="dashboard-card flex min-w-[230px] flex-1 flex-col rounded-xl border-0 p-3 sm:min-w-0"
                                     style={{ borderTop: `4px solid ${accent}` }}
                                 >
-                                    <div className="text-[11px] font-semibold leading-snug text-gray-600">
+                                    <div className="text-xs font-bold uppercase tracking-wide text-gray-500">
                                         {s.name}
                                     </div>
-                                    <div className="mt-1 flex items-baseline justify-between gap-3">
+                                    <div className="mt-2 flex items-end justify-between gap-3">
                                         <div>
-                                            <p className="text-sm font-bold leading-tight tabular-nums text-gray-900">
+                                            <p className="text-xl font-bold leading-none tabular-nums text-gray-900">
                                                 <SlidingNumber
                                                     value={stockMt}
-                                                    format={(v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT`}
+                                                    format={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                 />
                                             </p>
-                                            <p className="text-[10px] text-gray-600">Stock</p>
+                                            <p className="mt-0.5 text-[11px] font-medium text-gray-500">MT available</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm font-bold leading-tight tabular-nums text-gray-900">
+                                            <p className="text-xl font-bold leading-none tabular-nums" style={{ color: accent }}>
                                                 {rakesLoadable}
                                             </p>
-                                            <p className="text-[10px] text-gray-600">Rakes</p>
+                                            <p className="mt-0.5 text-[11px] font-medium text-gray-500">rakes loadable</p>
                                         </div>
                                     </div>
-                                    <div className="mt-2 space-y-0.5 border-t border-gray-100 pt-2 text-[10px]">
-                                        <p className="text-green-700">
-                                            <span className="font-bold">Last receipt: </span>
-                                            <span className="tabular-nums">
+                                    <div className="mt-3 space-y-1 rounded-lg bg-gray-50 px-2.5 py-2 text-[10px]">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-semibold text-green-700">Last receipt</span>
+                                            <span className="tabular-nums text-gray-600">
                                                 {stock?.last_receipt_at
                                                     ? new Date(stock.last_receipt_at).toLocaleString()
                                                     : '—'}
                                             </span>
-                                        </p>
-                                        <p className="text-red-700">
-                                            <span className="font-bold">Last dispatch: </span>
-                                            <span className="tabular-nums">
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-semibold text-red-700">Last dispatch</span>
+                                            <span className="tabular-nums text-gray-600">
                                                 {stock?.last_dispatch_at
                                                     ? new Date(stock.last_dispatch_at).toLocaleString()
                                                     : '—'}
                                             </span>
-                                        </p>
+                                        </div>
                                     </div>
                                 </div>
                             );
