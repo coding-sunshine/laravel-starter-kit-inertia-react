@@ -4807,13 +4807,6 @@ export default function Dashboard() {
                                 sidingPerformance={sidingPerformance}
                                 penaltyTrendDaily={penaltyTrendDaily}
                                 powerPlantDispatch={powerPlantDispatch}
-                                penaltyBySidingForSidingOverview={penaltyBySidingForSidingOverview}
-                                sidingWiseMonthly={sidingWiseMonthly}
-                                sidingRadar={sidingRadar}
-                                dateWiseDispatch={dateWiseDispatch}
-                                sidings={sidings}
-                                sidingOverviewPenaltyPeriod={sidingOverviewPenaltyPeriod}
-                                setSidingOverviewPenaltyPeriod={setSidingOverviewPenaltyPeriod}
                                 filters={filters}
                             />
                         )}

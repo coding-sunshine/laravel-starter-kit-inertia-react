@@ -1,14 +1,8 @@
 import { formatCurrency, formatWeight, SectionHeader, SidingPerformanceSection } from '../dashboard';
 import type {
     DashboardFilters,
-    DateWiseDispatchData,
-    ExecutiveChartPeriodKey,
-    PenaltyBySidingPoint,
     PowerPlantDispatchItem,
-    SidingComparisonData,
-    SidingOption,
     SidingPerformanceItem,
-    SidingWiseMonthlyPoint,
 } from './types';
 import { BarChart3, Calendar, Factory } from 'lucide-react';
 import {
@@ -30,13 +24,6 @@ interface Props {
     sidingPerformance: SidingPerformanceItem[];
     penaltyTrendDaily: Array<{ date: string; label: string; total: number }>;
     powerPlantDispatch: PowerPlantDispatchItem[];
-    penaltyBySidingForSidingOverview: PenaltyBySidingPoint[];
-    sidingWiseMonthly: SidingWiseMonthlyPoint[];
-    sidingRadar: SidingComparisonData;
-    dateWiseDispatch: DateWiseDispatchData;
-    sidings: SidingOption[];
-    sidingOverviewPenaltyPeriod: ExecutiveChartPeriodKey;
-    setSidingOverviewPenaltyPeriod: (period: ExecutiveChartPeriodKey) => void;
     filters: DashboardFilters;
 }
 
