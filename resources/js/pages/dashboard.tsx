@@ -1,6 +1,3 @@
-import { AreaChart as DashboardAreaChart } from '@/components/charts/area-chart';
-import { BarChart } from '@/components/charts/bar-chart';
-import { ComposedChart } from '@/components/charts/composed-chart';
 import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,8 +21,6 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
-    ArrowDown,
-    ArrowUp,
     BarChart3,
     Bell,
     Calendar,
@@ -36,28 +31,21 @@ import {
     Factory,
     Filter,
     Flame,
-    Clock,
     MapPin,
     Train,
     TriangleAlert,
-    TrendingUp,
-    Truck,
-    FileSpreadsheet,
     X,
     Zap,
 } from 'lucide-react';
 import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Area,
-    AreaChart as RechartsAreaChart,
     Bar,
     BarChart as RechartsBarChart,
     CartesianGrid,
     Cell,
     Legend,
     LabelList,
-    Line,
     Pie,
     PieChart as RechartsPieChart,
     ReferenceLine,
@@ -66,9 +54,6 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import { PieChart } from '@/components/charts/pie-chart';
-import SpeedometerGauge from '@/Components/Charts/SpeedometerGauge';
-import { SlidingNumber } from '@/components/SlidingNumber';
 import { ExecutiveOverview } from '@/pages/dashboard/ExecutiveOverview';
 import { Operations } from '@/pages/dashboard/Operations';
 import { SidingOverview } from '@/pages/dashboard/SidingOverview';
@@ -78,18 +63,8 @@ import { LoaderOverloading } from '@/pages/dashboard/LoaderOverloading';
 import { PowerPlant } from '@/pages/dashboard/PowerPlant';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
-import { LoaderOverloadDashboardSection } from '@/components/dashboard/loader-overload-dashboard-section';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { laravelJsonFetch } from '@/lib/laravel-json-fetch';
-import { ActiveRakePipeline } from '@/components/dashboard/active-rake-pipeline';
-import { AlertFeed } from '@/components/dashboard/alert-feed';
-import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
-import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
-import { PenaltyExposureStrip } from '@/components/dashboard/penalty-exposure-strip';
-import { OverloadPatternsWidget } from '@/components/dashboard/overload-patterns-widget';
-import { PenaltyPredictionsWidget } from '@/components/dashboard/penalty-predictions-widget';
-import { SidingCoalStock } from '@/components/dashboard/siding-coal-stock';
-import { SidingRiskScoreWidget } from '@/components/dashboard/siding-risk-score';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
