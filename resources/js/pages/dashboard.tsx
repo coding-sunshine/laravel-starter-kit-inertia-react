@@ -17,7 +17,6 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { index as rakesIndex } from '@/routes/rakes';
@@ -4666,136 +4665,113 @@ export default function Dashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            {/* ── Operations Command Center ── */}
-            <section className="mb-6 flex flex-col gap-4 px-4 pt-4 lg:px-6">
-                <h2
-                    className="text-xs font-bold uppercase tracking-widest"
-                    style={{ color: 'oklch(0.22 0.06 150)' }}
-                >
-                    Operations Command Center
-                </h2>
-
-                {!isExecutive && <OperatorRakeWidget rake={operatorRake} />}
-
-                {isExecutive && (
-                    <>
-                        {penaltySummary && <PenaltyExposureStrip data={penaltySummary} />}
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                            {activeRakePipeline && (
-                                <div className="lg:col-span-2">
-                                    <ActiveRakePipeline data={activeRakePipeline} />
-                                </div>
-                            )}
-                            <DispatchSummary stocks={sidingStocksMap} />
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                            <SidingCoalStock stocks={sidingStocksMap} />
-                            <SidingRiskScoreWidget scores={riskScores} />
-                            <AlertFeed alerts={alertsData} />
-                        </div>
-
-                        <PenaltyPredictionsWidget predictions={penaltyPredictions} />
-                        <OverloadPatternsWidget overloadPatterns={overloadPatterns ?? []} />
-                    </>
-                )}
-            </section>
-            {/* ── End Command Center ── */}
             {/* AppSidebarLayout adds p-4/sm:p-6/lg:p-8 around pages; cancel it for dashboard full-bleed layout. */}
             <div className="-m-4 sm:-m-6 lg:-m-8">
-                <div className="dashboard-page flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#FAFAFA] p-3">
-                <div className="sticky top-0 z-10 -mx-3 flex flex-col gap-1 bg-[#FAFAFA] px-3 pb-2 pt-1">
-                    <div className="flex flex-col">
-                        <h2 className="text-xl font-semibold tracking-tight">
-                            Management Dashboard
-                        </h2>
-                        {mainDateRangeLabel && activeSection !== 'executive-overview' && (
-                            <span className="mt-1 inline-flex items-center self-start rounded-full border border-green-500/70 bg-green-50 px-3 py-0.5 text-[11px] font-medium text-green-700">
-                                {mainDateRangeLabel} ({periodLabel})
-                            </span> 
-                        )}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                        {activeSection !== 'executive-overview' && hasActiveFilters && !filtersExpanded && (
-                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                                {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} applied
-                            </span>
-                        )}
-                        {activeSection !== 'executive-overview' && (
-                            <>
-                                <Button
-                                    type="button"
-                                    variant={filtersExpanded ? 'secondary' : hasActiveFilters ? 'default' : 'outline'}
-                                    size="sm"
-                                    className="shrink-0 rounded-[10px] relative"
-                                    onClick={() => setFiltersExpanded((v) => !v)}
-                                >
-                                    <Filter className="size-4 shrink-0" />
-                                    <span className="ml-1.5">Filters</span>
-                                    {hasActiveFilters && (
-                                        <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                                            {activeFilterCount > 9 ? '9+' : activeFilterCount}
-                                        </span>
-                                    )}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="shrink-0 rounded-[10px]"
-                                    onClick={() => {
-                                        const basePath = dashboard().url.split('?')[0] || dashboard().url;
-                                        router.get(basePath, { section: activeSection }, { preserveState: false, preserveScroll: true });
-                                    }}
-                                >
-                                    Reset
-                                </Button>
-                            </>
-                        )}
-                        {activeSection === 'executive-overview' && !!props.executiveYesterday && showExecutiveYesterdayViewToggle ? (
-                            <div className="flex items-center gap-2">
-                                <select
-                                    value={executiveYesterdayViewMode}
-                                    onChange={(e) => setExecutiveYesterdayViewMode(e.target.value as 'table' | 'charts')}
-                                    className="rounded-[10px] border border-gray-200 bg-white px-2.5 py-1.5 text-sm shadow-sm"
-                                >
-                                    <option value="charts">Bar Chart View</option>
-                                    <option value="table">Table View</option>
-                                </select>
-                            </div>
-                        ) : null}
-                        {visibleSections.length === 0 ? (
-                            <span className="text-xs text-muted-foreground">No dashboard sections enabled for your role.</span>
-                        ) : (
-                        <Select value={activeSection} onValueChange={setActiveSection}>
-                            <SelectTrigger className="min-w-[200px] rounded-[10px] border border-gray-200 bg-white shadow-sm w-full sm:w-auto">
-                                <SelectValue placeholder="Select section" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {visibleSections.map((s) => (
-                                    <SelectItem key={s.id} value={s.id}>
-                                        {s.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        )}
-                        {filtersExpanded && sidings.length > 0 && (
-                            <DashboardFiltersBar
-                                sidings={sidings}
-                                filters={filters}
-                                filterOptions={filterOptions}
-                                currentSection={activeSection}
-                                inline
-                                onClose={() => setFiltersExpanded(false)}
-                            />
-                        )}
-                    </div>
-                </div>
+                <div className="dashboard-page flex h-full flex-1 flex-col overflow-x-auto">
 
-                <div className="flex min-w-0 gap-3">
-                    <div className="min-w-0 flex-1 space-y-6">
+                    {/* ── Dark Header ── */}
+                    <div className="sticky top-0 z-10 flex flex-col" style={{ background: '#1a1a2e' }}>
+                        {/* Title row */}
+                        <div className="flex items-center justify-between px-4 py-3 lg:px-6">
+                            <h2 className="text-lg font-semibold tracking-tight text-white">
+                                Management Dashboard
+                            </h2>
+                            <div className="flex items-center gap-2">
+                                {activeSection === 'executive-overview' && !!props.executiveYesterday && showExecutiveYesterdayViewToggle && (
+                                    <select
+                                        value={executiveYesterdayViewMode}
+                                        onChange={(e) => setExecutiveYesterdayViewMode(e.target.value as 'table' | 'charts')}
+                                        className="rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-white shadow-sm"
+                                    >
+                                        <option value="charts">Bar Chart View</option>
+                                        <option value="table">Table View</option>
+                                    </select>
+                                )}
+                                {activeSection !== 'executive-overview' && (
+                                    <div className="flex items-center gap-2">
+                                        {mainDateRangeLabel && (
+                                            <span className="inline-flex items-center rounded-full border border-green-500/50 bg-green-900/30 px-3 py-0.5 text-[11px] font-medium text-green-300">
+                                                {mainDateRangeLabel} ({periodLabel})
+                                            </span>
+                                        )}
+                                        {hasActiveFilters && !filtersExpanded && (
+                                            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80">
+                                                {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} applied
+                                            </span>
+                                        )}
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="rounded-lg border border-slate-600 text-white/80 hover:bg-white/10 hover:text-white"
+                                            onClick={() => setFiltersExpanded((v) => !v)}
+                                        >
+                                            <Filter className="size-4 shrink-0" />
+                                            <span className="ml-1.5">Filters</span>
+                                            {hasActiveFilters && (
+                                                <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold text-white">
+                                                    {activeFilterCount > 9 ? '9+' : activeFilterCount}
+                                                </span>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="rounded-lg border border-slate-600 text-white/60 hover:bg-white/10 hover:text-white"
+                                            onClick={() => {
+                                                const basePath = dashboard().url.split('?')[0] || dashboard().url;
+                                                router.get(basePath, { section: activeSection }, { preserveState: false, preserveScroll: true });
+                                            }}
+                                        >
+                                            Reset
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Pill nav row */}
+                        <div className="flex flex-wrap gap-2 px-4 pb-3 lg:px-6" style={{ background: '#0f0f1e' }}>
+                            {visibleSections.length === 0 ? (
+                                <span className="text-xs text-slate-400">No dashboard sections enabled for your role.</span>
+                            ) : (
+                                visibleSections.map((s) => (
+                                    <button
+                                        key={s.id}
+                                        type="button"
+                                        onClick={() => setActiveSection(s.id)}
+                                        className={
+                                            s.id === activeSection
+                                                ? 'cursor-pointer rounded-full px-4 py-1 text-sm font-semibold transition-colors'
+                                                : 'cursor-pointer rounded-full border border-slate-700 px-4 py-1 text-sm text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200'
+                                        }
+                                        style={s.id === activeSection ? { background: '#1a1a2e', color: '#d4af37' } : undefined}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Inline filters bar (non-executive sections) */}
+                        {filtersExpanded && sidings.length > 0 && (
+                            <div style={{ background: '#0f0f1e' }} className="px-4 pb-3 lg:px-6">
+                                <DashboardFiltersBar
+                                    sidings={sidings}
+                                    filters={filters}
+                                    filterOptions={filterOptions}
+                                    currentSection={activeSection}
+                                    inline
+                                    onClose={() => setFiltersExpanded(false)}
+                                />
+                            </div>
+                        )}
+                    </div>
+                    {/* ── End Dark Header ── */}
+
+                    <div className="flex min-w-0 flex-1 gap-3 bg-[#FAFAFA] p-3">
+                        <div className="min-w-0 flex-1 space-y-6">
                 {canWidget('dashboard.widgets.global_coal_stock_strip') && filteredSidings.length > 0 && (
                     <div className="space-y-1">
                         <div className="flex items-center justify-between">
