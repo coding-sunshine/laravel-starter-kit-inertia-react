@@ -56,6 +56,26 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "loadrite_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weight_source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "loadrite_last_synced_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "loadrite_override": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
