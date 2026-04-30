@@ -69,6 +69,7 @@ import {
 import { PieChart } from '@/components/charts/pie-chart';
 import SpeedometerGauge from '@/Components/Charts/SpeedometerGauge';
 import { SlidingNumber } from '@/components/SlidingNumber';
+import { ExecutiveOverview } from '@/pages/dashboard/ExecutiveOverview';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
 import { LoaderOverloadDashboardSection } from '@/components/dashboard/loader-overload-dashboard-section';
@@ -1338,7 +1339,7 @@ function ExecutiveYesterdayTable({
     );
 }
 
-function ExecutiveYesterdaySection({
+export function ExecutiveYesterdaySection({
     data,
     viewMode,
     penaltyBySiding = [],
@@ -4771,68 +4772,6 @@ export default function Dashboard() {
 
                     <div className="flex min-w-0 flex-1 gap-3 bg-[#FAFAFA] p-3">
                         <div className="min-w-0 flex-1 space-y-6">
-                {canWidget('dashboard.widgets.global_coal_stock_strip') && filteredSidings.length > 0 && (
-                    <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-gray-500">Coal stock updates live from the ledger (and real-time events when connected).</p>
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-3 lg:gap-2 lg:overflow-visible">
-                            {filteredSidings.map((s) => {
-                                const stock = sidingStocks[s.id];
-                                const stockMt = stock?.closing_balance_mt ?? 0;
-                                const rakesLoadable = Math.floor(stockMt / MT_PER_RAKE_LOAD);
-                                const accent = SIDING_ACCENT[s.name] ?? '#6B7280';
-                                return (
-                                    <div
-                                        key={s.id}
-                                        className="dashboard-card flex min-w-[220px] flex-1 flex-col rounded-lg border-0 p-2 sm:min-w-0"
-                                        style={{ borderTop: `4px solid ${accent}` }}
-                                    >
-                                        <div className="text-[11px] font-semibold leading-snug text-gray-600">
-                                            {s.name}
-                                        </div>
-                                        <div className="mt-1 flex items-baseline justify-between gap-3">
-                                            <div>
-                                                <p className="text-sm font-bold leading-tight tabular-nums text-gray-900">
-                                                    <SlidingNumber
-                                                        value={stockMt}
-                                                        format={(v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT`}
-                                                    />
-                                                </p>
-                                                <p className="text-[10px] text-gray-600">Stock</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-sm font-bold leading-tight tabular-nums text-gray-900">
-                                                    {rakesLoadable}
-                                                </p>
-                                                <p className="text-[10px] text-gray-600">Rakes</p>
-                                            </div>
-                                        </div>
-                                        <div className="mt-2 space-y-0.5 border-t border-gray-100 pt-2 text-[10px]">
-                                            <p className="text-green-700">
-                                                <span className="font-bold">Last receipt: </span>
-                                                <span className="tabular-nums">
-                                                    {stock?.last_receipt_at
-                                                        ? new Date(stock.last_receipt_at).toLocaleString()
-                                                        : '—'}
-                                                </span>
-                                            </p>
-                                            <p className="text-red-700">
-                                                <span className="font-bold">Last dispatch: </span>
-                                                <span className="tabular-nums">
-                                                    {stock?.last_dispatch_at
-                                                        ? new Date(stock.last_dispatch_at).toLocaleString()
-                                                        : '—'}
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
                 {sidings.length === 0 ? (
                     <div className="dashboard-card rounded-xl border-0 p-8 text-center text-sm text-gray-600">
                         <p>No sidings assigned to your account. Contact your administrator to get access.</p>
@@ -4841,19 +4780,24 @@ export default function Dashboard() {
                     <>
                     <div className="min-w-0 space-y-6">
                         {activeSection === 'executive-overview' && (
-                            <div className="space-y-6">
-                                {executiveYesterday ? (
-                                    <ExecutiveYesterdaySection
-                                        data={executiveYesterday}
-                                        viewMode={executiveYesterdayViewMode}
-                                        penaltyBySiding={penaltyBySiding}
-                                        powerPlantDispatch={powerPlantDispatch}
-                                        canWidget={canWidget}
-                                    />
-                                ) : (
-                                    <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">Yesterday data is not available.</div>
-                                )}
-                            </div>
+                            <ExecutiveOverview
+                                isExecutive={isExecutive}
+                                operatorRake={operatorRake}
+                                penaltySummary={penaltySummary}
+                                activeRakePipeline={activeRakePipeline}
+                                sidingStocksMap={sidingStocksMap}
+                                riskScores={riskScores}
+                                alertsData={alertsData}
+                                penaltyPredictions={penaltyPredictions}
+                                overloadPatterns={overloadPatterns}
+                                filteredSidings={filteredSidings}
+                                sidingStocks={sidingStocks}
+                                canWidget={canWidget}
+                                executiveYesterday={executiveYesterday}
+                                executiveYesterdayViewMode={executiveYesterdayViewMode}
+                                penaltyBySiding={penaltyBySiding}
+                                powerPlantDispatch={powerPlantDispatch}
+                            />
                         )}
 
                         {activeSection === 'siding-overview' && (
