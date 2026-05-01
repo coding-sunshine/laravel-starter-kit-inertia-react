@@ -501,6 +501,11 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/api/command-palette/search', App\Http\Controllers\Search\CommandPaletteSearchController::class)
+        ->name('command-palette.search');
+});
+
+Route::middleware('auth')->group(function (): void {
     // User...
     Route::delete('user', [UserController::class, 'destroy'])->name('user.destroy');
 
