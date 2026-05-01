@@ -1,0 +1,21 @@
+{
+  "siding_name": "Dumka Siding",
+  "rake_number": "DMK-CALIB-001",
+  "commodity_grade": "G2",
+  "wagon_count": 58,
+  "placement_time": "2026-04-01T08:00:00+05:30",
+  "loading_end_time": "2026-04-01T16:00:00+05:30",
+  "wagons": [
+    { "wagon_number": "BOXNHL-CALIB-01", "cc_capacity_mt": 70.0, "net_weight_mt": 66.5 }
+  ],
+  "billed": {
+    "DEM": 0,
+    "PLO": 0,
+    "POL1": 0,
+    "POLA": 0,
+    "ENHC": 0
+  },
+  "source_rr_document": "synthetic-placeholder",
+  "notes": "Synthetic placeholder — replace with real RR-derived fixtures before merging Stage 1.",
+  "synthetic": true
+}
