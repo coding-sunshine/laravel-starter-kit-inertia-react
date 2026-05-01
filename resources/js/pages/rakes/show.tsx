@@ -17,7 +17,8 @@ import { parseSafeReturnTo } from '@/lib/safe-return-url';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Clock, FileText, Scale, Train, Edit, Trash2 } from 'lucide-react';
+import { Clock, FileText, Scale, Train, Edit, Trash2, Flag } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { RakeWorkflow } from '@/components/rakes/workflow/RakeWorkflow';
 import { WagonOverviewDialog } from '@/components/rakes/WagonOverviewDialog';
 import { EditWagonsDialog } from '@/components/rakes/EditWagonsDialog';
@@ -1348,41 +1349,71 @@ export default function RakesShow({
                                 Predicted vs billed by head
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="text-left text-muted-foreground">
-                                        <th className="py-1 pr-2">Head</th>
-                                        <th className="py-1 pr-2">Predicted</th>
-                                        <th className="py-1 pr-2">Billed</th>
-                                        <th className="py-1 pr-2">Variance</th>
-                                        <th className="py-1 pr-2">Dispute?</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {reconciliations.map((r) => (
-                                        <tr key={r.penalty_code} className="border-t">
-                                            <td className="py-1 pr-2 font-medium">{r.penalty_code}</td>
-                                            <td className="py-1 pr-2 tabular-nums">₹{r.predicted_amount.toLocaleString('en-IN')}</td>
-                                            <td className="py-1 pr-2 tabular-nums">₹{r.billed_amount.toLocaleString('en-IN')}</td>
-                                            <td
-                                                className={
-                                                    'py-1 pr-2 tabular-nums ' +
-                                                    (r.variance > 0
-                                                        ? 'text-red-600'
-                                                        : r.variance < 0
-                                                          ? 'text-green-600'
-                                                          : '')
-                                                }
-                                            >
-                                                {r.variance >= 0 ? '+' : ''}₹{r.variance.toLocaleString('en-IN')}
-                                                {r.variance_pct !== null && ` (${r.variance_pct}%)`}
-                                            </td>
-                                            <td className="py-1 pr-2">{r.dispute_candidate ? '🚩' : '—'}</td>
+                        <CardContent className="px-0 sm:px-6">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                            <th scope="col" className="px-3 py-2 font-medium">Head</th>
+                                            <th scope="col" className="px-3 py-2 text-right font-medium">Predicted</th>
+                                            <th scope="col" className="px-3 py-2 text-right font-medium">Billed</th>
+                                            <th scope="col" className="px-3 py-2 text-right font-medium">Variance</th>
+                                            <th scope="col" className="px-3 py-2 text-center font-medium">Dispute</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {reconciliations.map((r) => (
+                                            <tr
+                                                key={r.penalty_code}
+                                                className="border-b last:border-b-0 transition-colors hover:bg-muted/40"
+                                            >
+                                                <td className="px-3 py-2">
+                                                    <Badge variant="secondary" className="font-mono text-[11px]">
+                                                        {r.penalty_code}
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    ₹{r.predicted_amount.toLocaleString('en-IN')}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    ₹{r.billed_amount.toLocaleString('en-IN')}
+                                                </td>
+                                                <td
+                                                    className={
+                                                        'px-3 py-2 text-right tabular-nums font-medium ' +
+                                                        (r.variance > 0
+                                                            ? 'text-destructive'
+                                                            : r.variance < 0
+                                                              ? 'text-emerald-600 dark:text-emerald-400'
+                                                              : 'text-muted-foreground')
+                                                    }
+                                                >
+                                                    {r.variance >= 0 ? '+' : ''}₹{r.variance.toLocaleString('en-IN')}
+                                                    {r.variance_pct !== null && (
+                                                        <span className="ml-1 text-[11px] opacity-70">
+                                                            ({r.variance_pct}%)
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-center">
+                                                    {r.dispute_candidate ? (
+                                                        <span
+                                                            className="inline-flex items-center gap-1 text-destructive"
+                                                            title="Flagged as dispute candidate"
+                                                            aria-label="Dispute candidate"
+                                                        >
+                                                            <Flag className="h-3.5 w-3.5" aria-hidden="true" />
+                                                            <span className="text-xs font-medium">Yes</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground" aria-label="Not a dispute candidate">—</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </CardContent>
                     </Card>
                 )}
