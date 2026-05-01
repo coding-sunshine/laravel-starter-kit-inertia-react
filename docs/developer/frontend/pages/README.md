@@ -146,5 +146,13 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | weighments/index | weighments.index, weighments.show | ❌ |
 | weighments/show | weighments.index, weighments.show | ❌ |
 | sidings/monitor | sidings.monitor | ❌ |
+| dashboard/ExecutiveOverview | N/A | ❌ |
+| dashboard/LoaderOverloading | N/A | ❌ |
+| dashboard/Operations | N/A | ❌ |
+| dashboard/PenaltyControl | N/A | ❌ |
+| dashboard/PowerPlant | N/A | ❌ |
+| dashboard/RakePerformance | N/A | ❌ |
+| dashboard/SidingOverview | N/A | ❌ |
+| sidings/quick-placement | sidings.quick-placement.show, sidings.quick-placement.store | ❌ |
 
 

@@ -78,6 +78,7 @@ All Controllers:
 | VehicleWorkorderController | N/A | ❌ |
 | AccountDeletionRequestController | N/A | ❌ |
 | MobileDashboardController | N/A | ❌ |
+| [QuickPlacementController](./QuickPlacementController.md) | N/A | ✅ |
 | AuthController | N/A | ❌ |
 | IndentController | N/A | ❌ |
 | PowerPlantApiController | N/A | ❌ |

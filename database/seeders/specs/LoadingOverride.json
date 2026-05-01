@@ -3,22 +3,22 @@
     "table": "loading_overrides",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "wagon_loading_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "operator_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },

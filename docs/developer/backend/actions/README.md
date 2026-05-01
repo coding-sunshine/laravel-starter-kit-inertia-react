@@ -69,6 +69,9 @@ All Actions:
 | [RecommendDisputeAction](./RecommendDisputeAction.md) | N/A | ✅ |
 | CreateUnloadFromArrival | N/A | ❌ |
 | GenerateDispatchReport | N/A | ❌ |
+| [ReconcilePenaltyHeadsAction](./ReconcilePenaltyHeadsAction.md) | N/A | ✅ |
+| [CalculatePloPenaltyAction](./CalculatePloPenaltyAction.md) | N/A | ✅ |
+| [ApplyPloPenaltyAction](./ApplyPloPenaltyAction.md) | N/A | ✅ |
 | ApplyDemurragePenaltyAction | N/A | ❌ |
 | ApplyWeighmentPenaltiesAction | N/A | ❌ |
 | CreateApiUser | N/A | ❌ |
@@ -88,5 +91,7 @@ All Actions:
 | UpdateTxrHeaderAction | N/A | ❌ |
 | GenerateLoadingRecommendationAction | N/A | ❌ |
 | LogLoadingOverride | N/A | ❌ |
+| PloPenaltyResult | N/A | ❌ |
+| ReconciliationOutcome | N/A | ❌ |
 
 

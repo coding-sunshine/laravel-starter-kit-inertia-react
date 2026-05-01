@@ -1,49 +1,54 @@
 {
-    "model": "PenaltyPrediction",
-    "table": "penalty_predictions",
+    "model": "PenaltyReconciliation",
+    "table": "penalty_reconciliations",
     "fields": {
         "id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "siding_id": {
+        "rake_id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "prediction_date": {
-            "type": "date",
-            "nullable": true,
-            "default": null
-        },
-        "risk_level": {
+        "penalty_code": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "predicted_types": {
-            "type": "json",
-            "nullable": true,
-            "default": null
-        },
-        "predicted_amount_min": {
+        "predicted_amount": {
             "type": "numeric",
             "nullable": true,
             "default": null
         },
-        "predicted_amount_max": {
+        "billed_amount": {
             "type": "numeric",
             "nullable": true,
             "default": null
         },
-        "factors": {
+        "variance": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "variance_pct": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "dispute_candidate": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
             "type": "json",
             "nullable": true,
             "default": null
         },
-        "recommendations": {
-            "type": "json",
+        "reconciled_at": {
+            "type": "timestamp",
             "nullable": true,
             "default": null
         },
@@ -56,12 +61,34 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
-        "siding": {
+        "rake": {
             "type": "belongsTo",
-            "model": "Siding"
+            "model": "Rake"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        },
+        "editor": {
+            "type": "belongsTo",
+            "model": "Editor"
+        },
+        "destroyer": {
+            "type": "belongsTo",
+            "model": "Destroyer"
         }
     },
     "value_hints": [],

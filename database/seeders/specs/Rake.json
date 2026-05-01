@@ -3,17 +3,17 @@
     "table": "rakes",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "indent_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -103,17 +103,17 @@
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "updated_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "deleted_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -256,6 +256,11 @@
             "type": "string",
             "nullable": true,
             "default": null
+        },
+        "commodity_grade": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -326,6 +331,10 @@
         "rakeCharges": {
             "type": "hasMany",
             "model": "RakeCharge"
+        },
+        "reconciliations": {
+            "type": "hasMany",
+            "model": "Reconciliation"
         },
         "diverrtDestinations": {
             "type": "hasMany",

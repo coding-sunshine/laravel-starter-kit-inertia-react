@@ -916,17 +916,13 @@
             "path": "./ReconcilePenaltyHeadsAction.md",
             "lastUpdated": "2026-05-01",
             "relationships": {
-                "usedBy": [
-                    "ReconcilePenaltyHeadsJob",
-                    "ReconcileOnAppliedPenalty",
-                    "ReconcileOnRrImport"
-                ],
-                "usesModels": [
-                    "PenaltyReconciliation",
-                    "AppliedPenalty",
-                    "RrPenaltySnapshot",
-                    "Rake"
-                ],
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "1": "AppliedPenalty",
+                    "2": "PenaltyReconciliation",
+                    "4": "RrPenaltySnapshot"
+                },
                 "relatedRoutes": []
             }
         },
@@ -935,9 +931,7 @@
             "path": "./CalculatePloPenaltyAction.md",
             "lastUpdated": "2026-05-01",
             "relationships": {
-                "usedBy": [
-                    "ApplyPloPenaltyAction"
-                ],
+                "usedBy": [],
                 "usesModels": [
                     "Rake",
                     "RakeWeighment",
@@ -952,16 +946,14 @@
             "path": "./ApplyPloPenaltyAction.md",
             "lastUpdated": "2026-05-01",
             "relationships": {
-                "usedBy": [
-                    "RakeWeighmentPdfImporter"
-                ],
-                "usesModels": [
-                    "AppliedPenalty",
-                    "PenaltyType",
-                    "RakeCharge",
-                    "Rake",
-                    "RakeWeighment"
-                ],
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "1": "RakeWeighment",
+                    "2": "AppliedPenalty",
+                    "3": "PenaltyType",
+                    "5": "RakeCharge"
+                },
                 "relatedRoutes": []
             }
         },
@@ -1350,6 +1342,24 @@
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override"
                 ]
+            }
+        },
+        "PloPenaltyResult": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": []
+            }
+        },
+        "ReconciliationOutcome": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": []
             }
         }
     },
@@ -2386,13 +2396,8 @@
             "lastUpdated": "2026-05-01",
             "relationships": {
                 "usesActions": [],
-                "usesFormRequests": [
-                    "QuickPlacementRequest"
-                ],
-                "relatedRoutes": [
-                    "sidings.quick-placement.show",
-                    "sidings.quick-placement.store"
-                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
                 "rendersPages": [
                     "sidings/quick-placement"
                 ]
@@ -2938,6 +2943,11 @@
                     "filament.admin.resources.roles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.penalty-reconciliations.index",
+                    "filament.admin.resources.penalty-reconciliations.view",
+                    "filament.admin.resources.commodity-utilisation-thresholds.index",
+                    "filament.admin.resources.commodity-utilisation-thresholds.create",
+                    "filament.admin.resources.commodity-utilisation-thresholds.edit",
                     "filament.admin.home",
                     "referralLink",
                     "generateReferralCodes",
@@ -3106,6 +3116,8 @@
                     "billing.invoices.download",
                     "siding.switch",
                     "sidings.monitor",
+                    "sidings.quick-placement.show",
+                    "sidings.quick-placement.store",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override",
@@ -3616,6 +3628,11 @@
                     "filament.admin.resources.roles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.penalty-reconciliations.index",
+                    "filament.admin.resources.penalty-reconciliations.view",
+                    "filament.admin.resources.commodity-utilisation-thresholds.index",
+                    "filament.admin.resources.commodity-utilisation-thresholds.create",
+                    "filament.admin.resources.commodity-utilisation-thresholds.edit",
                     "filament.admin.home",
                     "referralLink",
                     "generateReferralCodes",
@@ -3784,6 +3801,8 @@
                     "billing.invoices.download",
                     "siding.switch",
                     "sidings.monitor",
+                    "sidings.quick-placement.show",
+                    "sidings.quick-placement.store",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override",
@@ -4077,6 +4096,11 @@
                     "filament.admin.resources.roles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.penalty-reconciliations.index",
+                    "filament.admin.resources.penalty-reconciliations.view",
+                    "filament.admin.resources.commodity-utilisation-thresholds.index",
+                    "filament.admin.resources.commodity-utilisation-thresholds.create",
+                    "filament.admin.resources.commodity-utilisation-thresholds.edit",
                     "filament.admin.home",
                     "referralLink",
                     "generateReferralCodes",
@@ -4245,6 +4269,8 @@
                     "billing.invoices.download",
                     "siding.switch",
                     "sidings.monitor",
+                    "sidings.quick-placement.show",
+                    "sidings.quick-placement.store",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override",
@@ -4524,6 +4550,11 @@
                     "filament.admin.resources.roles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.penalty-reconciliations.index",
+                    "filament.admin.resources.penalty-reconciliations.view",
+                    "filament.admin.resources.commodity-utilisation-thresholds.index",
+                    "filament.admin.resources.commodity-utilisation-thresholds.create",
+                    "filament.admin.resources.commodity-utilisation-thresholds.edit",
                     "filament.admin.home",
                     "referralLink",
                     "generateReferralCodes",
@@ -4692,6 +4723,8 @@
                     "billing.invoices.download",
                     "siding.switch",
                     "sidings.monitor",
+                    "sidings.quick-placement.show",
+                    "sidings.quick-placement.store",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override",
@@ -6686,6 +6719,18 @@
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
+            }
+        },
+        "sidings/quick-placement": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "sidings.quick-placement.show",
+                    "sidings.quick-placement.store"
+                ]
             }
         }
     },
