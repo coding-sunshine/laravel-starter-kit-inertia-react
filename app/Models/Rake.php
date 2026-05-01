@@ -24,6 +24,7 @@ final class Rake extends Model
         'indent_id',
         'rake_number',
         'rake_serial_number',
+        'commodity_grade',
         'data_source',
         'rake_type',
         'wagon_count',
