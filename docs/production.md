@@ -2,6 +2,66 @@
 
 Steps to apply when merging `feature/laravel-13` → `railway` and releasing to production.
 
+> **Just testing locally?** Jump to [§ L — Local testing](#l-local-testing) — a smaller subset of these steps is enough.
+
+---
+
+## L. Local testing
+
+Use this when you're trying the branch on `https://rrmanagementlatest.test/` (or any local Herd site) before merging to `railway`. Production sections 3, 5, 6, 8 are **optional** locally — Loadrite, Reverb, and the cron scheduler can stay off unless you're specifically testing those features.
+
+### L.1 Required steps
+
+```bash
+composer install                 # applies the Machour patch (patches/) automatically
+npm install
+npm run build                    # or `npm run dev` for HMR
+php artisan migrate              # runs the 10 new migrations
+php artisan db:seed --class='Database\Seeders\Essential\CommodityUtilisationThresholdSeeder'
+php artisan optimize:clear       # flush route + config caches after pulling new code
+php artisan wayfinder:generate   # refresh typed FE routes after route changes
+```
+
+### L.2 Queue worker (only if testing reconciliation jobs)
+
+`ReconcilePenaltyHeadsJob` runs on the `penalties` queue. Either:
+
+```bash
+php artisan queue:work --queue=penalties,default      # one-shot worker
+# OR if Horizon is configured locally:
+php artisan horizon
+```
+
+If `QUEUE_CONNECTION=sync` in your `.env`, jobs run in-process and you can skip the worker.
+
+### L.3 Optional features
+
+| Feature | What to start | Skip if |
+|---|---|---|
+| Loadrite live polling | `php artisan loadrite:store-token --siding=2` then `php artisan loadrite:start-polling` | You're not testing Loadrite |
+| Reverb / siding monitor | `php artisan reverb:start --port=8080` | You won't visit `/sidings/{id}/monitor` (browser console will show WS errors otherwise — non-blocking) |
+| Scheduled jobs | `php artisan schedule:work` | You're not testing demurrage check / weekly report scheduling |
+
+### L.4 Smoke check
+
+After L.1, hit these URLs as a super-admin user (seeded as `superadmin@rmms.local` / `password`):
+
+| URL | Expected |
+|---|---|
+| `/dashboard` | Dark navy header, pill nav, 6 sections |
+| `/penalties` | Penalties table loads (was 500 pre-Machour-patch) |
+| `/rakes` | Rakes table loads |
+| `/admin/penalty-reconciliations` | Filament admin, table renders (rows depend on data) |
+| `/admin/commodity-utilisation-thresholds` | 6 seeded rows |
+| `/sidings/1/quick-placement` | Pakur placement page (need a siding-attached user with `siding_in_charge` role) |
+| `/reconciliation/power-plant-receipts` | Loads (was 500 pre-route-reorder) |
+
+If any of those throw a 500, run `php artisan optimize:clear` and check `storage/logs/laravel.log`.
+
+### L.5 Full QA pass
+
+When you're ready to confirm the whole release locally, run through `docs/e2e-testing-guide.md` — sections A–G cover every user-visible change.
+
 ---
 
 ## 0. Major version jumps in this release ⚠️
