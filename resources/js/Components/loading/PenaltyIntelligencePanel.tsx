@@ -30,8 +30,8 @@ export function PenaltyIntelligencePanel({
         >
             {/* Penalty total */}
             <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
-                    Estimated Penalty
+                <p className="text-xs font-medium text-white/60">
+                    Estimated penalty
                 </p>
                 <p className="font-mono text-3xl font-bold tabular-nums">
                     {inr(summary.totalPenaltyRs)}
@@ -61,8 +61,8 @@ export function PenaltyIntelligencePanel({
             {/* Problem wagon list */}
             {overWagons.length > 0 && (
                 <div>
-                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/50">
-                        Over-PCC Wagons
+                    <p className="mb-1.5 text-xs font-medium text-white/60">
+                        Over-PCC wagons
                     </p>
                     <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto pr-1">
                         {overWagons.map((w) => (

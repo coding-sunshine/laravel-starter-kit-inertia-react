@@ -13,7 +13,7 @@ export default function AuthSimpleLayout({
 }: PropsWithChildren<AuthLayoutProps>) {
     return (
         <div className="flex min-h-svh items-center justify-center bg-[oklch(0.96_0.008_150)] p-6 md:p-10">
-            <div className="flex w-full max-w-4xl overflow-hidden rounded-2xl shadow-xl">
+            <div className="flex w-full max-w-4xl overflow-hidden rounded-lg border shadow-md">
                 {/* Left: BGR identity panel */}
                 <div className="hidden flex-shrink-0 flex-col bg-[oklch(0.22_0.06_150)] p-10 text-white md:flex md:w-[320px]">
                     <div className="mb-8">

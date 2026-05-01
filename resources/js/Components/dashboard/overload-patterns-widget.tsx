@@ -36,7 +36,7 @@ export function OverloadPatternsWidget({ overloadPatterns }: Props) {
             <CardContent className="space-y-4">
                 {overloadPatterns.map((siding) => (
                     <div key={siding.siding_name}>
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <p className="mb-1 text-xs font-medium text-muted-foreground">
                             {siding.siding_name}
                         </p>
                         <div className="space-y-1">

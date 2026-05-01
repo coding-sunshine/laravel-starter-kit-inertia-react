@@ -32,8 +32,8 @@ export function OperatorRakeWidget({ rake }: { rake: OperatorRake | null }) {
             <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                     <div>
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-white/50">
-                            Your Active Rake
+                        <p className="mb-1 text-xs font-medium text-white/60">
+                            Your active rake
                         </p>
                         <p className="font-mono text-2xl font-bold text-white">{rake.rake_number}</p>
                         <p className="mt-0.5 text-sm text-white/60">

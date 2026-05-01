@@ -1286,7 +1286,7 @@ export default function RakesShow({
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                     <Card>
                         <CardHeader className="py-3">
-                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                            <CardDescription className="text-xs">
                                 Status
                             </CardDescription>
                             <CardTitle className="text-sm font-semibold capitalize">
@@ -1296,7 +1296,7 @@ export default function RakesShow({
                     </Card>
                     <Card>
                         <CardHeader className="py-3">
-                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                            <CardDescription className="text-xs">
                                 Wagons
                             </CardDescription>
                             <div className="flex items-end justify-between gap-2">
@@ -1317,7 +1317,7 @@ export default function RakesShow({
                     </Card>
                     <Card>
                         <CardHeader className="py-3">
-                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                            <CardDescription className="text-xs">
                                 Destination
                             </CardDescription>
                             <CardTitle className="text-sm font-semibold">
@@ -1327,7 +1327,7 @@ export default function RakesShow({
                     </Card>
                     <Card>
                         <CardHeader className="py-3">
-                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                            <CardDescription className="text-xs">
                                 Coal (MT)
                             </CardDescription>
                             <CardTitle className="text-sm font-semibold tabular-nums">
@@ -1337,7 +1337,7 @@ export default function RakesShow({
                     </Card>
                     <Card>
                         <CardHeader className="py-3">
-                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                            <CardDescription className="text-xs">
                                 Predicted (₹)
                             </CardDescription>
                             <CardTitle className="text-sm font-semibold tabular-nums">
@@ -1347,7 +1347,7 @@ export default function RakesShow({
                     </Card>
                     <Card>
                         <CardHeader className="py-3">
-                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                            <CardDescription className="text-xs">
                                 Actual (₹)
                             </CardDescription>
                             <CardTitle className="text-sm font-semibold tabular-nums">
@@ -1363,7 +1363,7 @@ export default function RakesShow({
                             <CardTitle className="text-sm font-semibold">
                                 Penalty reconciliation
                             </CardTitle>
-                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                            <CardDescription className="text-xs">
                                 Predicted vs billed by head
                             </CardDescription>
                         </CardHeader>
@@ -1371,7 +1371,7 @@ export default function RakesShow({
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                        <tr className="border-b text-left text-xs font-medium text-muted-foreground">
                                             <th scope="col" className="px-3 py-2 font-medium">Head</th>
                                             <th scope="col" className="px-3 py-2 text-right font-medium">Predicted</th>
                                             <th scope="col" className="px-3 py-2 text-right font-medium">Billed</th>

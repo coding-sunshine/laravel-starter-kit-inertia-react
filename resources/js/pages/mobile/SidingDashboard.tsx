@@ -211,7 +211,7 @@ export default function SidingDashboard() {
                     </MobileCard>
 
                     {/* Key Metrics Footer */}
-                    <MobileCard className="mx-4 mb-24 bg-gradient-to-r from-blue-50 to-indigo-50">
+                    <MobileCard className="mx-4 mb-24 bg-blue-50">
                         <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
                                 <p className="mb-1 text-xs text-gray-500">

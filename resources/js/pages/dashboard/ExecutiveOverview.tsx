@@ -175,7 +175,7 @@ export function ExecutiveOverview({
                                     className="dashboard-card flex min-w-[230px] flex-1 flex-col rounded-xl border-0 p-3 sm:min-w-0"
                                     style={{ borderTop: `4px solid ${accent}` }}
                                 >
-                                    <div className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                                    <div className="text-xs font-semibold text-muted-foreground">
                                         {s.name}
                                     </div>
                                     <div className="mt-2 flex items-end justify-between gap-3">

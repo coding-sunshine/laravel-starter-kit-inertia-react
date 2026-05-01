@@ -152,7 +152,7 @@ export function RakeTimelineChip({
                                 </TooltipContent>
                             </Tooltip>
                             {size === 'detailed' && (
-                                <span className="ml-1 text-[10px] tracking-wide text-slate-500 uppercase">
+                                <span className="ml-1 text-[11px] text-slate-600 dark:text-slate-400">
                                     {step.label}
                                 </span>
                             )}

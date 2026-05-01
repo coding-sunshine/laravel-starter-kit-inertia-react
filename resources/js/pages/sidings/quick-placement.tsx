@@ -90,7 +90,7 @@ export default function QuickPlacement({ siding, rakes }: Props) {
                 <div className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl sm:px-6 sm:py-8">
                     {/* Header */}
                     <header className="mb-6">
-                        <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                        <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                             <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                             <span>Siding</span>
                         </div>

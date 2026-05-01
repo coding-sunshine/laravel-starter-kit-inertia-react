@@ -1297,7 +1297,7 @@ export function WagonLoadingWorkflow({
                                                                 }}
                                                             >
                                                                 {isUnfitRow && (
-                                                                    <span className="text-xs font-semibold uppercase tracking-wide text-red-950 dark:text-red-100">
+                                                                    <span className="text-xs font-semibold text-red-950 dark:text-red-100">
                                                                         Unfit wagon
                                                                     </span>
                                                                 )}
@@ -1505,7 +1505,7 @@ export function WagonLoadingWorkflow({
                                                 <TableHead>Loader</TableHead>
                                                 <TableHead>Operator</TableHead>
                                                 <TableHead>Loaded Qty (MT)</TableHead>
-                                                <TableHead className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 text-center">Load vs PCC</TableHead>
+                                                <TableHead className="px-2 py-1 text-xs font-medium text-gray-500 text-center">Load vs PCC</TableHead>
                                                 <TableHead>Wagon Type</TableHead>
                                                 <TableHead>PCC Capacity</TableHead>
                                                 <TableHead>Loading Time</TableHead>
@@ -1558,7 +1558,7 @@ export function WagonLoadingWorkflow({
                                                             <TableCell className="min-w-[140px]">
                                                                 <div className="flex flex-col gap-1">
                                                                     {isUnfitRow && (
-                                                                        <span className="text-xs font-semibold uppercase tracking-wide text-red-950 dark:text-red-100">
+                                                                        <span className="text-xs font-semibold text-red-950 dark:text-red-100">
                                                                             Unfit wagon
                                                                         </span>
                                                                     )}

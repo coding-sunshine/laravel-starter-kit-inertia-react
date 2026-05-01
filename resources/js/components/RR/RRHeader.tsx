@@ -37,43 +37,43 @@ export function RRHeader({
         <div className="rounded-xl border bg-card p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                         RR Number
                     </p>
                     <p className="mt-1 font-medium">{rrNumber}</p>
                 </div>
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                         Rake Number
                     </p>
                     <p className="mt-1 font-medium">{rakeNumber}</p>
                 </div>
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                         Siding
                     </p>
                     <p className="mt-1 font-medium">{siding}</p>
                 </div>
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                         Power Plant
                     </p>
                     <p className="mt-1 font-medium">{powerPlant}</p>
                 </div>
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                         RR Date
                     </p>
                     <p className="mt-1 font-medium">{rrDate}</p>
                 </div>
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                         Total Weight (MT)
                     </p>
                     <p className="mt-1 font-medium">{totalWeightMt}</p>
                 </div>
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                         Status
                     </p>
                     <Badge

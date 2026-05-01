@@ -46,7 +46,7 @@ export default function AppLogo({
                     <span className="truncate font-bold leading-tight text-sidebar-foreground">
                         SHAReReport
                     </span>
-                    <span className="truncate text-[9px] font-medium uppercase tracking-widest text-sidebar-foreground/40">
+                    <span className="truncate text-[10px] text-sidebar-foreground/50">
                         BGR Mining &amp; Infra
                     </span>
                 </div>
