@@ -41,6 +41,11 @@ final class RakeDataTable extends AbstractDataTable
         public bool $workflow_has_pending,
         /** @var array{txr_done: bool, wagon_loading_done: bool, guard_done: bool, weighment_done: bool, rr_done: bool} */
         public array $workflow_steps,
+        public ?string $loading_start_time,
+        public ?string $loading_end_time,
+        public ?string $weighment_end_time,
+        public ?string $drawn_out,
+        public ?string $rr_actual_date,
     ) {}
 
     public static function fromModel(Rake $model): self
@@ -66,6 +71,11 @@ final class RakeDataTable extends AbstractDataTable
             pdf_download_url: $model->pdf_download_url,
             workflow_has_pending: ! ($steps['txr_done'] && $steps['wagon_loading_done'] && $steps['guard_done'] && $steps['weighment_done'] && $steps['rr_done']),
             workflow_steps: $steps,
+            loading_start_time: $model->loading_start_time?->toIso8601String(),
+            loading_end_time: $model->loading_end_time?->toIso8601String(),
+            weighment_end_time: $model->weighment_end_time?->toIso8601String(),
+            drawn_out: $model->drawn_out?->toIso8601String(),
+            rr_actual_date: $model->rr_actual_date?->toIso8601String(),
         );
     }
 
@@ -84,6 +94,7 @@ final class RakeDataTable extends AbstractDataTable
             ),
             new Column(id: 'destination', label: 'Destination', type: 'text', sortable: true, filterable: false),
             new Column(id: 'loading_date', label: 'Loading date', type: 'date', sortable: true, filterable: true),
+            new Column(id: 'lifecycle', label: 'Lifecycle', type: 'text', sortable: false, filterable: false),
             new Column(id: 'progress', label: 'Progress', type: 'text', sortable: false, filterable: false),
         ];
     }

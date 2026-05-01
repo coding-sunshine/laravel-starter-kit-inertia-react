@@ -3,6 +3,7 @@ import type { DataTableResponse } from 'laravel-data-table';
 import Heading from '@/components/heading';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
+import { RakeTimelineChip } from '@/components/rake/rake-timeline-chip';
 import {
     Card,
     CardContent,
@@ -37,6 +38,11 @@ interface RakeRow {
     pdf_download_url: string | null;
     workflow_has_pending: boolean;
     workflow_steps: WorkflowSteps;
+    loading_start_time: string | null;
+    loading_end_time: string | null;
+    weighment_end_time: string | null;
+    drawn_out: string | null;
+    rr_actual_date: string | null;
 }
 
 interface Props {
@@ -187,6 +193,21 @@ export default function RakesIndex({ tableData }: Props) {
                                 }
                                 if (columnId === 'destination') {
                                     return row.destination ? row.destination : '—';
+                                }
+                                if (columnId === 'lifecycle') {
+                                    return (
+                                        <RakeTimelineChip
+                                            rake={{
+                                                placement_time: row.placement_time,
+                                                loading_start_time: row.loading_start_time,
+                                                loading_end_time: row.loading_end_time,
+                                                weighment_end_time: row.weighment_end_time,
+                                                drawn_out: row.drawn_out,
+                                                rr_actual_date: row.rr_actual_date,
+                                            }}
+                                            size="compact"
+                                        />
+                                    );
                                 }
                                 if (columnId === 'progress') {
                                     return (
