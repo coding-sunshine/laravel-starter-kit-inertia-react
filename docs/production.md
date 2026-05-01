@@ -4,6 +4,28 @@ Steps to apply when merging `feature/laravel-13` → `railway` and releasing to 
 
 ---
 
+## 0. Major version jumps in this release ⚠️
+
+This branch includes major framework upgrades. Confirm the production server can run them before merging:
+
+| Package | railway | feature/laravel-13 | Notes |
+|---|---|---|---|
+| `laravel/framework` | ^12.52 | ^13.7 | Major. PHP **8.4** required. |
+| `inertiajs/inertia-laravel` | ^2.0 | ^3.0 | Major. Frontend rebuild required (already in §1). Axios removed; uses built-in XHR. |
+| `filament/filament` | ^5.2 | ^5.6 | Minor. Re-publish assets (handled by `optimize:clear` + `view:cache` below). |
+
+**Pre-flight on the server:**
+
+```bash
+php -v   # must be 8.4+
+redis-cli ping   # must return PONG (Horizon + cache)
+node -v  # must be 20+ for Vite/Tailwind v4
+```
+
+Any failure here → fix before deploy.
+
+---
+
 ## 1. Standard deploy steps
 
 Run these on the production server after the merge:
@@ -82,15 +104,13 @@ When prompted:
 
 ## 4. Horizon — restart and verify queues
 
-⚠️ **Critical config edit before restart.** Stage-1 reconciliation (`ReconcilePenaltyHeadsJob`) runs on the `penalties` queue. Without this edit, those jobs queue and never process.
-
-Edit `config/horizon.php` supervisor-1 queue list to include `'penalties'`:
+`config/horizon.php` already ships with the correct supervisor-1 queue list:
 
 ```php
 'queue' => ['loadrite-poll', 'loadrite-sync', 'loadrite-alerts', 'penalties', 'default'],
 ```
 
-Then restart Horizon:
+No manual edit needed — `composer install` + the merged config takes care of it. Restart Horizon to pick up the new queues:
 
 ```bash
 php artisan horizon:terminate

@@ -201,7 +201,7 @@ return [
     'defaults' => [
         'supervisor-1' => [
             'connection' => 'redis',
-            'queue' => ['loadrite-poll', 'loadrite-sync', 'loadrite-alerts', 'default'],
+            'queue' => ['loadrite-poll', 'loadrite-sync', 'loadrite-alerts', 'penalties', 'default'],
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
             'maxProcesses' => 1,
