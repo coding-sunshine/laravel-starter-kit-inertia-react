@@ -23,15 +23,32 @@ php artisan event:cache
 
 ## 2. Database migrations
 
-Five new migrations ship in this branch. `migrate --force` above runs them, but listed here for awareness:
+Ten new migrations ship in this branch. `migrate --force` above runs them in timestamp order, but listed here for awareness:
 
 | Migration | What it does |
 |-----------|-------------|
+| `2026_04_29_120000_upgrade_activity_log_table_for_spatie_activity_log_v5` | Spatie ActivityLog v5 schema upgrade |
 | `2026_04_29_142818_create_loading_overrides_table` | PCC loading overrides log |
 | `2026_04_29_220306_create_loadrite_settings_table` | Stores encrypted Loadrite API tokens per siding |
 | `2026_04_29_220534_add_loadrite_columns_to_wagon_loading_table` | `loadrite_weight_mt`, `weight_source`, `loadrite_last_synced_at`, `loadrite_override` on `wagon_loading` |
 | `2026_04_30_000001_add_migration_columns_to_penalties_table` | `migrated_at`, `migration_note` on `penalties` |
 | `2026_04_30_055618_add_site_name_to_loadrite_settings` | `site_name` column (required for API calls) |
+| `2026_05_01_000001_create_penalty_reconciliations_table` | Predicted-vs-billed reconciliation per penalty head (Stage 1) |
+| `2026_05_01_000002_create_commodity_utilisation_thresholds_table` | PLO utilisation thresholds per commodity grade (Stage 1) |
+| `2026_05_01_130333_add_commodity_grade_to_rakes_table` | `commodity_grade` on rakes — required by PLO calculator (Stage 1) |
+| `2026_05_01_152956_add_index_to_rr_penalty_snapshots_rake_id` | FK index for reconciliation aggregation perf (Stage 1) |
+
+---
+
+## 2.5 Seeders — Stage 1
+
+Run after migrations to populate PLO utilisation thresholds (G1–G5 + UNGRADED at 0.95 each). Without this, `CalculatePloPenaltyAction` falls back to a hardcoded 0.95 default — functional but the Filament admin at `/admin/commodity-utilisation-thresholds` will be empty.
+
+```bash
+php artisan db:seed --class='Database\Seeders\Essential\CommodityUtilisationThresholdSeeder' --force
+```
+
+Idempotent: re-running on existing data updates rather than duplicates (uses `updateOrCreate` keyed on `commodity_grade + effective_from`).
 
 ---
 
@@ -65,7 +82,15 @@ When prompted:
 
 ## 4. Horizon — restart and verify queues
 
-Three new queues were added for Loadrite polling. Horizon must be restarted to pick them up:
+⚠️ **Critical config edit before restart.** Stage-1 reconciliation (`ReconcilePenaltyHeadsJob`) runs on the `penalties` queue. Without this edit, those jobs queue and never process.
+
+Edit `config/horizon.php` supervisor-1 queue list to include `'penalties'`:
+
+```php
+'queue' => ['loadrite-poll', 'loadrite-sync', 'loadrite-alerts', 'penalties', 'default'],
+```
+
+Then restart Horizon:
 
 ```bash
 php artisan horizon:terminate
@@ -76,6 +101,7 @@ Verify the new queues appear in the Horizon dashboard (`/horizon`):
 - `loadrite-poll`
 - `loadrite-sync`
 - `loadrite-alerts`
+- `penalties` ← new in Stage 1, must be present
 
 ---
 
@@ -152,9 +178,14 @@ crontab -l | grep artisan
 
 ---
 
-## 9. New page — siding monitor
+## 9. New routes
 
-A new route is live at `/sidings/{siding}/monitor`. No permissions gate is on it — any authenticated user who knows the URL can access it. If you want to restrict it, add middleware or a gate before go-live.
+| Route | Purpose | Access |
+|---|---|---|
+| `/sidings/{siding}/monitor` | Real-time siding monitor (Reverb-driven) | Authenticated users — no permissions gate; add middleware/gate before go-live if restriction needed |
+| `/admin/penalty-reconciliations` | Filament — predicted-vs-billed reconciliation list (read-only) | Admin panel users |
+| `/admin/commodity-utilisation-thresholds` | Filament — PLO utilisation thresholds (CRUD) | Admin panel users |
+| `/sidings/{siding}/quick-placement` | Mobile-friendly placement capture (Stage 1, primarily for Pakur data hole) | Authenticated user attached to the siding (`user_siding` pivot) with `siding_in_charge` or `siding_operator` role |
 
 ---
 
@@ -184,6 +215,20 @@ php artisan horizon:status
 
 # 5. Build assets present
 ls -la public/build/assets/ | tail -5
+
+# 6. Stage-1 tables exist
+php artisan tinker --execute '
+echo "penalty_reconciliations: " . (Schema::hasTable("penalty_reconciliations") ? "✓" : "✗") . PHP_EOL;
+echo "commodity_utilisation_thresholds: " . (Schema::hasTable("commodity_utilisation_thresholds") ? "✓" : "✗") . PHP_EOL;
+echo "rakes.commodity_grade: " . (Schema::hasColumn("rakes", "commodity_grade") ? "✓" : "✗") . PHP_EOL;
+'
+
+# 7. PLO thresholds seeded (expect 6 rows)
+php artisan tinker --execute 'echo App\Models\CommodityUtilisationThreshold::count() . " thresholds (expect 6)" . PHP_EOL;'
+
+# 8. Reconciliation listeners auto-discovered
+php artisan event:list | grep -E "AppliedPenaltyPersisted|RrPenaltySnapshotsImported"
+# Expected: both events listed with their listener mappings (ReconcileOnAppliedPenalty, ReconcileOnRrImport)
 ```
 
 ---
@@ -193,8 +238,8 @@ ls -la public/build/assets/ | tail -5
 If anything goes wrong:
 
 ```bash
-# Roll back the 5 new migrations in reverse order
-php artisan migrate:rollback --step=5
+# Roll back all 10 new migrations in reverse order
+php artisan migrate:rollback --step=10
 
 # Clear all caches
 php artisan optimize:clear
@@ -204,3 +249,39 @@ php artisan optimize:clear
 > ```sql
 > DELETE FROM loadrite_settings WHERE siding_id = 2;
 > ```
+>
+> The `penalty_reconciliations` table is dropped by rollback (additive table, no FK dependents). The `commodity_utilisation_thresholds` table is also dropped. The `rakes.commodity_grade` column is dropped. No data outside these new tables/columns is affected.
+
+---
+
+## 12. Calibration test — expected CI red
+
+`tests/Feature/Calibration/RrReconciliationCalibrationTest.php` is an intentional merge gate. It fails until at least one **real** RR-derived fixture is added to `tests/Fixtures/RailwayBills/` (synthetic placeholders are rejected). CI on `railway` and downstream branches will show 1 red test until then.
+
+**To unblock and flip the gate green:**
+1. Pick a Pakur rake whose RR document is on file (`rr_documents` table) and that has DEM/PLO bills (`rr_penalty_snapshots`).
+2. Use `php artisan pakur:backfill-placement` (Section 13) to set its `placement_time` and `loading_end_time` from the siding logbook.
+3. Read the rake's wagon weighments + RR bill values, capture as JSON in `tests/Fixtures/RailwayBills/<date>-<siding>-<head>-<seq>.json` per the schema in that directory's `README.md`. Set `"synthetic": false`.
+4. Run `composer test:calibration` — must pass within ±10% predicted-vs-billed.
+
+Until then, treat this single failure as expected.
+
+---
+
+## 13. `pakur:backfill-placement` — operational artisan
+
+For closing the historical Pakur data hole. Imports `placement_time` and `loading_end_time` onto existing rakes from a CSV export of the siding logbook.
+
+**CSV format** (`storage/app/pakur-logbook.csv`):
+```
+rake_number,placed_at,released_at,source
+95,2026-04-01 08:00:00,2026-04-01 16:00:00,logbook
+```
+
+**Run:**
+```bash
+php artisan pakur:backfill-placement --file=storage/app/pakur-logbook.csv
+# Add --force to overwrite rakes that already have placement_time set
+```
+
+Skips rows where `rake_number` doesn't match. Without `--force`, preserves any pre-existing values. Outputs `Updated N rake(s). Skipped M row(s).`
