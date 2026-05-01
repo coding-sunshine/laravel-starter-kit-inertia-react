@@ -1196,10 +1196,11 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Siding stock from stock_ledger only (no date filter).
-     * Receipts (daily_vehicle_entry_id) increase stock; dispatches (rake_id) decrease it.
-     * Stock = latest ledger row's closing_balance_mt per siding as of the current request time (live).
-     * last_receipt_at / last_dispatch_at = MAX(created_at) for receipt vs dispatch rows (corrections excluded).
+     * Siding stock from stock_ledger.
+     * Stock (opening/closing) = latest ledger row's closing_balance_mt per siding (live, no date filter).
+     * received_mt / dispatched_mt = sum within the requested [$from, $to] window — matches the
+     * "Today's dispatch" / period-anchored card on the dashboard.
+     * last_receipt_at / last_dispatch_at = MAX(created_at) over the window for receipt vs dispatch rows.
      *
      * @param  array<int>  $sidingIds
      * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float, last_receipt_at: string|null, last_dispatch_at: string|null}>
@@ -1213,7 +1214,7 @@ final class ExecutiveDashboardController extends Controller
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
 
-        // Get latest ledger per siding (correct ordering using id)
+        // Get latest ledger per siding (correct ordering using id) — used for the live closing balance.
         $latestLedgerIds = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
             ->selectRaw('MAX(id) as id')
@@ -1226,22 +1227,26 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('siding_id');
 
-        // Total received (positive values)
+        // Received (positive values) within the requested window.
         $receivedBySiding = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
             ->where('transaction_type', 'receipt')
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw('siding_id, COALESCE(SUM(quantity_mt), 0) as total')
             ->groupBy('siding_id')
             ->pluck('total', 'siding_id');
 
-        // Total dispatched (stored as negative, so sum will be negative)
+        // Dispatched (stored as negative) within the requested window.
         $dispatchedBySiding = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
             ->where('transaction_type', 'dispatch')
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw('siding_id, COALESCE(SUM(quantity_mt), 0) as total')
             ->groupBy('siding_id')
             ->pluck('total', 'siding_id');
 
+        // last_receipt_at / last_dispatch_at stay live (most-recent across all time) for the
+        // "Last receipt" timestamps shown elsewhere on the dashboard. These are NOT period-scoped.
         $lastReceiptAtBySiding = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
             ->where('transaction_type', 'receipt')
