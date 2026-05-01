@@ -93,5 +93,9 @@ All Actions:
 | LogLoadingOverride | N/A | ❌ |
 | PloPenaltyResult | N/A | ❌ |
 | ReconciliationOutcome | N/A | ❌ |
+| ForceMajeureStitchOutcome | N/A | ❌ |
+| StitchForceMajeureDisputesAction | N/A | ❌ |
+| CommandPaletteResults | N/A | ❌ |
+| SearchForCommandPaletteAction | N/A | ❌ |
 
 

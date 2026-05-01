@@ -117,5 +117,6 @@ All Controllers:
 | StockLedgerController | N/A | ❌ |
 | WeighmentsController | N/A | ❌ |
 | SidingMonitorController | N/A | ❌ |
+| CommandPaletteSearchController | N/A | ❌ |
 
 

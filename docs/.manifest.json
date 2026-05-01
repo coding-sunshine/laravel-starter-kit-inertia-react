@@ -1361,6 +1361,50 @@
                 "usesModels": [],
                 "relatedRoutes": []
             }
+        },
+        "ForceMajeureStitchOutcome": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": []
+            }
+        },
+        "StitchForceMajeureDisputesAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "LoadriteDowntimeEvent",
+                    "PenaltyReconciliation"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "CommandPaletteResults": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": []
+            }
+        },
+        "SearchForCommandPaletteAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Indent",
+                    "Rake"
+                ],
+                "relatedRoutes": [
+                    "command-palette.search"
+                ]
+            }
         }
     },
     "controllers": {
@@ -2912,6 +2956,16 @@
                     "sidings/monitor"
                 ]
             }
+        },
+        "CommandPaletteSearchController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
         }
     },
     "pages": {
@@ -3348,6 +3402,7 @@
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
+                    "command-palette.search",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
@@ -4033,6 +4088,7 @@
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
+                    "command-palette.search",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
@@ -4501,6 +4557,7 @@
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
+                    "command-palette.search",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
@@ -4955,6 +5012,7 @@
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
+                    "command-palette.search",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
