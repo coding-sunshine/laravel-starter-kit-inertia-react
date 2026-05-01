@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { ShieldCheck, TrendingDown, TrendingUp } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface PenaltySummary {
@@ -8,92 +9,104 @@ interface PenaltySummary {
     preventable_pct: number;
 }
 
+const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
 export function PenaltyExposureStrip({ data }: { data: PenaltySummary }) {
-    const formatted = new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 0,
-    }).format(data.today_rs);
+    const isZero = !data.today_rs || data.today_rs === 0;
+    const formatted = inr.format(data.today_rs);
+
+    const lastTwo = data.trend_7d.slice(-2);
+    const diff = lastTwo.length === 2 ? lastTwo[1].rs - lastTwo[0].rs : 0;
+    const diffSign = diff > 0 ? '+' : '';
+    const diffFormatted = inr.format(Math.abs(diff));
+    const diffUp = diff > 0;
 
     const preventableBadgeVariant =
         data.preventable_pct >= 50 ? 'destructive' : data.preventable_pct >= 25 ? 'secondary' : 'outline';
 
-    const lastTwo = data.trend_7d.slice(-2);
-    const diff = lastTwo.length === 2 ? lastTwo[1].rs - lastTwo[0].rs : 0;
-    const sign = diff >= 0 ? '+' : '';
-    const diffFormatted = new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 0,
-    }).format(diff);
-
     return (
-        <Card className="border-0 shadow-sm" style={{ backgroundColor: 'oklch(0.22 0.06 150)' }}>
-            <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-white/50">
-                        Today's Penalty Exposure
-                    </p>
-                    <p className="font-mono text-3xl font-bold tabular-nums text-white">{formatted}</p>
+        <Card className="border-l-4 border-l-emerald-700 bg-gradient-to-br from-emerald-950 to-emerald-900 text-emerald-50 shadow-sm dark:from-emerald-950 dark:to-emerald-900">
+            <CardContent className="flex flex-wrap items-center gap-4 p-3 sm:gap-6 sm:p-4">
+                {/* Headline */}
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-800/60 text-emerald-200 ring-1 ring-emerald-700/50">
+                        <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/80">
+                            Today's penalty exposure
+                        </p>
+                        <p className="font-mono text-xl font-bold tabular-nums sm:text-2xl">
+                            {isZero ? <span className="text-emerald-200">₹0</span> : formatted}
+                        </p>
+                        {isZero && (
+                            <p className="mt-0.5 text-[11px] text-emerald-300/70">
+                                No predicted penalty so far today
+                            </p>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    {data.preventable_pct > 0 && (
-                        <Badge variant={preventableBadgeVariant} className="text-xs">
-                            {data.preventable_pct}% preventable
-                        </Badge>
-                    )}
+                {/* Preventable badge */}
+                {data.preventable_pct > 0 && (
+                    <Badge variant={preventableBadgeVariant} className="shrink-0 text-[10px]">
+                        {data.preventable_pct}% preventable
+                    </Badge>
+                )}
 
-                    {data.trend_7d.length > 1 && (
-                        <div className="h-12 w-32">
+                {/* Sparkline + delta */}
+                {data.trend_7d.length > 1 && (
+                    <div className="flex shrink-0 items-center gap-3">
+                        <div className="h-10 w-28 sm:w-32">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={data.trend_7d}>
+                                <AreaChart data={data.trend_7d} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
                                     <defs>
                                         <linearGradient id="penGrad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#C8A84B" stopOpacity={0.6} />
-                                            <stop offset="95%" stopColor="#C8A84B" stopOpacity={0} />
+                                            <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.55} />
+                                            <stop offset="95%" stopColor="#fbbf24" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
                                     <Area
                                         type="monotone"
                                         dataKey="rs"
-                                        stroke="#C8A84B"
+                                        stroke="#fbbf24"
                                         strokeWidth={1.5}
                                         fill="url(#penGrad)"
                                         dot={false}
+                                        isAnimationActive={false}
                                     />
                                     <Tooltip
-                                        formatter={(v: number) =>
-                                            new Intl.NumberFormat('en-IN', {
-                                                style: 'currency',
-                                                currency: 'INR',
-                                                maximumFractionDigits: 0,
-                                            }).format(v)
-                                        }
+                                        formatter={(v: number) => inr.format(v)}
                                         contentStyle={{
-                                            background: '#1E3A2F',
-                                            border: 'none',
-                                            color: '#fff',
+                                            background: '#022c22',
+                                            border: '1px solid rgba(16,185,129,0.3)',
+                                            color: '#d1fae5',
                                             fontSize: 11,
+                                            borderRadius: 6,
                                         }}
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
-                    )}
 
-                    {lastTwo.length === 2 && (
-                        <div className="text-right">
-                            <p className="text-[10px] uppercase tracking-wide text-white/40">7-day trend</p>
-                            <p
-                                className={`font-mono text-sm font-semibold tabular-nums ${diff > 0 ? 'text-red-400' : 'text-green-400'}`}
-                            >
-                                {sign}
-                                {diffFormatted}
-                            </p>
-                        </div>
-                    )}
-                </div>
+                        {lastTwo.length === 2 && (
+                            <div className="text-right">
+                                <p className="text-[10px] uppercase tracking-wide text-emerald-300/60">7-day trend</p>
+                                <p
+                                    className={`flex items-center justify-end gap-1 font-mono text-sm font-semibold tabular-nums ${diffUp ? 'text-rose-300' : 'text-emerald-200'}`}
+                                >
+                                    {diffUp ? (
+                                        <TrendingUp className="h-3 w-3" aria-hidden="true" />
+                                    ) : (
+                                        <TrendingDown className="h-3 w-3" aria-hidden="true" />
+                                    )}
+                                    {diffSign}
+                                    {diffFormatted}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

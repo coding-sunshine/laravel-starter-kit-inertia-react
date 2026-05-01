@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Train } from 'lucide-react';
 
 interface RakePipelineCard {
     rake_id: number;
@@ -19,80 +20,105 @@ interface ActiveRakePipeline {
     dispatched: RakePipelineCard[];
 }
 
+const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
 function RakeCard({ card }: { card: RakePipelineCard }) {
     const hasOverload = card.overloaded_count > 0;
-    const riskFormatted = new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 0,
-    }).format(card.penalty_risk_rs);
 
     return (
         <div
-            className={`rounded-lg border p-3 text-sm transition-colors ${
-                hasOverload ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'
+            className={`rounded-md border p-2.5 text-sm transition-colors ${
+                hasOverload
+                    ? 'border-rose-200 bg-rose-50 dark:border-rose-900/40 dark:bg-rose-950/20'
+                    : 'border-border bg-card hover:border-primary/30'
             }`}
         >
             <div className="flex items-start justify-between gap-2">
-                <div>
-                    <p className="font-mono font-semibold text-gray-900">{card.rake_number}</p>
-                    <p className="text-[11px] text-gray-500">
-                        {card.siding_code} · {card.loading_date ?? '—'}
+                <div className="min-w-0">
+                    <p className="font-mono text-sm font-semibold text-foreground">{card.rake_number}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                        {card.siding_code} · {card.wagon_count} wagons
+                        {card.loading_date ? ` · ${card.loading_date}` : ''}
                     </p>
                 </div>
                 {hasOverload && (
                     <Badge variant="destructive" className="shrink-0 text-[10px]">
-                        {card.overloaded_count} overloaded
+                        {card.overloaded_count} OL
                     </Badge>
                 )}
             </div>
-            <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
-                <span>{card.wagon_count} wagons</span>
-                {hasOverload && (
-                    <span className="font-mono font-semibold tabular-nums text-red-600">{riskFormatted} risk</span>
-                )}
-            </div>
+            {hasOverload && card.penalty_risk_rs > 0 && (
+                <p className="mt-1.5 font-mono text-[11px] font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                    {inr.format(card.penalty_risk_rs)} risk
+                </p>
+            )}
         </div>
     );
 }
 
-const COLUMNS: { key: keyof ActiveRakePipeline; label: string; color: string }[] = [
-    { key: 'loading', label: 'Loading', color: 'text-blue-600' },
-    { key: 'awaiting_clearance', label: 'Awaiting Clearance', color: 'text-amber-600' },
-    { key: 'dispatched', label: 'Dispatched Today', color: 'text-green-600' },
+const COLUMNS: { key: keyof ActiveRakePipeline; label: string; dotClass: string }[] = [
+    { key: 'loading', label: 'Loading', dotClass: 'bg-blue-500' },
+    { key: 'awaiting_clearance', label: 'Awaiting clearance', dotClass: 'bg-amber-500' },
+    { key: 'dispatched', label: 'Dispatched today', dotClass: 'bg-emerald-500' },
 ];
 
+function Column({
+    label,
+    dotClass,
+    cards,
+}: {
+    label: string;
+    dotClass: string;
+    cards: RakePipelineCard[];
+}) {
+    return (
+        <section className="flex min-w-0 flex-col">
+            <header className="mb-2 flex items-center justify-between gap-2 border-b pb-1.5">
+                <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden="true" />
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {label}
+                    </p>
+                </div>
+                <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-foreground">
+                    {cards.length}
+                </span>
+            </header>
+
+            {cards.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-md border border-dashed py-6 text-center">
+                    <Train className="h-4 w-4 text-muted-foreground/40" aria-hidden="true" />
+                    <p className="text-[11px] text-muted-foreground/70">No rakes</p>
+                </div>
+            ) : (
+                <div className="flex max-h-[480px] flex-col gap-1.5 overflow-y-auto pr-1">
+                    {cards.map((card) => (
+                        <RakeCard key={card.rake_id} card={card} />
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+}
+
 export function ActiveRakePipeline({ data }: { data: ActiveRakePipeline }) {
+    const totalActive = data.loading.length + data.awaiting_clearance.length + data.dispatched.length;
+
     return (
         <Card className="shadow-sm">
-            <CardHeader className="pb-2">
-                <CardTitle
-                    className="text-sm font-semibold uppercase tracking-wide"
-                    style={{ color: 'oklch(0.22 0.06 150)' }}
-                >
-                    Active Rake Pipeline
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-emerald-900 dark:text-emerald-300">
+                    <Train className="h-4 w-4" aria-hidden="true" />
+                    Active rake pipeline
                 </CardTitle>
+                <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                    {totalActive} total
+                </span>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {COLUMNS.map((col) => (
-                        <div key={col.key}>
-                            <div className="mb-2 flex items-center justify-between">
-                                <p className={`text-xs font-semibold uppercase tracking-wide ${col.color}`}>
-                                    {col.label}
-                                </p>
-                                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
-                                    {data[col.key].length}
-                                </span>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                {data[col.key].length === 0 ? (
-                                    <p className="text-[11px] italic text-gray-400">No rakes</p>
-                                ) : (
-                                    data[col.key].map((card) => <RakeCard key={card.rake_id} card={card} />)
-                                )}
-                            </div>
-                        </div>
+                        <Column key={col.key} label={col.label} dotClass={col.dotClass} cards={data[col.key]} />
                     ))}
                 </div>
             </CardContent>
