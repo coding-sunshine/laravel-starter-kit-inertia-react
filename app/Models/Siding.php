@@ -29,6 +29,32 @@ final class Siding extends Model
         'is_active' => 'boolean',
     ];
 
+    /**
+     * Resolve a route-bound siding from id, code (e.g. "PKUR"), or case-insensitive name.
+     * Lets links like /sidings/pakur/quick-placement work without forcing the numeric id.
+     */
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        if ($field !== null) {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        if (is_numeric($value)) {
+            return $this->newQuery()->whereKey((int) $value)->first();
+        }
+
+        $needle = mb_strtolower((string) $value);
+
+        return $this->newQuery()
+            ->where(function ($q) use ($needle): void {
+                $q->whereRaw('LOWER(code) = ?', [$needle])
+                    ->orWhereRaw('LOWER(name) = ?', [$needle])
+                    ->orWhereRaw('LOWER(name) LIKE ?', [$needle.' %'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', [$needle.'%']);
+            })
+            ->first();
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
