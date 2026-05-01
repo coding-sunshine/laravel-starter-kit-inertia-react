@@ -274,6 +274,11 @@ final class Rake extends Model
         return $this->hasMany(RakeCharge::class);
     }
 
+    public function reconciliations(): HasMany
+    {
+        return $this->hasMany(PenaltyReconciliation::class);
+    }
+
     public function diverrtDestinations(): HasMany
     {
         return $this->hasMany(DiverrtDestination::class);

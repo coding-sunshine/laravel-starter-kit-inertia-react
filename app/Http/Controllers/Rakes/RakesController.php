@@ -63,6 +63,7 @@ final class RakesController extends Controller
             'appliedPenalties.wagon',
             'rakeCharges.appliedPenalties:id,rake_charge_id,amount',
             'rakeCharges.rrPenaltySnapshots:id,rake_charge_id,amount',
+            'reconciliations',
         ]);
 
         // Keep loader weighment rows in wagon sequence order even when rows were created later.
@@ -258,6 +259,14 @@ final class RakesController extends Controller
             'powerPlants' => $powerPlants,
             'demurrageRemainingMinutes' => $demurrageRemainingMinutes,
             'demurrage_rate_per_mt_hour' => config('rrmcs.demurrage_rate_per_mt_hour', 50),
+            'reconciliations' => $rake->reconciliations->map(static fn ($r): array => [
+                'penalty_code' => $r->penalty_code,
+                'predicted_amount' => (float) $r->predicted_amount,
+                'billed_amount' => (float) ($r->billed_amount ?? 0),
+                'variance' => (float) $r->variance,
+                'variance_pct' => $r->variance_pct !== null ? (float) $r->variance_pct : null,
+                'dispute_candidate' => (bool) $r->dispute_candidate,
+            ])->values()->all(),
         ]);
     }
 
