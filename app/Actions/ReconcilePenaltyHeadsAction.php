@@ -37,11 +37,6 @@ final readonly class ReconcilePenaltyHeadsAction
                     : null;
                 $disputeCandidate = $this->isDisputeCandidate($predicted, $billed);
 
-                $existing = PenaltyReconciliation::query()
-                    ->where('rake_id', $rake->id)
-                    ->where('penalty_code', $code)
-                    ->first();
-
                 $row = PenaltyReconciliation::query()->updateOrCreate(
                     ['rake_id' => $rake->id, 'penalty_code' => $code],
                     [
@@ -54,7 +49,7 @@ final readonly class ReconcilePenaltyHeadsAction
                     ],
                 );
 
-                if ($existing === null) {
+                if ($row->wasRecentlyCreated) {
                     $created[] = $row->id;
                 } else {
                     $updated[] = $row->id;
