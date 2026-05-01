@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Actions\ApplyPloPenaltyAction;
 use App\Actions\ApplyWeighmentPenaltiesAction;
 use App\Actions\UpdateStockLedger;
 use App\Models\Rake;
@@ -24,6 +25,7 @@ final readonly class RakeWeighmentPdfImporter
         private WeighmentPdfImporter $importer,
         private RakeWeighmentXlsxParser $xlsxParser,
         private ApplyWeighmentPenaltiesAction $applyWeighmentPenalties,
+        private ApplyPloPenaltyAction $applyPloPenalty,
         private UpdateStockLedger $updateStockLedger,
     ) {}
 
@@ -355,6 +357,7 @@ final readonly class RakeWeighmentPdfImporter
             }
 
             $this->applyWeighmentPenalties->handle($rake, $weighment);
+            $this->applyPloPenalty->handle($rake, $weighment);
 
             return $weighment->fresh(['rakeWagonWeighments.wagon']);
         });
