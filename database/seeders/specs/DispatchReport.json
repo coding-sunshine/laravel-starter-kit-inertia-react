@@ -3,12 +3,12 @@
     "table": "dispatch_reports",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -123,7 +123,7 @@
             "default": null
         },
         "vehicle_dispatch_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         }

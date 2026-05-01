@@ -1,44 +1,54 @@
 {
-    "model": "Txr",
-    "table": "txrs",
+    "model": "LoadriteDowntimeEvent",
+    "table": "loadrite_downtime_events",
     "fields": {
         "id": {
             "type": "integer",
             "nullable": true,
             "default": null
         },
-        "rake_id": {
+        "siding_id": {
             "type": "integer",
             "nullable": true,
             "default": null
         },
-        "inspection_time": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
-        },
-        "inspection_end_time": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
-        },
-        "status": {
+        "downtime_id": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "remarks": {
+        "start_local_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "end_local_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "duration_minutes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "reason_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "sub_reason_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "equipment_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "raw_payload": {
             "type": "text",
-            "nullable": true,
-            "default": null
-        },
-        "created_by": {
-            "type": "integer",
-            "nullable": true,
-            "default": null
-        },
-        "updated_by": {
-            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -54,31 +64,24 @@
         }
     },
     "relationships": {
-        "rake": {
+        "siding": {
             "type": "belongsTo",
-            "model": "Rake"
-        },
-        "wagonUnfitLogs": {
-            "type": "hasMany",
-            "model": "WagonUnfitLog"
-        },
-        "createdBy": {
-            "type": "belongsTo",
-            "model": "CreatedBy"
-        },
-        "creator": {
-            "type": "belongsTo",
-            "model": "Creator"
-        },
-        "editor": {
-            "type": "belongsTo",
-            "model": "Editor"
-        },
-        "destroyer": {
-            "type": "belongsTo",
-            "model": "Destroyer"
+            "model": "Siding"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "reason_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "sub_reason_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "equipment_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
     "scenarios": []
 }

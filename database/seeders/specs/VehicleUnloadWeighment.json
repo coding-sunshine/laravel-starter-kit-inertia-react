@@ -3,12 +3,12 @@
     "table": "vehicle_unload_weighments",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "vehicle_unload_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -48,7 +48,7 @@
             "default": null
         },
         "raw_payload": {
-            "type": "json",
+            "type": "text",
             "nullable": true,
             "default": null
         },

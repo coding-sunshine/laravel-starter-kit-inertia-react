@@ -3,7 +3,7 @@
     "table": "penalty_types",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
