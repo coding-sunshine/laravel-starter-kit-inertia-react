@@ -455,10 +455,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Reconciliation
     Route::get('reconciliation', [ReconciliationController::class, 'index'])->name('reconciliation.index');
-    Route::get('reconciliation/{rake}', [ReconciliationController::class, 'show'])->name('reconciliation.show');
+    // Static sub-routes MUST come before the {rake} catch-all so they aren't shadowed.
     Route::get('reconciliation/power-plant-receipts', [PowerPlantReceiptController::class, 'index'])->name('reconciliation.power-plant-receipts.index');
     Route::get('reconciliation/power-plant-receipts/create', [PowerPlantReceiptController::class, 'create'])->name('reconciliation.power-plant-receipts.create');
     Route::post('reconciliation/power-plant-receipts', [PowerPlantReceiptController::class, 'store'])->name('reconciliation.power-plant-receipts.store');
+    Route::get('reconciliation/{rake}', [ReconciliationController::class, 'show'])
+        ->whereNumber('rake')
+        ->name('reconciliation.show');
 
     // Reports
     Route::get('reports', [ReportsController::class, 'index'])->name('reports.index');

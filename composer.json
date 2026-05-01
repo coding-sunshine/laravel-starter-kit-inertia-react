@@ -83,7 +83,7 @@
         "spatie/laravel-analytics": "^5.7.1",
         "spatie/laravel-backup": "^10.2.1",
         "spatie/laravel-cookie-consent": "^3.4.0",
-        "spatie/laravel-csp": "^3.23",
+        "spatie/laravel-csp": "^3.23.1",
         "spatie/laravel-data": "^4.22.1",
         "spatie/laravel-honeypot": "^4.7.1",
         "spatie/laravel-medialibrary": "^11.22.0",
@@ -97,7 +97,7 @@
         "spatie/laravel-schemaless-attributes": "^2.6.0",
         "spatie/laravel-settings": "^3.8",
         "spatie/laravel-sitemap": "^8.1",
-        "spatie/laravel-sluggable": "^4.0.1",
+        "spatie/laravel-sluggable": "^4.0.2",
         "spatie/laravel-tags": "^4.11.0",
         "spatie/pdf-to-text": "^1.55",
         "stechstudio/filament-impersonate": "^5.3",
@@ -221,6 +221,11 @@
             "dont-discover": [
                 "eznix86/laravel-ai-memory"
             ]
+        },
+        "patches": {
+            "machour/laravel-data-table": {
+                "Add missing ColumnBuilder import (upstream main branch regression)": "patches/machour-data-table-columnbuilder-import.patch"
+            }
         }
     },
     "config": {

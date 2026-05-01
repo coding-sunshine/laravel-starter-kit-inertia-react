@@ -14,7 +14,6 @@ use App\Models\PowerPlant;
 use App\Models\Rake;
 use App\Models\RakeCharge;
 use App\Models\SectionTimer;
-use App\Models\Siding;
 use App\Models\Wagon;
 use Carbon\Carbon;
 use Closure;
@@ -304,26 +303,13 @@ final class RakesController extends Controller
     }
 
     /**
-     * Show the form for editing a rake
+     * Edit redirect — the dedicated edit page was removed; editing happens
+     * inline on the show page via <EditWagonsDialog />. Redirect any inbound
+     * link to /rakes/{rake} so old bookmarks keep working.
      */
-    public function edit(Request $request, Rake $rake): Response
+    public function edit(Rake $rake): RedirectResponse
     {
-        // $this->authorize('update', $rake);
-
-        $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
-
-        $sidings = Siding::query()
-            ->whereIn('id', $sidingIds)
-            ->orderBy('name')
-            ->get(['id', 'name', 'code']);
-
-        return Inertia::render('rakes/edit', [
-            'rake' => $rake,
-            'sidings' => $sidings,
-        ]);
+        return redirect()->route('rakes.show', $rake);
     }
 
     /**

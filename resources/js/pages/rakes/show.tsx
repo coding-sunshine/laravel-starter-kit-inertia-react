@@ -881,11 +881,10 @@ export default function RakesShow({
         }
     };
 
-    useEffect(() => {
-        if (rake.wagons.length === 0 && (rake.wagon_count ?? 0) > 0) {
-            router.visit(`/rakes/${rake.id}/edit${returnToQuerySuffix}`);
-        }
-    }, [rake.id, rake.wagons.length, rake.wagon_count, returnToQuerySuffix]);
+    // (Removed) auto-redirect to /rakes/{id}/edit when wagon list was empty.
+    // The target Inertia page `pages/rakes/edit.tsx` does not exist; wagon
+    // editing is handled inline via <EditWagonsDialog />. The redirect was
+    // throwing "Page not found: ./pages/rakes/edit.tsx" in the console.
 
     useEffect(() => {
         setWagons(rake.wagons);
