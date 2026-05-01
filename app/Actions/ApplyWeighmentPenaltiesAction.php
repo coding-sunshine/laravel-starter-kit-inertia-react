@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Events\AppliedPenaltyPersisted;
 use App\Jobs\NotifySuperAdmins;
 use App\Models\AppliedPenalty;
 use App\Models\PenaltyType;
@@ -105,6 +106,8 @@ final readonly class ApplyWeighmentPenaltiesAction
                     ->values()
                     ->all(),
             ]);
+
+            AppliedPenaltyPersisted::dispatch($rake, 'weighment');
         });
     }
 
