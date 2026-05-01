@@ -28,11 +28,8 @@ export function AlertFeed({ alerts }: { alerts: Record<string, AlertRecord[]> })
         <Card className="shadow-sm">
             <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                    <CardTitle
-                        className="text-sm font-semibold uppercase tracking-wide"
-                        style={{ color: 'oklch(0.22 0.06 150)' }}
-                    >
-                        Alert Feed
+                    <CardTitle className="text-sm font-semibold text-foreground">
+                        Alert feed
                     </CardTitle>
                     {allAlerts.length > 0 && (
                         <Badge variant="destructive" className="text-[10px]">

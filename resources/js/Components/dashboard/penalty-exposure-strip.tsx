@@ -25,23 +25,23 @@ export function PenaltyExposureStrip({ data }: { data: PenaltySummary }) {
         data.preventable_pct >= 50 ? 'destructive' : data.preventable_pct >= 25 ? 'secondary' : 'outline';
 
     return (
-        <Card className="border-l-4 border-l-emerald-700 bg-gradient-to-br from-emerald-950 to-emerald-900 text-emerald-50 shadow-sm dark:from-emerald-950 dark:to-emerald-900">
+        <Card className="border-l-4 border-l-emerald-600 shadow-sm">
             <CardContent className="flex flex-wrap items-center gap-4 p-3 sm:gap-6 sm:p-4">
                 {/* Headline */}
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-800/60 text-emerald-200 ring-1 ring-emerald-700/50">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900/60">
                         <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                     </div>
                     <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/80">
+                        <p className="text-xs font-medium text-muted-foreground">
                             Today's penalty exposure
                         </p>
                         <p className="font-mono text-xl font-bold tabular-nums sm:text-2xl">
-                            {isZero ? <span className="text-emerald-200">₹0</span> : formatted}
+                            {isZero ? <span className="text-emerald-700 dark:text-emerald-400">₹0</span> : formatted}
                         </p>
                         {isZero && (
-                            <p className="mt-0.5 text-[11px] text-emerald-300/70">
-                                No predicted penalty so far today
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                No predicted penalty so far today.
                             </p>
                         )}
                     </div>
@@ -91,9 +91,9 @@ export function PenaltyExposureStrip({ data }: { data: PenaltySummary }) {
 
                         {lastTwo.length === 2 && (
                             <div className="text-right">
-                                <p className="text-[10px] uppercase tracking-wide text-emerald-300/60">7-day trend</p>
+                                <p className="text-xs text-muted-foreground">7-day trend</p>
                                 <p
-                                    className={`flex items-center justify-end gap-1 font-mono text-sm font-semibold tabular-nums ${diffUp ? 'text-rose-300' : 'text-emerald-200'}`}
+                                    className={`flex items-center justify-end gap-1 font-mono text-sm font-semibold tabular-nums ${diffUp ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}
                                 >
                                     {diffUp ? (
                                         <TrendingUp className="h-3 w-3" aria-hidden="true" />

@@ -28,11 +28,8 @@ export function SidingRiskScoreWidget({ scores }: { scores: Record<number, Sidin
     return (
         <Card className="shadow-sm">
             <CardHeader className="pb-2">
-                <CardTitle
-                    className="text-sm font-semibold uppercase tracking-wide"
-                    style={{ color: 'oklch(0.22 0.06 150)' }}
-                >
-                    Siding Risk Score
+                <CardTitle className="text-sm font-semibold text-foreground">
+                    Siding risk score
                 </CardTitle>
             </CardHeader>
             <CardContent>

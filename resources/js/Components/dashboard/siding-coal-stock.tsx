@@ -18,11 +18,8 @@ export function SidingCoalStock({ stocks }: { stocks: Record<number, SidingStock
     return (
         <Card className="shadow-sm">
             <CardHeader className="pb-2">
-                <CardTitle
-                    className="text-sm font-semibold uppercase tracking-wide"
-                    style={{ color: 'oklch(0.22 0.06 150)' }}
-                >
-                    Siding Coal Stock
+                <CardTitle className="text-sm font-semibold text-foreground">
+                    Siding coal stock
                 </CardTitle>
             </CardHeader>
             <CardContent>

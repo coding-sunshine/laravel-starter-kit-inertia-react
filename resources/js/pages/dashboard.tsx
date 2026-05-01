@@ -4637,11 +4637,11 @@ export default function Dashboard() {
             <div className="-m-4 sm:-m-6 lg:-m-8">
                 <div className="dashboard-page flex h-full flex-1 flex-col overflow-x-auto">
 
-                    {/* ── Dark Header ── */}
-                    <div className="sticky top-0 z-10 flex flex-col shadow-[0_2px_12px_rgba(0,0,0,0.35)]" style={{ background: '#1a1a2e' }}>
+                    {/* ── Header ── */}
+                    <div className="sticky top-0 z-10 flex flex-col border-b bg-background">
                         {/* Title row */}
                         <div className="flex items-center justify-between px-4 py-3 lg:px-6">
-                            <h2 className="text-lg font-bold tracking-tight text-white">
+                            <h2 className="text-lg font-semibold tracking-tight text-foreground">
                                 Management Dashboard
                             </h2>
                             <div className="flex items-center gap-2">
@@ -4649,7 +4649,7 @@ export default function Dashboard() {
                                     <select
                                         value={executiveYesterdayViewMode}
                                         onChange={(e) => setExecutiveYesterdayViewMode(e.target.value as 'table' | 'charts')}
-                                        className="rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-sm text-white shadow-sm"
+                                        className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm text-foreground shadow-sm"
                                     >
                                         <option value="charts">Bar Chart View</option>
                                         <option value="table">Table View</option>
@@ -4658,26 +4658,25 @@ export default function Dashboard() {
                                 {activeSection !== 'executive-overview' && (
                                     <div className="flex items-center gap-2">
                                         {mainDateRangeLabel && (
-                                            <span className="inline-flex items-center rounded-full border border-green-500/50 bg-green-900/30 px-3 py-0.5 text-[11px] font-medium text-green-300">
+                                            <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-400">
                                                 {mainDateRangeLabel} ({periodLabel})
                                             </span>
                                         )}
                                         {hasActiveFilters && !filtersExpanded && (
-                                            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80">
+                                            <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                                                 {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} applied
                                             </span>
                                         )}
                                         <Button
                                             type="button"
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
-                                            className="rounded-lg border border-slate-600 text-white/80 hover:bg-white/10 hover:text-white"
                                             onClick={() => setFiltersExpanded((v) => !v)}
                                         >
                                             <Filter className="size-4 shrink-0" />
                                             <span className="ml-1.5">Filters</span>
                                             {hasActiveFilters && (
-                                                <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold text-white">
+                                                <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-foreground">
                                                     {activeFilterCount > 9 ? '9+' : activeFilterCount}
                                                 </span>
                                             )}
@@ -4686,7 +4685,6 @@ export default function Dashboard() {
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="rounded-lg border border-slate-600 text-white/60 hover:bg-white/10 hover:text-white"
                                             onClick={() => {
                                                 const basePath = dashboard().url.split('?')[0] || dashboard().url;
                                                 router.get(basePath, { section: activeSection }, { preserveState: false, preserveScroll: true });
@@ -4699,10 +4697,10 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Pill nav row */}
-                        <div className="flex flex-wrap gap-2 px-4 pt-2 pb-3 lg:px-6" style={{ background: '#0f0f1e' }}>
+                        {/* Section nav row */}
+                        <div className="flex flex-wrap gap-1 border-t bg-muted/30 px-4 lg:px-6">
                             {visibleSections.length === 0 ? (
-                                <span className="text-xs text-slate-400">No dashboard sections enabled for your role.</span>
+                                <span className="px-1 py-2 text-xs text-muted-foreground">No dashboard sections enabled for your role.</span>
                             ) : (
                                 visibleSections.map((s) => (
                                     <button
@@ -4712,8 +4710,8 @@ export default function Dashboard() {
                                         onClick={() => setActiveSection(s.id)}
                                         className={
                                             s.id === activeSection
-                                                ? 'cursor-pointer rounded-full bg-[#1a1a2e] px-4 py-1.5 text-sm font-semibold text-[#d4af37] shadow-[inset_0_-2px_0_0_#d4af37] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0f0f1e]'
-                                                : 'cursor-pointer rounded-full border border-slate-700 px-4 py-1.5 text-sm text-slate-300 transition-all duration-200 hover:border-slate-400 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0f0f1e]'
+                                                ? 'cursor-pointer border-b-2 border-emerald-700 px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 dark:border-emerald-400'
+                                                : 'cursor-pointer border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700'
                                         }
                                     >
                                         {s.label}
@@ -4724,7 +4722,7 @@ export default function Dashboard() {
 
                         {/* Inline filters bar (non-executive sections) */}
                         {filtersExpanded && sidings.length > 0 && (
-                            <div style={{ background: '#0f0f1e' }} className="px-4 pb-3 lg:px-6">
+                            <div className="border-t bg-muted/30 px-4 pb-3 pt-3 lg:px-6">
                                 <DashboardFiltersBar
                                     sidings={sidings}
                                     filters={filters}

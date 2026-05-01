@@ -76,7 +76,7 @@ function Column({
             <header className="mb-2 flex items-center justify-between gap-2 border-b pb-1.5">
                 <div className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden="true" />
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                         {label}
                     </p>
                 </div>
@@ -107,8 +107,8 @@ export function ActiveRakePipeline({ data }: { data: ActiveRakePipeline }) {
     return (
         <Card className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-emerald-900 dark:text-emerald-300">
-                    <Train className="h-4 w-4" aria-hidden="true" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Train className="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
                     Active rake pipeline
                 </CardTitle>
                 <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">

@@ -20,8 +20,8 @@ export function DispatchSummary({ stocks }: { stocks: Record<number, SidingStock
     return (
         <Card className="shadow-sm">
             <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-emerald-900 dark:text-emerald-300">
-                    <Truck className="h-4 w-4" aria-hidden="true" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Truck className="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
                     Today's dispatch
                 </CardTitle>
             </CardHeader>
@@ -66,7 +66,7 @@ export function DispatchSummary({ stocks }: { stocks: Record<number, SidingStock
 function Stat({ label, value }: { label: string; value: number }) {
     return (
         <div className="rounded-md border bg-card p-3">
-            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">{label}</p>
             <p className="font-mono text-xl font-bold tabular-nums text-foreground">
                 {mt.format(value)}
                 <span className="ml-1 text-[11px] font-normal text-muted-foreground">MT</span>
