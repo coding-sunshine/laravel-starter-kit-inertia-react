@@ -344,6 +344,8 @@ final class AppServiceProvider extends ServiceProvider
             'master-data-loaders-tab-loaders',
             'master-data-loaders-tab-operators',
             'nav-penalty-analytics',
+            'sidings-quick-placement-placed',
+            'sidings-quick-placement-released',
         ]);
     }
 
