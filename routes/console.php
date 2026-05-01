@@ -50,3 +50,17 @@ Schedule::job(new App\Jobs\Billing\GenerateBillingMetrics)->daily()->at('02:00')
 Schedule::job(new App\Jobs\Billing\ExpireCredits)->daily()->at('03:00');
 Schedule::job(new App\Jobs\Billing\ProcessTrialEndingReminders)->daily()->at('04:00');
 Schedule::job(new App\Jobs\Billing\ProcessDunningReminders)->daily()->at('05:00');
+
+// Loadrite: fetch downtime events for all configured sidings into cache table.
+Schedule::command('loadrite:fetch-downtime')
+    ->dailyAt('02:30')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->name('loadrite-fetch-downtime');
+
+// RRMCS: cross-reference Loadrite downtime with DEM reconciliations and flag force-majeure dispute candidates.
+Schedule::command('disputes:stitch-force-majeure --lookback=30')
+    ->dailyAt('03:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->name('disputes-stitch-force-majeure');
