@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-04-30",
+    "lastGenerated": "2026-05-01",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -909,6 +909,60 @@
                 "relatedRoutes": [
                     "dispatch-reports.generate"
                 ]
+            }
+        },
+        "ReconcilePenaltyHeadsAction": {
+            "documented": true,
+            "path": "./ReconcilePenaltyHeadsAction.md",
+            "lastUpdated": "2026-05-01",
+            "relationships": {
+                "usedBy": [
+                    "ReconcilePenaltyHeadsJob",
+                    "ReconcileOnAppliedPenalty",
+                    "ReconcileOnRrImport"
+                ],
+                "usesModels": [
+                    "PenaltyReconciliation",
+                    "AppliedPenalty",
+                    "RrPenaltySnapshot",
+                    "Rake"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "CalculatePloPenaltyAction": {
+            "documented": true,
+            "path": "./CalculatePloPenaltyAction.md",
+            "lastUpdated": "2026-05-01",
+            "relationships": {
+                "usedBy": [
+                    "ApplyPloPenaltyAction"
+                ],
+                "usesModels": [
+                    "Rake",
+                    "RakeWeighment",
+                    "CommodityUtilisationThreshold",
+                    "PenaltyType"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "ApplyPloPenaltyAction": {
+            "documented": true,
+            "path": "./ApplyPloPenaltyAction.md",
+            "lastUpdated": "2026-05-01",
+            "relationships": {
+                "usedBy": [
+                    "RakeWeighmentPdfImporter"
+                ],
+                "usesModels": [
+                    "AppliedPenalty",
+                    "PenaltyType",
+                    "RakeCharge",
+                    "Rake",
+                    "RakeWeighment"
+                ],
+                "relatedRoutes": []
             }
         },
         "ApplyDemurragePenaltyAction": {
@@ -2324,6 +2378,24 @@
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": []
+            }
+        },
+        "QuickPlacementController": {
+            "documented": true,
+            "path": "./QuickPlacementController.md",
+            "lastUpdated": "2026-05-01",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "QuickPlacementRequest"
+                ],
+                "relatedRoutes": [
+                    "sidings.quick-placement.show",
+                    "sidings.quick-placement.store"
+                ],
+                "rendersPages": [
+                    "sidings/quick-placement"
+                ]
             }
         },
         "AuthController": {
@@ -6551,6 +6623,69 @@
                 "relatedRoutes": [
                     "sidings.monitor"
                 ]
+            }
+        },
+        "dashboard/ExecutiveOverview": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "dashboard/LoaderOverloading": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "dashboard/Operations": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "dashboard/PenaltyControl": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "dashboard/PowerPlant": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "dashboard/RakePerformance": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "dashboard/SidingOverview": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
             }
         }
     },

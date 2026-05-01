@@ -250,6 +250,15 @@ function appendRakeEditFormData(data: RakeEditFormData, fd: FormData): void {
     fd.append('remarks', data.remarks);
 }
 
+interface Reconciliation {
+    penalty_code: string;
+    predicted_amount: number;
+    billed_amount: number;
+    variance: number;
+    variance_pct: number | null;
+    dispute_candidate: boolean;
+}
+
 interface Props {
     rake: RakeData;
     powerPlants: Array<{
@@ -259,6 +268,7 @@ interface Props {
     }>;
     demurrageRemainingMinutes: number | null;
     demurrage_rate_per_mt_hour: number;
+    reconciliations: Reconciliation[];
 }
 
 function formatRemaining(m: number): string {
@@ -793,6 +803,7 @@ export default function RakesShow({
     powerPlants,
     demurrageRemainingMinutes,
     demurrage_rate_per_mt_hour,
+    reconciliations,
 }: Props) {
     const page = usePage<{ errors?: { template?: string } }>();
     const returnToQuerySuffix = useMemo((): string => {
@@ -1326,6 +1337,55 @@ export default function RakesShow({
                         </CardHeader>
                     </Card>
                 </div>
+
+                {reconciliations.length > 0 && (
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardTitle className="text-sm font-semibold">
+                                Penalty reconciliation
+                            </CardTitle>
+                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                                Predicted vs billed by head
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="text-left text-muted-foreground">
+                                        <th className="py-1 pr-2">Head</th>
+                                        <th className="py-1 pr-2">Predicted</th>
+                                        <th className="py-1 pr-2">Billed</th>
+                                        <th className="py-1 pr-2">Variance</th>
+                                        <th className="py-1 pr-2">Dispute?</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {reconciliations.map((r) => (
+                                        <tr key={r.penalty_code} className="border-t">
+                                            <td className="py-1 pr-2 font-medium">{r.penalty_code}</td>
+                                            <td className="py-1 pr-2 tabular-nums">₹{r.predicted_amount.toLocaleString('en-IN')}</td>
+                                            <td className="py-1 pr-2 tabular-nums">₹{r.billed_amount.toLocaleString('en-IN')}</td>
+                                            <td
+                                                className={
+                                                    'py-1 pr-2 tabular-nums ' +
+                                                    (r.variance > 0
+                                                        ? 'text-red-600'
+                                                        : r.variance < 0
+                                                          ? 'text-green-600'
+                                                          : '')
+                                                }
+                                            >
+                                                {r.variance >= 0 ? '+' : ''}₹{r.variance.toLocaleString('en-IN')}
+                                                {r.variance_pct !== null && ` (${r.variance_pct}%)`}
+                                            </td>
+                                            <td className="py-1 pr-2">{r.dispute_candidate ? '🚩' : '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Workflow steps (TXR, Loading, Guard, Weighment, etc.) */}
                 <RakeWorkflow

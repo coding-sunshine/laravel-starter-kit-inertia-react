@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Railway;
 
+use App\Events\RrPenaltySnapshotsImported;
 use App\Http\Requests\StoreRrUploadRequest;
 use App\Jobs\NotifySuperAdmins;
 use App\Models\AppliedPenalty;
@@ -359,6 +360,10 @@ final readonly class RrImportService
                         ->all(),
                 ]);
             });
+
+            if ($rake !== null) {
+                DB::afterCommit(fn () => RrPenaltySnapshotsImported::dispatch($rake));
+            }
         }
     }
 

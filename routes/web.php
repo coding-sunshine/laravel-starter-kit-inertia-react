@@ -242,6 +242,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('sidings/{siding}/monitor', [App\Http\Controllers\Sidings\SidingMonitorController::class, 'show'])
         ->name('sidings.monitor');
 
+    // Pakur quick-placement (siding-attached operators tap Placed/Released)
+    Route::get('sidings/{siding}/quick-placement', [App\Http\Controllers\Sidings\QuickPlacementController::class, 'show'])
+        ->name('sidings.quick-placement.show');
+    Route::post('sidings/{siding}/quick-placement', [App\Http\Controllers\Sidings\QuickPlacementController::class, 'store'])
+        ->name('sidings.quick-placement.store');
+
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rake-loader', [RakeLoaderController::class, 'index'])->name('rake-loader.index');
     Route::get('rake-loader/rakes/{rake}/loading', [RakeLoaderController::class, 'loading'])->name('rake-loader.rakes.loading');

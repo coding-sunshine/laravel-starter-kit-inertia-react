@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Imports;
 
+use App\Events\RrPenaltySnapshotsImported;
 use App\Models\PenaltyType;
 use App\Models\Rake;
 use App\Models\RrPenaltySnapshot;
@@ -175,7 +176,11 @@ final class HistoricalRakeImport implements ToCollection
                     'updated_at' => $timestamp,
                 ]);
 
-                $this->createPenalties($rake, $row, $map, $loadingDate);
+                $penaltiesCreated = $this->createPenalties($rake, $row, $map, $loadingDate);
+
+                if ($penaltiesCreated > 0) {
+                    DB::afterCommit(fn () => RrPenaltySnapshotsImported::dispatch($rake));
+                }
 
                 $count++;
 
@@ -291,38 +296,42 @@ final class HistoricalRakeImport implements ToCollection
         return $map;
     }
 
-    private function createPenalties(Rake $rake, $row, $map, $loadingDate = null)
+    private function createPenalties(Rake $rake, $row, $map, $loadingDate = null): int
     {
+        $created = 0;
+
         if (isset($map['O/L CHARGE'])) {
-            $this->createPenalty($rake, 'PLO', $row[$map['O/L CHARGE']] ?? null, $loadingDate);
+            $created += $this->createPenalty($rake, 'PLO', $row[$map['O/L CHARGE']] ?? null, $loadingDate);
         }
 
         if (isset($map['DETENTION CHARGES'])) {
-            $this->createPenalty($rake, 'DEM', $row[$map['DETENTION CHARGES']] ?? null, $loadingDate);
+            $created += $this->createPenalty($rake, 'DEM', $row[$map['DETENTION CHARGES']] ?? null, $loadingDate);
         }
 
         if (isset($map['SHUNTING CHARGES'])) {
-            $this->createPenalty($rake, 'SHUNT', $row[$map['SHUNTING CHARGES']] ?? null, $loadingDate);
+            $created += $this->createPenalty($rake, 'SHUNT', $row[$map['SHUNTING CHARGES']] ?? null, $loadingDate);
         }
 
         if (isset($map['PILOT CHARGES'])) {
-            $this->createPenalty($rake, 'PILOT', $row[$map['PILOT CHARGES']] ?? null, $loadingDate);
+            $created += $this->createPenalty($rake, 'PILOT', $row[$map['PILOT CHARGES']] ?? null, $loadingDate);
         }
+
+        return $created;
     }
 
-    private function createPenalty(Rake $rake, string $code, $amount, $loadingDate = null)
+    private function createPenalty(Rake $rake, string $code, $amount, $loadingDate = null): int
     {
         $amount = $this->cleanNumber($amount);
 
         if (! $amount || $amount <= 0) {
             echo "Penalty {$code} amount is invalid: {$amount}\n";
 
-            return;
+            return 0;
         }
         if (! isset($this->penaltyTypes[$code])) {
             echo "Penalty type {$code} not found\n";
 
-            return;
+            return 0;
         }
 
         RrPenaltySnapshot::query()->create([
@@ -338,6 +347,8 @@ final class HistoricalRakeImport implements ToCollection
         ]);
 
         echo "Penalty {$code} added: {$amount}\n";
+
+        return 1;
     }
 
     private function findHeaderRow(Collection $rows): int

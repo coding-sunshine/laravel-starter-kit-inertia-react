@@ -24,6 +24,7 @@ final class Rake extends Model
         'indent_id',
         'rake_number',
         'rake_serial_number',
+        'commodity_grade',
         'data_source',
         'rake_type',
         'wagon_count',
@@ -272,6 +273,11 @@ final class Rake extends Model
     public function rakeCharges(): HasMany
     {
         return $this->hasMany(RakeCharge::class);
+    }
+
+    public function reconciliations(): HasMany
+    {
+        return $this->hasMany(PenaltyReconciliation::class);
     }
 
     public function diverrtDestinations(): HasMany
