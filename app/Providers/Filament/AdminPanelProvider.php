@@ -9,6 +9,7 @@ use AlizHarb\ActivityLog\ActivityLogPlugin;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\ProductAnalytics;
+use App\Filament\Resources\PenaltyReconciliations\PenaltyReconciliationResource;
 use App\Filament\Resources\Permissions\PermissionResource;
 use App\Filament\Resources\Roles\RoleResource;
 use App\Filament\Resources\Users\UserResource;
@@ -64,6 +65,7 @@ final class AdminPanelProvider extends PanelProvider
                 UserResource::class,
                 RoleResource::class,
                 PermissionResource::class,
+                PenaltyReconciliationResource::class,
             ])
             ->pages([
                 Dashboard::class,
