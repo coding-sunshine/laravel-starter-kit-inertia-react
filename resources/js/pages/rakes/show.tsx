@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { RakeWorkflow } from '@/components/rakes/workflow/RakeWorkflow';
 import { WagonOverviewDialog } from '@/components/rakes/WagonOverviewDialog';
 import { EditWagonsDialog } from '@/components/rakes/EditWagonsDialog';
+import { RakeTimelineChip } from '@/components/rake/rake-timeline-chip';
 
 interface Siding {
     id: number;
@@ -152,6 +153,11 @@ interface RakeData {
     wagon_count: number | null;
     state: string;
     placement_time: string | null;
+    loading_start_time: string | null;
+    loading_end_time: string | null;
+    weighment_end_time: string | null;
+    drawn_out: string | null;
+    rr_actual_date: string | null;
     dispatch_time: string | null;
     rr_expected_date?: string | null;
     remarks?: string | null;
@@ -976,6 +982,19 @@ export default function RakesShow({
                                 ? `${rake.siding.name} (${rake.siding.code})`
                                 : 'Railway rake detail'}
                         </p>
+                        <div className="mt-3">
+                            <RakeTimelineChip
+                                rake={{
+                                    placement_time: rake.placement_time,
+                                    loading_start_time: rake.loading_start_time,
+                                    loading_end_time: rake.loading_end_time,
+                                    weighment_end_time: rake.weighment_end_time,
+                                    drawn_out: rake.drawn_out,
+                                    rr_actual_date: rake.rr_actual_date,
+                                }}
+                                size="detailed"
+                            />
+                        </div>
                     </div>
                     <div className="flex gap-2">
                         <WagonOverviewDialog
