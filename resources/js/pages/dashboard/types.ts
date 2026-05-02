@@ -80,7 +80,10 @@ export interface RakePerformanceItem {
     }>;
 }
 
-export type RakePerformanceSummaryItem = Omit<RakePerformanceItem, 'loading_minutes' | 'wagon_overloads'> & {
+export type RakePerformanceSummaryItem = Omit<
+    RakePerformanceItem,
+    'loading_minutes' | 'wagon_overloads'
+> & {
     siding_id: number;
 };
 
@@ -192,56 +195,108 @@ export interface ExecutiveTimelineSeries {
     fyWise: ExecutiveTimelineValue;
 }
 
-export type ExecutiveChartPeriodKey = 'yesterday' | 'today' | 'week' | 'month' | 'fy';
+export type ExecutiveChartPeriodKey =
+    | 'yesterday'
+    | 'today'
+    | 'week'
+    | 'month'
+    | 'fy';
 
 export interface ExecutiveYesterdayData {
     anchorDate: string;
     fyLabel: string;
-    periods: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { from: string; to: string }>;
+    periods: Record<
+        'yesterday' | 'today' | 'week' | 'month' | 'fy',
+        { from: string; to: string }
+    >;
     roadDispatch: {
-        totals: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { trips: number; qty: number }>;
+        totals: Record<
+            'yesterday' | 'today' | 'week' | 'month' | 'fy',
+            { trips: number; qty: number }
+        >;
         bySiding: Array<{
             sidingId: number;
             sidingName: string;
-            totals: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { trips: number; qty: number }>;
+            totals: Record<
+                'yesterday' | 'today' | 'week' | 'month' | 'fy',
+                { trips: number; qty: number }
+            >;
         }>;
     };
     railDispatch: {
-        totals: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { rakes: number; qty: number }>;
+        totals: Record<
+            'yesterday' | 'today' | 'week' | 'month' | 'fy',
+            { rakes: number; qty: number }
+        >;
         bySiding: Array<{
             sidingId: number;
             sidingName: string;
-            totals: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { rakes: number; qty: number }>;
+            totals: Record<
+                'yesterday' | 'today' | 'week' | 'month' | 'fy',
+                { rakes: number; qty: number }
+            >;
         }>;
     };
-    obProduction: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { trips: number; qty: number }>;
-    coalProduction: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { trips: number; qty: number }>;
+    obProduction: Record<
+        'yesterday' | 'today' | 'week' | 'month' | 'fy',
+        { trips: number; qty: number }
+    >;
+    coalProduction: Record<
+        'yesterday' | 'today' | 'week' | 'month' | 'fy',
+        { trips: number; qty: number }
+    >;
     customRanges: {
         roadDispatch: {
             from: string;
             to: string;
             totals: { trips: number; qty: number };
-            bySiding: Array<{ sidingId: number; sidingName: string; trips: number; qty: number }>;
-            summary: { granularity: string; columns: string[]; data: Record<string, { trips: number; qty: number }> };
+            bySiding: Array<{
+                sidingId: number;
+                sidingName: string;
+                trips: number;
+                qty: number;
+            }>;
+            summary: {
+                granularity: string;
+                columns: string[];
+                data: Record<string, { trips: number; qty: number }>;
+            };
         };
         railDispatch: {
             from: string;
             to: string;
             totals: { rakes: number; qty: number };
-            bySiding: Array<{ sidingId: number; sidingName: string; rakes: number; qty: number }>;
-            summary: { granularity: string; columns: string[]; data: Record<string, { rakes: number; qty: number }> };
+            bySiding: Array<{
+                sidingId: number;
+                sidingName: string;
+                rakes: number;
+                qty: number;
+            }>;
+            summary: {
+                granularity: string;
+                columns: string[];
+                data: Record<string, { rakes: number; qty: number }>;
+            };
         };
         obProduction: {
             from: string;
             to: string;
             totals: { trips: number; qty: number };
-            summary: { granularity: string; columns: string[]; data: Record<string, { trips: number; qty: number }> };
+            summary: {
+                granularity: string;
+                columns: string[];
+                data: Record<string, { trips: number; qty: number }>;
+            };
         };
         coalProduction: {
             from: string;
             to: string;
             totals: { trips: number; qty: number };
-            summary: { granularity: string; columns: string[]; data: Record<string, { trips: number; qty: number }> };
+            summary: {
+                granularity: string;
+                columns: string[];
+                data: Record<string, { trips: number; qty: number }>;
+            };
         };
     };
     fySummary: {
@@ -260,8 +315,14 @@ export interface ExecutiveYesterdayData {
             dispatch: { roadQty: number; railQty: number };
         }>;
     };
-    penaltyBySidingByPeriod?: Record<'yesterday' | 'today' | 'month' | 'fy', PenaltyBySidingPoint[]>;
-    powerPlantDispatchByPeriod?: Record<'yesterday' | 'today' | 'month' | 'fy', PowerPlantDispatchItem[]>;
+    penaltyBySidingByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy',
+        PenaltyBySidingPoint[]
+    >;
+    powerPlantDispatchByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy',
+        PowerPlantDispatchItem[]
+    >;
 }
 
 export interface DashboardAlert {
@@ -328,7 +389,11 @@ export interface CoalTransportReportData {
     date: string;
     sidings: Array<{ id: number; name: string }>;
     rows: CoalTransportReportRow[];
-    totals: { siding_metrics: CoalTransportSidingMetric[]; total_trips: number; total_qty: number };
+    totals: {
+        siding_metrics: CoalTransportSidingMetric[];
+        total_trips: number;
+        total_qty: number;
+    };
 }
 
 export interface TruckReceiptHour {
@@ -358,6 +423,14 @@ export interface PenaltySummary {
     preventable_pct: number;
 }
 
+export type RakeLifecycleStage =
+    | 'awaiting_placement'
+    | 'loading'
+    | 'awaiting_dispatch'
+    | 'dispatched'
+    | 'in_transit'
+    | 'delivered';
+
 export interface RakePipelineCard {
     rake_id: number;
     rake_number: string;
@@ -367,12 +440,15 @@ export interface RakePipelineCard {
     overloaded_count: number;
     penalty_risk_rs: number;
     state: string;
+    stage: RakeLifecycleStage;
+    stage_label: string;
     loading_date: string | null;
 }
 
 export interface ActiveRakePipelineData {
+    awaiting_placement: RakePipelineCard[];
     loading: RakePipelineCard[];
-    awaiting_clearance: RakePipelineCard[];
+    awaiting_dispatch: RakePipelineCard[];
     dispatched: RakePipelineCard[];
 }
 
@@ -407,4 +483,3 @@ export interface OperatorRake {
     status: string;
     loading_date: string | null;
 }
-

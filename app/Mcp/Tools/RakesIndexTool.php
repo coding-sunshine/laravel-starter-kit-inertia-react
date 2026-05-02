@@ -61,7 +61,7 @@ final class RakesIndexTool extends Tool
                 'state' => $r->state,
                 'siding' => $r->siding ? ['id' => $r->siding->id, 'name' => $r->siding->name, 'code' => $r->siding->code] : null,
                 'loading_start_time' => $r->loading_start_time?->toIso8601String(),
-                'free_time_minutes' => $r->free_time_minutes,
+                'loading_free_minutes' => $r->loading_free_minutes,
             ])->all(),
             'total' => $rakes->total(),
             'per_page' => $rakes->perPage(),

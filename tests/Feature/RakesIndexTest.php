@@ -6,11 +6,10 @@ use App\Models\Organization;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\User;
-use Database\Seeders\Essential\RakeManagementRolePermissionSeeder;
-use Spatie\Permission\Models\Role;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 
 beforeEach(function (): void {
-    $this->seed(RakeManagementRolePermissionSeeder::class);
+    $this->seed(RolesAndPermissionsSeeder::class);
 });
 
 test('unauthenticated user cannot access rakes index', function (): void {
@@ -32,7 +31,8 @@ test('authenticated user with sidings can access rakes index without ambiguous c
     $user = User::factory()->withoutTwoFactor()->create([
         'onboarding_completed' => true,
     ]);
-    $user->assignRole('siding_operator');
+    $user->assignRole('admin');
+    $user->givePermissionTo('sections.rakes.view');
     $user->sidings()->attach($siding->id, ['is_primary' => true]);
 
     Rake::query()->create([
@@ -53,8 +53,6 @@ test('authenticated user with sidings can access rakes index without ambiguous c
 });
 
 test('super admin sees all rakes', function (): void {
-    Role::query()->firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
-
     $user = User::factory()->withoutTwoFactor()->create([
         'onboarding_completed' => true,
     ]);
@@ -75,12 +73,14 @@ test('super admin sees all rakes', function (): void {
         'rake_number' => 'SA-001',
         'state' => 'pending',
         'wagon_count' => 10,
+        'loading_date' => now()->toDateString(),
     ]);
     Rake::query()->create([
         'siding_id' => $siding->id,
         'rake_number' => 'SA-002',
         'state' => 'loading',
         'wagon_count' => 12,
+        'loading_date' => now()->toDateString(),
     ]);
 
     $this->actingAs($user)

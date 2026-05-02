@@ -88,12 +88,12 @@ final class ChatController extends Controller
             ->whereIn('siding_id', $sidingIds)
             ->where('state', 'loading')
             ->whereNotNull('placement_time')
-            ->whereNotNull('free_time_minutes')
+            ->whereNotNull('loading_free_minutes')
             ->get();
 
         $warnings = [];
         foreach ($rakes as $rake) {
-            $end = $rake->placement_time->copy()->addMinutes((int) $rake->free_time_minutes);
+            $end = $rake->placement_time->copy()->addMinutes((int) $rake->loading_free_minutes);
             $remaining = (int) now()->diffInMinutes($end, false);
 
             if ($remaining <= 30) {

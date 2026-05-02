@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\RakeLifecycleStage;
 use App\Support\Rakes\RakeLoaderWagonNumber;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -155,6 +156,39 @@ final class Rake extends Model
     public function rrPredictions(): HasMany
     {
         return $this->hasMany(RrPrediction::class);
+    }
+
+    /**
+     * Operational pipeline stage derived from process timestamps, with a fallback
+     * mapping for legacy `state` strings that pre-date timestamp instrumentation.
+     *
+     * Timestamps are the source of truth; the persisted `state` column carries
+     * values from two competing vocabularies and is unreliable for live ops.
+     * See ADR: docs/architecture/ADRs/0001-canonical-rake-state.md.
+     */
+    public function pipelineStage(): RakeLifecycleStage
+    {
+        if ($this->dispatch_time !== null) {
+            if ($this->rr_actual_date !== null) {
+                return RakeLifecycleStage::Delivered;
+            }
+
+            return RakeLifecycleStage::Dispatched;
+        }
+
+        if ($this->loading_end_time !== null) {
+            return RakeLifecycleStage::AwaitingDispatch;
+        }
+
+        if ($this->loading_start_time !== null) {
+            return RakeLifecycleStage::Loading;
+        }
+
+        if ($this->placement_time !== null) {
+            return RakeLifecycleStage::AwaitingPlacement;
+        }
+
+        return $this->stageFromLegacyState();
     }
 
     /**
@@ -310,6 +344,25 @@ final class Rake extends Model
 
             return route('railway-receipts.pdf', $doc);
         });
+    }
+
+    /**
+     * Best-effort mapping for rakes with no process timestamps. Covers both the
+     * lifecycle vocabulary (pending → loading → staged → departed → in_transit →
+     * delivered) and the workflow-step vocabulary (loading_completed, closed,
+     * completed, etc.) that exist in legacy data.
+     */
+    private function stageFromLegacyState(): RakeLifecycleStage
+    {
+        return match ($this->state) {
+            'completed', 'closed', 'delivered' => RakeLifecycleStage::Delivered,
+            'in_transit' => RakeLifecycleStage::InTransit,
+            'departed', 'dispatched' => RakeLifecycleStage::Dispatched,
+            'staged', 'loading_completed', 'ready_for_dispatch',
+            'guard_approved', 'weighment_completed', 'rr_generated' => RakeLifecycleStage::AwaitingDispatch,
+            'loading' => RakeLifecycleStage::Loading,
+            default => RakeLifecycleStage::AwaitingPlacement,
+        };
     }
 
     private function rakeHasWeighmentsButNoWeighmentWagonLines(): bool

@@ -2,6 +2,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Train } from 'lucide-react';
 
+type LifecycleStage =
+    | 'awaiting_placement'
+    | 'loading'
+    | 'awaiting_dispatch'
+    | 'dispatched';
+
 interface RakePipelineCard {
     rake_id: number;
     rake_number: string;
@@ -11,16 +17,23 @@ interface RakePipelineCard {
     overloaded_count: number;
     penalty_risk_rs: number;
     state: string;
+    stage: LifecycleStage;
+    stage_label: string;
     loading_date: string | null;
 }
 
 interface ActiveRakePipeline {
+    awaiting_placement: RakePipelineCard[];
     loading: RakePipelineCard[];
-    awaiting_clearance: RakePipelineCard[];
+    awaiting_dispatch: RakePipelineCard[];
     dispatched: RakePipelineCard[];
 }
 
-const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const inr = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+});
 
 function RakeCard({ card }: { card: RakePipelineCard }) {
     const hasOverload = card.overloaded_count > 0;
@@ -35,20 +48,25 @@ function RakeCard({ card }: { card: RakePipelineCard }) {
         >
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                    <p className="font-mono text-sm font-semibold text-foreground">{card.rake_number}</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">
+                        {card.rake_number}
+                    </p>
                     <p className="truncate text-[11px] text-muted-foreground">
                         {card.siding_code} · {card.wagon_count} wagons
                         {card.loading_date ? ` · ${card.loading_date}` : ''}
                     </p>
                 </div>
                 {hasOverload && (
-                    <Badge variant="destructive" className="shrink-0 text-[10px]">
+                    <Badge
+                        variant="destructive"
+                        className="shrink-0 text-[10px]"
+                    >
                         {card.overloaded_count} OL
                     </Badge>
                 )}
             </div>
             {hasOverload && card.penalty_risk_rs > 0 && (
-                <p className="mt-1.5 font-mono text-[11px] font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                <p className="mt-1.5 font-mono text-[11px] font-semibold text-rose-600 tabular-nums dark:text-rose-400">
                     {inr.format(card.penalty_risk_rs)} risk
                 </p>
             )}
@@ -56,39 +74,80 @@ function RakeCard({ card }: { card: RakePipelineCard }) {
     );
 }
 
-const COLUMNS: { key: keyof ActiveRakePipeline; label: string; dotClass: string }[] = [
-    { key: 'loading', label: 'Loading', dotClass: 'bg-blue-500' },
-    { key: 'awaiting_clearance', label: 'Awaiting clearance', dotClass: 'bg-amber-500' },
-    { key: 'dispatched', label: 'Dispatched today', dotClass: 'bg-emerald-500' },
+const COLUMNS: {
+    key: keyof ActiveRakePipeline;
+    label: string;
+    dotClass: string;
+    description: string;
+}[] = [
+    {
+        key: 'awaiting_placement',
+        label: 'Awaiting placement',
+        dotClass: 'bg-slate-400',
+        description: 'Indented · not yet at siding',
+    },
+    {
+        key: 'loading',
+        label: 'Loading',
+        dotClass: 'bg-blue-500',
+        description: 'Loading in progress',
+    },
+    {
+        key: 'awaiting_dispatch',
+        label: 'Awaiting dispatch',
+        dotClass: 'bg-amber-500',
+        description: 'Loaded · awaiting clearance',
+    },
+    {
+        key: 'dispatched',
+        label: 'Dispatched today',
+        dotClass: 'bg-emerald-500',
+        description: 'Departed siding today',
+    },
 ];
 
 function Column({
     label,
     dotClass,
+    description,
     cards,
 }: {
     label: string;
     dotClass: string;
+    description: string;
     cards: RakePipelineCard[];
 }) {
     return (
         <section className="flex min-w-0 flex-col">
             <header className="mb-2 flex items-center justify-between gap-2 border-b pb-1.5">
-                <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden="true" />
-                    <p className="text-xs font-medium text-muted-foreground">
-                        {label}
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span
+                            className={`h-2 w-2 rounded-full ${dotClass}`}
+                            aria-hidden="true"
+                        />
+                        <p className="text-xs font-medium text-foreground">
+                            {label}
+                        </p>
+                    </div>
+                    <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                        {description}
                     </p>
                 </div>
-                <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-foreground">
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] font-semibold text-foreground tabular-nums">
                     {cards.length}
                 </span>
             </header>
 
             {cards.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-md border border-dashed py-6 text-center">
-                    <Train className="h-4 w-4 text-muted-foreground/40" aria-hidden="true" />
-                    <p className="text-[11px] text-muted-foreground/70">No rakes</p>
+                    <Train
+                        className="h-4 w-4 text-muted-foreground/40"
+                        aria-hidden="true"
+                    />
+                    <p className="text-[11px] text-muted-foreground/70">
+                        No rakes
+                    </p>
                 </div>
             ) : (
                 <div className="flex max-h-[480px] flex-col gap-1.5 overflow-y-auto pr-1">
@@ -102,23 +161,36 @@ function Column({
 }
 
 export function ActiveRakePipeline({ data }: { data: ActiveRakePipeline }) {
-    const totalActive = data.loading.length + data.awaiting_clearance.length + data.dispatched.length;
+    const totalActive =
+        data.awaiting_placement.length +
+        data.loading.length +
+        data.awaiting_dispatch.length +
+        data.dispatched.length;
 
     return (
         <Card className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Train className="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
+                    <Train
+                        className="h-4 w-4 text-emerald-700 dark:text-emerald-400"
+                        aria-hidden="true"
+                    />
                     Active rake pipeline
                 </CardTitle>
-                <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] font-semibold text-foreground tabular-nums">
                     {totalActive} total
                 </span>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {COLUMNS.map((col) => (
-                        <Column key={col.key} label={col.label} dotClass={col.dotClass} cards={data[col.key]} />
+                        <Column
+                            key={col.key}
+                            label={col.label}
+                            dotClass={col.dotClass}
+                            description={col.description}
+                            cards={data[col.key]}
+                        />
                     ))}
                 </div>
             </CardContent>

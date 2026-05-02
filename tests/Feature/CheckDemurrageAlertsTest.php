@@ -7,12 +7,12 @@ use App\Models\Alert;
 use App\Models\Organization;
 use App\Models\Rake;
 use App\Models\Siding;
-use Database\Seeders\Essential\RakeManagementRolePermissionSeeder;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 
 beforeEach(function (): void {
-    $this->seed(RakeManagementRolePermissionSeeder::class);
+    $this->seed(RolesAndPermissionsSeeder::class);
 
     $org = Organization::factory()->create();
     $this->siding = Siding::query()->create([
@@ -33,8 +33,8 @@ test('fires event when rake crosses 60 minute threshold', function (): void {
         'rake_number' => 'DEM-001',
         'state' => 'loading',
         'wagon_count' => 10,
-        'loading_start_time' => now()->subMinutes(130),
-        'free_time_minutes' => 180,
+        'placement_time' => now()->subMinutes(130),
+        'loading_free_minutes' => 180,
         'loaded_weight_mt' => 3500,
     ]);
 
@@ -51,8 +51,8 @@ test('fires event when rake crosses 0 minute threshold (free time exceeded)', fu
         'rake_number' => 'DEM-002',
         'state' => 'loading',
         'wagon_count' => 10,
-        'loading_start_time' => now()->subMinutes(200),
-        'free_time_minutes' => 180,
+        'placement_time' => now()->subMinutes(200),
+        'loading_free_minutes' => 180,
         'loaded_weight_mt' => 3500,
     ]);
 
@@ -71,8 +71,8 @@ test('does not fire event for rakes with plenty of free time remaining', functio
         'rake_number' => 'DEM-003',
         'state' => 'loading',
         'wagon_count' => 10,
-        'loading_start_time' => now()->subMinutes(10),
-        'free_time_minutes' => 180,
+        'placement_time' => now()->subMinutes(10),
+        'loading_free_minutes' => 180,
         'loaded_weight_mt' => 3500,
     ]);
 
@@ -89,8 +89,8 @@ test('does not fire duplicate event within cache TTL', function (): void {
         'rake_number' => 'DEM-004',
         'state' => 'loading',
         'wagon_count' => 10,
-        'loading_start_time' => now()->subMinutes(130),
-        'free_time_minutes' => 180,
+        'placement_time' => now()->subMinutes(130),
+        'loading_free_minutes' => 180,
         'loaded_weight_mt' => 3500,
     ]);
 
@@ -110,8 +110,8 @@ test('ignores rakes not in loading state', function (): void {
         'rake_number' => 'DEM-005',
         'state' => 'dispatched',
         'wagon_count' => 10,
-        'loading_start_time' => now()->subMinutes(200),
-        'free_time_minutes' => 180,
+        'placement_time' => now()->subMinutes(200),
+        'loading_free_minutes' => 180,
         'loaded_weight_mt' => 3500,
     ]);
 
@@ -128,14 +128,14 @@ test('syncs in-app alerts via SyncDemurrageAlertsAction', function (): void {
         'rake_number' => 'DEM-006',
         'state' => 'loading',
         'wagon_count' => 10,
-        'loading_start_time' => now()->subMinutes(200),
-        'free_time_minutes' => 180,
+        'placement_time' => now()->subMinutes(200),
+        'loading_free_minutes' => 180,
         'loaded_weight_mt' => 3500,
     ]);
 
     $this->artisan('rrmcs:check-demurrage')->assertSuccessful();
 
-    expect(Alert::query()->where('rake_id', '!=')->count())->toBeGreaterThanOrEqual(1);
+    expect(Alert::query()->whereNotNull('rake_id')->count())->toBeGreaterThanOrEqual(1);
 });
 
 test('fires multiple threshold events for a single deeply overdue rake', function (): void {
@@ -146,8 +146,8 @@ test('fires multiple threshold events for a single deeply overdue rake', functio
         'rake_number' => 'DEM-007',
         'state' => 'loading',
         'wagon_count' => 10,
-        'loading_start_time' => now()->subMinutes(200),
-        'free_time_minutes' => 180,
+        'placement_time' => now()->subMinutes(200),
+        'loading_free_minutes' => 180,
         'loaded_weight_mt' => 3500,
     ]);
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Dashboard;
 
 use App\DataTables\RakeDataTable;
+use App\Enums\RakeLifecycleStage;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\AppliedPenalty;
@@ -4061,23 +4062,48 @@ final class ExecutiveDashboardController extends Controller
 
     private function buildActiveRakePipeline(array $sidingIds): array
     {
+        $empty = [
+            'awaiting_placement' => [],
+            'loading' => [],
+            'awaiting_dispatch' => [],
+            'dispatched' => [],
+        ];
+
         try {
+            $today = Carbon::today();
+
             $rakes = Rake::whereIn('siding_id', $sidingIds)
                 ->with(['siding:id,name,code', 'wagonLoadings' => fn ($q) => $q->with('wagon:id,pcc_weight_mt')])
-                ->where(fn ($q) => $q
-                    ->whereNotIn('state', ['dispatched', 'completed', 'cancelled'])
-                    ->orWhere(fn ($q2) => $q2
-                        ->whereIn('siding_id', $sidingIds)
-                        ->where('state', 'dispatched')
-                        ->whereDate('dispatch_time', Carbon::today()))
-                )
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('dispatch_time')
+                        ->orWhereDate('dispatch_time', $today);
+                })
+                ->where(function ($q) {
+                    $q->whereNull('state')
+                        ->orWhereNotIn('state', ['cancelled']);
+                })
+                ->orderByDesc('placement_time')
                 ->orderByDesc('loading_date')
                 ->limit(50)
                 ->get();
 
-            $pipeline = ['loading' => [], 'awaiting_clearance' => [], 'dispatched' => []];
+            $pipeline = $empty;
 
             foreach ($rakes as $rake) {
+                $stage = $rake->pipelineStage();
+
+                $bucket = match ($stage) {
+                    RakeLifecycleStage::AwaitingPlacement => 'awaiting_placement',
+                    RakeLifecycleStage::Loading => 'loading',
+                    RakeLifecycleStage::AwaitingDispatch => 'awaiting_dispatch',
+                    RakeLifecycleStage::Dispatched => 'dispatched',
+                    default => null,
+                };
+
+                if ($bucket === null) {
+                    continue;
+                }
+
                 $overloadedCount = 0;
                 $penaltyRiskRs = 0.0;
 
@@ -4091,7 +4117,7 @@ final class ExecutiveDashboardController extends Controller
                     }
                 }
 
-                $card = [
+                $pipeline[$bucket][] = [
                     'rake_id' => $rake->id,
                     'rake_number' => $rake->rake_number,
                     'siding_name' => $rake->siding?->name ?? '—',
@@ -4100,22 +4126,15 @@ final class ExecutiveDashboardController extends Controller
                     'overloaded_count' => $overloadedCount,
                     'penalty_risk_rs' => $penaltyRiskRs,
                     'state' => $rake->state,
+                    'stage' => $stage->value,
+                    'stage_label' => $stage->label(),
                     'loading_date' => $rake->loading_date?->toDateString(),
                 ];
-
-                $state = (string) $rake->state;
-                $bucket = match (true) {
-                    str_contains($state, 'dispatch') => 'dispatched',
-                    str_contains($state, 'clearance') || str_contains($state, 'await') => 'awaiting_clearance',
-                    default => 'loading',
-                };
-
-                $pipeline[$bucket][] = $card;
             }
 
             return $pipeline;
         } catch (Throwable) {
-            return ['loading' => [], 'awaiting_clearance' => [], 'dispatched' => []];
+            return $empty;
         }
     }
 

@@ -7,10 +7,10 @@ use App\Models\Penalty;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\User;
-use Database\Seeders\Essential\RakeManagementRolePermissionSeeder;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 
 beforeEach(function (): void {
-    $this->seed(RakeManagementRolePermissionSeeder::class);
+    $this->seed(RolesAndPermissionsSeeder::class);
 });
 
 test('unauthenticated user cannot access penalties index', function (): void {
@@ -32,7 +32,7 @@ test('authenticated user with sidings sees penalties index with chart data', fun
     $user = User::factory()->withoutTwoFactor()->create([
         'onboarding_completed' => true,
     ]);
-    $user->assignRole('siding_operator');
+    $user->assignRole('super-admin');
     $user->sidings()->attach($siding->id, ['is_primary' => true]);
 
     $rake = Rake::query()->create([
