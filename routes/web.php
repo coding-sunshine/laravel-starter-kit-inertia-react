@@ -191,6 +191,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
 
     Route::get('dashboard', App\Http\Controllers\Dashboard\ExecutiveDashboardController::class)->name('dashboard');
+
+    Route::get('control-room', [App\Http\Controllers\LiveMonitorController::class, 'index'])->name('control-room.index');
+    Route::get('control-room/{rake}', [App\Http\Controllers\LiveMonitorController::class, 'show'])->name('control-room.show');
     Route::get('dashboard/executive-yesterday-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'executiveYesterdayData'])
         ->name('dashboard.executive-yesterday-data');
     Route::get('dashboard/rake-performance/rakes', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceList'])

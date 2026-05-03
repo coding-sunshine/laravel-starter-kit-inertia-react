@@ -12,8 +12,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { analytics as penaltiesAnalytics } from '@/routes/penalties';
 import { dashboard } from '@/routes';
+import { analytics as penaltiesAnalytics } from '@/routes/penalties';
 import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import {
@@ -28,6 +28,7 @@ import {
     MapPin,
     Mountain,
     Package,
+    Radio,
     Route,
     Scale,
     Settings,
@@ -49,6 +50,13 @@ const platformNavItems: NavItem[] = [
         icon: LayoutGrid,
         permission: 'sections.dashboard.view',
         dataPan: 'nav-dashboard',
+    },
+    {
+        title: 'Control Room',
+        href: '/control-room',
+        icon: Radio,
+        permission: 'sections.live_monitor.view',
+        dataPan: 'nav-control-room',
     },
     {
         title: 'Settings',
@@ -383,8 +391,9 @@ export function AppSidebar() {
         const settingsItem = platformNavItems.find(
             (i) => i.title === 'Settings' && i.collapsible,
         );
-        const visibleSettingsSubItems =
-            settingsItem?.subItems ? settingsItem.subItems.filter(canShow) : [];
+        const visibleSettingsSubItems = settingsItem?.subItems
+            ? settingsItem.subItems.filter(canShow)
+            : [];
         const settingsNavItem: NavItem | null =
             visibleSettingsSubItems.length > 0 && settingsItem
                 ? { ...settingsItem, subItems: visibleSettingsSubItems }
@@ -395,33 +404,40 @@ export function AppSidebar() {
             platformNavItems.find((i) => i.title === title) ?? null;
 
         // --- Group 1: Overview ---
-        const overviewItems: NavItem[] = visible([
-            byTitle('Dashboard'),
-        ].filter(Boolean) as NavItem[]);
+        const overviewItems: NavItem[] = visible(
+            [byTitle('Dashboard'), byTitle('Control Room')].filter(
+                Boolean,
+            ) as NavItem[],
+        );
 
         // --- Group 2: Loading Operations ---
-        const loadingItems: NavItem[] = visible([
-            byTitle('Rake Loader'),
-            byTitle('Rake Progress'),
-            byTitle('Rake Weighments'),
-            byTitle('Railway Siding Record Data'),
-            byTitle('Railway Siding Empty Weighment'),
-            byTitle('Mines Dispatch Data'),
-        ].filter(Boolean) as NavItem[]);
+        const loadingItems: NavItem[] = visible(
+            [
+                byTitle('Rake Loader'),
+                byTitle('Rake Progress'),
+                byTitle('Rake Weighments'),
+                byTitle('Railway Siding Record Data'),
+                byTitle('Railway Siding Empty Weighment'),
+                byTitle('Mines Dispatch Data'),
+            ].filter(Boolean) as NavItem[],
+        );
 
         // --- Group 3: Finance & Compliance ---
-        const financeItems: NavItem[] = visible([
-            byTitle('Railway Receipts'),
-            byTitle('Indent'),
-            byTitle('E-Demand'),
-        ].filter(Boolean) as NavItem[]);
+        const financeItems: NavItem[] = visible(
+            [
+                byTitle('Railway Receipts'),
+                byTitle('Indent'),
+                byTitle('E-Demand'),
+            ].filter(Boolean) as NavItem[],
+        );
 
         // --- Group 4: Analytics ---
         const historyItem = platformNavItems.find(
             (i) => i.title === 'Historic' && i.collapsible,
         );
-        const visibleHistorySubItems =
-            historyItem?.subItems ? historyItem.subItems.filter(canShow) : [];
+        const visibleHistorySubItems = historyItem?.subItems
+            ? historyItem.subItems.filter(canShow)
+            : [];
         const historyNavItem: NavItem | null =
             visibleHistorySubItems.length > 0 && historyItem
                 ? { ...historyItem, subItems: visibleHistorySubItems }
@@ -429,11 +445,15 @@ export function AppSidebar() {
 
         const analyticsItems: NavItem[] = [
             ...(historyNavItem ? [historyNavItem] : []),
-            ...visible([byTitle('Penalty Analytics')].filter(Boolean) as NavItem[]),
+            ...visible(
+                [byTitle('Penalty Analytics')].filter(Boolean) as NavItem[],
+            ),
         ];
 
         // --- Group 5: Settings ---
-        const settingsItems: NavItem[] = settingsNavItem ? [settingsNavItem] : [];
+        const settingsItems: NavItem[] = settingsNavItem
+            ? [settingsNavItem]
+            : [];
 
         const groups: NavGroup[] = [
             { title: 'Overview', items: overviewItems },

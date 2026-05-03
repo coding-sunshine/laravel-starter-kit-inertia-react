@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-05-02",
+    "lastGenerated": "2026-05-03",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -2966,6 +2966,22 @@
                 "relatedRoutes": [],
                 "rendersPages": []
             }
+        },
+        "LiveMonitorController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "control-room.index",
+                    "control-room.show"
+                ],
+                "rendersPages": [
+                    "control-room/index",
+                    "control-room/show"
+                ]
+            }
         }
     },
     "pages": {
@@ -3137,6 +3153,8 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
+                    "control-room.index",
+                    "control-room.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
@@ -3823,6 +3841,8 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
+                    "control-room.index",
+                    "control-room.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
@@ -4292,6 +4312,8 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
+                    "control-room.index",
+                    "control-room.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
@@ -4747,6 +4769,8 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
+                    "control-room.index",
+                    "control-room.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
@@ -6787,6 +6811,34 @@
                 "relatedRoutes": [
                     "sidings.quick-placement.show",
                     "sidings.quick-placement.store"
+                ]
+            }
+        },
+        "control-room/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "LiveMonitorController"
+                ],
+                "relatedRoutes": [
+                    "control-room.index",
+                    "control-room.show"
+                ]
+            }
+        },
+        "control-room/show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "LiveMonitorController"
+                ],
+                "relatedRoutes": [
+                    "control-room.index",
+                    "control-room.show"
                 ]
             }
         }

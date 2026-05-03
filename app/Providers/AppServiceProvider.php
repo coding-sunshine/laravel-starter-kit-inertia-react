@@ -159,6 +159,7 @@ final class AppServiceProvider extends ServiceProvider
             'welcome-help',
             'welcome-contact',
             'nav-dashboard',
+            'nav-control-room',
             'nav-organizations',
             'nav-billing',
             'nav-blog',

@@ -154,5 +154,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | dashboard/RakePerformance | N/A | ❌ |
 | dashboard/SidingOverview | N/A | ❌ |
 | sidings/quick-placement | sidings.quick-placement.show, sidings.quick-placement.store | ❌ |
+| control-room/index | control-room.index, control-room.show | ❌ |
+| control-room/show | control-room.index, control-room.show | ❌ |
 
 

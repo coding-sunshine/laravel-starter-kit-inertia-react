@@ -16,6 +16,11 @@ return [
             'actions' => ['view'],
         ],
         [
+            'slug' => 'live_monitor',
+            'label' => 'Control Room (Live Monitor)',
+            'actions' => ['view'],
+        ],
+        [
             'slug' => 'power_plants',
             'label' => 'Power Plants',
             'actions' => ['view', 'create', 'update', 'delete'],
@@ -180,6 +185,10 @@ return [
     'route_to_permission' => [
         // Dashboard
         'dashboard' => 'sections.dashboard.view',
+
+        // Control Room (Live Monitor)
+        'control-room.index' => 'sections.live_monitor.view',
+        'control-room.show' => 'sections.live_monitor.view',
 
         // Master Data
         'master-data.power-plants.index' => 'sections.power_plants.view',
@@ -452,6 +461,7 @@ return [
      */
     'nav_permission' => [
         'dashboard' => 'sections.dashboard.view',
+        'control-room' => 'sections.live_monitor.view',
         'power_plants' => 'sections.power_plants.view',
         'sidings' => 'sections.sidings.view',
         'loaders' => 'sections.loaders.view',

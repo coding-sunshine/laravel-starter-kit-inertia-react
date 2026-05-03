@@ -118,5 +118,6 @@ All Controllers:
 | WeighmentsController | N/A | ❌ |
 | SidingMonitorController | N/A | ❌ |
 | CommandPaletteSearchController | N/A | ❌ |
+| LiveMonitorController | N/A | ❌ |
 
 

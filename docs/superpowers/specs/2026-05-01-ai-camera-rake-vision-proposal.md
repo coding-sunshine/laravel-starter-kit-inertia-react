@@ -17,12 +17,19 @@ This proposal covers **additional work** to integrate AI-camera-based rake ident
 
 This add-on extends the existing system. It does **not** replace any existing module. It plugs into the existing Rake, Wagon, and Loading data structures.
 
+The customer chooses one of two configurations per the commercials in Section 9:
+
+- **Configuration A — Single-Camera per Siding** (1 camera × 3 sidings = 3 cameras total)
+- **Configuration B — Dual-Camera per Siding** (2 cameras × 3 sidings = 6 cameras total)
+
+Configuration B improves wagon-side coverage (catches wagons whose entry-side serial is dirty/glared by reading the exit-side serial as well), at the cost of additional software, hardware, and installation effort.
+
 ---
 
 ## 2. KEY OBJECTIVES
 
 - Eliminate manual rake-chartering at the siding (currently 30–60 minutes per rake)
-- Improve wagon-roster accuracy from ~92–95% (manual) to ≥98% (assisted)
+- Improve wagon-roster accuracy from ~92–95% (manual) to ≥98% (Configuration A) or ≥99% (Configuration B)
 - Provide visual audit trail (frame thumbnail per wagon) for dispute resolution with railway officials
 - Reduce siding-staff workload during rake placement
 - Lay the foundation for future Stage-2 modules (visual load estimation and pre-departure penalty alerts — separately quoted)
@@ -52,25 +59,26 @@ Module numbering continues from the existing SOW (which ended at 4.13).
 
 ### 4.14 AI CAMERA INTEGRATION & VIDEO INGESTION MODULE
 
-**Purpose:** Connect the customer's IP camera at the siding to the system so every rake is recorded automatically.
+**Purpose:** Connect the customer's IP camera(s) at the siding to the system so every rake is recorded automatically.
 
-**In simple terms:** Today, when a rake arrives, the siding team has to physically walk along the rake and check each wagon's painted number against the indent. This module lets the system watch the rake instead. The customer installs one camera at the siding (entry point recommended). Once registered in the application by the System Admin (camera address, login), the system silently begins recording every time a rake is placed, and stops when loading completes. No one has to start or stop the camera manually. If the camera ever goes offline — power cut, internet down, dirty lens — the System Admin receives a notification so it can be fixed before the next rake arrives.
+**In simple terms:** Today, when a rake arrives, the siding team has to physically walk along the rake and check each wagon's painted number against the indent. This module lets the system watch the rake instead. The customer installs one or two cameras at the siding (entry-only for Configuration A, entry + exit for Configuration B). Once registered in the application by the System Admin (camera address, login), the system silently begins recording every time a rake is placed, and stops when loading completes. No one has to start or stop the camera manually. If a camera ever goes offline — power cut, internet down, dirty lens — the System Admin receives a notification so it can be fixed before the next rake arrives.
 
 **Developer Scope:**
-- Camera onboarding screen (RTSP URL, credentials, siding mapping)
-- Continuous video stream pull from one IP camera per siding
+- Camera onboarding screen (RTSP URL, credentials, siding mapping, role: entry / exit)
+- Continuous video stream pull from one **or two** IP cameras per siding
 - Frame extraction at configurable rate (default 5 frames/second)
 - Per-rake clip generation triggered automatically on Rake Placement event (existing 4.4)
 - Capture stops automatically on Loading Completion event (existing 4.9)
 - Secure storage of frame snapshots and rake clip metadata
 - Camera-offline alert to System Admin
+- For Configuration B only: time-synchronisation between the two cameras at the same siding
 
 **System Logic:**
-- Each siding can have one camera registered in this phase
+- Each siding can have **one or two** cameras registered, depending on contracted configuration
 - All captured artefacts are organisation-scoped (multi-tenant safe)
 
 **Validations:**
-- Cannot enable AI module for a siding without a registered, reachable camera
+- Cannot enable AI module for a siding without all contracted cameras registered and reachable
 - Cannot reuse the same camera for two sidings simultaneously
 
 ---
@@ -79,16 +87,17 @@ Module numbering continues from the existing SOW (which ended at 4.13).
 
 **Purpose:** Read the painted serial number on each wagon and match it against the expected rake roster.
 
-**In simple terms:** As the rake passes the camera, AI software reads the serial number painted on every wagon (for example, `73102512177`). The system looks at the same wagon several times across multiple frames so dust, glare, or one bad angle do not throw off the reading — the most consistent reading wins. Once the entire rake has passed, the system has a complete list of detected wagon numbers. It then compares this list with the wagon roster expected for that rake (taken from the indent and placement records). For each wagon, the system gives one of three results: ✅ matches the expected wagon, ⚠️ a different wagon than expected, or ❌ could not read this wagon clearly — please check manually. The system never silently guesses on low-confidence wagons; uncertain ones are clearly flagged so the operator decides.
+**In simple terms:** As the rake passes the camera, AI software reads the serial number painted on every wagon (for example, `73102512177`). The system looks at the same wagon several times across multiple frames so dust, glare, or one bad angle do not throw off the reading — the most consistent reading wins. In Configuration B (two cameras), readings from both sides of the rake are fused so a wagon that is unreadable from one side can still be recognised from the other. Once the rake has fully passed, the system has a complete list of detected wagon numbers. It then compares this list with the wagon roster expected for that rake (taken from the indent and placement records). For each wagon, the system gives one of three results: ✅ matches the expected wagon, ⚠️ a different wagon than expected, or ❌ could not read this wagon clearly — please check manually. The system never silently guesses on low-confidence wagons; uncertain ones are clearly flagged so the operator decides.
 
 **Developer Scope:**
 - Wagon-region detection on extracted frames using a pre-trained object-detection model
 - Optical Character Recognition (OCR) on detected wagon regions, applied to multiple frames per wagon
 - Multi-frame voting to select the most-confident serial number per wagon
+- For Configuration B only: cross-camera fusion (combining same-wagon readings from entry and exit cameras using time-aligned wagon-tracking)
 - Auto-match of detected serials against the expected roster (linked to existing 4.4 and 4.6)
 - Confidence score and match status (Matched / Mismatch / Not-detected) per wagon
 - Position-in-rake fallback when OCR confidence is below threshold
-- Storage of detected serial, confidence score, frame thumbnail, and match decision per wagon
+- Storage of detected serial, confidence score, frame thumbnails (one per camera in Configuration B), and match decision per wagon
 
 **System Logic:**
 - A wagon flagged as "Not-detected" still appears in the roster, marked for mandatory manual confirmation
@@ -113,7 +122,7 @@ Module numbering continues from the existing SOW (which ended at 4.13).
   - Detected serial
   - Confidence
   - Match status badge
-  - Frame thumbnail (clickable to enlarge)
+  - Frame thumbnail (clickable to enlarge; both sides shown in Configuration B)
   - One-click override action
 - Override workflow with mandatory reason capture
 - Notification to Siding In-Charge when an entire rake is reviewed and confirmed
@@ -158,7 +167,7 @@ No existing business logic is altered. The AI module supplements existing data; 
 
 1. Three new functional modules (4.14, 4.15, 4.16) integrated into the existing application
 2. Database extensions to capture AI detection records, audit trail, and override history
-3. Camera onboarding administration screen
+3. Camera onboarding administration screen (supports 1 or 2 cameras per siding)
 4. Operator review screen (web, desktop)
 5. Notification wiring for camera offline / review pending events
 6. Per-organisation feature toggle for staged rollout
@@ -179,12 +188,12 @@ The following items are **not** part of this proposal. They will be quoted separ
 - Admin diagnostics dashboard (detection-run health metrics)
 - Daily summary emails to Management
 - Edge inference appliance (offline-capable AI processing at siding)
-- Multi-camera coordination per siding (entry + exit + loading point)
+- More than two cameras per siding (loader-point camera, weighbridge camera)
 - Custom-trained OCR models for severely faded or coal-covered wagon serials
 - Number-plate OCR for road vehicles (separate workflow under existing 4.1)
 - Driver / operator face recognition
 
-Indicative budget for Stage 2 (for planning only): ₹15–22 L over 12–16 weeks.
+Indicative budget for Stage 2 (for planning only): ₹15,00,000 – ₹22,00,000 (Fifteen Lakh to Twenty-Two Lakh) over 12–16 weeks.
 
 ---
 
@@ -192,16 +201,16 @@ Indicative budget for Stage 2 (for planning only): ₹15–22 L over 12–16 wee
 
 The proposal is built on the following assumptions. Material change to any of these may impact cost or timeline.
 
-1. **Camera procurement and physical installation** is performed by the customer's vendor. Recommended: 4 MP IP camera with IR night vision, IP67 rated, mounted with line-of-sight to one side of the rake.
-2. **Camera placement survey** — customer provides 30+ short sample clips from the proposed mounting position before development starts, so the AI engineer can validate angle and lighting.
-3. **Internet connectivity at the siding** is at least 10 Mbps stable (wired preferred, or strong 4G), with a public-IP or VPN path to the camera RTSP stream.
-4. **Power and weatherproofing** of the camera and PoE/DVR equipment is the customer's responsibility.
-5. **Single camera per siding** in this scope. Additional cameras can be added later at incremental cost.
+1. **Camera procurement and physical installation** is performed either by the customer's vendor (self-procurement) or via Bundle 1 in §9.4 (developer turnkey).
+2. **Camera placement survey** — customer provides 30+ short sample clips from the proposed mounting position(s) before development starts.
+3. **Internet connectivity at the siding** is at least 10 Mbps stable (wired preferred, or strong 4G), with a public-IP or VPN path to the camera RTSP stream(s).
+4. **Power and weatherproofing** of the camera and PoE/DVR equipment (when self-procured) is the customer's responsibility.
+5. **Camera count per siding:** **1 (Configuration A)** or **2 (Configuration B)**, fixed at the time of PO. A change later is a scope revision.
 6. **Existing Rake Management application** is in production and accessible to the development team for integration.
 7. **UAT environment** with sample data is available throughout the engagement.
 8. **Customer review turnaround** during UAT is within 3 working days per cycle.
-9. **Hardware costs** (camera, cabling, enclosure, installation) are borne by the customer and are **not** included in this proposal. Indicative range: ₹1.2–2.0 L per siding (one-time CAPEX).
-10. **Recurring cloud cost** (₹6–12 K per siding per month for AI processing and storage) will either be billed at cost to the customer or absorbed into a per-siding annual subscription, to be agreed before kickoff.
+9. **Hardware procurement and installation** — customer either self-procures (recommended camera: **Dahua DHI-ITC413-PW4D-IZ1**, 4 MP ANPR varifocal, IP67, STQC/ER-compliant; full specification and procurement checklist in `2026-05-01-camera-hardware-recommendations.md`) or opts in to **Bundle 1 in §9.4** for turnkey supply and installation. **Customer must confirm STQC/ER compliance of any camera procured after 1 April 2026** per the MeitY mandate, regardless of route.
+10. **Recurring cloud cost** (₹6,000 – ₹12,000 per siding per month for AI processing and storage) will either be billed at cost to the customer or absorbed into a per-siding annual subscription, to be agreed before kickoff.
 
 ---
 
@@ -209,42 +218,112 @@ The proposal is built on the following assumptions. Material change to any of th
 
 ### 9.1 One-time Software Development Charges
 
+The customer chooses one of the following options at the time of PO:
+
+#### Option A — Single-Camera per Siding (Configuration A)
+
 | Description | Amount (₹) |
 |---|---|
-| Module 4.14 — AI Camera Integration & Video Ingestion | 1,80,000 |
-| Module 4.15 — AI-Based Wagon Identification & Roster Matching | 2,40,000 |
+| Module 4.14 — AI Camera Integration & Video Ingestion (single-camera) | 1,80,000 |
+| Module 4.15 — AI-Based Wagon Identification & Roster Matching (single-camera) | 2,40,000 |
 | Module 4.16 — Operator Review, Override & Audit | 1,40,000 |
 | Project management, QA, UAT support, documentation, warranty | 40,000 |
-| **Total** | **₹6,00,000 + GST** |
+| **Software Development Total — Option A** | **₹6,00,000 + GST** |
+| In words | **Rupees Six Lakh only + GST** |
 
-### 9.2 Payment Milestones
+#### Option B — Dual-Camera per Siding (Configuration B)
 
-| Milestone | % | Amount (₹) |
-|---|---|---|
-| Advance on PO / kickoff | 50% | 3,00,000 |
-| On UAT sign-off (approx. week 5) | 30% | 1,80,000 |
-| On live release / production go-live | 20% | 1,20,000 |
-| **Total** | **100%** | **6,00,000 + GST** |
+| Description | Amount (₹) |
+|---|---|
+| Module 4.14 — AI Camera Integration & Video Ingestion (dual-camera, time-synchronised) | 2,40,000 |
+| Module 4.15 — AI-Based Wagon Identification & Roster Matching (with cross-camera fusion) | 3,40,000 |
+| Module 4.16 — Operator Review, Override & Audit (dual-thumbnail view) | 1,55,000 |
+| Project management, QA, UAT support, documentation, warranty | 40,000 |
+| **Software Development Total — Option B** | **₹7,75,000 + GST** |
+| In words | **Rupees Seven Lakh Seventy-Five Thousand only + GST** |
+
+### 9.2 Payment Milestones (apply to whichever Option is selected)
+
+| Milestone | % | Option A (₹) | Option B (₹) |
+|---|---|---|---|
+| Advance on PO / kickoff | 50% | 3,00,000 | 3,87,500 |
+| On UAT sign-off (approx. week 5–6) | 30% | 1,80,000 | 2,32,500 |
+| On live release / production go-live | 20% | 1,20,000 | 1,55,000 |
+| **Total** | **100%** | **6,00,000 + GST** | **7,75,000 + GST** |
 
 GST is invoiced alongside each milestone.
 
 ### 9.3 Recurring Charges (Per Siding, Post-Go-Live)
 
-| Description | ₹/month |
-|---|---|
-| Cloud AI processing (per-rake billing model) | 2,000 – 4,000 |
-| Frame and clip storage (90-day retention) | 1,000 – 3,000 |
-| Bandwidth and platform share | 1,000 – 3,000 |
-| Model updates and remote support | 2,000 |
-| **Total** | **₹6,000 – 12,000 per month** |
+| Description | Configuration A (₹/month) | Configuration B (₹/month) |
+|---|---|---|
+| Cloud AI processing (per-rake billing model) | 2,000 – 4,000 | 3,500 – 7,000 |
+| Frame and clip storage (90-day retention) | 1,000 – 3,000 | 2,000 – 5,000 |
+| Bandwidth and platform share | 1,000 – 3,000 | 1,500 – 4,000 |
+| Model updates and remote support | 2,000 | 2,000 |
+| **Total per siding** | **₹6,000 – 12,000** | **₹9,000 – 18,000** |
 
-To be either passed through at cost or bundled into the existing application subscription, as agreed.
+Recurring charges may be passed through at cost or bundled into the existing application subscription, as agreed.
+
+### 9.4 Optional Per-Siding Service Bundles
+
+Each bundle is independently selectable per siding. The configuration of these bundles must match the Option (A or B) selected in §9.1.
+
+#### Bundle 1 — Hardware Supply & Installation
+
+Inclusions (per siding):
+- Dahua DHI-ITC413-PW4D-IZ1 (4 MP ANPR varifocal, IP67/IK10, STQC/ER-compliant) × number of cameras
+- Industrial enclosure with sun-shade and mounting bracket × number of cameras
+- PoE injector + Cat6 outdoor cable (up to 50 m per camera)
+- Surge protector + 1 kVA UPS (one shared per siding)
+- On-site installation, lens alignment, RTSP commissioning
+- 2-year camera warranty (manufacturer)
+
+| Configuration | Cameras / siding | Bundle 1 price (₹/siding) | In words |
+|---|---|---|---|
+| A — Single | 1 | **1,45,000 + GST** | Rupees One Lakh Forty-Five Thousand only |
+| B — Dual | 2 | **2,75,000 + GST** | Rupees Two Lakh Seventy-Five Thousand only |
+
+#### Bundle 2 — Software Configuration & Go-Live
+
+Inclusions (per siding):
+- Camera onboarding inside the Railway Rake Management application (1 or 2 cameras as applicable)
+- Network and firewall coordination with customer IT
+- AI calibration (mounting angle, focus, frame rate, region of interest) for each camera
+- 5 pilot-rake validation runs with accuracy report
+- 1 operator training session (up to 4 attendees)
+- 7-day post-go-live hand-holding support
+
+| Configuration | Cameras / siding | Bundle 2 price (₹/siding) | In words |
+|---|---|---|---|
+| A — Single | 1 | **50,000 + GST** | Rupees Fifty Thousand only |
+| B — Dual | 2 | **70,000 + GST** | Rupees Seventy Thousand only |
+
+If the customer self-procures hardware, only Bundle 2 applies. Bundle 1 alone, without the Software Development charges in §9.1, is not deliverable.
+
+### 9.5 Total Cost Scenarios (3 Sidings: Pakur / Dumka / Kurwa)
+
+| Scenario | Software (§9.1) | Bundle 2 × 3 sidings | Bundle 1 × 3 sidings | **Grand Total** | In words |
+|---|---|---|---|---|---|
+| **Software only — Option A** (customer self-procures + self-installs) | 6,00,000 | — | — | **₹6,00,000 + GST** | Rupees Six Lakh only |
+| **Software + Go-Live — Option A** | 6,00,000 | 1,50,000 | — | **₹7,50,000 + GST** | Rupees Seven Lakh Fifty Thousand only |
+| **Turnkey — Option A** (1 cam × 3 sidings = 3 cameras) | 6,00,000 | 1,50,000 | 4,35,000 | **₹11,85,000 + GST** | Rupees Eleven Lakh Eighty-Five Thousand only |
+| **Software only — Option B** | 7,75,000 | — | — | **₹7,75,000 + GST** | Rupees Seven Lakh Seventy-Five Thousand only |
+| **Software + Go-Live — Option B** | 7,75,000 | 2,10,000 | — | **₹9,85,000 + GST** | Rupees Nine Lakh Eighty-Five Thousand only |
+| **Turnkey — Option B** (2 cam × 3 sidings = 6 cameras) | 7,75,000 | 2,10,000 | 8,25,000 | **₹18,10,000 + GST** | Rupees Eighteen Lakh Ten Thousand only |
+
+Mixed selections (for example, Configuration A at one siding and Configuration B at another) are not supported in a single PO. All three sidings must operate on the same configuration.
 
 ---
 
 ## 10. PROJECT SCHEDULE
 
-Total duration: **6 weeks** from the date of PO and receipt of advance payment.
+| Configuration | Total duration |
+|---|---|
+| Option A — Single-Camera | **6 weeks** |
+| Option B — Dual-Camera | **7 weeks** (additional week for cross-camera time-sync and fusion) |
+
+### Schedule (Option A — 6 weeks)
 
 | Week | Activity | Output |
 |---|---|---|
@@ -255,14 +334,20 @@ Total duration: **6 weeks** from the date of PO and receipt of advance payment.
 | 5 | Multi-tenant hardening, audit trail, notifications, UAT with customer | **UAT sign-off (Milestone 2)** |
 | 6 | Production rollout behind feature flag, customer go-live | **Live release (Milestone 3)** |
 
+### Schedule (Option B — 7 weeks)
+
+Same as Option A through week 4. Week 5 adds dual-camera time-sync and cross-camera fusion. UAT sign-off shifts to week 6, live release to week 7.
+
 The schedule assumes the customer dependencies in Section 8 are met on time. Slips on customer side (sample clips, RTSP credentials, UAT feedback) will shift the schedule on a one-for-one basis.
+
+**Bundle rollout timing.** The schedule covers software development. Bundle 1 (hardware) and Bundle 2 (go-live) for the **first / pilot siding** are delivered alongside the final two weeks of the development schedule. Bundle 1 + Bundle 2 for the remaining two sidings are delivered post-pilot at a pace of approximately **one siding every two weeks**, sequenced to customer readiness.
 
 ---
 
 ## 11. WARRANTY & SUPPORT
 
 - **Warranty period:** 30 calendar days post-live release. Defects in the delivered modules are fixed at no additional cost during this period.
-- **Post-warranty support:** covered under the recurring monthly charges in Section 9.3.
+- **Post-warranty support:** covered under the recurring monthly charges in §9.3.
 - **Out-of-scope changes** during the engagement are estimated and billed via formal change request.
 
 ---
