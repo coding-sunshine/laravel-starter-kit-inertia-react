@@ -3,12 +3,12 @@
     "table": "rr_predictions",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },

@@ -3,12 +3,12 @@
     "table": "loadrite_downtime_events",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -48,7 +48,7 @@
             "default": null
         },
         "raw_payload": {
-            "type": "text",
+            "type": "json",
             "nullable": true,
             "default": null
         },

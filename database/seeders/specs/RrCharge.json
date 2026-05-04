@@ -3,12 +3,12 @@
     "table": "rr_charges",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "rr_document_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -28,7 +28,7 @@
             "default": null
         },
         "meta": {
-            "type": "text",
+            "type": "json",
             "nullable": true,
             "default": null
         },
@@ -43,7 +43,7 @@
             "default": null
         },
         "rake_charge_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         }
