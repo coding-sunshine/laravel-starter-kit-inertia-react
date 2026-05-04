@@ -275,7 +275,7 @@ final readonly class RrImportService
     }
 
     /**
-     * @param  array<int, array{sequence?: int, wagon_number: string, wagon_type?: string|null, pcc_weight?: float, loaded_weight?: float, permissible_weight?: float, overload_weight?: float}>  $wagons
+     * @param  array<int, array{sequence?: int, wagon_number: string, wagon_type?: string|null, pcc_weight?: float, loaded_weight?: float, permissible_weight?: float, overload_weight?: float, tare_weight?: float|null, gross_weight?: float|null, pcc_weight_mt?: float, loaded_weight_mt?: float, permissible_weight_mt?: float, overload_weight_mt?: float, tare_weight_mt?: float|null, gross_weight_mt?: float|null}>  $wagons
      */
     private function insertWagonSnapshots(RrDocument $rrDocument, ?Rake $rake, array $wagons): void
     {
@@ -300,6 +300,8 @@ final readonly class RrImportService
                 'loaded_weight_mt' => $this->clampWagonWeight($w['loaded_weight'] ?? $w['loaded_weight_mt'] ?? null),
                 'permissible_weight_mt' => $this->clampWagonWeight($w['permissible_weight'] ?? $w['permissible_weight_mt'] ?? null),
                 'overload_weight_mt' => $this->clampWagonWeight($w['overload_weight'] ?? $w['overload_weight_mt'] ?? null),
+                'tare_weight_mt' => $this->clampWagonWeight($w['tare_weight'] ?? $w['tare_weight_mt'] ?? null),
+                'gross_weight_mt' => $this->clampWagonWeight($w['gross_weight'] ?? $w['gross_weight_mt'] ?? null),
                 'meta' => [],
             ]);
         }

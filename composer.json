@@ -107,6 +107,7 @@
         "wildside/userstamps": "^4.0"
     },
     "require-dev": {
+        "cweagans/composer-patches": "^1.7.3",
         "driftingly/rector-laravel": "^2.3.0",
         "filament/blueprint": "^2.1.2",
         "larastan/larastan": "^3.9.6",

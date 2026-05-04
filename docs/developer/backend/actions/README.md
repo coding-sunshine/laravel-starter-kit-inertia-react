@@ -83,6 +83,7 @@ All Actions:
 | ImportHistoricalMinesDataFromExcelAction | N/A | ❌ |
 | ImportSidingDispatchFromExcel | N/A | ❌ |
 | ProvisionRakeForIndent | N/A | ❌ |
+| [FetchRakeWeighmentFromRailwayReceipt](./fetchrakeweighmentfromrailwayreceipt.md) | Build rake weighment from RR wagon snapshots + duplicated RR PDF | ✅ |
 | RecordManualRakeWeighment | N/A | ❌ |
 | StartTxrAction | N/A | ❌ |
 | StoreTyrUnfitLogsAction | N/A | ❌ |

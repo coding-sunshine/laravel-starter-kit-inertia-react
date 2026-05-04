@@ -277,6 +277,7 @@ final class AppServiceProvider extends ServiceProvider
             'weighments-manual-dialog-cancel',
             'weighments-dialog-file-input',
             'weighments-dialog-save-manual',
+            'weighments-fetch-from-rr',
             'weighments-dialog-manual-net-mt',
             'weighments-hub-saved-summary',
             'weighments-dialog-update-manual',

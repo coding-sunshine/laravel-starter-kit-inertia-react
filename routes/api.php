@@ -89,6 +89,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('rake-weighments/{rakeWeighment}', [RakeWeighmentApiController::class, 'show'])->name('rake-weighments.show');
         Route::get('rake-weighments/{rakeWeighment}/download', [RakeWeighmentApiController::class, 'download'])->name('rake-weighments.download');
         Route::post('rakes/{rake}/weighments/manual', [RakeWeighmentWorkflowApiController::class, 'storeManual'])->name('rakes.weighments.manual');
+        Route::post('rakes/{rake}/weighments/fetch-from-rr', [RakeWeighmentWorkflowApiController::class, 'fetchFromRr'])->name('rakes.weighments.fetch-from-rr');
         Route::patch('rakes/{rake}/weighments/{rakeWeighment}/manual', [RakeWeighmentWorkflowApiController::class, 'updateManual'])->name('rakes.weighments.update-manual');
         Route::delete('rakes/{rake}/weighments', [RakeWeighmentWorkflowApiController::class, 'destroy'])->name('rakes.weighments.destroy');
 
