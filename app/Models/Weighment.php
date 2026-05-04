@@ -20,6 +20,7 @@ final class Weighment extends Model implements HasMedia
 
     protected $fillable = [
         'rake_id',
+        'rr_document_id',
         'attempt_no',
         'gross_weighment_datetime',
         'tare_weighment_datetime',
@@ -68,6 +69,11 @@ final class Weighment extends Model implements HasMedia
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    public function rrDocument(): BelongsTo
+    {
+        return $this->belongsTo(RrDocument::class);
     }
 
     public function rakeWagonWeighments(): HasMany

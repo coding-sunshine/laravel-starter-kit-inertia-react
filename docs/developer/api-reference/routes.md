@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-14 (Pan product analytics, Filament Product Analytics page)
+**Last Updated**: 2026-05-04 (Fetch RR weighment — hub + API)
 
 ## Closure
 
@@ -1038,4 +1038,21 @@ See [Filament > User impersonation](../backend/filament.md#user-impersonation).
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
 | POST | `lemon-squeezy/webhook` | lemon-squeezy.webhook | web (CSRF excluded) |
+
+
+## WeighmentsController (Fetch RR)
+
+**Controller**: `App\Http\Controllers\Weighments\WeighmentsController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `weighments/fetch-from-rr` | weighments.fetch-from-rr | web, auth, verified |
+
+## RakeWeighmentWorkflowApiController (Fetch RR)
+
+**Controller**: `App\Http\Controllers\Api\V1\RakeWeighmentWorkflowApiController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `api/v1/rakes/{rake}/weighments/fetch-from-rr` | api.v1.rakes.weighments.fetch-from-rr | api, throttle, auth:sanctum, feature:api_access |
 

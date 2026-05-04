@@ -20,7 +20,7 @@ import { useCan } from '@/hooks/use-can';
 import { manualWeighmentFieldsFromRake } from '@/lib/manual-weighment-from-rake';
 import { cn } from '@/lib/utils';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Download, Eye, FileText, PenLine, Scale, Trash2, Upload } from 'lucide-react';
+import { Download, Eye, FileText, PenLine, Receipt, Scale, Trash2, Upload } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface WeighmentsRakeRow {
@@ -104,6 +104,7 @@ export default function WeighmentsIndex({ tableData }: Props) {
     const [hubTab, setHubTab] = useState<HubTab>('file');
     const [selectedRake, setSelectedRake] = useState<WeighmentsRakeRow | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [fetchingRr, setFetchingRr] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const manualForm = useForm({
@@ -187,6 +188,23 @@ export default function WeighmentsIndex({ tableData }: Props) {
             },
         });
     }, [canUpload, closeHub, selectedFile, selectedRake]);
+
+    const submitFetchRr = useCallback(() => {
+        if (!canUpload || !selectedRake) {
+            return;
+        }
+
+        setFetchingRr(true);
+        router.post(
+            '/weighments/fetch-from-rr',
+            { rake_id: selectedRake.id },
+            {
+                preserveScroll: true,
+                onFinish: () => setFetchingRr(false),
+                onSuccess: () => closeHub(),
+            },
+        );
+    }, [canUpload, closeHub, selectedRake]);
 
     const hubAllowsManual = useMemo(() => {
         if (!selectedRake) {
@@ -589,38 +607,56 @@ export default function WeighmentsIndex({ tableData }: Props) {
                         </div>
 
                         {hubAllowsManual ? (
-                            <div className="flex gap-1 border-b border-border px-6 pb-px">
-                                <button
-                                    type="button"
-                                    className={cn(
-                                        '-mb-px border-b-2 px-3 py-2 text-sm font-medium',
-                                        hubTab === 'file'
-                                            ? 'border-primary text-foreground'
-                                            : 'border-transparent text-muted-foreground hover:text-foreground',
-                                    )}
-                                    onClick={() => setHubTab('file')}
-                                >
-                                    <span className="inline-flex items-center gap-2">
-                                        <Upload className="h-4 w-4" />
-                                        File
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className={cn(
-                                        '-mb-px border-b-2 px-3 py-2 text-sm font-medium',
-                                        hubTab === 'manual'
-                                            ? 'border-primary text-foreground'
-                                            : 'border-transparent text-muted-foreground hover:text-foreground',
-                                    )}
-                                    onClick={() => setHubTab('manual')}
-                                >
-                                    <span className="inline-flex items-center gap-2">
-                                        <PenLine className="h-4 w-4" />
-                                        Manual entry
-                                    </span>
-                                </button>
-                            </div>
+                            <>
+                                <div className="flex gap-1 border-b border-border px-6 pb-px">
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            '-mb-px border-b-2 px-3 py-2 text-sm font-medium',
+                                            hubTab === 'file'
+                                                ? 'border-primary text-foreground'
+                                                : 'border-transparent text-muted-foreground hover:text-foreground',
+                                        )}
+                                        onClick={() => setHubTab('file')}
+                                    >
+                                        <span className="inline-flex items-center gap-2">
+                                            <Upload className="h-4 w-4" />
+                                            File
+                                        </span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            '-mb-px border-b-2 px-3 py-2 text-sm font-medium',
+                                            hubTab === 'manual'
+                                                ? 'border-primary text-foreground'
+                                                : 'border-transparent text-muted-foreground hover:text-foreground',
+                                        )}
+                                        onClick={() => setHubTab('manual')}
+                                    >
+                                        <span className="inline-flex items-center gap-2">
+                                            <PenLine className="h-4 w-4" />
+                                            Manual entry
+                                        </span>
+                                    </button>
+                                </div>
+                                {canUpload ? (
+                                    <div className="flex flex-col gap-2 border-b border-border px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            className="inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                                            disabled={fetchingRr || uploading}
+                                            onClick={() => void submitFetchRr()}
+                                            data-pan="weighments-fetch-from-rr"
+                                        >
+                                            <Receipt className="h-4 w-4 shrink-0" />
+                                            {fetchingRr ? 'Loading from RR…' : 'Fetch RR data'}
+                                        </Button>
+                                        <InputError message={errors?.rake_id} />
+                                    </div>
+                                ) : null}
+                            </>
                         ) : (
                             <div className="border-b border-border px-6 py-3">
                                 <p className="text-muted-foreground flex items-center gap-2 text-sm font-medium">

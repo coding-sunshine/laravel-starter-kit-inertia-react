@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-05-03",
+    "lastGenerated": "2026-04-27",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -804,6 +804,24 @@
                 ]
             }
         },
+        "BuildDispatchReportDprExport": {
+            "documented": true,
+            "path": "./BuildDispatchReportDprExport.md",
+            "lastUpdated": "2026-04-27",
+            "relationships": {
+                "usedBy": [
+                    "ExportDispatchReportDprSpreadsheetJob",
+                    "DispatchReportDprExportController"
+                ],
+                "usesModels": [
+                    "DispatchReport",
+                    "Siding"
+                ],
+                "relatedRoutes": [
+                    "vehicle-dispatch.dpr-export.queue"
+                ]
+            }
+        },
         "BuildPenaltyChartDataAction": {
             "documented": true,
             "path": "./BuildPenaltyChartDataAction.md",
@@ -877,8 +895,8 @@
             }
         },
         "CreateUnloadFromArrival": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./createunloadfromarrival.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -896,8 +914,8 @@
             }
         },
         "GenerateDispatchReport": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./generatedispatchreport.md",
             "relationships": {
                 "usedBy": [
                     "GenerateDispatchReportController"
@@ -911,55 +929,9 @@
                 ]
             }
         },
-        "ReconcilePenaltyHeadsAction": {
-            "documented": true,
-            "path": "./ReconcilePenaltyHeadsAction.md",
-            "lastUpdated": "2026-05-01",
-            "relationships": {
-                "usedBy": [],
-                "usesModels": {
-                    "0": "Rake",
-                    "1": "AppliedPenalty",
-                    "2": "PenaltyReconciliation",
-                    "4": "RrPenaltySnapshot"
-                },
-                "relatedRoutes": []
-            }
-        },
-        "CalculatePloPenaltyAction": {
-            "documented": true,
-            "path": "./CalculatePloPenaltyAction.md",
-            "lastUpdated": "2026-05-01",
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "Rake",
-                    "RakeWeighment",
-                    "CommodityUtilisationThreshold",
-                    "PenaltyType"
-                ],
-                "relatedRoutes": []
-            }
-        },
-        "ApplyPloPenaltyAction": {
-            "documented": true,
-            "path": "./ApplyPloPenaltyAction.md",
-            "lastUpdated": "2026-05-01",
-            "relationships": {
-                "usedBy": [],
-                "usesModels": {
-                    "0": "Rake",
-                    "1": "RakeWeighment",
-                    "2": "AppliedPenalty",
-                    "3": "PenaltyType",
-                    "5": "RakeCharge"
-                },
-                "relatedRoutes": []
-            }
-        },
         "ApplyDemurragePenaltyAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./applydemurragepenaltyaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -985,8 +957,8 @@
             }
         },
         "ApplyWeighmentPenaltiesAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./applyweighmentpenaltiesaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -1001,8 +973,8 @@
             }
         },
         "CreateApiUser": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./createapiuser.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1017,36 +989,86 @@
                 ]
             }
         },
-        "CreateIndentAndProvisionRakeAction": {
-            "documented": false,
-            "path": null,
+        "EndTxrAction": {
+            "documented": true,
+            "path": "./endtxraction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "2": "Txr"
+                },
+                "relatedRoutes": [
+                    "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.upload-note"
+                ]
+            }
+        },
+        "StartTxrAction": {
+            "documented": true,
+            "path": "./starttxraction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "2": "Txr"
+                },
+                "relatedRoutes": [
+                    "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.upload-note"
+                ]
+            }
+        },
+        "StoreTyrUnfitLogsAction": {
+            "documented": true,
+            "path": "./storetyrunfitlogsaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
-                    "User",
-                    "Indent",
                     "Rake"
                 ],
                 "relatedRoutes": [
-                    "api.v1.indents.index",
-                    "api.v1.indents.upload",
-                    "api.v1.indents.store",
-                    "api.v1.indents.show",
-                    "api.v1.indents.assign-rake-number",
-                    "api.v1.indents.download",
-                    "indents.index",
-                    "indents.import",
-                    "indents.create",
-                    "indents.store",
-                    "indents.pdf",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update",
-                    "indents.assign-rake-number",
-                    "indents.destroy",
-                    "indents.create-rake",
-                    "indents.store-rake"
+                    "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.upload-note"
                 ]
+            }
+        },
+        "UpdateTxrHeaderAction": {
+            "documented": true,
+            "path": "./updatetxrheaderaction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "2": "Txr"
+                },
+                "relatedRoutes": [
+                    "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.upload-note"
+                ]
+            }
+        },
+        "ImportHistoricalMinesDataFromExcelAction": {
+            "documented": true,
+            "path": "./importhistoricalminesdatafromexcelaction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "HistoricalMine"
+                ],
+                "relatedRoutes": []
             }
         },
         "DeleteIndentAction": {
@@ -1117,35 +1139,6 @@
                 ]
             }
         },
-        "EndTxrAction": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": {
-                    "0": "Rake",
-                    "2": "Txr"
-                },
-                "relatedRoutes": [
-                    "rakes.txr.update",
-                    "rakes.txr.start",
-                    "rakes.txr.end",
-                    "rakes.txr.unfit-logs",
-                    "rakes.txr.upload-note"
-                ]
-            }
-        },
-        "ImportHistoricalMinesDataFromExcelAction": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "HistoricalMine"
-                ],
-                "relatedRoutes": []
-            }
-        },
         "ImportSidingDispatchFromExcel": {
             "documented": false,
             "path": null,
@@ -1159,8 +1152,9 @@
             }
         },
         "ProvisionRakeForIndent": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "docs/developer/backend/actions/provisionrakeforindent.md",
+            "lastUpdated": "2026-03-29",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -1182,69 +1176,6 @@
                     "indents.destroy",
                     "indents.create-rake",
                     "indents.store-rake"
-                ]
-            }
-        },
-        "RecordManualRakeWeighment": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": {
-                    "0": "Rake",
-                    "2": "RakeWeighment"
-                },
-                "relatedRoutes": [
-                    "api.v1.weighments.template-xlsx",
-                    "api.v1.rakes.weighments.manual",
-                    "api.v1.rakes.weighments.update-manual",
-                    "api.v1.rakes.weighments.destroy",
-                    "rakes.weighments.store",
-                    "rakes.weighments.manual",
-                    "rakes.weighments.update-manual",
-                    "rakes.weighments.destroy",
-                    "weighments.index",
-                    "weighments.show",
-                    "weighments.download",
-                    "weighments.destroy",
-                    "weighments.import",
-                    "weighments.manual",
-                    "weighments.template-xlsx"
-                ]
-            }
-        },
-        "StartTxrAction": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": {
-                    "0": "Rake",
-                    "2": "Txr"
-                },
-                "relatedRoutes": [
-                    "rakes.txr.update",
-                    "rakes.txr.start",
-                    "rakes.txr.end",
-                    "rakes.txr.unfit-logs",
-                    "rakes.txr.upload-note"
-                ]
-            }
-        },
-        "StoreTyrUnfitLogsAction": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "Rake"
-                ],
-                "relatedRoutes": [
-                    "rakes.txr.update",
-                    "rakes.txr.start",
-                    "rakes.txr.end",
-                    "rakes.txr.unfit-logs",
-                    "rakes.txr.upload-note"
                 ]
             }
         },
@@ -1273,9 +1204,38 @@
                 ]
             }
         },
+        "RecordManualRakeWeighment": {
+            "documented": true,
+            "path": "./recordmanualrakeweighment.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "Rake",
+                    "2": "RakeWeighment"
+                },
+                "relatedRoutes": [
+                    "api.v1.weighments.template-xlsx",
+                    "api.v1.rakes.weighments.manual",
+                    "api.v1.rakes.weighments.update-manual",
+                    "api.v1.rakes.weighments.destroy",
+                    "rakes.weighments.store",
+                    "rakes.weighments.manual",
+                    "rakes.weighments.update-manual",
+                    "rakes.weighments.destroy",
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx"
+                ]
+            }
+        },
         "UpdateManualRakeWeighment": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./updatemanualrakeweighment.md",
+            "lastUpdated": "2026-04-06",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1294,115 +1254,35 @@
                 ]
             }
         },
-        "UpdateTxrHeaderAction": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": {
-                    "0": "Rake",
-                    "2": "Txr"
-                },
-                "relatedRoutes": [
-                    "rakes.txr.update",
-                    "rakes.txr.start",
-                    "rakes.txr.end",
-                    "rakes.txr.unfit-logs",
-                    "rakes.txr.upload-note"
-                ]
-            }
-        },
-        "GenerateLoadingRecommendationAction": {
+        "CreateIndentAndProvisionRakeAction": {
             "documented": false,
             "path": null,
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
-                    "Rake"
-                ],
-                "relatedRoutes": [
-                    "rake-loader.index",
-                    "rake-loader.rakes.loading",
-                    "rake-loader.rakes.override"
-                ]
-            }
-        },
-        "LogLoadingOverride": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "Rake",
                     "User",
-                    "LoadingOverride"
-                ],
-                "relatedRoutes": [
-                    "rake-loader.index",
-                    "rake-loader.rakes.loading",
-                    "rake-loader.rakes.override"
-                ]
-            }
-        },
-        "PloPenaltyResult": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [],
-                "relatedRoutes": []
-            }
-        },
-        "ReconciliationOutcome": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [],
-                "relatedRoutes": []
-            }
-        },
-        "ForceMajeureStitchOutcome": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [],
-                "relatedRoutes": []
-            }
-        },
-        "StitchForceMajeureDisputesAction": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "LoadriteDowntimeEvent",
-                    "PenaltyReconciliation"
-                ],
-                "relatedRoutes": []
-            }
-        },
-        "CommandPaletteResults": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [],
-                "relatedRoutes": []
-            }
-        },
-        "SearchForCommandPaletteAction": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
                     "Indent",
                     "Rake"
                 ],
                 "relatedRoutes": [
-                    "command-palette.search"
+                    "api.v1.indents.index",
+                    "api.v1.indents.upload",
+                    "api.v1.indents.store",
+                    "api.v1.indents.show",
+                    "api.v1.indents.assign-rake-number",
+                    "api.v1.indents.download",
+                    "indents.index",
+                    "indents.import",
+                    "indents.create",
+                    "indents.store",
+                    "indents.pdf",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
+                    "indents.assign-rake-number",
+                    "indents.destroy",
+                    "indents.create-rake",
+                    "indents.store-rake"
                 ]
             }
         }
@@ -1431,6 +1311,28 @@
                 "rendersPages": [
                     "changelog/index"
                 ]
+            }
+        },
+        "CoalTransportReportExportController": {
+            "documented": true,
+            "path": "./CoalTransportReportExportController.md",
+            "lastUpdated": "2026-03-28",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "DispatchReportDprExportController": {
+            "documented": true,
+            "path": "./DispatchReportDprExportController.md",
+            "lastUpdated": "2026-04-02",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
             }
         },
         "HelpCenterController": {
@@ -1913,6 +1815,7 @@
         "ExecutiveDashboardController": {
             "documented": true,
             "path": "./executivedashboardcontroller.md",
+            "lastUpdated": "2026-04-27",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2037,7 +1940,8 @@
                 "relatedRoutes": [],
                 "rendersPages": [
                     "rakes/index",
-                    "rakes/show"
+                    "rakes/show",
+                    "rakes/edit"
                 ]
             }
         },
@@ -2141,8 +2045,8 @@
             }
         },
         "RakeWagonController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakewagoncontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2151,8 +2055,8 @@
             }
         },
         "DailyVehicleEntryController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./dailyvehicleentrycontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2174,8 +2078,8 @@
             }
         },
         "LoadersController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./loaderscontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2197,8 +2101,8 @@
             }
         },
         "PenaltyTypesController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./penaltytypescontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2219,9 +2123,20 @@
                 ]
             }
         },
+        "PowerPlantApiController": {
+            "documented": true,
+            "path": "./powerplantapicontroller.md",
+            "lastUpdated": "2026-04-24",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
         "PowerPlantController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./powerplantcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2243,8 +2158,8 @@
             }
         },
         "PowerplantSidingDistancesController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./powerplantsidingdistancescontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2266,8 +2181,8 @@
             }
         },
         "RakeLoadController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakeloadcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2278,8 +2193,8 @@
             }
         },
         "SectionTimersController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./sectiontimerscontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2301,8 +2216,8 @@
             }
         },
         "SidingsController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./sidingscontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2324,8 +2239,8 @@
             }
         },
         "TxrController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./txrcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -2336,8 +2251,8 @@
             }
         },
         "WagonUnfitController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./wagonunfitcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -2350,8 +2265,9 @@
             }
         },
         "GenerateDispatchReportController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./generatedispatchreportcontroller.md",
+            "lastUpdated": "2026-03-29",
             "relationships": {
                 "usesActions": [
                     "GenerateDispatchReport"
@@ -2364,8 +2280,8 @@
             }
         },
         "VehicleDispatchController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./vehicledispatchcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -2381,12 +2297,13 @@
                 ],
                 "rendersPages": [
                     "VehicleDispatch/Index"
-                ]
+                ],
+                "lastUpdated": "2026-04-27"
             }
         },
         "VehicleWorkorderController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./vehicleworkordercontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -2410,45 +2327,19 @@
                 ]
             }
         },
-        "AccountDeletionRequestController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [
-                    "account.request-deletion.show",
-                    "account.request-deletion.store"
-                ],
-                "rendersPages": []
-            }
-        },
         "MobileDashboardController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./mobiledashboardcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": []
-            }
-        },
-        "QuickPlacementController": {
-            "documented": true,
-            "path": "./QuickPlacementController.md",
-            "lastUpdated": "2026-05-01",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "sidings/quick-placement"
-                ]
             }
         },
         "AuthController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./authcontroller.md",
             "relationships": {
                 "usesActions": [
                     "CreateApiUser",
@@ -2462,8 +2353,9 @@
             }
         },
         "IndentController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./indentcontroller.md",
+            "lastUpdated": "2026-04-21",
             "relationships": {
                 "usesActions": [
                     "CreateIndentAndProvisionRakeAction"
@@ -2475,19 +2367,9 @@
                 "rendersPages": []
             }
         },
-        "PowerPlantApiController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
         "RailwayReceiptApiController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./railwayreceiptapicontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2496,18 +2378,9 @@
             }
         },
         "RailwayReceiptUploadController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "RakeController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./railwayreceiptuploadcontroller.md",
+            "lastUpdated": "2026-04-22",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2516,8 +2389,9 @@
             }
         },
         "RakeRrDiversionApiController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakerrdiversionapicontroller.md",
+            "lastUpdated": "2026-04-22",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2526,8 +2400,19 @@
             }
         },
         "RakeRrHubStateApiController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakerrhubstateapicontroller.md",
+            "lastUpdated": "2026-04-22",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeController": {
+            "documented": true,
+            "path": "./rakecontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2536,8 +2421,8 @@
             }
         },
         "RakeWeighmentApiController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakeweighmentapicontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2545,26 +2430,9 @@
                 "rendersPages": []
             }
         },
-        "RakeWeighmentWorkflowApiController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [
-                    "RecordManualRakeWeighment",
-                    "UpdateManualRakeWeighment",
-                    "UpdateStockLedger"
-                ],
-                "usesFormRequests": [
-                    "StoreManualRakeWeighmentRequest",
-                    "UpdateManualRakeWeighmentRequest"
-                ],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
         "RolePermissionController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rolepermissioncontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2573,8 +2441,8 @@
             }
         },
         "SidingController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./sidingcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2583,8 +2451,8 @@
             }
         },
         "SidingVehicleDispatchController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./sidingvehicledispatchcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2593,70 +2461,8 @@
             }
         },
         "WeighmentUploadController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "CoalStockApproxDetailController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [
-                    "master-data.daily-stock-details.index",
-                    "master-data.daily-stock-details.export",
-                    "master-data.daily-stock-details.create",
-                    "master-data.daily-stock-details.store",
-                    "master-data.daily-stock-details.edit",
-                    "master-data.daily-stock-details.update",
-                    "master-data.daily-stock-details.destroy"
-                ],
-                "rendersPages": [
-                    "MasterData/DailyStockDetails/Index",
-                    "MasterData/DailyStockDetails/Create",
-                    "MasterData/DailyStockDetails/Edit"
-                ]
-            }
-        },
-        "LoaderOverloadWebController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "CoalTransportReportExportController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "DispatchReportDprExportController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "RedirectAdminHomeController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./weighmentuploadcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2665,8 +2471,8 @@
             }
         },
         "HistoricalMineController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./historicalminecontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2682,8 +2488,8 @@
             }
         },
         "HistoricalRakeController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./historicalrakecontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2699,35 +2505,9 @@
                 ]
             }
         },
-        "LoaderOperatorsController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [
-                    "StoreLoaderOperatorRequest",
-                    "UpdateLoaderOperatorRequest"
-                ],
-                "relatedRoutes": [
-                    "master-data.loader-operators.store",
-                    "master-data.loader-operators.update"
-                ],
-                "rendersPages": []
-            }
-        },
-        "NotificationReadController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
         "OpeningCoalStockController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./openingcoalstockcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2744,8 +2524,8 @@
             }
         },
         "ProductionEntryController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./productionentrycontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -2771,8 +2551,8 @@
             }
         },
         "RrUploadController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rruploadcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -2783,8 +2563,8 @@
             }
         },
         "RailwaySidingEmptyWeighmentController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./railwaysidingemptyweighmentcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2800,6 +2580,94 @@
                 "rendersPages": [
                     "railway-siding-empty-weighment/index"
                 ]
+            }
+        },
+        "ShiftTimingsController": {
+            "documented": true,
+            "path": "./shifttimingscontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update"
+                ],
+                "rendersPages": [
+                    "MasterData/ShiftTimings/Index",
+                    "MasterData/ShiftTimings/Edit"
+                ]
+            }
+        },
+        "WeighmentsController": {
+            "documented": true,
+            "path": "./weighmentscontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "DeleteStandaloneHistoricalWeighmentAction",
+                    "RecordManualRakeWeighment"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "weighments/index",
+                    "weighments/show"
+                ]
+            }
+        },
+        "AccountDeletionRequestController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "account.request-deletion.show",
+                    "account.request-deletion.store"
+                ],
+                "rendersPages": []
+            }
+        },
+        "CoalStockApproxDetailController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.daily-stock-details.index",
+                    "master-data.daily-stock-details.export",
+                    "master-data.daily-stock-details.create",
+                    "master-data.daily-stock-details.store",
+                    "master-data.daily-stock-details.edit",
+                    "master-data.daily-stock-details.update",
+                    "master-data.daily-stock-details.destroy"
+                ],
+                "rendersPages": [
+                    "MasterData/DailyStockDetails/Index",
+                    "MasterData/DailyStockDetails/Create",
+                    "MasterData/DailyStockDetails/Edit"
+                ]
+            }
+        },
+        "RedirectAdminHomeController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "NotificationReadController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
             }
         },
         "PreRrController": {
@@ -2832,13 +2700,21 @@
                 "rendersPages": []
             }
         },
+        "RakePowerPlantReceiptController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
         "RakeLoaderController": {
             "documented": false,
             "path": null,
             "relationships": {
-                "usesActions": [
-                    "GenerateLoadingRecommendationAction"
-                ],
+                "usesActions": [],
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": [
@@ -2847,13 +2723,36 @@
                 ]
             }
         },
-        "RakePowerPlantReceiptController": {
+        "RakeWeighmentWorkflowApiController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "RecordManualRakeWeighment",
+                    "UpdateManualRakeWeighment",
+                    "UpdateStockLedger"
+                ],
+                "usesFormRequests": [
+                    "StoreManualRakeWeighmentRequest",
+                    "UpdateManualRakeWeighmentRequest"
+                ],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "LoaderOperatorsController": {
             "documented": false,
             "path": null,
             "relationships": {
                 "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
+                "usesFormRequests": [
+                    "StoreLoaderOperatorRequest",
+                    "UpdateLoaderOperatorRequest"
+                ],
+                "relatedRoutes": [
+                    "master-data.loader-operators.store",
+                    "master-data.loader-operators.update"
+                ],
                 "rendersPages": []
             }
         },
@@ -2865,23 +2764,6 @@
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": []
-            }
-        },
-        "ShiftTimingsController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [
-                    "master-data.shift-timings.index",
-                    "master-data.shift-timings.edit",
-                    "master-data.shift-timings.update"
-                ],
-                "rendersPages": [
-                    "MasterData/ShiftTimings/Index",
-                    "MasterData/ShiftTimings/Edit"
-                ]
             }
         },
         "SidingPreIndentReportController": {
@@ -2912,8 +2794,8 @@
             }
         },
         "StockLedgerController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./stockledgercontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -2929,58 +2811,20 @@
                 ]
             }
         },
-        "WeighmentsController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [
-                    "DeleteStandaloneHistoricalWeighmentAction",
-                    "RecordManualRakeWeighment"
-                ],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "weighments/index",
-                    "weighments/show"
-                ]
-            }
-        },
-        "SidingMonitorController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "sidings/monitor"
-                ]
-            }
-        },
-        "CommandPaletteSearchController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "LiveMonitorController": {
-            "documented": false,
-            "path": null,
+        "LoaderOverloadWebController": {
+            "documented": true,
+            "path": "./loaderoverloadwebcontroller.md",
+            "lastUpdated": "2026-04-27",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
                 "relatedRoutes": [
-                    "control-room.index",
-                    "control-room.show"
+                    "dashboard.loader-overload.loaders.index",
+                    "dashboard.loader-overload.loaders.show",
+                    "dashboard.loader-overload.operators.index",
+                    "dashboard.loader-overload.operators.show"
                 ],
-                "rendersPages": [
-                    "control-room/index",
-                    "control-room/show"
-                ]
+                "rendersPages": []
             }
         }
     },
@@ -2996,6 +2840,7 @@
                     "filament.imports.failed-rows.download",
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
+                    "filament.admin.home",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.analytics.product",
@@ -3012,12 +2857,6 @@
                     "filament.admin.resources.roles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
-                    "filament.admin.resources.penalty-reconciliations.index",
-                    "filament.admin.resources.penalty-reconciliations.view",
-                    "filament.admin.resources.commodity-utilisation-thresholds.index",
-                    "filament.admin.resources.commodity-utilisation-thresholds.create",
-                    "filament.admin.resources.commodity-utilisation-thresholds.edit",
-                    "filament.admin.home",
                     "referralLink",
                     "generateReferralCodes",
                     "login",
@@ -3062,26 +2901,6 @@
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
-                    "data-table.export",
-                    "data-table.select-all",
-                    "data-table.inline-edit",
-                    "data-table.toggle",
-                    "data-table.detail",
-                    "data-table.filter-options",
-                    "data-table.cascading-options",
-                    "data-table.reorder",
-                    "data-table.import",
-                    "data-table.export-status",
-                    "data-table.ai.query",
-                    "data-table.ai.insights",
-                    "data-table.ai.column-summary",
-                    "data-table.ai.suggest",
-                    "data-table.ai.enrich",
-                    "data-table.ai.visualize",
-                    "data-table.saved-views.index",
-                    "data-table.saved-views.store",
-                    "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
                     "api.v1.auth.login",
                     "api.v1.auth.register",
                     "api.v1.auth.refresh",
@@ -3153,8 +2972,6 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
-                    "control-room.index",
-                    "control-room.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
@@ -3186,12 +3003,8 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
-                    "sidings.monitor",
-                    "sidings.quick-placement.show",
-                    "sidings.quick-placement.store",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
-                    "rake-loader.rakes.override",
                     "rakes.index",
                     "rakes.show",
                     "rakes.rr-hub-state",
@@ -3365,8 +3178,6 @@
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
-                    "vehicle-dispatch.dpr-data",
-                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save",
@@ -3396,10 +3207,10 @@
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
+                    "reconciliation.show",
                     "reconciliation.power-plant-receipts.index",
                     "reconciliation.power-plant-receipts.create",
                     "reconciliation.power-plant-receipts.store",
-                    "reconciliation.show",
                     "reports.index",
                     "reports.generate",
                     "weighments.index",
@@ -3420,7 +3231,6 @@
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
-                    "command-palette.search",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
@@ -3684,6 +3494,7 @@
                     "filament.imports.failed-rows.download",
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
+                    "filament.admin.home",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.analytics.product",
@@ -3700,12 +3511,6 @@
                     "filament.admin.resources.roles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
-                    "filament.admin.resources.penalty-reconciliations.index",
-                    "filament.admin.resources.penalty-reconciliations.view",
-                    "filament.admin.resources.commodity-utilisation-thresholds.index",
-                    "filament.admin.resources.commodity-utilisation-thresholds.create",
-                    "filament.admin.resources.commodity-utilisation-thresholds.edit",
-                    "filament.admin.home",
                     "referralLink",
                     "generateReferralCodes",
                     "login",
@@ -3750,26 +3555,6 @@
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
-                    "data-table.export",
-                    "data-table.select-all",
-                    "data-table.inline-edit",
-                    "data-table.toggle",
-                    "data-table.detail",
-                    "data-table.filter-options",
-                    "data-table.cascading-options",
-                    "data-table.reorder",
-                    "data-table.import",
-                    "data-table.export-status",
-                    "data-table.ai.query",
-                    "data-table.ai.insights",
-                    "data-table.ai.column-summary",
-                    "data-table.ai.suggest",
-                    "data-table.ai.enrich",
-                    "data-table.ai.visualize",
-                    "data-table.saved-views.index",
-                    "data-table.saved-views.store",
-                    "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
                     "api.v1.auth.login",
                     "api.v1.auth.register",
                     "api.v1.auth.refresh",
@@ -3841,8 +3626,6 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
-                    "control-room.index",
-                    "control-room.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
@@ -3874,12 +3657,8 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
-                    "sidings.monitor",
-                    "sidings.quick-placement.show",
-                    "sidings.quick-placement.store",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
-                    "rake-loader.rakes.override",
                     "rakes.index",
                     "rakes.show",
                     "rakes.rr-hub-state",
@@ -4053,8 +3832,6 @@
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
-                    "vehicle-dispatch.dpr-data",
-                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save",
@@ -4084,10 +3861,10 @@
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
+                    "reconciliation.show",
                     "reconciliation.power-plant-receipts.index",
                     "reconciliation.power-plant-receipts.create",
                     "reconciliation.power-plant-receipts.store",
-                    "reconciliation.show",
                     "reports.index",
                     "reports.generate",
                     "weighments.index",
@@ -4108,7 +3885,6 @@
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
-                    "command-palette.search",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
@@ -4155,6 +3931,7 @@
                     "filament.imports.failed-rows.download",
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
+                    "filament.admin.home",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.analytics.product",
@@ -4171,12 +3948,6 @@
                     "filament.admin.resources.roles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
-                    "filament.admin.resources.penalty-reconciliations.index",
-                    "filament.admin.resources.penalty-reconciliations.view",
-                    "filament.admin.resources.commodity-utilisation-thresholds.index",
-                    "filament.admin.resources.commodity-utilisation-thresholds.create",
-                    "filament.admin.resources.commodity-utilisation-thresholds.edit",
-                    "filament.admin.home",
                     "referralLink",
                     "generateReferralCodes",
                     "login",
@@ -4221,26 +3992,6 @@
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
-                    "data-table.export",
-                    "data-table.select-all",
-                    "data-table.inline-edit",
-                    "data-table.toggle",
-                    "data-table.detail",
-                    "data-table.filter-options",
-                    "data-table.cascading-options",
-                    "data-table.reorder",
-                    "data-table.import",
-                    "data-table.export-status",
-                    "data-table.ai.query",
-                    "data-table.ai.insights",
-                    "data-table.ai.column-summary",
-                    "data-table.ai.suggest",
-                    "data-table.ai.enrich",
-                    "data-table.ai.visualize",
-                    "data-table.saved-views.index",
-                    "data-table.saved-views.store",
-                    "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
                     "api.v1.auth.login",
                     "api.v1.auth.register",
                     "api.v1.auth.refresh",
@@ -4312,8 +4063,6 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
-                    "control-room.index",
-                    "control-room.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
@@ -4345,12 +4094,8 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
-                    "sidings.monitor",
-                    "sidings.quick-placement.show",
-                    "sidings.quick-placement.store",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
-                    "rake-loader.rakes.override",
                     "rakes.index",
                     "rakes.show",
                     "rakes.rr-hub-state",
@@ -4524,8 +4269,6 @@
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
-                    "vehicle-dispatch.dpr-data",
-                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save",
@@ -4555,10 +4298,10 @@
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
+                    "reconciliation.show",
                     "reconciliation.power-plant-receipts.index",
                     "reconciliation.power-plant-receipts.create",
                     "reconciliation.power-plant-receipts.store",
-                    "reconciliation.show",
                     "reports.index",
                     "reports.generate",
                     "weighments.index",
@@ -4579,7 +4322,6 @@
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
-                    "command-palette.search",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
@@ -4612,6 +4354,7 @@
                     "filament.imports.failed-rows.download",
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
+                    "filament.admin.home",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.analytics.product",
@@ -4628,12 +4371,6 @@
                     "filament.admin.resources.roles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
-                    "filament.admin.resources.penalty-reconciliations.index",
-                    "filament.admin.resources.penalty-reconciliations.view",
-                    "filament.admin.resources.commodity-utilisation-thresholds.index",
-                    "filament.admin.resources.commodity-utilisation-thresholds.create",
-                    "filament.admin.resources.commodity-utilisation-thresholds.edit",
-                    "filament.admin.home",
                     "referralLink",
                     "generateReferralCodes",
                     "login",
@@ -4678,26 +4415,6 @@
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
-                    "data-table.export",
-                    "data-table.select-all",
-                    "data-table.inline-edit",
-                    "data-table.toggle",
-                    "data-table.detail",
-                    "data-table.filter-options",
-                    "data-table.cascading-options",
-                    "data-table.reorder",
-                    "data-table.import",
-                    "data-table.export-status",
-                    "data-table.ai.query",
-                    "data-table.ai.insights",
-                    "data-table.ai.column-summary",
-                    "data-table.ai.suggest",
-                    "data-table.ai.enrich",
-                    "data-table.ai.visualize",
-                    "data-table.saved-views.index",
-                    "data-table.saved-views.store",
-                    "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
                     "api.v1.auth.login",
                     "api.v1.auth.register",
                     "api.v1.auth.refresh",
@@ -4769,8 +4486,6 @@
                     "terms.accept",
                     "terms.accept.store",
                     "dashboard",
-                    "control-room.index",
-                    "control-room.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
@@ -4802,12 +4517,8 @@
                     "billing.invoices.index",
                     "billing.invoices.download",
                     "siding.switch",
-                    "sidings.monitor",
-                    "sidings.quick-placement.show",
-                    "sidings.quick-placement.store",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
-                    "rake-loader.rakes.override",
                     "rakes.index",
                     "rakes.show",
                     "rakes.rr-hub-state",
@@ -4981,8 +4692,6 @@
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
-                    "vehicle-dispatch.dpr-data",
-                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
                     "vehicle-dispatch.save",
@@ -5012,10 +4721,10 @@
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
+                    "reconciliation.show",
                     "reconciliation.power-plant-receipts.index",
                     "reconciliation.power-plant-receipts.create",
                     "reconciliation.power-plant-receipts.store",
-                    "reconciliation.show",
                     "reports.index",
                     "reports.generate",
                     "weighments.index",
@@ -5036,7 +4745,6 @@
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
-                    "command-palette.search",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
@@ -5598,9 +5306,9 @@
             }
         },
         "rakes/create-from-indent": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./rakes/create-from-indent.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -5620,9 +5328,9 @@
             }
         },
         "road-dispatch/arrivals/show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./road-dispatch/arrivals/show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -5635,27 +5343,27 @@
             }
         },
         "road-dispatch/components/WeighmentHistory": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./road-dispatch/components/WeighmentHistory.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "road-dispatch/stepper/track-timeline": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./road-dispatch/stepper/track-timeline.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "road-dispatch/unloads/show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./road-dispatch/unloads/show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -5672,9 +5380,9 @@
             }
         },
         "MasterData/DistanceMatrix/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/DistanceMatrix/Create.md",
             "relationships": {
                 "renderedBy": [
                     "PowerplantSidingDistancesController"
@@ -5691,9 +5399,9 @@
             }
         },
         "MasterData/DistanceMatrix/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/DistanceMatrix/Index.md",
             "relationships": {
                 "renderedBy": [
                     "PowerplantSidingDistancesController"
@@ -5710,9 +5418,9 @@
             }
         },
         "MasterData/Loaders/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/Loaders/Create.md",
             "relationships": {
                 "renderedBy": [
                     "LoadersController"
@@ -5729,9 +5437,9 @@
             }
         },
         "MasterData/Loaders/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/Loaders/Index.md",
             "relationships": {
                 "renderedBy": [
                     "LoadersController"
@@ -5748,9 +5456,9 @@
             }
         },
         "MasterData/PenaltyTypes/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/PenaltyTypes/Create.md",
             "relationships": {
                 "renderedBy": [
                     "PenaltyTypesController"
@@ -5767,9 +5475,9 @@
             }
         },
         "MasterData/PenaltyTypes/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/PenaltyTypes/Index.md",
             "relationships": {
                 "renderedBy": [
                     "PenaltyTypesController"
@@ -5786,9 +5494,9 @@
             }
         },
         "MasterData/PowerPlants/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/PowerPlants/Create.md",
             "relationships": {
                 "renderedBy": [
                     "PowerPlantController"
@@ -5805,9 +5513,9 @@
             }
         },
         "MasterData/PowerPlants/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/PowerPlants/Edit.md",
             "relationships": {
                 "renderedBy": [
                     "PowerPlantController"
@@ -5824,9 +5532,9 @@
             }
         },
         "MasterData/PowerPlants/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/PowerPlants/Index.md",
             "relationships": {
                 "renderedBy": [
                     "PowerPlantController"
@@ -5843,9 +5551,9 @@
             }
         },
         "MasterData/PowerPlants/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/PowerPlants/Show.md",
             "relationships": {
                 "renderedBy": [
                     "PowerPlantController"
@@ -5862,9 +5570,9 @@
             }
         },
         "MasterData/SectionTimers/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/SectionTimers/Create.md",
             "relationships": {
                 "renderedBy": [
                     "SectionTimersController"
@@ -5881,9 +5589,9 @@
             }
         },
         "MasterData/SectionTimers/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/SectionTimers/Index.md",
             "relationships": {
                 "renderedBy": [
                     "SectionTimersController"
@@ -5900,9 +5608,9 @@
             }
         },
         "MasterData/Sidings/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/Sidings/Index.md",
             "relationships": {
                 "renderedBy": [
                     "SidingsController"
@@ -5919,9 +5627,9 @@
             }
         },
         "rakes/load": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./rakes/load.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -5940,9 +5648,9 @@
             }
         },
         "road-dispatch/daily-vehicle-entries/index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./road-dispatch/daily-vehicle-entries/index.md",
             "relationships": {
                 "renderedBy": [
                     "DailyVehicleEntryController"
@@ -5962,99 +5670,111 @@
             }
         },
         "road-dispatch/daily-vehicle-entries/shift-tabs": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./road-dispatch/daily-vehicle-entries/shift-tabs.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "road-dispatch/daily-vehicle-entries/shift-report-dialog": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./road-dispatch/daily-vehicle-entries/shift-report-dialog.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "road-dispatch/daily-vehicle-entries/vehicle-entry-row": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./road-dispatch/daily-vehicle-entries/vehicle-entry-row.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "road-dispatch/daily-vehicle-entries/vehicle-entry-table": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./road-dispatch/daily-vehicle-entries/vehicle-entry-table.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "VehicleDispatch/DPRTab": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleDispatch/DPRTab.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "VehicleDispatch/ImportPreviewCard": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleDispatch/ImportPreviewCard.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "VehicleDispatch/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleDispatch/Index.md",
+            "lastUpdated": "2026-04-27",
             "relationships": {
                 "renderedBy": [
                     "VehicleDispatchController"
                 ],
                 "relatedRoutes": [
                     "vehicle-dispatch.index",
-                    "vehicle-dispatch.dpr-data",
-                    "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
                     "vehicle-dispatch.import",
-                    "vehicle-dispatch.save"
+                    "vehicle-dispatch.save",
+                    "vehicle-dispatch.dpr-export.queue",
+                    "vehicle-dispatch.dpr-export.status",
+                    "vehicle-dispatch.dpr-export.download",
+                    "vehicle-dispatch.dpr-export"
                 ]
             }
         },
         "VehicleDispatch/MainDataTab": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleDispatch/MainDataTab.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "VehicleDispatch/VehicleDispatchTable": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleDispatch/VehicleDispatchTable.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "VehicleDispatch/VehicleDispatchTabs": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleDispatch/VehicleDispatchTabs.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "VehicleWorkorders/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleWorkorders/Edit.md",
             "relationships": {
                 "renderedBy": [
                     "VehicleWorkorderController"
@@ -6071,9 +5791,456 @@
             }
         },
         "VehicleWorkorders/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleWorkorders/Index.md",
+            "relationships": {
+                "renderedBy": [
+                    "VehicleWorkorderController"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.create",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.store",
+                    "vehicle-workorders.update"
+                ]
+            }
+        },
+        "MasterData/OpeningCoalStock/Edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/OpeningCoalStock/Edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "OpeningCoalStockController"
+                ],
+                "relatedRoutes": [
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix"
+                ]
+            }
+        },
+        "MasterData/OpeningCoalStock/Index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/OpeningCoalStock/Index.md",
+            "relationships": {
+                "renderedBy": [
+                    "OpeningCoalStockController"
+                ],
+                "relatedRoutes": [
+                    "master-data.opening-coal-stock.index",
+                    "master-data.opening-coal-stock.edit",
+                    "master-data.opening-coal-stock.update",
+                    "master-data.opening-coal-stock.fix"
+                ]
+            }
+        },
+        "MasterData/SectionTimers/Edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/SectionTimers/Edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "SectionTimersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy"
+                ]
+            }
+        },
+        "MasterData/SectionTimers/Show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/SectionTimers/Show.md",
+            "relationships": {
+                "renderedBy": [
+                    "SectionTimersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy"
+                ]
+            }
+        },
+        "MasterData/ShiftTimings/Edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/ShiftTimings/Edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "ShiftTimingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update"
+                ]
+            }
+        },
+        "MasterData/ShiftTimings/Index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/ShiftTimings/Index.md",
+            "relationships": {
+                "renderedBy": [
+                    "ShiftTimingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.shift-timings.index",
+                    "master-data.shift-timings.edit",
+                    "master-data.shift-timings.update"
+                ]
+            }
+        },
+        "historical/mines/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./historical/mines/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "HistoricalMineController"
+                ],
+                "relatedRoutes": [
+                    "historical.mines.index",
+                    "historical.mines.store",
+                    "historical.mines.update",
+                    "historical.mines.destroy"
+                ]
+            }
+        },
+        "historical/railway-siding/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./historical/railway-siding/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "HistoricalRakeController"
+                ],
+                "relatedRoutes": [
+                    "historical.railway-siding.index",
+                    "historical.railway-siding.export",
+                    "historical.railway-siding.store",
+                    "historical.railway-siding.update",
+                    "historical.railway-siding.destroy"
+                ]
+            }
+        },
+        "production/edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./production/edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "ProductionEntryController"
+                ],
+                "relatedRoutes": [
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy"
+                ]
+            }
+        },
+        "production/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./production/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "ProductionEntryController"
+                ],
+                "relatedRoutes": [
+                    "production.coal.index",
+                    "production.coal.store",
+                    "production.coal.edit",
+                    "production.coal.update",
+                    "production.coal.destroy",
+                    "production.ob.index",
+                    "production.ob.store",
+                    "production.ob.edit",
+                    "production.ob.update",
+                    "production.ob.destroy"
+                ]
+            }
+        },
+        "railway-siding-empty-weighment/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./railway-siding-empty-weighment/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "RailwaySidingEmptyWeighmentController"
+                ],
+                "relatedRoutes": [
+                    "railway-siding-empty-weighment.index",
+                    "railway-siding-empty-weighment.store",
+                    "railway-siding-empty-weighment.hourly-summary",
+                    "railway-siding-empty-weighment.update",
+                    "railway-siding-empty-weighment.destroy",
+                    "railway-siding-empty-weighment.complete",
+                    "railway-siding-empty-weighment.export"
+                ]
+            }
+        },
+        "railway-siding-empty-weighment/shift-tabs": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./railway-siding-empty-weighment/shift-tabs.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "railway-siding-empty-weighment/vehicle-entry-row": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./railway-siding-empty-weighment/vehicle-entry-row.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "railway-siding-empty-weighment/vehicle-entry-table": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./railway-siding-empty-weighment/vehicle-entry-table.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "weighments/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./weighments/index.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx"
+                ]
+            }
+        },
+        "weighments/show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./weighments/show.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.template-xlsx"
+                ]
+            }
+        },
+        "MasterData/DistanceMatrix/Edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/DistanceMatrix/Edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "PowerplantSidingDistancesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy"
+                ]
+            }
+        },
+        "MasterData/DistanceMatrix/Show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/DistanceMatrix/Show.md",
+            "relationships": {
+                "renderedBy": [
+                    "PowerplantSidingDistancesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy"
+                ]
+            }
+        },
+        "MasterData/Loaders/Edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/Loaders/Edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "LoadersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy"
+                ]
+            }
+        },
+        "MasterData/Loaders/Show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/Loaders/Show.md",
+            "relationships": {
+                "renderedBy": [
+                    "LoadersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy"
+                ]
+            }
+        },
+        "MasterData/PenaltyTypes/Edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/PenaltyTypes/Edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "PenaltyTypesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy"
+                ]
+            }
+        },
+        "MasterData/PenaltyTypes/Show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/PenaltyTypes/Show.md",
+            "relationships": {
+                "renderedBy": [
+                    "PenaltyTypesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy"
+                ]
+            }
+        },
+        "MasterData/Sidings/Create": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/Sidings/Create.md",
+            "relationships": {
+                "renderedBy": [
+                    "SidingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy"
+                ]
+            }
+        },
+        "MasterData/Sidings/Edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/Sidings/Edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "SidingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy"
+                ]
+            }
+        },
+        "MasterData/Sidings/Show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./MasterData/Sidings/Show.md",
+            "relationships": {
+                "renderedBy": [
+                    "SidingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy"
+                ]
+            }
+        },
+        "VehicleWorkorders/Create": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./VehicleWorkorders/Create.md",
             "relationships": {
                 "renderedBy": [
                     "VehicleWorkorderController"
@@ -6146,281 +6313,23 @@
                 ]
             }
         },
-        "MasterData/DistanceMatrix/Edit": {
-            "documented": false,
+        "rake-loader/index": {
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "docs/developer/frontend/pages/rake-loader/index.md",
+            "lastUpdated": "2026-04-14",
             "relationships": {
-                "renderedBy": [
-                    "PowerplantSidingDistancesController"
-                ],
+                "renderedBy": [],
                 "relatedRoutes": [
-                    "master-data.master-data.distance-matrix.index",
-                    "master-data.master-data.distance-matrix.create",
-                    "master-data.master-data.distance-matrix.store",
-                    "master-data.master-data.distance-matrix.show",
-                    "master-data.master-data.distance-matrix.edit",
-                    "master-data.master-data.distance-matrix.update",
-                    "master-data.master-data.distance-matrix.destroy"
-                ]
-            }
-        },
-        "MasterData/DistanceMatrix/Show": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "PowerplantSidingDistancesController"
-                ],
-                "relatedRoutes": [
-                    "master-data.master-data.distance-matrix.index",
-                    "master-data.master-data.distance-matrix.create",
-                    "master-data.master-data.distance-matrix.store",
-                    "master-data.master-data.distance-matrix.show",
-                    "master-data.master-data.distance-matrix.edit",
-                    "master-data.master-data.distance-matrix.update",
-                    "master-data.master-data.distance-matrix.destroy"
-                ]
-            }
-        },
-        "MasterData/Loaders/Edit": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "LoadersController"
-                ],
-                "relatedRoutes": [
-                    "master-data.loaders.index",
-                    "master-data.loaders.create",
-                    "master-data.loaders.store",
-                    "master-data.loaders.show",
-                    "master-data.loaders.edit",
-                    "master-data.loaders.update",
-                    "master-data.loaders.destroy"
-                ]
-            }
-        },
-        "MasterData/Loaders/Show": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "LoadersController"
-                ],
-                "relatedRoutes": [
-                    "master-data.loaders.index",
-                    "master-data.loaders.create",
-                    "master-data.loaders.store",
-                    "master-data.loaders.show",
-                    "master-data.loaders.edit",
-                    "master-data.loaders.update",
-                    "master-data.loaders.destroy"
-                ]
-            }
-        },
-        "MasterData/OpeningCoalStock/Edit": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "OpeningCoalStockController"
-                ],
-                "relatedRoutes": [
-                    "master-data.opening-coal-stock.index",
-                    "master-data.opening-coal-stock.edit",
-                    "master-data.opening-coal-stock.update",
-                    "master-data.opening-coal-stock.fix"
-                ]
-            }
-        },
-        "MasterData/OpeningCoalStock/Index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "OpeningCoalStockController"
-                ],
-                "relatedRoutes": [
-                    "master-data.opening-coal-stock.index",
-                    "master-data.opening-coal-stock.edit",
-                    "master-data.opening-coal-stock.update",
-                    "master-data.opening-coal-stock.fix"
-                ]
-            }
-        },
-        "MasterData/PenaltyTypes/Edit": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "PenaltyTypesController"
-                ],
-                "relatedRoutes": [
-                    "master-data.penalty-types.index",
-                    "master-data.penalty-types.create",
-                    "master-data.penalty-types.store",
-                    "master-data.penalty-types.show",
-                    "master-data.penalty-types.edit",
-                    "master-data.penalty-types.update",
-                    "master-data.penalty-types.destroy"
-                ]
-            }
-        },
-        "MasterData/PenaltyTypes/Show": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "PenaltyTypesController"
-                ],
-                "relatedRoutes": [
-                    "master-data.penalty-types.index",
-                    "master-data.penalty-types.create",
-                    "master-data.penalty-types.store",
-                    "master-data.penalty-types.show",
-                    "master-data.penalty-types.edit",
-                    "master-data.penalty-types.update",
-                    "master-data.penalty-types.destroy"
-                ]
-            }
-        },
-        "MasterData/SectionTimers/Edit": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "SectionTimersController"
-                ],
-                "relatedRoutes": [
-                    "master-data.section-timers.index",
-                    "master-data.section-timers.create",
-                    "master-data.section-timers.store",
-                    "master-data.section-timers.show",
-                    "master-data.section-timers.edit",
-                    "master-data.section-timers.update",
-                    "master-data.section-timers.destroy"
-                ]
-            }
-        },
-        "MasterData/SectionTimers/Show": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "SectionTimersController"
-                ],
-                "relatedRoutes": [
-                    "master-data.section-timers.index",
-                    "master-data.section-timers.create",
-                    "master-data.section-timers.store",
-                    "master-data.section-timers.show",
-                    "master-data.section-timers.edit",
-                    "master-data.section-timers.update",
-                    "master-data.section-timers.destroy"
-                ]
-            }
-        },
-        "MasterData/ShiftTimings/Edit": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "ShiftTimingsController"
-                ],
-                "relatedRoutes": [
-                    "master-data.shift-timings.index",
-                    "master-data.shift-timings.edit",
-                    "master-data.shift-timings.update"
-                ]
-            }
-        },
-        "MasterData/ShiftTimings/Index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "ShiftTimingsController"
-                ],
-                "relatedRoutes": [
-                    "master-data.shift-timings.index",
-                    "master-data.shift-timings.edit",
-                    "master-data.shift-timings.update"
-                ]
-            }
-        },
-        "MasterData/Sidings/Create": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "SidingsController"
-                ],
-                "relatedRoutes": [
-                    "master-data.sidings.index",
-                    "master-data.sidings.create",
-                    "master-data.sidings.store",
-                    "master-data.sidings.show",
-                    "master-data.sidings.edit",
-                    "master-data.sidings.update",
-                    "master-data.sidings.destroy"
-                ]
-            }
-        },
-        "MasterData/Sidings/Edit": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "SidingsController"
-                ],
-                "relatedRoutes": [
-                    "master-data.sidings.index",
-                    "master-data.sidings.create",
-                    "master-data.sidings.store",
-                    "master-data.sidings.show",
-                    "master-data.sidings.edit",
-                    "master-data.sidings.update",
-                    "master-data.sidings.destroy"
-                ]
-            }
-        },
-        "MasterData/Sidings/Show": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "SidingsController"
-                ],
-                "relatedRoutes": [
-                    "master-data.sidings.index",
-                    "master-data.sidings.create",
-                    "master-data.sidings.store",
-                    "master-data.sidings.show",
-                    "master-data.sidings.edit",
-                    "master-data.sidings.update",
-                    "master-data.sidings.destroy"
+                    "rake-loader.index",
+                    "rake-loader.rakes.loading"
                 ]
             }
         },
         "MasterData/StockLedger/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/StockLedger/Index.md",
             "relationships": {
                 "renderedBy": [
                     "StockLedgerController"
@@ -6433,167 +6342,12 @@
             }
         },
         "MasterData/StockLedger/stock-report-dialog": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/StockLedger/stock-report-dialog.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
-            }
-        },
-        "VehicleWorkorders/Create": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "VehicleWorkorderController"
-                ],
-                "relatedRoutes": [
-                    "vehicle-workorders.index",
-                    "vehicle-workorders.export",
-                    "vehicle-workorders.export-transporters",
-                    "vehicle-workorders.create",
-                    "vehicle-workorders.edit",
-                    "vehicle-workorders.store",
-                    "vehicle-workorders.update"
-                ]
-            }
-        },
-        "historical/mines/index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "HistoricalMineController"
-                ],
-                "relatedRoutes": [
-                    "historical.mines.index",
-                    "historical.mines.store",
-                    "historical.mines.update",
-                    "historical.mines.destroy"
-                ]
-            }
-        },
-        "historical/railway-siding/index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "HistoricalRakeController"
-                ],
-                "relatedRoutes": [
-                    "historical.railway-siding.index",
-                    "historical.railway-siding.export",
-                    "historical.railway-siding.store",
-                    "historical.railway-siding.update",
-                    "historical.railway-siding.destroy"
-                ]
-            }
-        },
-        "production/edit": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "ProductionEntryController"
-                ],
-                "relatedRoutes": [
-                    "production.coal.index",
-                    "production.coal.store",
-                    "production.coal.edit",
-                    "production.coal.update",
-                    "production.coal.destroy",
-                    "production.ob.index",
-                    "production.ob.store",
-                    "production.ob.edit",
-                    "production.ob.update",
-                    "production.ob.destroy"
-                ]
-            }
-        },
-        "production/index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "ProductionEntryController"
-                ],
-                "relatedRoutes": [
-                    "production.coal.index",
-                    "production.coal.store",
-                    "production.coal.edit",
-                    "production.coal.update",
-                    "production.coal.destroy",
-                    "production.ob.index",
-                    "production.ob.store",
-                    "production.ob.edit",
-                    "production.ob.update",
-                    "production.ob.destroy"
-                ]
-            }
-        },
-        "railway-siding-empty-weighment/index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "RailwaySidingEmptyWeighmentController"
-                ],
-                "relatedRoutes": [
-                    "railway-siding-empty-weighment.index",
-                    "railway-siding-empty-weighment.store",
-                    "railway-siding-empty-weighment.hourly-summary",
-                    "railway-siding-empty-weighment.update",
-                    "railway-siding-empty-weighment.destroy",
-                    "railway-siding-empty-weighment.complete",
-                    "railway-siding-empty-weighment.export"
-                ]
-            }
-        },
-        "railway-siding-empty-weighment/shift-tabs": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "railway-siding-empty-weighment/vehicle-entry-row": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "railway-siding-empty-weighment/vehicle-entry-table": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "rake-loader/index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": [
-                    "rake-loader.index",
-                    "rake-loader.rakes.loading",
-                    "rake-loader.rakes.override"
-                ]
             }
         },
         "rake-loader/loading": {
@@ -6604,18 +6358,8 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "rake-loader.index",
-                    "rake-loader.rakes.loading",
-                    "rake-loader.rakes.override"
+                    "rake-loader.rakes.loading"
                 ]
-            }
-        },
-        "road-dispatch/daily-vehicle-entries/shift-report-dialog": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
             }
         },
         "siding-pre-indent-reports/create": {
@@ -6691,154 +6435,6 @@
                     "siding-pre-indent-reports.edit",
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy"
-                ]
-            }
-        },
-        "weighments/index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": [
-                    "weighments.index",
-                    "weighments.show",
-                    "weighments.download",
-                    "weighments.destroy",
-                    "weighments.import",
-                    "weighments.manual",
-                    "weighments.template-xlsx"
-                ]
-            }
-        },
-        "weighments/show": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": [
-                    "weighments.index",
-                    "weighments.show",
-                    "weighments.download",
-                    "weighments.destroy",
-                    "weighments.import",
-                    "weighments.manual",
-                    "weighments.template-xlsx"
-                ]
-            }
-        },
-        "sidings/monitor": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": [
-                    "sidings.monitor"
-                ]
-            }
-        },
-        "dashboard/ExecutiveOverview": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "dashboard/LoaderOverloading": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "dashboard/Operations": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "dashboard/PenaltyControl": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "dashboard/PowerPlant": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "dashboard/RakePerformance": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "dashboard/SidingOverview": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": []
-            }
-        },
-        "sidings/quick-placement": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": [
-                    "sidings.quick-placement.show",
-                    "sidings.quick-placement.store"
-                ]
-            }
-        },
-        "control-room/index": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "LiveMonitorController"
-                ],
-                "relatedRoutes": [
-                    "control-room.index",
-                    "control-room.show"
-                ]
-            }
-        },
-        "control-room/show": {
-            "documented": false,
-            "userGuide": null,
-            "developerGuide": null,
-            "relationships": {
-                "renderedBy": [
-                    "LiveMonitorController"
-                ],
-                "relatedRoutes": [
-                    "control-room.index",
-                    "control-room.show"
                 ]
             }
         }

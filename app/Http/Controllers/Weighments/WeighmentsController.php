@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Weighments;
 
 use App\Actions\DeleteStandaloneHistoricalWeighmentAction;
+use App\Actions\FetchRakeWeighmentFromRailwayReceipt;
 use App\Actions\RecordManualRakeWeighment;
 use App\DataTables\WeighmentsRakeDataTable;
 use App\Http\Controllers\Controller;
@@ -248,6 +249,42 @@ final class WeighmentsController extends Controller
 
         return to_route('weighments.show', $weighment->getKey())
             ->with('success', 'Manual weighment recorded. Upload the document when available.');
+    }
+
+    public function fetchFromRr(Request $request, FetchRakeWeighmentFromRailwayReceipt $fetchFromRr): RedirectResponse
+    {
+        $validated = $request->validate([
+            'rake_id' => ['required', 'integer', 'exists:rakes,id'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+        $rake = Rake::query()->findOrFail((int) $validated['rake_id']);
+
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->sidings()->get()->pluck('id')->all();
+
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
+
+        if (! in_array($rake->siding_id, $sidingIds, true)) {
+            return back()
+                ->withErrors(['rake_id' => 'You are not allowed to fetch weighments for the selected rake.'])
+                ->withInput();
+        }
+
+        try {
+            $weighment = $fetchFromRr->handle($rake, (int) $user->id);
+        } catch (InvalidArgumentException $e) {
+            return back()
+                ->withErrors(['rake_id' => $e->getMessage()])
+                ->withInput();
+        }
+
+        return to_route('weighments.show', $weighment->getKey())
+            ->with('success', 'Weighment data loaded from the railway receipt.');
     }
 
     public function downloadTemplateXlsx(Request $request, RakeWeighmentExcelTemplateResolver $templateResolver): BinaryFileResponse|RedirectResponse

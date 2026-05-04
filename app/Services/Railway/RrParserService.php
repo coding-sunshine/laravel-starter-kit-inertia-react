@@ -46,7 +46,7 @@ final readonly class RrParserService
      *     commodity_description: string|null,
      *     invoice_number: string|null,
      *     invoice_date: string|null,
-     *     wagons: array<int, array{sequence: int, wagon_number: string, wagon_type: string|null, pcc_weight: float, loaded_weight: float, permissible_weight: float, overload_weight: float}>,
+     *     wagons: array<int, array{sequence: int, wagon_number: string, wagon_type: string|null, pcc_weight: float, loaded_weight: float, permissible_weight: float, overload_weight: float, tare_weight?: float|null, gross_weight?: float|null}>,
      *     charges: array<int, array{code: string, name: string|null, amount: float}>,
      *     raw_text: string
      * }
@@ -362,9 +362,11 @@ final readonly class RrParserService
 
     /**
      * Parse a wagon data row. Format: "N RLY TYPE WAGON_NUM CC TARE 0 COMMODITY GROSS DIP ACTUAL PERM OVERLOAD ... CHARGEABLE"
+     * Some receipts omit a dedicated commodity token before gross (compact layout); others insert a numeric commodity code (large int),
+     * shifting gross one token right — handled in {@see extractNumbersFromWagonRest}.
      * Wagon number may be split: first line has 7-8 digits, continuation has 2-3 digits.
      *
-     * @return array{sequence: int, wagon_number: string, wagon_type: string|null, pcc_weight: float, loaded_weight: float, permissible_weight: float, overload_weight: float}|null
+     * @return array{sequence: int, wagon_number: string, wagon_type: string|null, pcc_weight: float, loaded_weight: float, permissible_weight: float, overload_weight: float, tare_weight: float|null, gross_weight: float|null}|null
      */
     private function parseWagonRow(string $line, ?string $continuation): ?array
     {
@@ -398,11 +400,33 @@ final readonly class RrParserService
             'loaded_weight' => $loaded,
             'permissible_weight' => $permissible,
             'overload_weight' => $overload,
+            'tare_weight' => $numbers['tare'] ?? null,
+            'gross_weight' => $numbers['gross'] ?? null,
         ];
     }
 
     /**
-     * @return array{cc?: float, tare?: float, actual?: float, permissible?: float, overload?: float, chargeable?: float}
+     * Numeric token positions after wagon number:
+     * - Compact ET-RR: CC, Tare, article count (often 0), Gross, …, Actual at {@see extractNumbersFromWagonRest} indices for permissibles.
+     * - With commodity column: CC, Tare, article count, **commodity code** (large int), Gross, … — gross shifts one slot after code.
+     */
+    private function wagonRestHasCommodityCodeBeforeGross(array $nums): bool
+    {
+        if (count($nums) < 5) {
+            return false;
+        }
+
+        $candidate = $nums[3];
+
+        if ($candidate < 100_000) {
+            return false;
+        }
+
+        return abs($candidate - round($candidate)) < 0.000_001;
+    }
+
+    /**
+     * @return array{cc?: float, tare?: float, gross?: float, actual?: float, permissible?: float, overload?: float, chargeable?: float}
      */
     private function extractNumbersFromWagonRest(string $rest): array
     {
@@ -417,6 +441,16 @@ final readonly class RrParserService
         $n = count($nums);
         if ($n >= 1) {
             $result['cc'] = $nums[0];
+        }
+        if ($n >= 2) {
+            $result['tare'] = $nums[1];
+        }
+        if ($this->wagonRestHasCommodityCodeBeforeGross($nums)) {
+            if ($n >= 5) {
+                $result['gross'] = $nums[4];
+            }
+        } elseif ($n >= 4) {
+            $result['gross'] = $nums[3];
         }
         if ($n >= 7) {
             $result['actual'] = $nums[6];

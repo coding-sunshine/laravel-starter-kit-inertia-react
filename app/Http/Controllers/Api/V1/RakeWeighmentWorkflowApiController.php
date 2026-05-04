@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\FetchRakeWeighmentFromRailwayReceipt;
 use App\Actions\RecordManualRakeWeighment;
 use App\Actions\UpdateManualRakeWeighment;
 use App\Actions\UpdateStockLedger;
@@ -51,6 +52,36 @@ final class RakeWeighmentWorkflowApiController extends Controller
 
         return response()->json([
             'message' => 'Manual weighment recorded. Upload the document when available.',
+            'data' => [
+                'rake_weighment_id' => $weighment->id,
+                'rake_id' => $weighment->rake_id,
+                'status' => $weighment->status,
+            ],
+        ], 201);
+    }
+
+    public function fetchFromRr(Rake $rake, FetchRakeWeighmentFromRailwayReceipt $fetchFromRr): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = auth()->user();
+
+        abort_if($user === null, 401);
+
+        abort_unless($user->canAccessSiding((int) $rake->siding_id), 403);
+
+        try {
+            $weighment = $fetchFromRr->handle($rake, (int) $user->id);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => [
+                    'rake' => [$e->getMessage()],
+                ],
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Weighment data loaded from the railway receipt.',
             'data' => [
                 'rake_weighment_id' => $weighment->id,
                 'rake_id' => $weighment->rake_id,

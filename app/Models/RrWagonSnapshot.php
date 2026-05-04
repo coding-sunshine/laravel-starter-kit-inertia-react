@@ -19,6 +19,8 @@ final class RrWagonSnapshot extends Model
         'loaded_weight_mt',
         'permissible_weight_mt',
         'overload_weight_mt',
+        'tare_weight_mt',
+        'gross_weight_mt',
         'meta',
     ];
 
@@ -39,6 +41,8 @@ final class RrWagonSnapshot extends Model
             'loaded_weight_mt' => 'decimal:2',
             'permissible_weight_mt' => 'decimal:2',
             'overload_weight_mt' => 'decimal:2',
+            'tare_weight_mt' => 'decimal:2',
+            'gross_weight_mt' => 'decimal:2',
             'meta' => 'array',
         ];
     }

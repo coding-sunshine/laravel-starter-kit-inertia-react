@@ -477,6 +477,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::delete('weighments/{weighment}', [WeighmentsController::class, 'destroy'])->whereNumber('weighment')->name('weighments.destroy');
     Route::post('weighments/import', [WeighmentsController::class, 'store'])->name('weighments.import');
     Route::post('weighments/manual', [WeighmentsController::class, 'storeManual'])->name('weighments.manual');
+    Route::post('weighments/fetch-from-rr', [WeighmentsController::class, 'fetchFromRr'])->name('weighments.fetch-from-rr');
     Route::get('weighments/template-xlsx', [WeighmentsController::class, 'downloadTemplateXlsx'])->name('weighments.template-xlsx');
 
     // AI Chatbot
