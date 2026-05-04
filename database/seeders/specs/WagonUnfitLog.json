@@ -3,17 +3,17 @@
     "table": "wagon_unfit_logs",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "txr_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "wagon_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -33,7 +33,7 @@
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },

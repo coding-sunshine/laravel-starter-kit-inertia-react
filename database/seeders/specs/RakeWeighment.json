@@ -3,12 +3,12 @@
     "table": "rake_weighments",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -68,7 +68,7 @@
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -83,7 +83,7 @@
             "default": null
         },
         "updated_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -126,12 +126,21 @@
             "type": "numeric",
             "nullable": true,
             "default": null
+        },
+        "rr_document_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
         "rake": {
             "type": "belongsTo",
             "model": "Rake"
+        },
+        "rrDocument": {
+            "type": "belongsTo",
+            "model": "RrDocument"
         },
         "rakeWagonWeighments": {
             "type": "hasMany",

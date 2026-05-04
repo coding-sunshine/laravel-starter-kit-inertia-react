@@ -3,17 +3,17 @@
     "table": "rr_wagon_snapshots",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "rr_document_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -53,7 +53,7 @@
             "default": null
         },
         "meta": {
-            "type": "text",
+            "type": "json",
             "nullable": true,
             "default": null
         },
@@ -64,6 +64,16 @@
         },
         "updated_at": {
             "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "tare_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "gross_weight_mt": {
+            "type": "numeric",
             "nullable": true,
             "default": null
         }

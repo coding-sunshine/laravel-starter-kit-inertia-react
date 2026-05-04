@@ -3,17 +3,17 @@
     "table": "rakes",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "indent_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -103,17 +103,17 @@
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "updated_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "deleted_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },

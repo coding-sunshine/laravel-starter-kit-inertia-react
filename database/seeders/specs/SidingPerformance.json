@@ -3,12 +3,12 @@
     "table": "siding_performances",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
