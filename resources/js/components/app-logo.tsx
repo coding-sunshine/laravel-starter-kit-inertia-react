@@ -18,7 +18,7 @@ export default function AppLogo({
                 className,
             )}
         >
-            {/* BGR mountain/triangle SVG mark */}
+            {/* SHAR Projects mountain/triangle SVG mark */}
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 32 32"
@@ -47,7 +47,7 @@ export default function AppLogo({
                         SHAReReport
                     </span>
                     <span className="truncate text-[10px] text-sidebar-foreground/50">
-                        BGR Mining &amp; Infra
+                        SHAR Projects
                     </span>
                 </div>
             ) : null}
