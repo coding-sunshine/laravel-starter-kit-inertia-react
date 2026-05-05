@@ -14,7 +14,7 @@ export default function AuthSimpleLayout({
     return (
         <div className="flex min-h-svh items-center justify-center bg-[oklch(0.96_0.008_150)] p-6 md:p-10">
             <div className="flex w-full max-w-4xl overflow-hidden rounded-lg border shadow-md">
-                {/* Left: BGR identity panel */}
+                {/* Left: SHAR Projects identity panel */}
                 <div className="hidden flex-shrink-0 flex-col bg-[oklch(0.22_0.06_150)] p-10 text-white md:flex md:w-[320px]">
                     <div className="mb-8">
                         <AppLogo showWordmark={false} className="flex-none" />
@@ -24,7 +24,7 @@ export default function AuthSimpleLayout({
                         Railway Rack Management System
                     </h2>
                     <p className="mt-3 text-sm leading-relaxed text-white/50">
-                        BGR Mining &amp; Infra Limited — Coal logistics intelligence platform
+                        SHAR Projects — Coal logistics intelligence platform
                     </p>
 
                     <div className="my-8 h-px bg-white/10" />
@@ -49,7 +49,7 @@ export default function AuthSimpleLayout({
                     </div>
 
                     <div className="mt-auto text-xs text-white/25">
-                        © BGR Mining &amp; Infra Limited
+                        © SHAR Projects
                     </div>
                 </div>
 

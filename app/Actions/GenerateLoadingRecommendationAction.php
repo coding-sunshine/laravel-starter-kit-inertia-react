@@ -136,7 +136,7 @@ final readonly class GenerateLoadingRecommendationAction
         $json = json_encode($data, JSON_PRETTY_PRINT);
 
         return <<<PROMPT
-        You are RRMCS AI, a loading optimization assistant for railway coal operations at BGR Mining.
+        You are RRMCS AI, a loading optimization assistant for railway coal operations at SHAR Projects.
 
         A rake is about to start loading at siding "{$data['siding_name']}". The rake has {$data['rake_total_wagons']} wagons.
 

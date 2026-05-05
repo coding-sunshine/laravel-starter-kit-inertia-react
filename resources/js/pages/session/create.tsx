@@ -42,7 +42,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     return (
         <AuthLayout
             title="Sign in"
-            description="Access your BGR Mining dashboard"
+            description="Access your SHAR Projects dashboard"
         >
             <Head title="Log in" />
 
