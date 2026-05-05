@@ -49,6 +49,7 @@ All Actions:
 | [ProcessRrDocument](./processrrdocument.md) | N/A | ✅ |
 | [ReconcileRakeAction](./reconcilerakeaction.md) | N/A | ✅ |
 | [ReconcileRrData](./reconcilerrdata.md) | N/A | ✅ |
+| [ResolveRakeForRrImportPreview](./resolverakeforrrimportpreview.md) | Resolve indent and rake by FNR for RR upload preview | ✅ |
 | [RunReportAction](./runreportaction.md) | N/A | ✅ |
 | [SyncDemurrageAlertsAction](./syncdemurragealertsaction.md) | N/A | ✅ |
 | [UatUtilities](./uatutilities.md) | N/A | ✅ |

@@ -438,6 +438,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Railway Receipts (RR) and Penalties
     Route::get('railway-receipts', [RrDocumentController::class, 'index'])->name('railway-receipts.index');
+    Route::post('railway-receipts/import-preview', [RrUploadController::class, 'importPreview'])->name('railway-receipts.import-preview');
     Route::post('railway-receipts/import', [RrUploadController::class, 'store'])->name('railway-receipts.import');
     Route::post('railway-receipts/upload', [RrDocumentController::class, 'upload'])->name('railway-receipts.upload');
     Route::get('railway-receipts/create', [RrDocumentController::class, 'create'])->name('railway-receipts.create');

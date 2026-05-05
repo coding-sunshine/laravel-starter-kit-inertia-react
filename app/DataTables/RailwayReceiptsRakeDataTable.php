@@ -27,6 +27,8 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
         public ?string $rake_serial_number,
         /** `indents.indent_number` when rake is linked to an indent. */
         public ?string $indent_number,
+        /** `indents.fnr_number` when rake is linked to an indent (e-demand FNR). */
+        public ?string $indent_fnr_number,
         public ?string $loading_date,
         public ?int $siding_id,
         public ?string $siding_code,
@@ -63,6 +65,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             rake_number: $model->rake_number,
             rake_serial_number: $model->rake_serial_number,
             indent_number: self::nullableTrimmedString($model->indent?->indent_number),
+            indent_fnr_number: self::nullableTrimmedString($model->indent?->fnr_number),
             loading_date: $model->loading_date?->toDateString(),
             siding_id: $model->siding_id,
             siding_code: $model->siding?->code,
@@ -103,6 +106,13 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
                 filterable: false,
             ),
             new Column(
+                id: 'indent_fnr_number',
+                label: 'FNR',
+                type: 'text',
+                sortable: false,
+                filterable: true,
+            ),
+            new Column(
                 id: 'siding_code',
                 label: 'Siding',
                 type: 'option',
@@ -131,7 +141,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             ->withCount('diverrtDestinations')
             ->with([
                 'siding:id,code,name',
-                'indent:id,indent_number',
+                'indent:id,indent_number,fnr_number',
                 'rrDocument:id,rake_id,diverrt_destination_id,rr_number,rr_received_date,rr_weight_mt,document_status,has_discrepancy,discrepancy_details,fnr,from_station_code,to_station_code,freight_total,distance_km,commodity_code,commodity_description,invoice_number,invoice_date,rate,class',
             ]);
 
@@ -178,6 +188,11 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             AllowedFilter::callback('rr_number', function (Builder $query, mixed $value): void {
                 $query->whereHas('rrDocument', function (Builder $q) use ($value): void {
                     (new OperatorFilter('text'))($q, $value, 'rr_number');
+                });
+            }),
+            AllowedFilter::callback('indent_fnr_number', function (Builder $query, mixed $value): void {
+                $query->whereHas('indent', function (Builder $q) use ($value): void {
+                    (new OperatorFilter('text'))($q, $value, 'fnr_number');
                 });
             }),
         ];
