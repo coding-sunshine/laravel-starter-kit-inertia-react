@@ -187,6 +187,7 @@ export default function RakeLoaderLoading({ rake: initialRake, loadingRecommenda
                             <PccStatusPills
                                 ok={pccSummary.ok}
                                 near={pccSummary.near}
+                                low={pccSummary.low}
                                 over={pccSummary.over}
                                 empty={pccSummary.empty}
                             />

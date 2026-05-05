@@ -1,18 +1,14 @@
+import { gaugeColorForPcc } from '@/utils/pcc';
+
 interface PccGaugeBarProps {
     pct: number;
     loadedMt: number;
     pccMt: number;
 }
 
-function barColor(pct: number): string {
-    if (pct >= 100) return '#dc2626';
-    if (pct >= 90) return '#d97706';
-    return '#16a34a';
-}
-
 export function PccGaugeBar({ pct, loadedMt, pccMt }: PccGaugeBarProps) {
     const clampedPct = Math.min(pct, 100);
-    const color = barColor(pct);
+    const color = gaugeColorForPcc(loadedMt, pccMt);
     const label = pccMt > 0 ? `${pct.toFixed(1)}%` : '—';
 
     return (

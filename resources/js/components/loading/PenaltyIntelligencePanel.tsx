@@ -5,6 +5,7 @@ interface PenaltyIntelligencePanelProps {
     summary: {
         ok: number;
         near: number;
+        low: number;
         over: number;
         empty: number;
         totalPenaltyRs: number;
@@ -22,6 +23,17 @@ export function PenaltyIntelligencePanel({
     onRequestClearance,
 }: PenaltyIntelligencePanelProps) {
     const overWagons = states.filter((s) => s.status === 'over');
+    const hasUnderTargetLoad = summary.near > 0 || summary.low > 0;
+
+    const suggestionText = (() => {
+        if (summary.over > 0) {
+            return `Redistribute ${summary.totalExcessMt.toFixed(2)} MT excess across ${summary.over} wagon${summary.over > 1 ? 's' : ''} to eliminate penalty exposure.`;
+        }
+        if (hasUnderTargetLoad) {
+            return 'No overload penalty. Some wagons are below the 97–100% on-target band; top up where safe if required.';
+        }
+        return 'No overloaded wagons. Good to proceed when loading is complete.';
+    })();
 
     return (
         <div
@@ -30,12 +42,8 @@ export function PenaltyIntelligencePanel({
         >
             {/* Penalty total */}
             <div>
-                <p className="text-xs font-medium text-white/60">
-                    Estimated penalty
-                </p>
-                <p className="font-mono text-3xl font-bold tabular-nums">
-                    {inr(summary.totalPenaltyRs)}
-                </p>
+                <p className="text-xs font-medium text-white/60">Estimated penalty</p>
+                <p className="font-mono text-3xl font-bold tabular-nums">{inr(summary.totalPenaltyRs)}</p>
                 {summary.totalExcessMt > 0 && (
                     <p className="mt-0.5 font-mono text-xs tabular-nums text-white/60">
                         {summary.totalExcessMt.toFixed(3)} MT excess
@@ -43,27 +51,34 @@ export function PenaltyIntelligencePanel({
                 )}
             </div>
 
-            {/* Status grid */}
+            {/* Status grid — bands: on-target 97–100%, underload 94–<97%, low <94%, over >100%, not loaded */}
             <div className="grid grid-cols-2 gap-2">
-                {[
-                    { label: 'Within PCC', count: summary.ok + summary.near, color: 'bg-green-900/40 text-green-300' },
-                    { label: 'Over PCC',   count: summary.over,              color: 'bg-red-900/40 text-red-300' },
-                    { label: 'Near Limit', count: summary.near,              color: 'bg-amber-900/40 text-amber-300' },
-                    { label: 'Not Loaded', count: summary.empty,             color: 'bg-white/10 text-white/50' },
-                ].map((item) => (
-                    <div key={item.label} className={`rounded-lg p-2 ${item.color}`}>
-                        <p className="font-mono text-xl font-bold tabular-nums">{item.count}</p>
-                        <p className="text-[10px] font-medium leading-tight">{item.label}</p>
-                    </div>
-                ))}
+                <div className="rounded-lg bg-green-900/40 p-2 text-green-300">
+                    <p className="font-mono text-xl font-bold tabular-nums">{summary.ok}</p>
+                    <p className="text-[10px] font-medium leading-tight">On target (97–100%)</p>
+                </div>
+                <div className="rounded-lg bg-amber-900/40 p-2 text-amber-300">
+                    <p className="font-mono text-xl font-bold tabular-nums">{summary.near}</p>
+                    <p className="text-[10px] font-medium leading-tight">Underload (at least 94%, under 97%)</p>
+                </div>
+                <div className="rounded-lg bg-purple-900/40 p-2 text-purple-200">
+                    <p className="font-mono text-xl font-bold tabular-nums">{summary.low}</p>
+                    <p className="text-[10px] font-medium leading-tight">Low load (below 94%)</p>
+                </div>
+                <div className="rounded-lg bg-red-900/40 p-2 text-red-300">
+                    <p className="font-mono text-xl font-bold tabular-nums">{summary.over}</p>
+                    <p className="text-[10px] font-medium leading-tight">Over PCC (above 100%)</p>
+                </div>
+                <div className="col-span-2 rounded-lg bg-white/10 p-2 text-white/70">
+                    <p className="font-mono text-xl font-bold tabular-nums">{summary.empty}</p>
+                    <p className="text-[10px] font-medium leading-tight">Not loaded</p>
+                </div>
             </div>
 
             {/* Problem wagon list */}
             {overWagons.length > 0 && (
                 <div>
-                    <p className="mb-1.5 text-xs font-medium text-white/60">
-                        Over-PCC wagons
-                    </p>
+                    <p className="mb-1.5 text-xs font-medium text-white/60">Over-PCC wagons</p>
                     <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto pr-1">
                         {overWagons.map((w) => (
                             <div key={w.wagonId} className="rounded-lg bg-red-900/30 p-2">
@@ -91,10 +106,7 @@ export function PenaltyIntelligencePanel({
             {/* AI suggestion stub */}
             <div className="rounded-lg bg-white/5 p-3 text-xs text-white/60">
                 <p className="mb-1 font-semibold text-white/80">Suggestion</p>
-                {summary.over === 0
-                    ? 'All wagons within PCC. Ready to dispatch.'
-                    : `Redistribute ${summary.totalExcessMt.toFixed(2)} MT excess across ${summary.over} wagon${summary.over > 1 ? 's' : ''} to eliminate penalty exposure.`
-                }
+                <p>{suggestionText}</p>
             </div>
 
             {/* Clearance button */}

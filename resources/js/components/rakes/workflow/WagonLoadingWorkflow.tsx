@@ -1,5 +1,5 @@
 import { PccGaugeBar } from '@/components/loading/PccGaugeBar';
-import { calcPccPct, calcStatus, parseMt } from '@/utils/pcc';
+import { calcPccPct, calcStatus, parseMt, pccRowSurfaceClassForStatus } from '@/utils/pcc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -1535,11 +1535,7 @@ export function WagonLoadingWorkflow({
                                                     const rowStatusDefault = pccMtDefault > 0 ? calcStatus(currentLoadedMtDefault, pccMtDefault) : 'empty';
                                                     const rowBgDefault = isUnfitRow
                                                         ? 'border-b border-red-900/55 bg-red-950/40 dark:bg-red-950/50'
-                                                        : rowStatusDefault === 'over'
-                                                        ? 'bg-[#fff5f5]'
-                                                        : rowStatusDefault === 'near'
-                                                        ? 'bg-[#fffdf0]'
-                                                        : undefined;
+                                                        : pccRowSurfaceClassForStatus(rowStatusDefault);
 
                                                     const operatorSelectValues = new Set(loaderOperatorNames);
                                                     const currentOp = row.loader_operator_name.trim();
