@@ -656,24 +656,24 @@ export default function RailwayReceiptsIndex({
                 </div>
                 {errors?.pdf && activeTab === 'rakes' ? <p className="text-sm text-destructive">{errors.pdf}</p> : null}
 
-                <div className="flex flex-wrap gap-1 border-b border-border pb-px">
-                    <button
-                        type="button"
-                        className={cn(
-                            '-mb-px border-b-2 px-3 py-2 text-sm font-medium',
-                            activeTab === 'rakes'
-                                ? 'border-primary text-foreground'
-                                : 'border-transparent text-muted-foreground hover:text-foreground',
-                        )}
-                        onClick={() => switchTab('rakes')}
-                        data-pan="railway-receipts-tab-rakes"
-                    >
-                        <span className="inline-flex items-center gap-2">
-                            <TrainFront className="h-4 w-4" />
-                            With rake
-                        </span>
-                    </button>
-                    {showStandaloneTab ? (
+                {showStandaloneTab ? (
+                    <div className="flex flex-wrap gap-1 border-b border-border pb-px">
+                        <button
+                            type="button"
+                            className={cn(
+                                '-mb-px border-b-2 px-3 py-2 text-sm font-medium',
+                                activeTab === 'rakes'
+                                    ? 'border-primary text-foreground'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground',
+                            )}
+                            onClick={() => switchTab('rakes')}
+                            data-pan="railway-receipts-tab-rakes"
+                        >
+                            <span className="inline-flex items-center gap-2">
+                                <TrainFront className="h-4 w-4" />
+                                With rake
+                            </span>
+                        </button>
                         <button
                             type="button"
                             className={cn(
@@ -687,8 +687,21 @@ export default function RailwayReceiptsIndex({
                         >
                             Without rake
                         </button>
-                    ) : null}
-                </div>
+                    </div>
+                ) : null}
+
+                {!showStandaloneTab && activeTab === 'standalone' ? (
+                    <div className="flex justify-start">
+                        <Button
+                            type="button"
+                            variant="link"
+                            className="h-auto px-0 text-muted-foreground"
+                            onClick={() => switchTab('rakes')}
+                        >
+                            ← Back to rakes
+                        </Button>
+                    </div>
+                ) : null}
 
                 {activeTab === 'rakes' ? (
                     <Card>
