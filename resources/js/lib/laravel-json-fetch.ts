@@ -121,3 +121,46 @@ export async function postRailwayReceiptImport(
 
     return body as { rr_document: { id: number; rr_number?: string; diverrt_destination_id?: number | null }; rr_hub: unknown };
 }
+
+/** Response from `POST /railway-receipts/import-preview` (FNR → e-demand → rake match). */
+export type RrImportPreviewPayload = {
+    fnr_from_rr: string;
+    fnr_from_indent: string | null;
+    to_station_code: string | null;
+    rake_destination_code: string | null;
+    rake_destination: string | null;
+    siding_code: string | null;
+    siding_name: string | null;
+    rake_id: number;
+    rake_number: string | null;
+    rake_serial_number: string | null;
+};
+
+/** Multipart POST to parse RR PDF and resolve rake by indent FNR (preview only, no import). */
+export async function postRailwayReceiptImportPreview(file: File): Promise<RrImportPreviewPayload> {
+    const formData = new FormData();
+    formData.append('pdf', file);
+
+    const response = await fetch('/railway-receipts/import-preview', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-XSRF-TOKEN': getXsrfToken(),
+        },
+    });
+
+    const body: unknown = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const message =
+            typeof body === 'object' && body !== null && 'message' in body
+                ? String((body as { message: unknown }).message)
+                : `Preview failed (${response.status})`;
+        throw new JsonFetchError(message, response.status, body);
+    }
+
+    return body as RrImportPreviewPayload;
+}

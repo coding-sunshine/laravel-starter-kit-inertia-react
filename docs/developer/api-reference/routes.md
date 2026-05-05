@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-05-04 (Fetch RR weighment — hub + API)
+**Last Updated**: 2026-05-05 (RR import preview by FNR)
 
 ## Closure
 
@@ -1047,6 +1047,15 @@ See [Filament > User impersonation](../backend/filament.md#user-impersonation).
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
 | POST | `weighments/fetch-from-rr` | weighments.fetch-from-rr | web, auth, verified |
+
+## RrUploadController
+
+**Controller**: `App\Http\Controllers\RR\RrUploadController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `railway-receipts/import-preview` | railway-receipts.import-preview | web, auth, verified |
+| POST | `railway-receipts/import` | railway-receipts.import | web, auth, verified |
 
 ## RakeWeighmentWorkflowApiController (Fetch RR)
 

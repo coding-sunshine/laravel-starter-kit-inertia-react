@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\RR;
 
+use App\Actions\ResolveRakeForRrImportPreview;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreRrImportPreviewRequest;
 use App\Http\Requests\StoreRrUploadRequest;
 use App\Models\DiverrtDestination;
 use App\Models\Rake;
+use App\Models\Siding;
+use App\Models\User;
 use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
+use App\Services\TenantContext;
 use App\Support\RakeRrHubPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +28,61 @@ final class RrUploadController extends Controller
         private readonly RrParserService $parser,
         private readonly RrImportService $rrImportService,
     ) {}
+
+    public function importPreview(
+        StoreRrImportPreviewRequest $request,
+        ResolveRakeForRrImportPreview $resolveRakeForRrImportPreview,
+    ): JsonResponse {
+        /** @var User $user */
+        $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.upload'), 403);
+
+        try {
+            $parsed = $this->parser->parse($request->file('pdf'));
+            $fnrRaw = $parsed['fnr'] ?? null;
+            $normalizedFnr = is_string($fnrRaw) ? mb_trim($fnrRaw) : '';
+
+            $resolved = $resolveRakeForRrImportPreview->handle($normalizedFnr);
+            $rake = $resolved['rake'];
+            $indent = $resolved['indent'];
+
+            $rake->loadMissing('siding');
+            $siding = $rake->siding;
+
+            $sidingIds = $user->isSuperAdmin()
+                ? Siding::query()->pluck('id')->all()
+                : $user->accessibleSidings()->get()->pluck('id')->all();
+            $normalizedSidingIds = array_map(static fn (mixed $id): int => (int) $id, $sidingIds);
+
+            if ($rake->siding_id !== null && ! in_array((int) $rake->siding_id, $normalizedSidingIds, true)) {
+                abort(403);
+            }
+
+            return response()->json([
+                'fnr_from_rr' => $normalizedFnr,
+                'fnr_from_indent' => $indent->fnr_number,
+                'to_station_code' => $parsed['to_station_code'] ?? null,
+                'rake_destination_code' => $rake->destination_code,
+                'rake_destination' => $rake->destination,
+                'siding_code' => $siding?->code,
+                'siding_name' => $siding?->name,
+                'rake_id' => $rake->id,
+                'rake_number' => $rake->rake_number,
+                'rake_serial_number' => $rake->rake_serial_number,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            Log::warning('RR import preview validation failed', ['error' => $e->getMessage()]);
+
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            Log::error('RR import preview failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            report($e);
+
+            return response()->json([
+                'message' => 'Failed to process Railway Receipt preview. Please ensure the PDF is valid and try again.',
+            ], 500);
+        }
+    }
 
     public function store(StoreRrUploadRequest $request): RedirectResponse|JsonResponse
     {
@@ -88,5 +148,18 @@ final class RrUploadController extends Controller
 
             return back()->withErrors(['pdf' => 'Failed to process Railway Receipt. Please ensure the PDF is valid and try again.']);
         }
+    }
+
+    private function hasSectionPermission(User $user, string $permission): bool
+    {
+        if ($user->can('bypass-permissions')) {
+            return true;
+        }
+
+        if (TenantContext::check() && $user->canInCurrentOrganization($permission)) {
+            return true;
+        }
+
+        return $user->hasPermissionTo($permission);
     }
 }

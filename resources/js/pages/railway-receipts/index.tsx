@@ -1,5 +1,4 @@
 import { DataTable } from '@/components/data-table/data-table';
-import Heading from '@/components/heading';
 import {
     DiverrtDestinationRow,
     RrDocumentRecord,
@@ -20,13 +19,19 @@ import {
 import { Label } from '@/components/ui/label';
 import { useCan } from '@/hooks/use-can';
 import AppLayout from '@/layouts/app-layout';
-import { JsonFetchError, laravelJsonFetch, postRailwayReceiptImport } from '@/lib/laravel-json-fetch';
+import {
+    type RrImportPreviewPayload,
+    JsonFetchError,
+    laravelJsonFetch,
+    postRailwayReceiptImport,
+    postRailwayReceiptImportPreview,
+} from '@/lib/laravel-json-fetch';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import type { DataTableResponse } from 'laravel-data-table';
 import { ExternalLink, TrainFront, Trash2 } from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface RailwayReceiptsRakeRow {
     id: number;
@@ -34,6 +39,8 @@ export interface RailwayReceiptsRakeRow {
     rake_serial_number: string | null;
     /** E-Demand / indent priority when the rake is linked to an indent */
     indent_number: string | null;
+    /** E-demand FNR from linked indent (`indents.fnr_number`) */
+    indent_fnr_number: string | null;
     loading_date: string | null;
     siding_id: number | null;
     siding_code: string | null;
@@ -113,6 +120,27 @@ function firstValidationError(body: unknown, keys: string[]): string | undefined
     return undefined;
 }
 
+function formatRakeSequenceFromSidingCode(rakeNumber: string | null, sidingCode: string | null): string {
+    const normalized = (rakeNumber ?? '').trim();
+    if (normalized === '') {
+        return '';
+    }
+    const code = (sidingCode ?? '').toUpperCase();
+    let prefix = '';
+    if (code === 'PKUR') {
+        prefix = 'P';
+    } else if (code === 'KURWA') {
+        prefix = 'K';
+    } else if (code === 'DUMK') {
+        prefix = 'D';
+    }
+    if (prefix === '') {
+        return normalized;
+    }
+
+    return normalized.startsWith(`${prefix}-`) ? normalized : `${prefix}-${normalized}`;
+}
+
 function messageFromFetchError(err: unknown): string {
     if (err instanceof JsonFetchError) {
         const v =
@@ -163,6 +191,7 @@ function RrHubDetailRows({ row }: { row: RailwayReceiptsRakeRow }): ReactNode {
 
     const entries: { label: string; value: string }[] = [
         { label: 'Priority number', value: row.indent_number ?? '—' },
+        { label: 'FNR (e-demand)', value: row.indent_fnr_number ?? '—' },
         { label: 'RR number', value: row.rr_number ?? '—' },
         { label: 'Received date', value: row.rr_received_date ? new Date(row.rr_received_date).toLocaleDateString() : '—' },
         { label: 'Weight (MT)', value: row.rr_weight_mt ?? '—' },
@@ -311,6 +340,13 @@ export default function RailwayReceiptsIndex({
     const [diversionModeBusy, setDiversionModeBusy] = useState(false);
     const [addingDestination, setAddingDestination] = useState(false);
     const [newLocation, setNewLocation] = useState('');
+    const fnrFileInputRef = useRef<HTMLInputElement>(null);
+    const [fnrFlowOpen, setFnrFlowOpen] = useState(false);
+    const [fnrPreview, setFnrPreview] = useState<RrImportPreviewPayload | null>(null);
+    const [fnrPendingFile, setFnrPendingFile] = useState<File | null>(null);
+    const [fnrPreviewLoading, setFnrPreviewLoading] = useState(false);
+    const [fnrImportLoading, setFnrImportLoading] = useState(false);
+    const [fnrFlowError, setFnrFlowError] = useState<string | null>(null);
 
     const {
         props: { errors },
@@ -476,6 +512,59 @@ export default function RailwayReceiptsIndex({
         [hubRow, mergeRrHubFromResponse],
     );
 
+    const closeFnrFlow = useCallback(() => {
+        setFnrFlowOpen(false);
+        setFnrPreview(null);
+        setFnrPendingFile(null);
+        setFnrPreviewLoading(false);
+        setFnrImportLoading(false);
+        setFnrFlowError(null);
+        if (fnrFileInputRef.current) {
+            fnrFileInputRef.current.value = '';
+        }
+    }, []);
+
+    const handleFnrFileSelected = useCallback(
+        async (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0];
+            if (!file || !canUpload) {
+                return;
+            }
+            setFnrFlowOpen(true);
+            setFnrPreview(null);
+            setFnrPendingFile(file);
+            setFnrFlowError(null);
+            setFnrPreviewLoading(true);
+            try {
+                const preview = await postRailwayReceiptImportPreview(file);
+                setFnrPreview(preview);
+            } catch (err) {
+                setFnrFlowError(messageFromFetchError(err));
+                setFnrPreview(null);
+            } finally {
+                setFnrPreviewLoading(false);
+            }
+        },
+        [canUpload],
+    );
+
+    const confirmFnrImport = useCallback(async () => {
+        if (!fnrPreview || !fnrPendingFile || !canUpload) {
+            return;
+        }
+        setFnrImportLoading(true);
+        setFnrFlowError(null);
+        try {
+            await postRailwayReceiptImport(fnrPreview.rake_id, fnrPendingFile, null);
+            closeFnrFlow();
+            router.reload({ only: ['tableData'], preserveScroll: true });
+        } catch (err) {
+            setFnrFlowError(messageFromFetchError(err));
+        } finally {
+            setFnrImportLoading(false);
+        }
+    }, [canUpload, closeFnrFlow, fnrPendingFile, fnrPreview]);
+
     const rakesTableData = useMemo((): DataTableResponse<RailwayReceiptsRakeRow> => {
         return {
             ...tableData,
@@ -519,11 +608,52 @@ export default function RailwayReceiptsIndex({
         return normalized.startsWith(`${prefix}-`) ? normalized : `${prefix}-${normalized}`;
     }, []);
 
+    const fnrSequenceMissing =
+        fnrPreview != null && (fnrPreview.rake_number == null || fnrPreview.rake_number.trim() === '');
+    const fnrSeqDisplay =
+        fnrPreview != null ? formatRakeSequenceFromSidingCode(fnrPreview.rake_number, fnrPreview.siding_code) : '';
+    const fnrDestRakeLine =
+        fnrPreview != null
+            ? [fnrPreview.rake_destination_code, fnrPreview.rake_destination]
+                  .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+                  .join(' · ')
+            : '';
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Railway Receipts" />
             <div className="space-y-6">
-                <Heading title="Railway Receipts" description="RR documents by rake and standalone uploads" />
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div className="min-w-0 space-y-0.5">
+                        <h2 className="text-xl font-semibold tracking-tight">Railway Receipts</h2>
+                        <p className="text-sm text-muted-foreground">
+                            RR documents by rake and standalone uploads
+                        </p>
+                    </div>
+                    {canUpload && activeTab === 'rakes' ? (
+                        <>
+                            <input
+                                ref={fnrFileInputRef}
+                                type="file"
+                                accept="application/pdf"
+                                className="sr-only"
+                                aria-hidden
+                                tabIndex={-1}
+                                onChange={(e) => void handleFnrFileSelected(e)}
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                onClick={() => fnrFileInputRef.current?.click()}
+                                data-pan="railway-receipts-upload-rr"
+                            >
+                                Upload RR
+                            </Button>
+                        </>
+                    ) : null}
+                </div>
                 {errors?.pdf && activeTab === 'rakes' ? <p className="text-sm text-destructive">{errors.pdf}</p> : null}
 
                 <div className="flex flex-wrap gap-1 border-b border-border pb-px">
@@ -562,13 +692,16 @@ export default function RailwayReceiptsIndex({
 
                 {activeTab === 'rakes' ? (
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Rakes</CardTitle>
-                            <CardDescription>
-                                System rakes for your sidings. RR number, received date, and weight come from the primary
-                                RR (non-diversion). Default loading date is today — adjust filters as needed. Open a row
-                                to view RR details and upload PDFs per slot (primary and diversion legs).
-                            </CardDescription>
+                        <CardHeader className="space-y-4">
+                            <div className="min-w-0 space-y-1.5">
+                                <CardTitle>Rakes</CardTitle>
+                                <CardDescription>
+                                    System rakes for your sidings. RR number, received date, and weight come from the
+                                    primary RR (non-diversion). Default loading date is today — adjust filters as
+                                    needed. Open a row to view RR details and upload PDFs per slot (primary and
+                                    diversion legs).
+                                </CardDescription>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             {tableData.meta.total === 0 && filtersEmpty ? (
@@ -626,6 +759,13 @@ export default function RailwayReceiptsIndex({
                                         if (columnId === 'indent_number') {
                                             return row.indent_number ?? '—';
                                         }
+                                        if (columnId === 'indent_fnr_number') {
+                                            return row.indent_fnr_number != null && row.indent_fnr_number !== '' ? (
+                                                <span className="font-mono">{row.indent_fnr_number}</span>
+                                            ) : (
+                                                '—'
+                                            );
+                                        }
                                         if (columnId === 'siding_code') {
                                             return row.siding_code && row.siding_name
                                                 ? `${row.siding_code} (${row.siding_name})`
@@ -664,6 +804,7 @@ export default function RailwayReceiptsIndex({
                                             destination: 'w-[10rem]',
                                             loading_date: 'min-w-[18rem]',
                                             rr_number: 'min-w-[12rem] w-[15rem]',
+                                            indent_fnr_number: 'min-w-[10rem] w-[13rem]',
                                         },
                                     }}
                                 />
@@ -708,6 +849,100 @@ export default function RailwayReceiptsIndex({
                     </Card>
                 )}
             </div>
+
+            <Dialog
+                open={fnrFlowOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        closeFnrFlow();
+                    }
+                }}
+            >
+                <DialogContent
+                    className="max-h-[90vh] max-w-lg overflow-y-auto"
+                    data-pan="railway-receipts-fnr-preview-dialog"
+                >
+                    <DialogHeader>
+                        <DialogTitle>Confirm Railway Receipt match</DialogTitle>
+                        <DialogDescription>
+                            The PDF was matched to an e-demand (FNR) and rake. Confirm the details before uploading the
+                            primary Railway Receipt (diversion slots are not used here).
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {fnrPreviewLoading ? (
+                            <p className="text-muted-foreground text-sm">Reading PDF and matching e-demand…</p>
+                        ) : null}
+                        {fnrFlowError ? (
+                            <p className="text-destructive text-sm" role="alert">
+                                {fnrFlowError}
+                            </p>
+                        ) : null}
+                        {fnrPreview != null && !fnrPreviewLoading ? (
+                            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                                <div className="sm:col-span-1">
+                                    <dt className="text-muted-foreground font-medium">FNR (e-demand)</dt>
+                                    <dd className="mt-0.5 font-mono">{fnrPreview.fnr_from_indent ?? '—'}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-muted-foreground font-medium">FNR (Railway Receipt)</dt>
+                                    <dd className="mt-0.5 font-mono">{fnrPreview.fnr_from_rr || '—'}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-muted-foreground font-medium">Siding</dt>
+                                    <dd className="mt-0.5">
+                                        {fnrPreview.siding_code && fnrPreview.siding_name
+                                            ? `${fnrPreview.siding_code} (${fnrPreview.siding_name})`
+                                            : (fnrPreview.siding_name ?? fnrPreview.siding_code ?? '—')}
+                                    </dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-muted-foreground font-medium">Destination (rake)</dt>
+                                    <dd className="mt-0.5">{fnrDestRakeLine !== '' ? fnrDestRakeLine : '—'}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-muted-foreground font-medium">Rake number</dt>
+                                    <dd
+                                        className={cn(
+                                            'mt-0.5',
+                                            fnrSequenceMissing ? 'text-amber-600 dark:text-amber-400' : undefined,
+                                        )}
+                                    >
+                                        {fnrPreview.rake_serial_number != null && fnrPreview.rake_serial_number !== ''
+                                            ? fnrPreview.rake_serial_number
+                                            : '—'}
+                                    </dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-muted-foreground font-medium">Rake sequence</dt>
+                                    <dd className="mt-0.5 font-mono">{fnrSeqDisplay !== '' ? fnrSeqDisplay : '—'}</dd>
+                                </div>
+                            </dl>
+                        ) : null}
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:justify-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={closeFnrFlow}
+                            disabled={fnrImportLoading || fnrPreviewLoading}
+                            data-pan="railway-receipts-fnr-preview-cancel"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => void confirmFnrImport()}
+                            disabled={!fnrPreview || fnrImportLoading || fnrPreviewLoading}
+                            data-pan="railway-receipts-fnr-preview-confirm"
+                        >
+                            {fnrImportLoading ? 'Uploading…' : 'Confirm and upload'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {hubRow != null ? (
                 <Dialog
