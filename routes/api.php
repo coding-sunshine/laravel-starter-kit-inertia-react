@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\IndentController;
 use App\Http\Controllers\Api\V1\PowerPlantApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
+use App\Http\Controllers\Api\V1\RailwayReceiptImportPreviewController;
 use App\Http\Controllers\Api\V1\RailwayReceiptUploadController;
 use App\Http\Controllers\Api\V1\RakeController;
 use App\Http\Controllers\Api\V1\RakeRrDiversionApiController;
@@ -58,6 +59,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('indents/{indent}/download', [IndentController::class, 'download'])->name('indents.download');
 
         // Railway receipts
+        Route::post('railway-receipts/import-preview', [RailwayReceiptImportPreviewController::class, 'store'])->name('railway-receipts.import-preview');
         Route::post('railway-receipts/upload', [RailwayReceiptUploadController::class, 'store'])->name('railway-receipts.upload');
         Route::get('railway-receipts', [RailwayReceiptApiController::class, 'index'])->name('railway-receipts.index');
         Route::get('railway-receipts/{rrDocument}', [RailwayReceiptApiController::class, 'show'])->name('railway-receipts.show');
