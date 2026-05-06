@@ -76,76 +76,77 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [indents/edit](./indents/edit.md) | indents.index, indents.import | ✅ |
 | [indents/show](./indents/show.md) | indents.index, indents.import | ✅ |
 | [penalties/analytics](./penalties/analytics.md) | penalties.index, penalties.analytics | ✅ |
-| rakes/create-from-indent | indents.index, indents.import | ❌ |
-| road-dispatch/arrivals/show | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ❌ |
-| road-dispatch/components/WeighmentHistory | N/A | ❌ |
-| road-dispatch/stepper/track-timeline | N/A | ❌ |
-| road-dispatch/unloads/show | road-dispatch.unloads.index, road-dispatch.unloads.create | ❌ |
-| MasterData/DistanceMatrix/Create | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ❌ |
-| MasterData/DistanceMatrix/Index | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ❌ |
-| MasterData/Loaders/Create | master-data.loaders.index, master-data.loaders.create | ❌ |
-| MasterData/Loaders/Index | master-data.loaders.index, master-data.loaders.create | ❌ |
-| MasterData/PenaltyTypes/Create | master-data.penalty-types.index, master-data.penalty-types.create | ❌ |
-| MasterData/PenaltyTypes/Index | master-data.penalty-types.index, master-data.penalty-types.create | ❌ |
-| MasterData/PowerPlants/Create | master-data.power-plants.index, master-data.power-plants.create | ❌ |
-| MasterData/PowerPlants/Edit | master-data.power-plants.index, master-data.power-plants.create | ❌ |
-| MasterData/PowerPlants/Index | master-data.power-plants.index, master-data.power-plants.create | ❌ |
-| MasterData/PowerPlants/Show | master-data.power-plants.index, master-data.power-plants.create | ❌ |
-| MasterData/SectionTimers/Create | master-data.section-timers.index, master-data.section-timers.create | ❌ |
-| MasterData/SectionTimers/Index | master-data.section-timers.index, master-data.section-timers.create | ❌ |
-| MasterData/Sidings/Index | master-data.sidings.index, master-data.sidings.create | ❌ |
-| rakes/load | rakes.load.show, rakes.load.confirm-placement | ❌ |
-| road-dispatch/daily-vehicle-entries/index | road-dispatch.daily-vehicle-entries.index, road-dispatch.daily-vehicle-entries.store | ❌ |
-| road-dispatch/daily-vehicle-entries/shift-tabs | N/A | ❌ |
-| road-dispatch/daily-vehicle-entries/vehicle-entry-row | N/A | ❌ |
-| road-dispatch/daily-vehicle-entries/vehicle-entry-table | N/A | ❌ |
-| VehicleDispatch/DPRTab | N/A | ❌ |
-| VehicleDispatch/ImportPreviewCard | N/A | ❌ |
-| VehicleDispatch/Index | vehicle-dispatch.index, vehicle-dispatch.dpr-data | ❌ |
-| VehicleDispatch/MainDataTab | N/A | ❌ |
-| VehicleDispatch/VehicleDispatchTable | N/A | ❌ |
-| VehicleDispatch/VehicleDispatchTabs | N/A | ❌ |
-| VehicleWorkorders/Edit | vehicle-workorders.index, vehicle-workorders.export | ❌ |
-| VehicleWorkorders/Index | vehicle-workorders.index, vehicle-workorders.export | ❌ |
+| [rakes/create-from-indent](./rakes/create-from-indent.md) | indents.index, indents.import | ✅ |
+| [road-dispatch/arrivals/show](./road-dispatch/arrivals/show.md) | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ✅ |
+| [road-dispatch/components/WeighmentHistory](./road-dispatch/components/WeighmentHistory.md) | N/A | ✅ |
+| [road-dispatch/stepper/track-timeline](./road-dispatch/stepper/track-timeline.md) | N/A | ✅ |
+| [road-dispatch/unloads/show](./road-dispatch/unloads/show.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
+| [MasterData/DistanceMatrix/Create](./MasterData/DistanceMatrix/Create.md) | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ✅ |
+| [MasterData/DistanceMatrix/Index](./MasterData/DistanceMatrix/Index.md) | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ✅ |
+| [MasterData/Loaders/Create](./MasterData/Loaders/Create.md) | master-data.loaders.index, master-data.loaders.create | ✅ |
+| [MasterData/Loaders/Index](./MasterData/Loaders/Index.md) | master-data.loaders.index, master-data.loaders.create | ✅ |
+| [MasterData/PenaltyTypes/Create](./MasterData/PenaltyTypes/Create.md) | master-data.penalty-types.index, master-data.penalty-types.create | ✅ |
+| [MasterData/PenaltyTypes/Index](./MasterData/PenaltyTypes/Index.md) | master-data.penalty-types.index, master-data.penalty-types.create | ✅ |
+| [MasterData/PowerPlants/Create](./MasterData/PowerPlants/Create.md) | master-data.power-plants.index, master-data.power-plants.create | ✅ |
+| [MasterData/PowerPlants/Edit](./MasterData/PowerPlants/Edit.md) | master-data.power-plants.index, master-data.power-plants.create | ✅ |
+| [MasterData/PowerPlants/Index](./MasterData/PowerPlants/Index.md) | master-data.power-plants.index, master-data.power-plants.create | ✅ |
+| [MasterData/PowerPlants/Show](./MasterData/PowerPlants/Show.md) | master-data.power-plants.index, master-data.power-plants.create | ✅ |
+| [MasterData/SectionTimers/Create](./MasterData/SectionTimers/Create.md) | master-data.section-timers.index, master-data.section-timers.create | ✅ |
+| [MasterData/SectionTimers/Index](./MasterData/SectionTimers/Index.md) | master-data.section-timers.index, master-data.section-timers.create | ✅ |
+| [MasterData/Sidings/Index](./MasterData/Sidings/Index.md) | master-data.sidings.index, master-data.sidings.create | ✅ |
+| [rakes/load](./rakes/load.md) | rakes.load.show, rakes.load.confirm-placement | ✅ |
+| [road-dispatch/daily-vehicle-entries/index](./road-dispatch/daily-vehicle-entries/index.md) | road-dispatch.daily-vehicle-entries.index, road-dispatch.daily-vehicle-entries.store | ✅ |
+| [road-dispatch/daily-vehicle-entries/shift-tabs](./road-dispatch/daily-vehicle-entries/shift-tabs.md) | N/A | ✅ |
+| [road-dispatch/daily-vehicle-entries/shift-report-dialog](./road-dispatch/daily-vehicle-entries/shift-report-dialog.md) | N/A | ✅ |
+| [road-dispatch/daily-vehicle-entries/vehicle-entry-row](./road-dispatch/daily-vehicle-entries/vehicle-entry-row.md) | N/A | ✅ |
+| [road-dispatch/daily-vehicle-entries/vehicle-entry-table](./road-dispatch/daily-vehicle-entries/vehicle-entry-table.md) | N/A | ✅ |
+| [VehicleDispatch/DPRTab](./VehicleDispatch/DPRTab.md) | N/A | ✅ |
+| [VehicleDispatch/ImportPreviewCard](./VehicleDispatch/ImportPreviewCard.md) | N/A | ✅ |
+| [VehicleDispatch/Index](./VehicleDispatch/Index.md) | vehicle-dispatch.index, vehicle-dispatch.dpr-data | ✅ |
+| [VehicleDispatch/MainDataTab](./VehicleDispatch/MainDataTab.md) | N/A | ✅ |
+| [VehicleDispatch/VehicleDispatchTable](./VehicleDispatch/VehicleDispatchTable.md) | N/A | ✅ |
+| [VehicleDispatch/VehicleDispatchTabs](./VehicleDispatch/VehicleDispatchTabs.md) | N/A | ✅ |
+| [VehicleWorkorders/Edit](./VehicleWorkorders/Edit.md) | vehicle-workorders.index, vehicle-workorders.export | ✅ |
+| [VehicleWorkorders/Index](./VehicleWorkorders/Index.md) | vehicle-workorders.index, vehicle-workorders.export | ✅ |
+| [MasterData/OpeningCoalStock/Edit](./MasterData/OpeningCoalStock/Edit.md) | master-data.opening-coal-stock.index, master-data.opening-coal-stock.edit | ✅ |
+| [MasterData/OpeningCoalStock/Index](./MasterData/OpeningCoalStock/Index.md) | master-data.opening-coal-stock.index, master-data.opening-coal-stock.edit | ✅ |
+| [MasterData/SectionTimers/Edit](./MasterData/SectionTimers/Edit.md) | master-data.section-timers.index, master-data.section-timers.create | ✅ |
+| [MasterData/SectionTimers/Show](./MasterData/SectionTimers/Show.md) | master-data.section-timers.index, master-data.section-timers.create | ✅ |
+| [MasterData/ShiftTimings/Edit](./MasterData/ShiftTimings/Edit.md) | master-data.shift-timings.index, master-data.shift-timings.edit | ✅ |
+| [MasterData/ShiftTimings/Index](./MasterData/ShiftTimings/Index.md) | master-data.shift-timings.index, master-data.shift-timings.edit | ✅ |
+| [historical/mines/index](./historical/mines/index.md) | historical.mines.index, historical.mines.store | ✅ |
+| [historical/railway-siding/index](./historical/railway-siding/index.md) | historical.railway-siding.index, historical.railway-siding.export | ✅ |
+| [production/edit](./production/edit.md) | production.coal.index, production.coal.store | ✅ |
+| [production/index](./production/index.md) | production.coal.index, production.coal.store | ✅ |
+| [railway-siding-empty-weighment/index](./railway-siding-empty-weighment/index.md) | railway-siding-empty-weighment.index, railway-siding-empty-weighment.store | ✅ |
+| [railway-siding-empty-weighment/shift-tabs](./railway-siding-empty-weighment/shift-tabs.md) | N/A | ✅ |
+| [railway-siding-empty-weighment/vehicle-entry-row](./railway-siding-empty-weighment/vehicle-entry-row.md) | N/A | ✅ |
+| [railway-siding-empty-weighment/vehicle-entry-table](./railway-siding-empty-weighment/vehicle-entry-table.md) | N/A | ✅ |
+| [weighments/index](./weighments/index.md) | weighments.index, weighments.show | ✅ |
+| [weighments/show](./weighments/show.md) | weighments.index, weighments.show | ✅ |
+| [MasterData/DistanceMatrix/Edit](./MasterData/DistanceMatrix/Edit.md) | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ✅ |
+| [MasterData/DistanceMatrix/Show](./MasterData/DistanceMatrix/Show.md) | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ✅ |
+| [MasterData/Loaders/Edit](./MasterData/Loaders/Edit.md) | master-data.loaders.index, master-data.loaders.create | ✅ |
+| [MasterData/Loaders/Show](./MasterData/Loaders/Show.md) | master-data.loaders.index, master-data.loaders.create | ✅ |
+| [MasterData/PenaltyTypes/Edit](./MasterData/PenaltyTypes/Edit.md) | master-data.penalty-types.index, master-data.penalty-types.create | ✅ |
+| [MasterData/PenaltyTypes/Show](./MasterData/PenaltyTypes/Show.md) | master-data.penalty-types.index, master-data.penalty-types.create | ✅ |
+| [MasterData/Sidings/Create](./MasterData/Sidings/Create.md) | master-data.sidings.index, master-data.sidings.create | ✅ |
+| [MasterData/Sidings/Edit](./MasterData/Sidings/Edit.md) | master-data.sidings.index, master-data.sidings.create | ✅ |
+| [MasterData/Sidings/Show](./MasterData/Sidings/Show.md) | master-data.sidings.index, master-data.sidings.create | ✅ |
+| [VehicleWorkorders/Create](./VehicleWorkorders/Create.md) | vehicle-workorders.index, vehicle-workorders.export | ✅ |
 | MasterData/DailyStockDetails/Create | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
 | MasterData/DailyStockDetails/Edit | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
 | MasterData/DailyStockDetails/Index | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
-| MasterData/DistanceMatrix/Edit | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ❌ |
-| MasterData/DistanceMatrix/Show | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ❌ |
-| MasterData/Loaders/Edit | master-data.loaders.index, master-data.loaders.create | ❌ |
-| MasterData/Loaders/Show | master-data.loaders.index, master-data.loaders.create | ❌ |
-| MasterData/OpeningCoalStock/Edit | master-data.opening-coal-stock.index, master-data.opening-coal-stock.edit | ❌ |
-| MasterData/OpeningCoalStock/Index | master-data.opening-coal-stock.index, master-data.opening-coal-stock.edit | ❌ |
-| MasterData/PenaltyTypes/Edit | master-data.penalty-types.index, master-data.penalty-types.create | ❌ |
-| MasterData/PenaltyTypes/Show | master-data.penalty-types.index, master-data.penalty-types.create | ❌ |
-| MasterData/SectionTimers/Edit | master-data.section-timers.index, master-data.section-timers.create | ❌ |
-| MasterData/SectionTimers/Show | master-data.section-timers.index, master-data.section-timers.create | ❌ |
-| MasterData/ShiftTimings/Edit | master-data.shift-timings.index, master-data.shift-timings.edit | ❌ |
-| MasterData/ShiftTimings/Index | master-data.shift-timings.index, master-data.shift-timings.edit | ❌ |
-| MasterData/Sidings/Create | master-data.sidings.index, master-data.sidings.create | ❌ |
-| MasterData/Sidings/Edit | master-data.sidings.index, master-data.sidings.create | ❌ |
-| MasterData/Sidings/Show | master-data.sidings.index, master-data.sidings.create | ❌ |
-| MasterData/StockLedger/Index | master-data.stock-ledger.index, master-data.stock-ledger.stock-report | ❌ |
-| MasterData/StockLedger/stock-report-dialog | N/A | ❌ |
-| VehicleWorkorders/Create | vehicle-workorders.index, vehicle-workorders.export | ❌ |
-| historical/mines/index | historical.mines.index, historical.mines.store | ❌ |
-| historical/railway-siding/index | historical.railway-siding.index, historical.railway-siding.export | ❌ |
-| production/edit | production.coal.index, production.coal.store | ❌ |
-| production/index | production.coal.index, production.coal.store | ❌ |
-| railway-siding-empty-weighment/index | railway-siding-empty-weighment.index, railway-siding-empty-weighment.store | ❌ |
-| railway-siding-empty-weighment/shift-tabs | N/A | ❌ |
-| railway-siding-empty-weighment/vehicle-entry-row | N/A | ❌ |
-| railway-siding-empty-weighment/vehicle-entry-table | N/A | ❌ |
-| rake-loader/index | rake-loader.index, rake-loader.rakes.loading | ❌ |
+| [rake-loader/index](docs/developer/frontend/pages/rake-loader/index.md) | rake-loader.index, rake-loader.rakes.loading | ✅ |
+| [MasterData/StockLedger/Index](./MasterData/StockLedger/Index.md) | master-data.stock-ledger.index, master-data.stock-ledger.stock-report | ✅ |
+| [MasterData/StockLedger/stock-report-dialog](./MasterData/StockLedger/stock-report-dialog.md) | N/A | ✅ |
 | rake-loader/loading | rake-loader.index, rake-loader.rakes.loading | ❌ |
-| road-dispatch/daily-vehicle-entries/shift-report-dialog | N/A | ❌ |
 | siding-pre-indent-reports/create | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
 | siding-pre-indent-reports/edit | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
 | siding-pre-indent-reports/index | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
 | siding-pre-indent-reports/show | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
-| weighments/index | weighments.index, weighments.show | ❌ |
-| weighments/show | weighments.index, weighments.show | ❌ |
-| sidings/monitor | sidings.monitor | ❌ |
+| control-room/index | control-room.index, control-room.show | ❌ |
+| control-room/show | control-room.index, control-room.show | ❌ |
 | dashboard/ExecutiveOverview | N/A | ❌ |
 | dashboard/LoaderOverloading | N/A | ❌ |
 | dashboard/Operations | N/A | ❌ |
@@ -153,8 +154,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | dashboard/PowerPlant | N/A | ❌ |
 | dashboard/RakePerformance | N/A | ❌ |
 | dashboard/SidingOverview | N/A | ❌ |
+| sidings/monitor | sidings.monitor | ❌ |
 | sidings/quick-placement | sidings.quick-placement.show, sidings.quick-placement.store | ❌ |
-| control-room/index | control-room.index, control-room.show | ❌ |
-| control-room/show | control-room.index, control-room.show | ❌ |
 
 

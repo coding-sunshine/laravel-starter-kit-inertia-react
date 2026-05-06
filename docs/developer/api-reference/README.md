@@ -25,6 +25,10 @@ List endpoints (index, search) return Laravel API Resource format: `{ "data": [ 
 
 For the complete list of routes, see [Routes Documentation](./routes.md).
 
+## Integration guides
+
+- **[Railway Receipt import preview (multipart)](./railway-receipt-import-preview-api.md)** — Mobile-oriented reference for `POST /api/v1/railway-receipts/import-preview`: auth, multipart `pdf`, success and all error scenarios. Success responses may return a plain JSON body (fields at top level), not necessarily the **`essa/api-toolkit`** `{ status, message, data }` envelope used by many other JSON endpoints — see each guide.
+
 ## Filter, sort, include, and fields (v1 list endpoints)
 
 List endpoints that use **spatie/laravel-query-builder** support:
