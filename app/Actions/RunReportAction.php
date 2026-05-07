@@ -63,6 +63,9 @@ final readonly class RunReportAction
      */
     public const array COAL_LOGESTIC_ADVANCE_REPORT_KEYS = [
         'weighment_analysis_report',
+        'loader_vs_weighment_report',
+        'weighment_summary_report',
+        'rr_charges_report',
     ];
 
     public const array REPORT_KEYS = [
@@ -90,6 +93,9 @@ final readonly class RunReportAction
         'siding_dispatch_report' => ['name' => 'Siding Dispatch', 'description' => 'Daily siding KPIs from rakes, RR penalty snapshots, and indent targets (Coal Logestic Core)'],
         'power_plant_dispatch_report' => ['name' => 'Power Plant Dispatch', 'description' => 'Daily dispatch by destination plant and source siding from rakes and latest weighment net (Coal Logestic Core)'],
         'weighment_analysis_report' => ['name' => 'Weighment Analysis', 'description' => 'Per-wagon weighment lines from the latest rake weighment (Coal Logestic Advance)'],
+        'loader_vs_weighment_report' => ['name' => 'Loader vs Weighment', 'description' => 'Loader quantities vs latest in-motion net per wagon (Coal Logestic Advance)'],
+        'weighment_summary_report' => ['name' => 'Weighment Summary', 'description' => 'Per-rake totals from the latest rake weighment (Coal Logestic Advance)'],
+        'rr_charges_report' => ['name' => 'RR Charges', 'description' => 'Per-RR freight and weights from wagon snapshots and rake charges (Coal Logestic Advance)'],
     ];
 
     /** Default matches rake-performance modal (% of CC, shortfall from weighment under_load_mt). */
@@ -142,6 +148,9 @@ final readonly class RunReportAction
             'siding_dispatch_report' => $this->sidingDispatchReport($sidingIds, $params),
             'power_plant_dispatch_report' => $this->powerPlantDispatchReport($sidingIds, $params),
             'weighment_analysis_report' => $this->weighmentAnalysisReport($sidingIds, $params),
+            'loader_vs_weighment_report' => $this->loaderVsWeighmentAdvanceReport($sidingIds, $params),
+            'weighment_summary_report' => $this->weighmentSummaryReport($sidingIds, $params),
+            'rr_charges_report' => $this->rrChargesReport($sidingIds, $params),
             'penalty_register_rr_snapshot' => $this->penaltyRegisterRrSnapshot($sidingIds, $params),
             'penalty_register_applied' => $this->penaltyRegisterApplied($sidingIds, $params),
             'daily_operations', 'demurrage_analysis', 'financial_impact', 'rake_lifecycle', 'indent_fulfillment' => $this->delegateToGenerateReports($key, $sidingIds, $params),
@@ -186,6 +195,9 @@ final readonly class RunReportAction
                 'siding_dispatch_report' => $this->sidingDispatchReportCount($sidingIds, $params),
                 'power_plant_dispatch_report' => $this->powerPlantDispatchReportCount($sidingIds, $params),
                 'weighment_analysis_report' => $this->weighmentAnalysisReportCount($sidingIds, $params),
+                'loader_vs_weighment_report' => $this->loaderVsWeighmentAdvanceReportCount($sidingIds, $params),
+                'weighment_summary_report' => $this->weighmentSummaryReportCount($sidingIds, $params),
+                'rr_charges_report' => $this->rrChargesReportCount($sidingIds, $params),
                 default => 0,
             };
 
@@ -276,6 +288,76 @@ final readonly class RunReportAction
             'pgsql' => 'COALESCE('.$rw.'.total_net_weight_mt::double precision, ('.$grossMinusTare.'), COALESCE('.$wn.'.net_mt, 0::double precision))',
             'sqlite' => 'COALESCE(CAST('.$rw.'.total_net_weight_mt AS REAL), ('.$grossMinusTare.'), COALESCE(CAST('.$wn.'.net_mt AS REAL), 0))',
             default => 'COALESCE('.$rw.'.total_net_weight_mt, ('.$grossMinusTare.'), COALESCE('.$wn.'.net_mt, 0))',
+        };
+    }
+
+    /**
+     * Net weight for one `rake_wagon_weighments` row: `net_weight_mt`, else `actual_gross_mt - actual_tare_mt`.
+     */
+    private function sqlRakeWagonLineNetWeightMt(string $alias = 'rww'): string
+    {
+        $net = "{$alias}.net_weight_mt";
+        $gross = "{$alias}.actual_gross_mt";
+        $tare = "{$alias}.actual_tare_mt";
+        $grossMinusTare = match (DB::getDriverName()) {
+            'pgsql' => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN ({$gross}::double precision - {$tare}::double precision) ELSE NULL END",
+            'sqlite' => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN (CAST({$gross} AS REAL) - CAST({$tare} AS REAL)) ELSE NULL END",
+            default => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN ({$gross} - {$tare}) ELSE NULL END",
+        };
+
+        return match (DB::getDriverName()) {
+            'pgsql' => 'COALESCE('.$net.'::double precision, ('.$grossMinusTare.'))',
+            'sqlite' => 'COALESCE(CAST('.$net.' AS REAL), ('.$grossMinusTare.'))',
+            default => 'COALESCE('.$net.', ('.$grossMinusTare.'))',
+        };
+    }
+
+    /**
+     * Header net on `rake_weighments`: `total_net_weight_mt`, else `total_gross_weight_mt - total_tare_weight_mt`.
+     */
+    private function sqlRakeWeighmentHeaderNetMt(string $rwAlias = 'rw'): string
+    {
+        $net = "{$rwAlias}.total_net_weight_mt";
+        $gross = "{$rwAlias}.total_gross_weight_mt";
+        $tare = "{$rwAlias}.total_tare_weight_mt";
+        $grossMinusTare = match (DB::getDriverName()) {
+            'pgsql' => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN ({$gross}::double precision - {$tare}::double precision) ELSE NULL END",
+            'sqlite' => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN (CAST({$gross} AS REAL) - CAST({$tare} AS REAL)) ELSE NULL END",
+            default => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN ({$gross} - {$tare}) ELSE NULL END",
+        };
+
+        return match (DB::getDriverName()) {
+            'pgsql' => 'COALESCE('.$net.'::double precision, ('.$grossMinusTare.'))',
+            'sqlite' => 'COALESCE(CAST('.$net.' AS REAL), ('.$grossMinusTare.'))',
+            default => 'COALESCE('.$net.', ('.$grossMinusTare.'))',
+        };
+    }
+
+    /** Net/load for one `rr_wagon_snapshots` row: `loaded_weight_mt`, else `gross_weight_mt - tare_weight_mt`. */
+    private function sqlRrWagonSnapshotLineNetMt(string $alias = 'rws'): string
+    {
+        $loaded = "{$alias}.loaded_weight_mt";
+        $gross = "{$alias}.gross_weight_mt";
+        $tare = "{$alias}.tare_weight_mt";
+        $grossMinusTare = match (DB::getDriverName()) {
+            'pgsql' => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN ({$gross}::double precision - {$tare}::double precision) ELSE NULL END",
+            'sqlite' => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN (CAST({$gross} AS REAL) - CAST({$tare} AS REAL)) ELSE NULL END",
+            default => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN ({$gross} - {$tare}) ELSE NULL END",
+        };
+
+        return match (DB::getDriverName()) {
+            'pgsql' => 'COALESCE('.$loaded.'::double precision, ('.$grossMinusTare.'))',
+            'sqlite' => 'COALESCE(CAST('.$loaded.' AS REAL), ('.$grossMinusTare.'))',
+            default => 'COALESCE('.$loaded.', ('.$grossMinusTare.'))',
         };
     }
 
@@ -714,6 +796,409 @@ final readonly class RunReportAction
         }
 
         return sprintf('%.1f%%', $rounded);
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildWeighmentSummaryBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        if ($sidingIds === []) {
+            return DB::table('rakes as r')->whereRaw('1 = 0');
+        }
+
+        $latestRwId = DB::table('rake_weighments')
+            ->selectRaw('rake_id, MAX(id) as max_rw_id')
+            ->groupBy('rake_id');
+
+        $lineNet = $this->sqlRakeWagonLineNetWeightMt('rww');
+
+        $wagonAgg = DB::table('rake_wagon_weighments as rww')
+            ->join('rake_weighments as rw_agg', 'rw_agg.id', '=', 'rww.rake_weighment_id')
+            ->joinSub($latestRwId, 'lrw_agg', function ($join): void {
+                $join->on('lrw_agg.max_rw_id', '=', 'rw_agg.id')->on('lrw_agg.rake_id', '=', 'rw_agg.rake_id');
+            })
+            ->groupBy('rw_agg.rake_id')
+            ->selectRaw(
+                'rw_agg.rake_id as rake_id, COUNT(rww.id) as wagon_line_count, SUM(rww.cc_capacity_mt) as sum_cc,'.
+                ' SUM(rww.actual_gross_mt) as sum_gross, SUM('.$lineNet.') as sum_net_lines,'.
+                ' SUM(rww.under_load_mt) as sum_under, SUM(rww.over_load_mt) as sum_over'
+            );
+
+        $headerNet = $this->sqlRakeWeighmentHeaderNetMt('rw');
+
+        $q = DB::table('rakes as r')
+            ->joinSub($latestRwId, 'lrw', function ($join): void {
+                $join->on('lrw.rake_id', '=', 'r.id');
+            })
+            ->join('rake_weighments as rw', 'rw.id', '=', 'lrw.max_rw_id')
+            ->leftJoinSub($wagonAgg, 'wa', 'wa.rake_id', '=', 'r.id')
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->selectRaw(
+                'r.id as rake_id, r.rake_number, r.loading_date,'.
+                ' COALESCE(wa.wagon_line_count, 0) as total_wagons,'.
+                ' COALESCE(wa.sum_cc, rw.total_cc_weight_mt) as total_cc_mt,'.
+                ' COALESCE(wa.sum_gross, rw.total_gross_weight_mt) as total_gross_mt,'.
+                ' COALESCE(wa.sum_net_lines, ('.$headerNet.')) as total_net_mt,'.
+                ' COALESCE(wa.sum_under, rw.total_under_load_mt) as total_under_mt,'.
+                ' COALESCE(wa.sum_over, rw.total_over_load_mt) as total_over_mt'
+            );
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $needle = mb_trim((string) $params['rake_number']);
+            if ($needle !== '') {
+                $q->where('r.rake_number', 'like', '%'.$needle.'%');
+            }
+        }
+
+        return $q;
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function weighmentSummaryReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildWeighmentSummaryBaseQuery($sidingIds, $params)->count('r.id');
+    }
+
+    /**
+     * Coal Logestic Advance — one row per rake: totals from wagon lines on the latest `rake_weighments`
+     * row, falling back to header totals when there are no lines.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function weighmentSummaryReport(array $sidingIds, array $params): array
+    {
+        $query = $this->buildWeighmentSummaryBaseQuery($sidingIds, $params)
+            ->orderByDesc('r.loading_date')
+            ->orderBy('r.rake_number');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $round = fn ($v): ?float => $v !== null && $v !== '' && is_finite((float) $v) ? round((float) $v, 2) : null;
+
+            return [
+                'Rake No' => isset($r->rake_number) ? (string) $r->rake_number : '',
+                'Total Wagons' => (int) ($r->total_wagons ?? 0),
+                'Total CC (MT)' => $round($r->total_cc_mt ?? null),
+                'Total Gross (MT)' => $round($r->total_gross_mt ?? null),
+                'Total Net (MT)' => $round($r->total_net_mt ?? null),
+                'Total Underload (MT)' => $round($r->total_under_mt ?? null),
+                'Total Overload (MT)' => $round($r->total_over_mt ?? null),
+                '_rake_id' => (int) $r->rake_id,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildRrChargesReportBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        if ($sidingIds === []) {
+            return DB::table('rr_documents as rr')->whereRaw('1 = 0');
+        }
+
+        $lineNet = $this->sqlRrWagonSnapshotLineNetMt('rws');
+
+        $snapshotSum = DB::table('rr_wagon_snapshots as rws')
+            ->groupBy('rws.rr_document_id')
+            ->selectRaw('rws.rr_document_id as rr_document_id, SUM('.$lineNet.') as snapshot_net_sum_mt');
+
+        $chargesPivot = DB::table('rake_charges')
+            ->where('is_actual_charges', true)
+            ->selectRaw(
+                'rake_id, diverrt_destination_id,'.
+                ' SUM(CASE WHEN charge_type = \'FREIGHT\' THEN amount ELSE 0 END) AS basic_freight,'.
+                ' SUM(CASE WHEN charge_type = \'OTHER_CHARGE\' THEN amount ELSE 0 END) AS other_charges,'.
+                ' SUM(CASE WHEN charge_type = \'GST\' THEN amount ELSE 0 END) AS gst'
+            )
+            ->groupBy('rake_id', 'diverrt_destination_id');
+
+        $q = DB::table('rr_documents as rr')
+            ->join('rakes as r', function ($join): void {
+                $join->on('r.id', '=', 'rr.rake_id')->whereNull('r.deleted_at');
+            })
+            ->leftJoinSub($snapshotSum, 'sn', 'sn.rr_document_id', '=', 'rr.id')
+            ->leftJoinSub($chargesPivot, 'ch', function ($join): void {
+                $join->on('ch.rake_id', '=', 'rr.rake_id')
+                    ->where(function ($w): void {
+                        $w->where(function ($n): void {
+                            $n->whereNull('rr.diverrt_destination_id')
+                                ->whereNull('ch.diverrt_destination_id');
+                        })->orWhereColumn('rr.diverrt_destination_id', 'ch.diverrt_destination_id');
+                    });
+            })
+            ->whereNotNull('rr.rake_id')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->selectRaw(
+                'rr.id AS rr_document_id, rr.rr_number, r.rake_number,'.
+                ' rr.from_station_code, rr.to_station_code, rr.distance_km,'.
+                ' rr.rr_weight_mt, sn.snapshot_net_sum_mt,'.
+                ' ch.basic_freight, ch.other_charges, ch.gst'
+            );
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $needle = mb_trim((string) $params['rake_number']);
+            if ($needle !== '') {
+                $q->where('r.rake_number', 'like', '%'.$needle.'%');
+            }
+        }
+
+        return $q;
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function rrChargesReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildRrChargesReportBaseQuery($sidingIds, $params)->count('rr.id');
+    }
+
+    /**
+     * Coal Logestic Advance — RR leg with summed wagon snapshot net, chargeable RR weight,
+     * and categorized actual rake charges (freight / other / GST).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function rrChargesReport(array $sidingIds, array $params): array
+    {
+        $query = $this->buildRrChargesReportBaseQuery($sidingIds, $params)
+            ->orderByDesc('rr.rr_received_date')
+            ->orderByDesc('rr.id');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        $roundWt = fn ($v): ?float => $v !== null && $v !== '' && is_finite((float) $v) ? round((float) $v, 2) : null;
+        $roundMoney = fn ($v): ?float => $v !== null && $v !== '' && is_finite((float) $v) ? round((float) $v, 2) : null;
+
+        return $rows->map(function (object $row) use ($roundMoney, $roundWt): array {
+            $basicRaw = $row->basic_freight ?? null;
+            $otherRaw = $row->other_charges ?? null;
+            $gstRaw = $row->gst ?? null;
+            $hasChargeRow = $basicRaw !== null || $otherRaw !== null || $gstRaw !== null;
+
+            $basic = $roundMoney($basicRaw !== null ? $basicRaw : null);
+            $other = $roundMoney($otherRaw !== null ? $otherRaw : null);
+            $gst = $roundMoney($gstRaw !== null ? $gstRaw : null);
+
+            $totalFreight = null;
+            if ($hasChargeRow) {
+                $totalFreight = round(
+                    (float) ($basicRaw ?? 0) + (float) ($otherRaw ?? 0) + (float) ($gstRaw ?? 0),
+                    2,
+                );
+            }
+
+            $fromStation = isset($row->from_station_code) ? mb_trim((string) $row->from_station_code) : '';
+            $toStation = isset($row->to_station_code) ? mb_trim((string) $row->to_station_code) : '';
+
+            return [
+                'RR No' => isset($row->rr_number) ? (string) $row->rr_number : '',
+                'Rake No' => isset($row->rake_number) ? (string) $row->rake_number : '',
+                'From Station' => $fromStation,
+                'To Station' => $toStation,
+                'Distance (KM)' => $roundWt($row->distance_km ?? null),
+                'Total Weight (MT)' => $roundWt($row->snapshot_net_sum_mt ?? null),
+                'Chargeable Weight (MT)' => $roundWt($row->rr_weight_mt ?? null),
+                'Basic Freight' => $basic,
+                'Other Charges' => $other,
+                'GST' => $gst,
+                'Total Freight' => $totalFreight,
+                '_rr_document_id' => (int) $row->rr_document_id,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildLoaderVsWeighmentAdvanceBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        if ($sidingIds === []) {
+            return DB::table('wagon_loading as wl')->whereRaw('1 = 0');
+        }
+
+        $latestRwId = DB::table('rake_weighments')
+            ->selectRaw('rake_id, MAX(id) as max_rw_id')
+            ->groupBy('rake_id');
+
+        $q = DB::table('wagon_loading as wl')
+            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->leftJoin('wagons as w', 'w.id', '=', 'wl.wagon_id')
+            ->leftJoin('loaders as l', 'l.id', '=', 'wl.loader_id')
+            ->leftJoinSub($latestRwId, 'lrw', function ($join): void {
+                $join->on('lrw.rake_id', '=', 'wl.rake_id');
+            })
+            ->leftJoin('rake_weighments as rw', 'rw.id', '=', 'lrw.max_rw_id')
+            ->leftJoin('rake_wagon_weighments as rww', function ($join): void {
+                $join->on('rww.rake_weighment_id', '=', 'rw.id')
+                    ->on('rww.wagon_id', '=', 'wl.wagon_id');
+            })
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds);
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $needle = mb_trim((string) $params['rake_number']);
+            if ($needle !== '') {
+                $q->where('r.rake_number', 'like', '%'.$needle.'%');
+            }
+        }
+
+        return $q;
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function loaderVsWeighmentAdvanceReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildLoaderVsWeighmentAdvanceBaseQuery($sidingIds, $params)->count('wl.id');
+    }
+
+    /**
+     * Coal Logestic Advance — `wagon_loading` vs `rake_wagon_weighments` on the latest `rake_weighments` row per rake.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function loaderVsWeighmentAdvanceReport(array $sidingIds, array $params): array
+    {
+        $query = $this->buildLoaderVsWeighmentAdvanceBaseQuery($sidingIds, $params)
+            ->select([
+                'wl.id as wl_id',
+                'r.rake_number',
+                'rww.wagon_number as rww_wagon_number',
+                'w.wagon_number as w_wagon_number',
+                'wl.loaded_quantity_mt',
+                'rww.net_weight_mt',
+                'rww.actual_gross_mt',
+                'rww.actual_tare_mt',
+                'l.code as loader_code',
+                'l.loader_name',
+                'l.id as loader_table_id',
+                'wl.loading_time',
+            ])
+            ->orderByDesc('r.loading_date')
+            ->orderBy('r.rake_number')
+            ->orderByDesc('wl.loading_time')
+            ->orderBy('wl.id');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $wagonNo = $r->rww_wagon_number;
+            if ($wagonNo === null || $wagonNo === '') {
+                $wagonNo = $r->w_wagon_number ?? '';
+            }
+
+            $loaderQty = isset($r->loaded_quantity_mt) && $r->loaded_quantity_mt !== null
+                ? (float) $r->loaded_quantity_mt
+                : null;
+
+            $net = isset($r->net_weight_mt) && $r->net_weight_mt !== null ? (float) $r->net_weight_mt : null;
+            $gross = isset($r->actual_gross_mt) && $r->actual_gross_mt !== null ? (float) $r->actual_gross_mt : null;
+            $tareActual = isset($r->actual_tare_mt) && $r->actual_tare_mt !== null ? (float) $r->actual_tare_mt : null;
+            if ($net === null && $gross !== null && $tareActual !== null) {
+                $net = $gross - $tareActual;
+            }
+
+            $weighmentQty = $net;
+
+            $difference = ($loaderQty !== null && $weighmentQty !== null && is_finite($loaderQty) && is_finite($weighmentQty))
+                ? round($loaderQty - $weighmentQty, 2)
+                : null;
+
+            $overloadFlag = '—';
+            $underloadFlag = '—';
+            if ($difference !== null) {
+                if ($difference > 0) {
+                    $overloadFlag = 'Yes';
+                    $underloadFlag = 'No';
+                } elseif ($difference < 0) {
+                    $overloadFlag = 'No';
+                    $underloadFlag = 'Yes';
+                } else {
+                    $overloadFlag = 'No';
+                    $underloadFlag = 'No';
+                }
+            }
+
+            $loaderIdOut = '';
+            if (isset($r->loader_code) && $r->loader_code !== null && $r->loader_code !== '') {
+                $loaderIdOut = (string) $r->loader_code;
+            } elseif (isset($r->loader_name) && $r->loader_name !== null && $r->loader_name !== '') {
+                $loaderIdOut = (string) $r->loader_name;
+            } elseif (isset($r->loader_table_id) && $r->loader_table_id !== null) {
+                $loaderIdOut = (string) $r->loader_table_id;
+            }
+
+            return [
+                'Rake No' => isset($r->rake_number) ? (string) $r->rake_number : '',
+                'Wagon No' => (string) $wagonNo,
+                'Loader Qty (MT)' => $loaderQty !== null ? round($loaderQty, 2) : null,
+                'Weighment Qty (MT)' => $weighmentQty !== null ? round($weighmentQty, 2) : null,
+                'Difference (MT)' => $difference,
+                'Overload Flag' => $overloadFlag,
+                'Underload Flag' => $underloadFlag,
+                'Loader ID' => $loaderIdOut,
+                '_wl_id' => (int) $r->wl_id,
+            ];
+        })->values()->all();
     }
 
     /**

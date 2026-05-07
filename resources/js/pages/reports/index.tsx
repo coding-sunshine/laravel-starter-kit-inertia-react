@@ -102,6 +102,9 @@ const RAKE_NUMBER_FILTER_REPORTS = new Set([
     'overloading_report',
     'underloading_report',
     'weighment_analysis_report',
+    'loader_vs_weighment_report',
+    'weighment_summary_report',
+    'rr_charges_report',
 ]);
 
 const COAL_LOGESTIC_CORE_KEYS: string[] = [
@@ -119,12 +122,14 @@ const COAL_LOGESTIC_CORE_REPORT_LABELS: string[] = [
     'Operator Performance',
 ];
 
-const COAL_LOGESTIC_ADVANCE_KEYS: string[] = ['weighment_analysis_report'];
+const COAL_LOGESTIC_ADVANCE_KEYS: string[] = [
+    'weighment_summary_report',
+    'rr_charges_report',
+    'weighment_analysis_report',
+    'loader_vs_weighment_report',
+];
 
 const COAL_LOGESTIC_ADVANCE_REPORT_LABELS: string[] = [
-    'Loader vs Weighment',
-    'Weighment Summary',
-    'RR Charges',
     'RR Wagon Details',
     'Weighment vs RR',
     'Auto DPR Report',
@@ -192,6 +197,14 @@ function reportTableRowKey(
     const rwwId = row['_rww_id'];
     if (typeof rwwId === 'number' || typeof rwwId === 'string') {
         return `${page}:rww:${rwwId}`;
+    }
+    const wlId = row['_wl_id'];
+    if (typeof wlId === 'number' || typeof wlId === 'string') {
+        return `${page}:wl:${wlId}`;
+    }
+    const rakeSummaryId = row['_rake_id'];
+    if (typeof rakeSummaryId === 'number' || typeof rakeSummaryId === 'string') {
+        return `${page}:rake:${rakeSummaryId}`;
     }
     const digest = columns.map((c) => `${c}:${String(row[c] ?? '')}`).join('|');
 
