@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-05-05",
+    "lastGenerated": "2026-05-06",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -588,6 +588,18 @@
                     "Penalty",
                     "Rake",
                     "RrDocument"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "ResolveRakeForRrImportPreview": {
+            "documented": true,
+            "path": "./resolverakeforrrimportpreview.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Indent",
+                    "Rake"
                 ],
                 "relatedRoutes": []
             }
@@ -2724,8 +2736,11 @@
             "documented": true,
             "path": "./rruploadcontroller.md",
             "relationships": {
-                "usesActions": [],
+                "usesActions": [
+                    "PreviewRailwayReceiptImport"
+                ],
                 "usesFormRequests": [
+                    "StoreRrImportPreviewRequest",
                     "StoreRrUploadRequest"
                 ],
                 "relatedRoutes": [],
@@ -3045,6 +3060,69 @@
                     "sidings/monitor"
                 ]
             }
+        },
+        "RailwayReceiptImportPreviewController": {
+            "documented": true,
+            "path": "./railwayreceiptimportpreviewcontroller.md",
+            "lastUpdated": "2026-05-06",
+            "relationships": {
+                "usesActions": [
+                    "PreviewRailwayReceiptImport"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "LiveMonitorController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "control-room.index",
+                    "control-room.show"
+                ],
+                "rendersPages": [
+                    "control-room/index",
+                    "control-room/show"
+                ]
+            }
+        },
+        "CommandPaletteSearchController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "QuickPlacementController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "sidings/quick-placement"
+                ]
+            }
+        },
+        "SidingMonitorController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "sidings/monitor"
+                ]
+            }
         }
     },
     "pages": {
@@ -3163,6 +3241,7 @@
                     "api.v1.indents.show",
                     "api.v1.indents.assign-rake-number",
                     "api.v1.indents.download",
+                    "api.v1.railway-receipts.import-preview",
                     "api.v1.railway-receipts.upload",
                     "api.v1.railway-receipts.index",
                     "api.v1.railway-receipts.show",
@@ -3444,6 +3523,7 @@
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import-preview",
                     "railway-receipts.import",
                     "railway-receipts.upload",
                     "railway-receipts.create",
@@ -3853,6 +3933,7 @@
                     "api.v1.indents.show",
                     "api.v1.indents.assign-rake-number",
                     "api.v1.indents.download",
+                    "api.v1.railway-receipts.import-preview",
                     "api.v1.railway-receipts.upload",
                     "api.v1.railway-receipts.index",
                     "api.v1.railway-receipts.show",
@@ -4134,6 +4215,7 @@
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import-preview",
                     "railway-receipts.import",
                     "railway-receipts.upload",
                     "railway-receipts.create",
@@ -4326,6 +4408,7 @@
                     "api.v1.indents.show",
                     "api.v1.indents.assign-rake-number",
                     "api.v1.indents.download",
+                    "api.v1.railway-receipts.import-preview",
                     "api.v1.railway-receipts.upload",
                     "api.v1.railway-receipts.index",
                     "api.v1.railway-receipts.show",
@@ -4607,6 +4690,7 @@
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import-preview",
                     "railway-receipts.import",
                     "railway-receipts.upload",
                     "railway-receipts.create",
@@ -4785,6 +4869,7 @@
                     "api.v1.indents.show",
                     "api.v1.indents.assign-rake-number",
                     "api.v1.indents.download",
+                    "api.v1.railway-receipts.import-preview",
                     "api.v1.railway-receipts.upload",
                     "api.v1.railway-receipts.index",
                     "api.v1.railway-receipts.show",
@@ -5066,6 +5151,7 @@
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import-preview",
                     "railway-receipts.import",
                     "railway-receipts.upload",
                     "railway-receipts.create",

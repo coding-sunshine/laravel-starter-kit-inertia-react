@@ -51,8 +51,8 @@ final class ReportsController extends Controller
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'rake_number' => ['nullable', 'string', 'max:255'],
             'loader' => ['nullable', 'string', 'max:255'],
-            'preview' => ['nullable', 'boolean'],
-            'preview_limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:60'],
             'export_xlsx' => ['nullable', 'boolean'],
         ]);
 
@@ -61,8 +61,20 @@ final class ReportsController extends Controller
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
 
+        $page = max(1, (int) ($validated['page'] ?? 1));
+        $perPage = max(1, min(60, (int) ($validated['per_page'] ?? 60)));
+        $emptyGridResponse = fn (): JsonResponse => response()->json([
+            'data' => [],
+            'meta' => [
+                'current_page' => 1,
+                'per_page' => $perPage,
+                'total' => 0,
+                'last_page' => 1,
+            ],
+        ]);
+
         if ($sidingIds === []) {
-            return response()->json(['data' => []]);
+            return $emptyGridResponse();
         }
 
         $params = array_filter([
@@ -73,33 +85,29 @@ final class ReportsController extends Controller
             'loader' => $validated['loader'] ?? null,
         ]);
 
-        $preview = $request->boolean('preview');
-        $previewLimit = (int) ($validated['preview_limit'] ?? 25);
         $exportXlsx = $request->boolean('export_xlsx');
 
-        if ($preview) {
-            $params['limit'] = $previewLimit > 0 ? $previewLimit : 25;
-        }
-
         if ($exportXlsx || $request->boolean('export_csv')) {
-            // Exports should return full dataset.
             $params['no_limit'] = true;
         }
 
-        $data = resolve(RunReportAction::class)->handle($validated['key'], $sidingIds, $params);
-
         if ($request->boolean('export_csv')) {
+            $data = resolve(RunReportAction::class)->handle($validated['key'], $sidingIds, $params);
+
             return $this->exportCsv($validated['key'], $data);
         }
 
         if ($exportXlsx) {
+            $data = resolve(RunReportAction::class)->handle($validated['key'], $sidingIds, $params);
             $name = RunReportAction::REPORT_KEYS[$validated['key']]['name'] ?? $validated['key'];
             $filename = str_replace(' ', '_', $name).'_'.date('Y-m-d').'.xlsx';
 
             return Excel::download(new ReportArrayExport($data), $filename);
         }
 
-        return response()->json(['data' => $data]);
+        $payload = resolve(RunReportAction::class)->handlePaginated($validated['key'], $sidingIds, $params, $page, $perPage);
+
+        return response()->json($payload);
     }
 
     /**

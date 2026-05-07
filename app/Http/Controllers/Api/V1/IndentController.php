@@ -76,8 +76,8 @@ final class IndentController extends Controller
 
         /** @var LengthAwarePaginator $indents */
         $indents = QueryBuilder::for($query, $request)
-            ->allowedFilters(IndentDataTable::tableAllowedFilters())
-            ->allowedSorts(IndentDataTable::tableAllowedSorts())
+            ->allowedFilters(...IndentDataTable::tableAllowedFilters())
+            ->allowedSorts(...IndentDataTable::tableAllowedSorts())
             ->defaultSort('-id')
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();

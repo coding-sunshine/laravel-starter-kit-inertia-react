@@ -104,6 +104,17 @@ final readonly class RrImportService
         });
     }
 
+    /**
+     * Enforce the same upload-slot rules as {@see importSnapshotOnly} when no diversion destination is chosen
+     * (e.g. RR import preview before the user confirms upload).
+     *
+     * @throws InvalidArgumentException When the primary or default slot for this rake is already filled
+     */
+    public function assertDefaultUploadSlotAvailableForPreview(Rake $rake): void
+    {
+        $this->assertRrUploadSlotAvailable($rake, null);
+    }
+
     private function assertRrUploadSlotAvailable(Rake $rake, ?DiverrtDestination $diverrtDestination): void
     {
         if ($diverrtDestination !== null) {

@@ -640,6 +640,24 @@ This document lists all available routes in the application.
 - `action`: `App\Actions\DeleteUser`
 
 
+## RailwayReceiptImportPreviewController
+
+**Controller**: `App\Http\Controllers\Api\V1\RailwayReceiptImportPreviewController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `api/v1/railway-receipts/import-preview` | api.v1.railway-receipts.import-preview | api, throttle:60,1, auth:sanctum, feature:api_access |
+
+Parses multipart `pdf`; returns rake/e-demand preview JSON (same shape as web `railway-receipts/import-preview`). Requires `sections.railway_receipts.upload`.
+
+## RailwayReceiptUploadController
+
+**Controller**: `App\Http\Controllers\Api\V1\RailwayReceiptUploadController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `api/v1/railway-receipts/upload` | api.v1.railway-receipts.upload | api, throttle:60,1, auth:sanctum, feature:api_access |
+
 ## Impersonation (filament-impersonate)
 
 Impersonation is started from the Filament admin (Users table or Edit User page) via the package action. The package registers:

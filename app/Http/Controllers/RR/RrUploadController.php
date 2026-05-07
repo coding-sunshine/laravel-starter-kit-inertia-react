@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\RR;
 
-use App\Actions\ResolveRakeForRrImportPreview;
+use App\Actions\PreviewRailwayReceiptImport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRrImportPreviewRequest;
 use App\Http\Requests\StoreRrUploadRequest;
 use App\Models\DiverrtDestination;
 use App\Models\Rake;
-use App\Models\Siding;
 use App\Models\User;
 use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
@@ -31,45 +30,16 @@ final class RrUploadController extends Controller
 
     public function importPreview(
         StoreRrImportPreviewRequest $request,
-        ResolveRakeForRrImportPreview $resolveRakeForRrImportPreview,
+        PreviewRailwayReceiptImport $previewRailwayReceiptImport,
     ): JsonResponse {
         /** @var User $user */
         $user = $request->user();
         abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.upload'), 403);
 
         try {
-            $parsed = $this->parser->parse($request->file('pdf'));
-            $fnrRaw = $parsed['fnr'] ?? null;
-            $normalizedFnr = is_string($fnrRaw) ? mb_trim($fnrRaw) : '';
-
-            $resolved = $resolveRakeForRrImportPreview->handle($normalizedFnr);
-            $rake = $resolved['rake'];
-            $indent = $resolved['indent'];
-
-            $rake->loadMissing('siding');
-            $siding = $rake->siding;
-
-            $sidingIds = $user->isSuperAdmin()
-                ? Siding::query()->pluck('id')->all()
-                : $user->accessibleSidings()->get()->pluck('id')->all();
-            $normalizedSidingIds = array_map(static fn (mixed $id): int => (int) $id, $sidingIds);
-
-            if ($rake->siding_id !== null && ! in_array((int) $rake->siding_id, $normalizedSidingIds, true)) {
-                abort(403);
-            }
-
-            return response()->json([
-                'fnr_from_rr' => $normalizedFnr,
-                'fnr_from_indent' => $indent->fnr_number,
-                'to_station_code' => $parsed['to_station_code'] ?? null,
-                'rake_destination_code' => $rake->destination_code,
-                'rake_destination' => $rake->destination,
-                'siding_code' => $siding?->code,
-                'siding_name' => $siding?->name,
-                'rake_id' => $rake->id,
-                'rake_number' => $rake->rake_number,
-                'rake_serial_number' => $rake->rake_serial_number,
-            ]);
+            return response()->json(
+                $previewRailwayReceiptImport->handle($user, $request->file('pdf')),
+            );
         } catch (InvalidArgumentException $e) {
             Log::warning('RR import preview validation failed', ['error' => $e->getMessage()]);
 
