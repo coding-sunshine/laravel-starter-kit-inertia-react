@@ -1,5 +1,7 @@
 # Railway Receipt import preview API (mobile)
 
+> **Mobile handoff copy:** [`docs/mobile/railway-receipt-import-preview-api.md`](../../mobile/railway-receipt-import-preview-api.md) — same specification, expanded for integration teams.
+
 This document describes **`POST /api/v1/railway-receipts/import-preview`** for mobile and other API clients.
 
 It parses an uploaded RR **PDF**, reads **FNR** from the document, matches it to an **e-demand (Indent)** and **Rake**, checks that the authenticated user may access that rake’s **siding** and that the **default RR upload slot** is still available, then returns a **preview** payload.
