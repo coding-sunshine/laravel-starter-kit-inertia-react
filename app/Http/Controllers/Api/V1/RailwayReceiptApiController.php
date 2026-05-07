@@ -32,8 +32,8 @@ final class RailwayReceiptApiController extends Controller
 
         /** @var LengthAwarePaginator $paginator */
         $paginator = QueryBuilder::for($query, $request)
-            ->allowedFilters(RailwayReceiptsRakeDataTable::tableAllowedFilters())
-            ->allowedSorts(RailwayReceiptsRakeDataTable::tableAllowedSorts())
+            ->allowedFilters(...RailwayReceiptsRakeDataTable::tableAllowedFilters())
+            ->allowedSorts(...RailwayReceiptsRakeDataTable::tableAllowedSorts())
             ->defaultSort(RailwayReceiptsRakeDataTable::tableDefaultSort())
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();

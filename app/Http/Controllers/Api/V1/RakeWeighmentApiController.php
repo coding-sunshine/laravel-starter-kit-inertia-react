@@ -48,8 +48,8 @@ final class RakeWeighmentApiController extends Controller
 
         /** @var LengthAwarePaginator $paginator */
         $paginator = QueryBuilder::for($query, $request)
-            ->allowedFilters(WeighmentsRakeDataTable::tableAllowedFilters())
-            ->allowedSorts(WeighmentsRakeDataTable::tableAllowedSorts())
+            ->allowedFilters(...WeighmentsRakeDataTable::tableAllowedFilters())
+            ->allowedSorts(...WeighmentsRakeDataTable::tableAllowedSorts())
             ->defaultSort(WeighmentsRakeDataTable::tableDefaultSort())
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
