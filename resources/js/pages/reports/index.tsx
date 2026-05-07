@@ -42,6 +42,19 @@ interface PowerPlantOption {
     code: string;
 }
 
+interface ReportLoaderOption {
+    id: number;
+    code: string;
+    loader_name: string;
+    siding_id: number;
+}
+
+interface ReportLoaderOperatorOption {
+    id: number;
+    name: string;
+    siding_id: number | null;
+}
+
 interface ReportMeta {
     name: string;
     description: string;
@@ -51,6 +64,8 @@ interface Props {
     reports: Record<string, ReportMeta>;
     sidings: Siding[];
     powerPlants: PowerPlantOption[];
+    reportLoaders?: ReportLoaderOption[];
+    reportLoaderOperators?: ReportLoaderOperatorOption[];
 }
 
 type ReportData = Record<string, unknown>[];
@@ -85,25 +100,28 @@ const RAKE_NUMBER_FILTER_REPORTS = new Set([
     'rail_dispatch_dpr',
     'penalty_report',
     'overloading_report',
+    'underloading_report',
+    'weighment_analysis_report',
 ]);
 
 const COAL_LOGESTIC_CORE_KEYS: string[] = [
     'rail_dispatch_dpr',
     'penalty_report',
     'overloading_report',
+    'underloading_report',
+    'loader_performance_report',
+    'siding_dispatch_report',
+    'power_plant_dispatch_report',
 ];
 
 /** Placeholder labels until backend report keys exist (sidebar only). */
 const COAL_LOGESTIC_CORE_REPORT_LABELS: string[] = [
-    'Underloading',
-    'Loader Performance',
-    'Siding Dispatch',
-    'PowerPlant Dispatch',
     'Operator Performance',
 ];
 
+const COAL_LOGESTIC_ADVANCE_KEYS: string[] = ['weighment_analysis_report'];
+
 const COAL_LOGESTIC_ADVANCE_REPORT_LABELS: string[] = [
-    'Weighment Analysis',
     'Loader vs Weighment',
     'Weighment Summary',
     'RR Charges',
@@ -113,6 +131,13 @@ const COAL_LOGESTIC_ADVANCE_REPORT_LABELS: string[] = [
 ];
 
 const REPORTS_GRID_PER_PAGE = 60;
+
+/** Reports that expose the Loader text/id filter on /reports (matches POST `loader`). */
+const REPORTS_WITH_LOADER_FILTER = new Set<string>([
+    'wagon_loading',
+    'overloading_report',
+    'underloading_report',
+]);
 
 /** Collapsible triggers for sections without a selected report (Core / Advance, or Reports fallback). */
 const SECTION_TRIGGER_NEUTRAL =
@@ -164,6 +189,10 @@ function reportTableRowKey(
     if (typeof docId === 'number' || typeof docId === 'string') {
         return `${page}:doc:${docId}`;
     }
+    const rwwId = row['_rww_id'];
+    if (typeof rwwId === 'number' || typeof rwwId === 'string') {
+        return `${page}:rww:${rwwId}`;
+    }
     const digest = columns.map((c) => `${c}:${String(row[c] ?? '')}`).join('|');
 
     return `${page}:${index}:${digest}`;
@@ -193,7 +222,48 @@ function toLocalDateInput(date: Date): string {
     return `${year}-${month}-${day}`;
 }
 
-export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
+/** Table header: snake_case → Title Case; other keys (e.g. "Avg MT") pass through. */
+function formatReportColumnHeader(columnKey: string): string {
+    if (!columnKey.includes('_')) {
+        return columnKey;
+    }
+
+    return columnKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatReportsTableCellDisplay(raw: unknown, columnKey: string): string {
+    if (raw === null || raw === undefined) {
+        return '-';
+    }
+    if (typeof raw === 'boolean') {
+        return raw ? 'Yes' : 'No';
+    }
+    if (typeof raw === 'string') {
+        return raw === '' ? '-' : raw;
+    }
+    if (typeof raw !== 'number') {
+        return String(raw);
+    }
+
+    const val = Number(raw);
+    const col = columnKey;
+    const isCurrency =
+        col.includes('amount') ||
+        col.includes('total') ||
+        col.includes('penalty') ||
+        col.includes('weight') ||
+        col.includes('_mt') ||
+        col === 'Quantity Received (MT)';
+    return isCurrency ? val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : val.toLocaleString();
+}
+
+export default function ReportsIndex({
+    reports,
+    sidings,
+    powerPlants,
+    reportLoaders = [],
+    reportLoaderOperators = [],
+}: Props) {
     const [activeKey, setActiveKey] = useState<string>(Object.keys(reports)[0] ?? 'siding_coal_receipt');
     const [sidingId, setSidingId] = useState<string>('');
     const [dateFrom, setDateFrom] = useState<string>(() => {
@@ -205,6 +275,9 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
     const [powerPlantId, setPowerPlantId] = useState<string>('');
     const [penaltyStage, setPenaltyStage] = useState<string>('');
     const [loader, setLoader] = useState<string>('');
+    const [reportPerformanceLoaderId, setReportPerformanceLoaderId] = useState<string>('');
+    const [reportPerformanceOperatorId, setReportPerformanceOperatorId] = useState<string>('');
+    const [underloadThresholdPercent, setUnderloadThresholdPercent] = useState<string>('1');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<ReportData | null>(null);
     const [paginationMeta, setPaginationMeta] = useState<ReportGridMeta | null>(null);
@@ -227,10 +300,37 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
             COAL_LOGESTIC_CORE_KEYS.some((k) => k === activeKey && Boolean(reports[k])),
         [activeKey, reports],
     );
+    const activeReportIsInAdvanceSection = useMemo(
+        () =>
+            COAL_LOGESTIC_ADVANCE_KEYS.some((k) => k === activeKey && Boolean(reports[k])),
+        [activeKey, reports],
+    );
     const showsRakeNumberFilter = RAKE_NUMBER_FILTER_REPORTS.has(activeKey);
-    const showsLoaderFilter = activeKey === 'wagon_loading';
-    const showsPowerPlantFilter = activeKey === 'rail_dispatch_dpr';
+    const showsLoaderFilter = REPORTS_WITH_LOADER_FILTER.has(activeKey);
+    const showsPowerPlantFilter =
+        activeKey === 'rail_dispatch_dpr' || activeKey === 'power_plant_dispatch_report';
     const showsPenaltyStageFilter = activeKey === 'penalty_report';
+    const showsUnderloadingThresholdFilter = activeKey === 'underloading_report';
+    const showsLoaderPerformanceFilters = activeKey === 'loader_performance_report';
+
+    const loadersForPerformanceFilter = useMemo(() => {
+        if (!sidingId) {
+            return reportLoaders;
+        }
+        const sid = Number(sidingId);
+        return reportLoaders.filter((l) => l.siding_id === sid);
+    }, [reportLoaders, sidingId]);
+
+    const operatorsForPerformanceFilter = useMemo(() => {
+        if (!sidingId) {
+            return reportLoaderOperators;
+        }
+        const sid = Number(sidingId);
+        return reportLoaderOperators.filter(
+            (o) => o.siding_id === null || o.siding_id === sid,
+        );
+    }, [reportLoaderOperators, sidingId]);
+
     const requestPayload = useMemo(
         () => ({
             key: activeKey,
@@ -241,6 +341,21 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
             loader: showsLoaderFilter ? loader || undefined : undefined,
             power_plant_id: showsPowerPlantFilter && powerPlantId ? Number(powerPlantId) : undefined,
             penalty_stage: showsPenaltyStageFilter && penaltyStage ? penaltyStage : undefined,
+            underload_threshold_percent:
+                showsUnderloadingThresholdFilter
+                    ? (() => {
+                          const v = parseFloat(underloadThresholdPercent);
+                          return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 1;
+                      })()
+                    : undefined,
+            loader_id:
+                showsLoaderPerformanceFilters && reportPerformanceLoaderId !== ''
+                    ? Number(reportPerformanceLoaderId)
+                    : undefined,
+            loader_operator_id:
+                showsLoaderPerformanceFilters && reportPerformanceOperatorId !== ''
+                    ? Number(reportPerformanceOperatorId)
+                    : undefined,
         }),
         [
             activeKey,
@@ -251,10 +366,15 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
             powerPlantId,
             penaltyStage,
             loader,
+            underloadThresholdPercent,
+            reportPerformanceLoaderId,
+            reportPerformanceOperatorId,
             showsRakeNumberFilter,
             showsLoaderFilter,
             showsPowerPlantFilter,
             showsPenaltyStageFilter,
+            showsUnderloadingThresholdFilter,
+            showsLoaderPerformanceFilters,
         ],
     );
 
@@ -424,13 +544,22 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
                                                     if (!RAKE_NUMBER_FILTER_REPORTS.has(k)) {
                                                         setRakeNumber('');
                                                     }
-                                                    if (k !== 'rail_dispatch_dpr') {
+                                                    if (
+                                                        k !== 'rail_dispatch_dpr' &&
+                                                        k !== 'power_plant_dispatch_report'
+                                                    ) {
                                                         setPowerPlantId('');
                                                     }
                                                     if (k !== 'penalty_report') {
                                                         setPenaltyStage('');
                                                     }
-                                                    setLoader('');
+                                                    if (!REPORTS_WITH_LOADER_FILTER.has(k)) {
+                                                        setLoader('');
+                                                    }
+                                                    if (k !== 'loader_performance_report') {
+                                                        setReportPerformanceLoaderId('');
+                                                        setReportPerformanceOperatorId('');
+                                                    }
                                                 }}
                                             >
                                                 {reports[k].name}
@@ -452,31 +581,81 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
 
                             <Collapsible open={advanceSectionOpen} onOpenChange={setAdvanceSectionOpen}>
                                 <CollapsibleTrigger
-                                    className={SECTION_TRIGGER_NEUTRAL}
+                                    className={cn(
+                                        'flex w-full items-center justify-between gap-2 rounded-md border px-2 py-2 text-left text-xs font-semibold uppercase shadow-sm transition-colors',
+                                        activeReportIsInAdvanceSection
+                                            ? 'border-primary/55 bg-primary/15 text-primary hover:bg-primary/22 dark:bg-primary/22 dark:hover:bg-primary/30'
+                                            : SECTION_TRIGGER_NEUTRAL,
+                                        activeReportIsInAdvanceSection &&
+                                            !advanceSectionOpen &&
+                                            'ring-2 ring-primary/35 ring-offset-2 ring-offset-background dark:ring-offset-background',
+                                    )}
                                     data-pan="reports-sidebar-section-advance-toggle"
                                     type="button"
                                 >
                                     Coal Logestic Advance Reports
                                     <ChevronDown
                                         className={cn(
-                                            'h-4 w-4 shrink-0 text-foreground/70 transition-transform dark:text-foreground/65',
+                                            'h-4 w-4 shrink-0 transition-transform',
+                                            activeReportIsInAdvanceSection
+                                                ? 'text-primary'
+                                                : 'text-foreground/70 dark:text-foreground/65',
                                             advanceSectionOpen && 'rotate-180',
                                         )}
                                     />
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="pt-1">
-                                    <ul className="space-y-0.5">
+                                    <div className="space-y-0.5">
+                                        {COAL_LOGESTIC_ADVANCE_KEYS.filter((k) => reports[k]).map((k) => (
+                                            <button
+                                                key={k}
+                                                type="button"
+                                                data-pan="reports-sidebar-advance-report-select"
+                                                className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                                                    activeKey === k
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'hover:bg-muted'
+                                                }`}
+                                                onClick={() => {
+                                                    setActiveKey(k);
+                                                    setData(null);
+                                                    setPaginationMeta(null);
+                                                    setError(null);
+                                                    if (!RAKE_NUMBER_FILTER_REPORTS.has(k)) {
+                                                        setRakeNumber('');
+                                                    }
+                                                    if (
+                                                        k !== 'rail_dispatch_dpr' &&
+                                                        k !== 'power_plant_dispatch_report'
+                                                    ) {
+                                                        setPowerPlantId('');
+                                                    }
+                                                    if (k !== 'penalty_report') {
+                                                        setPenaltyStage('');
+                                                    }
+                                                    if (!REPORTS_WITH_LOADER_FILTER.has(k)) {
+                                                        setLoader('');
+                                                    }
+                                                    if (k !== 'loader_performance_report') {
+                                                        setReportPerformanceLoaderId('');
+                                                        setReportPerformanceOperatorId('');
+                                                    }
+                                                }}
+                                            >
+                                                {reports[k].name}
+                                            </button>
+                                        ))}
                                         {COAL_LOGESTIC_ADVANCE_REPORT_LABELS.map((label) => (
-                                            <li key={label}>
+                                            <div key={label}>
                                                 <span
                                                     className="block cursor-not-allowed rounded-md px-2 py-1.5 text-sm text-foreground/80 dark:text-foreground/75"
                                                     title="Coming soon"
                                                 >
                                                     {label}
                                                 </span>
-                                            </li>
+                                            </div>
                                         ))}
-                                    </ul>
+                                    </div>
                                 </CollapsibleContent>
                             </Collapsible>
 
@@ -520,8 +699,12 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
                                                     }
                                                     setPowerPlantId('');
                                                     setPenaltyStage('');
-                                                    if (k !== 'wagon_loading') {
+                                                    if (!REPORTS_WITH_LOADER_FILTER.has(k)) {
                                                         setLoader('');
+                                                    }
+                                                    if (k !== 'loader_performance_report') {
+                                                        setReportPerformanceLoaderId('');
+                                                        setReportPerformanceOperatorId('');
                                                     }
                                                 }}
                                                 className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
@@ -638,6 +821,29 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
                                             </select>
                                         </div>
                                     )}
+                                    {showsUnderloadingThresholdFilter && (
+                                        <div className="grid gap-1.5">
+                                            <label
+                                                htmlFor="report-underload-threshold"
+                                                className="text-xs font-medium"
+                                            >
+                                                Underload threshold (% of CC)
+                                            </label>
+                                            <input
+                                                id="report-underload-threshold"
+                                                type="number"
+                                                min={0}
+                                                max={100}
+                                                step={0.1}
+                                                value={underloadThresholdPercent}
+                                                onChange={(e) =>
+                                                    setUnderloadThresholdPercent(e.target.value)
+                                                }
+                                                className="w-28 rounded-md border border-input bg-background px-3 py-2 text-sm tabular-nums"
+                                                data-pan="report-filter-underload-threshold"
+                                            />
+                                        </div>
+                                    )}
                                     {showsLoaderFilter && (
                                         <div className="grid gap-1.5">
                                             <label className="text-xs font-medium">Loader</label>
@@ -649,6 +855,49 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
                                                 className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                                             />
                                         </div>
+                                    )}
+                                    {showsLoaderPerformanceFilters && (
+                                        <>
+                                            <div className="grid gap-1.5">
+                                                <label className="text-xs font-medium">Loader</label>
+                                                <select
+                                                    value={reportPerformanceLoaderId}
+                                                    onChange={(e) =>
+                                                        setReportPerformanceLoaderId(e.target.value)
+                                                    }
+                                                    className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                    data-pan="report-filter-loader-performance-loader"
+                                                >
+                                                    <option value="">All loaders</option>
+                                                    {loadersForPerformanceFilter.map((l) => (
+                                                        <option key={l.id} value={String(l.id)}>
+                                                            {l.loader_name}
+                                                            {l.code ? ` (${l.code})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="grid gap-1.5">
+                                                <label className="text-xs font-medium">
+                                                    Loader operator
+                                                </label>
+                                                <select
+                                                    value={reportPerformanceOperatorId}
+                                                    onChange={(e) =>
+                                                        setReportPerformanceOperatorId(e.target.value)
+                                                    }
+                                                    className="max-w-[min(100%,220px)] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                    data-pan="report-filter-loader-performance-operator"
+                                                >
+                                                    <option value="">All operators</option>
+                                                    {operatorsForPerformanceFilter.map((o) => (
+                                                        <option key={o.id} value={String(o.id)}>
+                                                            {o.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </>
                                     )}
                                     <Button
                                         onClick={generate}
@@ -699,19 +948,20 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
                                     {/* Data table */}
                                     {tableRows.length > 0 && tableColumns.length > 0 ? (
                                         <div className="max-w-full min-w-0 overflow-x-auto rounded-md border">
-                                            <table className="w-max min-w-full text-sm">
+                                            <table className="w-max min-w-full border-collapse text-sm">
                                                 <thead>
                                                     <tr className="border-b bg-muted/50">
                                                         {tableColumns.map((col) => (
                                                             <th
                                                                 key={col}
-                                                                className="whitespace-nowrap px-4 py-3 text-left font-medium"
+                                                                className={cn(
+                                                                    'border-border/70 max-w-[6.5rem] min-w-[3.75rem] border-r px-2 py-2.5 align-bottom text-[11px] font-semibold leading-tight tracking-tight text-foreground whitespace-normal last:border-r-0 sm:max-w-[8rem] sm:px-2.5 sm:text-xs',
+                                                                    'text-center',
+                                                                )}
                                                             >
-                                                                {col
-                                                                    .replace(/_/g, ' ')
-                                                                    .replace(/\b\w/g, (c) =>
-                                                                        c.toUpperCase(),
-                                                                    )}
+                                                                <span className="line-clamp-3">
+                                                                    {formatReportColumnHeader(col)}
+                                                                </span>
                                                             </th>
                                                         ))}
                                                     </tr>
@@ -734,31 +984,22 @@ export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
                                                         >
                                                             {tableColumns.map((col) => {
                                                                 const val = row[col];
-                                                                const isNumber = typeof val === 'number';
-                                                                const isCurrency =
-                                                                    isNumber &&
-                                                                    (col.includes('amount') ||
-                                                                        col.includes('total') ||
-                                                                        col.includes('penalty') ||
-                                                                        col.includes('weight') ||
-                                                                        col.includes('_mt') ||
-                                                                        col === 'Quantity Received (MT)');
+                                                                const centeredNumber = typeof val === 'number';
+                                                                const centeredText =
+                                                                    typeof val === 'string' &&
+                                                                    (/\d+(?:\.\d+)?%$/.test(val.trim()) ||
+                                                                        val.trim() === '—');
                                                                 return (
                                                                     <td
                                                                         key={col}
-                                                                        className={`whitespace-nowrap px-4 py-2.5 ${
-                                                                            isNumber ? 'text-right' : ''
-                                                                        }`}
+                                                                        className={cn(
+                                                                            'border-border/50 min-w-[3.5rem] border-r px-2 py-2 align-middle text-center text-[13px] last:border-r-0 sm:text-sm',
+                                                                            centeredNumber || centeredText
+                                                                                ? 'font-medium tabular-nums tracking-tight'
+                                                                                : 'break-words',
+                                                                        )}
                                                                     >
-                                                                        {val === null || val === undefined
-                                                                            ? '-'
-                                                                            : isCurrency
-                                                                              ? Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                                                              : isNumber
-                                                                                ? Number(val).toLocaleString()
-                                                                                : typeof val === 'boolean'
-                                                                                  ? val ? 'Yes' : 'No'
-                                                                                  : String(val)}
+                                                                        {formatReportsTableCellDisplay(val, col)}
                                                                     </td>
                                                                 );
                                                             })}

@@ -50,6 +50,19 @@ final readonly class RunReportAction
         'rail_dispatch_dpr',
         'penalty_report',
         'overloading_report',
+        'underloading_report',
+        'loader_performance_report',
+        'siding_dispatch_report',
+        'power_plant_dispatch_report',
+    ];
+
+    /**
+     * Coal Logestic Advance reports (same generate endpoint as Core / operational grid).
+     *
+     * @var list<string>
+     */
+    public const array COAL_LOGESTIC_ADVANCE_REPORT_KEYS = [
+        'weighment_analysis_report',
     ];
 
     public const array REPORT_KEYS = [
@@ -72,7 +85,15 @@ final readonly class RunReportAction
         'rail_dispatch_dpr' => ['name' => 'Rail Dispatch DPR', 'description' => 'Rail dispatch daily report by RR leg including diversions'],
         'penalty_report' => ['name' => 'Penalty Report', 'description' => 'Penalty lines with pre/post RR filter (Coal Logestic Core)'],
         'overloading_report' => ['name' => 'Overloading Report', 'description' => 'Wagon weighment overload lines with loader context (Coal Logestic Core)'],
+        'underloading_report' => ['name' => 'Underloading Report', 'description' => 'Wagon weighment underload vs CC threshold % (Coal Logestic Core)'],
+        'loader_performance_report' => ['name' => 'Loader Performance', 'description' => 'Per-loader loading accuracy from wagon_loading (Coal Logestic Core)'],
+        'siding_dispatch_report' => ['name' => 'Siding Dispatch', 'description' => 'Daily siding KPIs from rakes, RR penalty snapshots, and indent targets (Coal Logestic Core)'],
+        'power_plant_dispatch_report' => ['name' => 'Power Plant Dispatch', 'description' => 'Daily dispatch by destination plant and source siding from rakes and latest weighment net (Coal Logestic Core)'],
+        'weighment_analysis_report' => ['name' => 'Weighment Analysis', 'description' => 'Per-wagon weighment lines from the latest rake weighment (Coal Logestic Advance)'],
     ];
+
+    /** Default matches rake-performance modal (% of CC, shortfall from weighment under_load_mt). */
+    private const float DEFAULT_UNDERLOAD_THRESHOLD_PERCENT = 1.0;
 
     private const string PENALTY_STAGE_PRE = 'Pre-RR';
 
@@ -80,19 +101,25 @@ final readonly class RunReportAction
 
     private const string OVERLOADING_REPORT_PENALTY_IMPACT = 'Overload penalty';
 
+    private const string UNDERLOADING_REPORT_LOSS_IMPACT = 'Capacity shortfall';
+
     /**
-     * Report keys accepted by POST /reports/generate for the grid UI (operational + core).
+     * Report keys accepted by POST /reports/generate for the grid UI (operational, core, advance).
      *
      * @return list<string>
      */
     public static function reportGenerateKeys(): array
     {
-        return array_values(array_unique([...self::RAKE_MANAGEMENT_REPORT_KEYS, ...self::COAL_LOGESTIC_CORE_REPORT_KEYS]));
+        return array_values(array_unique([
+            ...self::RAKE_MANAGEMENT_REPORT_KEYS,
+            ...self::COAL_LOGESTIC_CORE_REPORT_KEYS,
+            ...self::COAL_LOGESTIC_ADVANCE_REPORT_KEYS,
+        ]));
     }
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, power_plant_id?: int, penalty_stage?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, power_plant_id?: int, penalty_stage?: string, underload_threshold_percent?: float, loader_id?: int, loader_operator_name?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     public function handle(string $key, array $sidingIds, array $params = []): array
@@ -110,6 +137,11 @@ final readonly class RunReportAction
             'penalty_register' => $this->penaltyRegister($sidingIds, $params),
             'penalty_report' => $this->penaltyReport($sidingIds, $params),
             'overloading_report' => $this->overloadingReport($sidingIds, $params),
+            'underloading_report' => $this->underloadingReport($sidingIds, $params),
+            'loader_performance_report' => $this->loaderPerformanceReport($sidingIds, $params),
+            'siding_dispatch_report' => $this->sidingDispatchReport($sidingIds, $params),
+            'power_plant_dispatch_report' => $this->powerPlantDispatchReport($sidingIds, $params),
+            'weighment_analysis_report' => $this->weighmentAnalysisReport($sidingIds, $params),
             'penalty_register_rr_snapshot' => $this->penaltyRegisterRrSnapshot($sidingIds, $params),
             'penalty_register_applied' => $this->penaltyRegisterApplied($sidingIds, $params),
             'daily_operations', 'demurrage_analysis', 'financial_impact', 'rake_lifecycle', 'indent_fulfillment' => $this->delegateToGenerateReports($key, $sidingIds, $params),
@@ -120,7 +152,7 @@ final readonly class RunReportAction
     /**
      * Paginated rows for the /reports UI (per_page capped at 60 in the controller).
      *
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, power_plant_id?: int, penalty_stage?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, power_plant_id?: int, penalty_stage?: string, underload_threshold_percent?: float, loader_id?: int, loader_operator_name?: string}  $params
      * @return array{data: array<int, array<string, mixed>>, meta: array{current_page: int, per_page: int, total: int, last_page: int}}
      */
     public function handlePaginated(string $key, array $sidingIds, array $params, int $page, int $perPage): array
@@ -149,6 +181,11 @@ final readonly class RunReportAction
                 'rr_summary' => $this->rrSummaryCount($sidingIds, $params),
                 'rail_dispatch_dpr' => $this->railDispatchDprCount($sidingIds, $params),
                 'overloading_report' => $this->overloadingReportCount($sidingIds, $params),
+                'underloading_report' => $this->underloadingReportCount($sidingIds, $params),
+                'loader_performance_report' => $this->loaderPerformanceReportCount($sidingIds, $params),
+                'siding_dispatch_report' => $this->sidingDispatchReportCount($sidingIds, $params),
+                'power_plant_dispatch_report' => $this->powerPlantDispatchReportCount($sidingIds, $params),
+                'weighment_analysis_report' => $this->weighmentAnalysisReportCount($sidingIds, $params),
                 default => 0,
             };
 
@@ -173,6 +210,512 @@ final readonly class RunReportAction
         ];
     }
 
+    private function formatLoaderPerformanceAccuracyPercent(float $percentRoundedToOneDecimal): string
+    {
+        if (abs($percentRoundedToOneDecimal - round($percentRoundedToOneDecimal)) < 0.0001) {
+            return sprintf('%d%%', (int) round($percentRoundedToOneDecimal));
+        }
+
+        return sprintf('%.1f%%', $percentRoundedToOneDecimal);
+    }
+
+    private function formatOptionalAverageLoadingMinutes(?float $minutes): string
+    {
+        if ($minutes === null || $minutes < 0 || ! is_finite($minutes)) {
+            return '—';
+        }
+
+        $rounded = round($minutes, 1);
+        if (abs($rounded - round($rounded)) < 0.0001) {
+            return sprintf('%d min', (int) round($rounded));
+        }
+
+        return sprintf('%.1f min', $rounded);
+    }
+
+    /** Calendar date bucket for `rakes.loading_date`. */
+    private function sqlRakeLoadingCalendarDate(string $rakeAlias = 'r'): string
+    {
+        $column = "{$rakeAlias}.loading_date";
+
+        return match (DB::getDriverName()) {
+            'pgsql' => "({$column})::date",
+            'sqlite' => "DATE({$column})",
+            default => "DATE({$column})",
+        };
+    }
+
+    /** `COALESCE(r.loaded_weight_mt, sum net from latest rake weighment)` SQL fragment (aliases `r`, `wn`). */
+    private function sqlCoalesceLoadedOrWeighNetMt(): string
+    {
+        return match (DB::getDriverName()) {
+            'pgsql' => 'COALESCE(r.loaded_weight_mt::double precision, COALESCE(wn.net_mt, 0::double precision))',
+            'sqlite' => 'COALESCE(CAST(r.loaded_weight_mt AS REAL), COALESCE(wn.net_mt, 0))',
+            default => 'COALESCE(r.loaded_weight_mt, COALESCE(wn.net_mt, 0))',
+        };
+    }
+
+    /**
+     * Latest `rake_weighments` row per rake: `total_net_weight_mt`, else `total_gross_weight_mt - total_tare_weight_mt`, else sum of wagon `net_weight_mt` (alias `wn`).
+     * Aliases: `rw` (joined latest header), `wn` (left join subquery sum by rake).
+     */
+    private function sqlCoalesceWeighmentHeaderOrGrossMinusTareOrWagonNetMt(): string
+    {
+        $rw = 'rw';
+        $wn = 'wn';
+        $grossMinusTare = match (DB::getDriverName()) {
+            'pgsql' => "CASE WHEN {$rw}.total_gross_weight_mt IS NOT NULL AND {$rw}.total_tare_weight_mt IS NOT NULL "
+                ."THEN ({$rw}.total_gross_weight_mt::double precision - {$rw}.total_tare_weight_mt::double precision) ELSE NULL END",
+            'sqlite' => "CASE WHEN {$rw}.total_gross_weight_mt IS NOT NULL AND {$rw}.total_tare_weight_mt IS NOT NULL "
+                .'THEN (CAST('.$rw.'.total_gross_weight_mt AS REAL) - CAST('.$rw.'.total_tare_weight_mt AS REAL)) ELSE NULL END',
+            default => "CASE WHEN {$rw}.total_gross_weight_mt IS NOT NULL AND {$rw}.total_tare_weight_mt IS NOT NULL "
+                ."THEN ({$rw}.total_gross_weight_mt - {$rw}.total_tare_weight_mt) ELSE NULL END",
+        };
+
+        return match (DB::getDriverName()) {
+            'pgsql' => 'COALESCE('.$rw.'.total_net_weight_mt::double precision, ('.$grossMinusTare.'), COALESCE('.$wn.'.net_mt, 0::double precision))',
+            'sqlite' => 'COALESCE(CAST('.$rw.'.total_net_weight_mt AS REAL), ('.$grossMinusTare.'), COALESCE(CAST('.$wn.'.net_mt AS REAL), 0))',
+            default => 'COALESCE('.$rw.'.total_net_weight_mt, ('.$grossMinusTare.'), COALESCE('.$wn.'.net_mt, 0))',
+        };
+    }
+
+    /** AVG loading interval minutes where both timestamps exist (alias `r`). */
+    private function sqlAvgLoadingMinutesAgg(): string
+    {
+        $driver = DB::getDriverName();
+        $start = 'r.loading_start_time';
+        $end = 'r.loading_end_time';
+
+        return match ($driver) {
+            'pgsql' => "AVG(CASE WHEN {$start} IS NOT NULL AND {$end} IS NOT NULL THEN EXTRACT(EPOCH FROM ({$end}::timestamp - {$start}::timestamp)) / 60.0 END)",
+            'sqlite' => "AVG(CASE WHEN {$start} IS NOT NULL AND {$end} IS NOT NULL THEN (julianday({$end}) - julianday({$start})) * 1440.0 END)",
+            default => "AVG(CASE WHEN {$start} IS NOT NULL AND {$end} IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, {$start}, {$end}) END)",
+        };
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildSidingDispatchGroupedSubquery(array $sidingIds, array $params): QueryBuilder
+    {
+        $latestRwId = DB::table('rake_weighments')
+            ->selectRaw('rake_id, MAX(id) as max_rw_id')
+            ->groupBy('rake_id');
+
+        $weighNetByRake = DB::table('rake_wagon_weighments as rww')
+            ->join('rake_weighments as rw', 'rw.id', '=', 'rww.rake_weighment_id')
+            ->joinSub($latestRwId, 'lrw', function ($join): void {
+                $join->on('lrw.max_rw_id', '=', 'rw.id')->on('lrw.rake_id', '=', 'rw.rake_id');
+            })
+            ->groupBy('rw.rake_id')
+            ->selectRaw('rw.rake_id as rake_id, SUM(COALESCE(rww.net_weight_mt, 0)) as net_mt');
+
+        $penaltyByRake = DB::table('rr_penalty_snapshots')
+            ->whereNotNull('rake_id')
+            ->groupBy('rake_id')
+            ->selectRaw('rake_id, SUM(COALESCE(amount, 0)) as penalty_sum');
+
+        $dispatchDay = $this->sqlRakeLoadingCalendarDate('r');
+        $coalMt = $this->sqlCoalesceLoadedOrWeighNetMt();
+
+        $effActual = '(CASE WHEN r.indent_id IS NOT NULL AND COALESCE(i.target_quantity_mt, 0) > 0 THEN '.$coalMt.' ELSE 0 END)';
+        $effTarget = '(CASE WHEN r.indent_id IS NOT NULL AND COALESCE(i.target_quantity_mt, 0) > 0 THEN COALESCE(i.target_quantity_mt, 0) ELSE 0 END)';
+
+        $avgLoadingSql = $this->sqlAvgLoadingMinutesAgg();
+
+        $q = DB::table('rakes as r')
+            ->join('sidings as s', 's.id', '=', 'r.siding_id')
+            ->leftJoinSub($weighNetByRake, 'wn', 'wn.rake_id', '=', 'r.id')
+            ->leftJoinSub($penaltyByRake, 'rp', 'rp.rake_id', '=', 'r.id')
+            ->leftJoin('indents as i', function ($join): void {
+                $join->on('i.id', '=', 'r.indent_id')
+                    ->whereNull('i.deleted_at');
+            })
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->whereNotNull('r.loading_date');
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        return $q
+            ->groupByRaw($dispatchDay.', r.siding_id, s.name')
+            ->selectRaw(
+                $dispatchDay.' as dispatch_day,'.
+                ' r.siding_id as siding_id,'.
+                ' s.name as siding_name,'.
+                ' COUNT(DISTINCT r.id) as total_rakes,'.
+                ' SUM('.$coalMt.') as total_coal_mt,'.
+                ' SUM(COALESCE(rp.penalty_sum, 0)) as total_penalty,'.
+                ' '.$avgLoadingSql.' as avg_loading_minutes,'.
+                ' SUM('.$effActual.') as efficiency_actual_mt,'.
+                ' SUM('.$effTarget.') as efficiency_target_mt'
+            );
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function sidingDispatchReportCount(array $sidingIds, array $params): int
+    {
+        if ($sidingIds === []) {
+            return 0;
+        }
+
+        return (int) DB::query()->fromSub(
+            $this->buildSidingDispatchGroupedSubquery($sidingIds, $params),
+            'dispatch_agg',
+        )->count();
+    }
+
+    /**
+     * Coal Logestic Core — date × siding from `rakes.loading_date`; coal uses `loaded_weight_mt` or latest weighment net;
+     * penalties from `rr_penalty_snapshots`; efficiency = 100 × Σ actual / Σ indent `target_quantity_mt` (indented rakes only).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function sidingDispatchReport(array $sidingIds, array $params): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $grouped = $this->buildSidingDispatchGroupedSubquery($sidingIds, $params);
+
+        $query = DB::query()->fromSub($grouped, 'dispatch_agg')
+            ->orderByDesc('dispatch_day')
+            ->orderBy('siding_name');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $dateRaw = $r->dispatch_day ?? '';
+            $dateOut = '';
+            if ($dateRaw !== '') {
+                $dateOut = Carbon::parse((string) $dateRaw)->toDateString();
+            }
+
+            $totalCoal = isset($r->total_coal_mt) ? round((float) $r->total_coal_mt, 2) : null;
+            $totalPenalty = isset($r->total_penalty) ? round((float) $r->total_penalty, 2) : null;
+            $avgMinutes = isset($r->avg_loading_minutes) && $r->avg_loading_minutes !== null
+                ? (float) $r->avg_loading_minutes
+                : null;
+
+            $effActual = isset($r->efficiency_actual_mt) ? (float) $r->efficiency_actual_mt : 0.0;
+            $effTarget = isset($r->efficiency_target_mt) ? (float) $r->efficiency_target_mt : 0.0;
+            $efficiencyDisplay = ($effTarget > 0)
+                ? $this->formatLoaderPerformanceAccuracyPercent(round(100.0 * $effActual / $effTarget, 1))
+                : '—';
+
+            return [
+                'Date' => $dateOut,
+                'Siding' => isset($r->siding_name) ? (string) $r->siding_name : '',
+                'Total Rakes' => (int) ($r->total_rakes ?? 0),
+                'Total Coal (MT)' => $totalCoal,
+                'Total Penalty' => $totalPenalty,
+                'Avg Loading Time' => $this->formatOptionalAverageLoadingMinutes($avgMinutes),
+                'Efficiency %' => $efficiencyDisplay,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, power_plant_id?: int}  $params
+     */
+    private function buildPowerPlantDispatchGroupedSubquery(array $sidingIds, array $params): QueryBuilder
+    {
+        $latestRwId = DB::table('rake_weighments')
+            ->selectRaw('rake_id, MAX(id) as max_rw_id')
+            ->groupBy('rake_id');
+
+        $weighNetByRake = DB::table('rake_wagon_weighments as rww')
+            ->join('rake_weighments as rw2', 'rw2.id', '=', 'rww.rake_weighment_id')
+            ->joinSub($latestRwId, 'lrw2', function ($join): void {
+                $join->on('lrw2.max_rw_id', '=', 'rw2.id')->on('lrw2.rake_id', '=', 'rw2.rake_id');
+            })
+            ->groupBy('rw2.rake_id')
+            ->selectRaw('rw2.rake_id as rake_id, SUM(COALESCE(rww.net_weight_mt, 0)) as net_mt');
+
+        $primaryRrPerRake = DB::table('rr_documents')
+            ->selectRaw('rake_id, MIN(id) as rr_id')
+            ->whereNotNull('to_station_code')
+            ->where('to_station_code', '!=', '')
+            ->groupBy('rake_id');
+
+        $dispatchDay = $this->sqlRakeLoadingCalendarDate('r');
+        $coalMt = $this->sqlCoalesceWeighmentHeaderOrGrossMinusTareOrWagonNetMt();
+
+        $q = DB::table('rakes as r')
+            ->join('sidings as s', 's.id', '=', 'r.siding_id')
+            ->leftJoinSub($primaryRrPerRake, 'pri', 'pri.rake_id', '=', 'r.id')
+            ->leftJoin('rr_documents as rr', 'rr.id', '=', 'pri.rr_id')
+            ->leftJoin('power_plants as pp', 'pp.code', '=', 'rr.to_station_code')
+            ->leftJoinSub($latestRwId, 'lrw', function ($join): void {
+                $join->on('lrw.rake_id', '=', 'r.id');
+            })
+            ->leftJoin('rake_weighments as rw', 'rw.id', '=', 'lrw.max_rw_id')
+            ->leftJoinSub($weighNetByRake, 'wn', 'wn.rake_id', '=', 'r.id')
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->whereNotNull('r.loading_date');
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['power_plant_id'])) {
+            $q->where('pp.id', '=', (int) $params['power_plant_id']);
+        }
+
+        $bucketPlantId = match (DB::getDriverName()) {
+            'pgsql' => 'COALESCE(pp.id, 0)',
+            'sqlite' => 'COALESCE(CAST(pp.id AS INTEGER), 0)',
+            default => 'COALESCE(pp.id, 0)',
+        };
+        $bucketToCode = "COALESCE(rr.to_station_code, '')";
+
+        return $q
+            ->groupByRaw($dispatchDay.', r.siding_id, s.id, s.name, '.$bucketPlantId.', '.$bucketToCode)
+            ->selectRaw(
+                $dispatchDay.' as dispatch_day,'.
+                ' r.siding_id as siding_id,'.
+                ' s.name as source_siding_name,'.
+                ' MAX(COALESCE(pp.name, rr.to_station_code, \'\')) as power_plant_label,'.
+                ' COUNT(DISTINCT r.id) as total_rakes,'.
+                ' SUM('.$coalMt.') as total_coal_mt'
+            );
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, power_plant_id?: int}  $params
+     */
+    private function powerPlantDispatchReportCount(array $sidingIds, array $params): int
+    {
+        if ($sidingIds === []) {
+            return 0;
+        }
+
+        return (int) DB::query()->fromSub(
+            $this->buildPowerPlantDispatchGroupedSubquery($sidingIds, $params),
+            'pp_dispatch_agg',
+        )->count();
+    }
+
+    /**
+     * Coal Logestic Core — by `rakes.loading_date`, destination from primary RR `to_station_code` → `power_plants`;
+     * coal from latest weighment header net or gross−tare or wagon net sum; transit time not tracked (N/A).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, power_plant_id?: int, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function powerPlantDispatchReport(array $sidingIds, array $params): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $grouped = $this->buildPowerPlantDispatchGroupedSubquery($sidingIds, $params);
+
+        $query = DB::query()->fromSub($grouped, 'pp_dispatch_agg')
+            ->orderByDesc('dispatch_day')
+            ->orderBy('power_plant_label')
+            ->orderBy('source_siding_name');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $dateRaw = $r->dispatch_day ?? '';
+            $dateOut = '';
+            if ($dateRaw !== '') {
+                $dateOut = Carbon::parse((string) $dateRaw)->toDateString();
+            }
+
+            $plantLabel = isset($r->power_plant_label) ? mb_trim((string) $r->power_plant_label) : '';
+            if ($plantLabel === '') {
+                $plantLabel = '—';
+            }
+
+            $totalCoal = isset($r->total_coal_mt) ? round((float) $r->total_coal_mt, 2) : null;
+
+            return [
+                'Date' => $dateOut,
+                'Power Plant' => $plantLabel,
+                'No of Rakes' => (int) ($r->total_rakes ?? 0),
+                'Total Coal (MT)' => $totalCoal,
+                'Source Siding' => isset($r->source_siding_name) ? (string) $r->source_siding_name : '',
+                'Transit Time' => 'N/A',
+                'Remarks' => '',
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildWeighmentAnalysisBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        if ($sidingIds === []) {
+            return DB::table('rake_wagon_weighments as rww')->whereRaw('1 = 0');
+        }
+
+        $latestRwId = DB::table('rake_weighments')
+            ->selectRaw('rake_id, MAX(id) as max_rw_id')
+            ->groupBy('rake_id');
+
+        $q = DB::table('rake_wagon_weighments as rww')
+            ->join('rake_weighments as rw', 'rw.id', '=', 'rww.rake_weighment_id')
+            ->joinSub($latestRwId, 'lrw', function ($join): void {
+                $join->on('lrw.max_rw_id', '=', 'rw.id')->on('lrw.rake_id', '=', 'rw.rake_id');
+            })
+            ->join('rakes as r', 'r.id', '=', 'rw.rake_id')
+            ->leftJoin('wagons as w', 'w.id', '=', 'rww.wagon_id')
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds);
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $needle = mb_trim((string) $params['rake_number']);
+            if ($needle !== '') {
+                $q->where('r.rake_number', 'like', '%'.$needle.'%');
+            }
+        }
+
+        return $q;
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function weighmentAnalysisReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildWeighmentAnalysisBaseQuery($sidingIds, $params)->count('rww.id');
+    }
+
+    /**
+     * Coal Logestic Advance — per-wagon lines from latest `rake_weighments` row per rake.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function weighmentAnalysisReport(array $sidingIds, array $params): array
+    {
+        $query = $this->buildWeighmentAnalysisBaseQuery($sidingIds, $params)
+            ->select([
+                'rww.id as rww_id',
+                'r.rake_number',
+                'rww.wagon_number as rww_wagon_number',
+                'w.wagon_number as w_wagon_number',
+                'rww.wagon_type',
+                'rww.cc_capacity_mt',
+                'rww.printed_tare_mt',
+                'rww.actual_tare_mt',
+                'rww.actual_gross_mt',
+                'rww.net_weight_mt',
+                'rww.under_load_mt',
+                'rww.over_load_mt',
+                'r.loading_date',
+                'rww.wagon_sequence',
+            ])
+            ->orderByDesc('r.loading_date')
+            ->orderBy('r.rake_number')
+            ->orderByRaw('COALESCE(rww.wagon_sequence, 999999) asc')
+            ->orderBy('rww.id');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $wagonNo = $r->rww_wagon_number;
+            if ($wagonNo === null || $wagonNo === '') {
+                $wagonNo = $r->w_wagon_number ?? '';
+            }
+
+            $cc = isset($r->cc_capacity_mt) && $r->cc_capacity_mt !== null ? (float) $r->cc_capacity_mt : null;
+            $gross = isset($r->actual_gross_mt) && $r->actual_gross_mt !== null ? (float) $r->actual_gross_mt : null;
+
+            $tareActual = isset($r->actual_tare_mt) && $r->actual_tare_mt !== null ? (float) $r->actual_tare_mt : null;
+            $tarePrinted = isset($r->printed_tare_mt) && $r->printed_tare_mt !== null ? (float) $r->printed_tare_mt : null;
+            $tareOut = $tareActual ?? $tarePrinted;
+
+            $net = isset($r->net_weight_mt) && $r->net_weight_mt !== null ? (float) $r->net_weight_mt : null;
+            if ($net === null && $gross !== null && $tareActual !== null) {
+                $net = $gross - $tareActual;
+            }
+
+            $underload = isset($r->under_load_mt) && $r->under_load_mt !== null ? round((float) $r->under_load_mt, 2) : null;
+            $overload = isset($r->over_load_mt) && $r->over_load_mt !== null ? round((float) $r->over_load_mt, 2) : null;
+
+            return [
+                'Rake No' => isset($r->rake_number) ? (string) $r->rake_number : '',
+                'Wagon No' => (string) $wagonNo,
+                'Wagon Type' => isset($r->wagon_type) ? (string) $r->wagon_type : '',
+                'CC Capacity (MT)' => $cc !== null ? round($cc, 2) : null,
+                'Tare Weight (MT)' => $tareOut !== null ? round($tareOut, 2) : null,
+                'Gross Weight (MT)' => $gross !== null ? round($gross, 2) : null,
+                'Net Weight (MT)' => $net !== null ? round($net, 2) : null,
+                'Underload (MT)' => $underload,
+                'Overload (MT)' => $overload,
+                'Deviation %' => $this->formatWeighmentAnalysisDeviationPercent($cc, $net),
+                '_rww_id' => (int) $r->rww_id,
+            ];
+        })->values()->all();
+    }
+
+    private function formatWeighmentAnalysisDeviationPercent(?float $cc, ?float $net): string
+    {
+        if ($cc === null || $cc <= 0 || $net === null || ! is_finite($net)) {
+            return '—';
+        }
+
+        $pct = 100.0 * ($net - $cc) / $cc;
+        $rounded = round($pct, 1);
+        if (abs($rounded - round($rounded)) < 0.0001) {
+            return sprintf('%d%%', (int) round($rounded));
+        }
+
+        return sprintf('%.1f%%', $rounded);
+    }
+
     /**
      * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, limit?: int|null, no_limit?: bool}  $params
      * @param  EloquentBuilder<\Illuminate\Database\Eloquent\Model>|QueryBuilder  $query
@@ -191,6 +734,36 @@ final readonly class RunReportAction
         if ($limit !== null) {
             $query->limit($limit);
         }
+    }
+
+    /**
+     * Same matching as the `loader` filter in {@see self::wagonLoading()}: numeric `loader_id` or substring on `loader_name` / `code` on joined `wagon_loading`/`loaders` (`wl`/`l`).
+     *
+     * @param  array{loader?: string}  $params
+     */
+    private function applyOverloadUnderloadReportLoaderFilter(QueryBuilder $q, array $params): void
+    {
+        if (empty($params['loader'])) {
+            return;
+        }
+
+        $loaderFilter = mb_trim((string) $params['loader']);
+        if ($loaderFilter === '') {
+            return;
+        }
+
+        $q->where(function ($sub) use ($loaderFilter): void {
+            if (is_numeric($loaderFilter)) {
+                $sub->where('wl.loader_id', (int) $loaderFilter)
+                    ->orWhere('l.loader_name', 'like', '%'.$loaderFilter.'%')
+                    ->orWhere('l.code', 'like', '%'.$loaderFilter.'%');
+            } else {
+                $sub->where(function ($inner) use ($loaderFilter): void {
+                    $inner->where('l.loader_name', 'like', '%'.$loaderFilter.'%')
+                        ->orWhere('l.code', 'like', '%'.$loaderFilter.'%');
+                });
+            }
+        });
     }
 
     /**
@@ -994,7 +1567,7 @@ final readonly class RunReportAction
     /**
      * Latest wagon_loading row per rake+wagon (MAX id), for loader / operator on overload lines.
      *
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      */
     private function buildOverloadingReportBaseQuery(array $sidingIds, array $params): QueryBuilder
     {
@@ -1031,11 +1604,13 @@ final readonly class RunReportAction
             $q->where('r.rake_number', 'like', '%'.$params['rake_number'].'%');
         }
 
+        $this->applyOverloadUnderloadReportLoaderFilter($q, $params);
+
         return $q;
     }
 
     /**
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      */
     private function overloadingReportCount(array $sidingIds, array $params): int
     {
@@ -1046,7 +1621,7 @@ final readonly class RunReportAction
      * In-motion net used as "Actual Weight (MT)".
      *
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function overloadingReport(array $sidingIds, array $params): array
@@ -1117,6 +1692,288 @@ final readonly class RunReportAction
                 'Remarks' => $remarks,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Rake performance modal: shortfall % = (under_load_mt / cc) × 100, count when >= threshold; overload wagons excluded.
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function resolveUnderloadingThresholdPercent(array $params): float
+    {
+        $v = $params['underload_threshold_percent'] ?? self::DEFAULT_UNDERLOAD_THRESHOLD_PERCENT;
+
+        return max(0.0, min(100.0, (float) $v));
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, underload_threshold_percent?: float, loader?: string}  $params
+     */
+    private function buildUnderloadingReportBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        $threshold = $this->resolveUnderloadingThresholdPercent($params);
+        $wlLatestIds = DB::table('wagon_loading')
+            ->selectRaw('rake_id, wagon_id, MAX(id) as wl_id')
+            ->groupBy('rake_id', 'wagon_id');
+
+        $ccEff = 'COALESCE(rww.cc_capacity_mt, w.pcc_weight_mt)';
+
+        $q = DB::table('rake_wagon_weighments as rww')
+            ->join('rake_weighments as rwm', 'rwm.id', '=', 'rww.rake_weighment_id')
+            ->join('rakes as r', 'r.id', '=', 'rwm.rake_id')
+            ->join('sidings as s', 's.id', '=', 'r.siding_id')
+            ->leftJoin('wagons as w', 'w.id', '=', 'rww.wagon_id')
+            ->leftJoinSub($wlLatestIds, 'wl_latest', function ($join): void {
+                $join->on('wl_latest.rake_id', '=', 'r.id')
+                    ->on('wl_latest.wagon_id', '=', 'rww.wagon_id');
+            })
+            ->leftJoin('wagon_loading as wl', 'wl.id', '=', 'wl_latest.wl_id')
+            ->leftJoin('loaders as l', 'l.id', '=', 'wl.loader_id')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->whereRaw('(rww.over_load_mt IS NULL OR rww.over_load_mt <= 0)')
+            ->where('rww.under_load_mt', '>', 0)
+            ->whereRaw("({$ccEff}) > 0")
+            ->whereRaw("(rww.under_load_mt * 100.0 / ({$ccEff})) >= ?", [$threshold]);
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $q->where('r.rake_number', 'like', '%'.$params['rake_number'].'%');
+        }
+
+        $this->applyOverloadUnderloadReportLoaderFilter($q, $params);
+
+        return $q;
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, underload_threshold_percent?: float, loader?: string}  $params
+     */
+    private function underloadingReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildUnderloadingReportBaseQuery($sidingIds, $params)->count('rww.id');
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, underload_threshold_percent?: float, loader?: string}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function underloadingReport(array $sidingIds, array $params): array
+    {
+        $ccEffSql = 'COALESCE(rww.cc_capacity_mt, w.pcc_weight_mt)';
+
+        $query = $this->buildUnderloadingReportBaseQuery($sidingIds, $params)
+            ->select([
+                'rww.under_load_mt',
+                'rww.net_weight_mt',
+                'rww.weighment_time',
+                'rww.wagon_number as rww_wagon_number',
+                'r.rake_number',
+                'r.loading_date',
+                's.name as siding_name',
+                'w.wagon_number as w_wagon_number',
+                'l.code as loader_code',
+                'l.loader_name',
+                'l.id as loader_table_id',
+            ])
+            ->addSelect(DB::raw("({$ccEffSql}) as cc_display_mt"))
+            ->orderByDesc('rww.weighment_time');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $wagonNo = $r->rww_wagon_number;
+            if ($wagonNo === null || $wagonNo === '') {
+                $wagonNo = $r->w_wagon_number;
+            }
+
+            $loaderId = '';
+            if (isset($r->loader_code) && $r->loader_code !== null && $r->loader_code !== '') {
+                $loaderId = (string) $r->loader_code;
+            } elseif (isset($r->loader_name) && $r->loader_name !== null && $r->loader_name !== '') {
+                $loaderId = (string) $r->loader_name;
+            } elseif (isset($r->loader_table_id) && $r->loader_table_id !== null) {
+                $loaderId = (string) $r->loader_table_id;
+            }
+
+            $dateOut = '';
+            if (! empty($r->weighment_time)) {
+                $dateOut = Carbon::parse((string) $r->weighment_time)->toDateString();
+            } elseif (! empty($r->loading_date)) {
+                $dateOut = Carbon::parse((string) $r->loading_date)->toDateString();
+            }
+
+            $ccVal = isset($r->cc_display_mt) && $r->cc_display_mt !== null ? round((float) $r->cc_display_mt, 2) : null;
+            $underMt = isset($r->under_load_mt) && $r->under_load_mt !== null ? round((float) $r->under_load_mt, 2) : null;
+
+            return [
+                'Date' => $dateOut,
+                'Siding' => $r->siding_name !== null ? (string) $r->siding_name : '',
+                'Rake No' => $r->rake_number !== null ? (string) $r->rake_number : '',
+                'Wagon No' => $wagonNo !== null ? (string) $wagonNo : '',
+                'CC Capacity (MT)' => $ccVal,
+                'Actual Weight (MT)' => isset($r->net_weight_mt) && $r->net_weight_mt !== null
+                    ? round((float) $r->net_weight_mt, 2)
+                    : null,
+                'Underload Qty (MT)' => $underMt,
+                'Loss Impact' => self::UNDERLOADING_REPORT_LOSS_IMPACT,
+                'Loader ID' => $loaderId,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * Coal Logestic Core: one row per loader (wagon_loading vs CC on wagons).
+     *
+     * Overload / underload match {@see \App\Services\Dashboard\LoaderOverloadMetricsService} rules; optional `underload_threshold_percent`
+     * defaults via {@see self::resolveUnderloadingThresholdPercent}.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, underload_threshold_percent?: float, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function loaderPerformanceReport(array $sidingIds, array $params): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $threshold = $this->resolveUnderloadingThresholdPercent($params);
+        $grouped = $this->buildLoaderPerformanceGroupedSubquery($sidingIds, $params, $threshold);
+
+        $query = DB::query()->fromSub($grouped, 'loader_perf')
+            ->orderBy('siding_name')
+            ->orderBy('loader_name_sort');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $total = (int) $r->total_wagons_loaded;
+            $overload = (int) $r->overload_count;
+            $underload = (int) $r->underload_count;
+            $accuracyFraction = $total > 0
+                ? 100.0 * ($total - $overload - $underload) / $total
+                : null;
+            $accuracyDisplay = $accuracyFraction === null
+                ? '—'
+                : $this->formatLoaderPerformanceAccuracyPercent(round($accuracyFraction, 1));
+
+            $loaderIdOut = '';
+            if (isset($r->loader_code) && $r->loader_code !== null && $r->loader_code !== '') {
+                $loaderIdOut = (string) $r->loader_code;
+            } elseif (isset($r->loader_name) && $r->loader_name !== null && $r->loader_name !== '') {
+                $loaderIdOut = (string) $r->loader_name;
+            } elseif (isset($r->loader_table_id) && $r->loader_table_id !== null) {
+                $loaderIdOut = (string) $r->loader_table_id;
+            }
+
+            $avgLoad = isset($r->avg_load) && $r->avg_load !== null ? round((float) $r->avg_load, 2) : null;
+            $avgDev = isset($r->avg_deviation_mt) && $r->avg_deviation_mt !== null
+                ? round((float) $r->avg_deviation_mt, 2)
+                : null;
+
+            return [
+                'Loader' => $loaderIdOut,
+                'Siding' => isset($r->siding_name) ? (string) $r->siding_name : '',
+                'Wagons' => $total,
+                'Overload' => $overload,
+                'Underload' => $underload,
+                'Avg MT' => $avgLoad,
+                'Dev MT' => $avgDev,
+                'Accuracy' => $accuracyDisplay,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, underload_threshold_percent?: float}  $params
+     */
+    private function loaderPerformanceReportCount(array $sidingIds, array $params): int
+    {
+        if ($sidingIds === []) {
+            return 0;
+        }
+
+        $threshold = $this->resolveUnderloadingThresholdPercent($params);
+        $grouped = $this->buildLoaderPerformanceGroupedSubquery($sidingIds, $params, $threshold);
+
+        return (int) DB::query()->fromSub($grouped, 'c')->count();
+    }
+
+    /**
+     * Aggregated loaders (one row per loader id).
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string}  $params
+     */
+    private function buildLoaderPerformanceGroupedSubquery(array $sidingIds, array $params, float $underloadThresholdPercent): QueryBuilder
+    {
+        $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
+        $eligible = '(wl.loaded_quantity_mt IS NOT NULL AND '.$ccEff.' IS NOT NULL AND '.$ccEff.' > 0)';
+        $overloadClause = "{$eligible} AND wl.loaded_quantity_mt > {$ccEff}";
+        $underloadClause = "{$eligible} AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= ?";
+
+        $q = DB::table('wagon_loading as wl')
+            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
+            ->join('loaders as l', 'l.id', '=', 'wl.loader_id')
+            ->join('sidings as ls', 'ls.id', '=', 'l.siding_id')
+            ->whereNull('l.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->whereNotNull('wl.loader_id');
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['loader_id'])) {
+            $q->where('wl.loader_id', '=', (int) $params['loader_id']);
+        }
+
+        if (! empty($params['loader_operator_name'])) {
+            $op = mb_trim((string) $params['loader_operator_name']);
+            if ($op !== '') {
+                $q->where('wl.loader_operator_name', '=', $op);
+            }
+        }
+
+        return $q
+            ->groupBy('l.id', 'ls.name', 'l.code', 'l.loader_name')
+            ->selectRaw(
+                'l.id as loader_table_id,'.
+                ' l.code as loader_code,'.
+                ' l.loader_name,'.
+                ' ls.name as siding_name,'.
+                ' l.loader_name as loader_name_sort,'.
+                ' SUM(CASE WHEN '.$eligible.' THEN 1 ELSE 0 END) as total_wagons_loaded,'.
+                ' SUM(CASE WHEN '.$overloadClause.' THEN 1 ELSE 0 END) as overload_count,'.
+                ' SUM(CASE WHEN '.$underloadClause.' THEN 1 ELSE 0 END) as underload_count,'.
+                ' AVG(CASE WHEN '.$eligible.' THEN wl.loaded_quantity_mt END) as avg_load,'.
+                ' AVG(CASE WHEN '.$eligible.' THEN ABS(wl.loaded_quantity_mt - ('.$ccEff.')) END) as avg_deviation_mt',
+                [$underloadThresholdPercent],
+            );
     }
 
     /**
