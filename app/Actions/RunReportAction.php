@@ -7,6 +7,8 @@ namespace App\Actions;
 use App\Models\AppliedPenalty;
 use App\Models\DailyVehicleEntry;
 use App\Models\Indent;
+use App\Models\PowerPlant;
+use App\Models\Rake;
 use App\Models\RakeCharge;
 use App\Models\RakeWagonWeighment;
 use App\Models\RrDocument;
@@ -17,6 +19,7 @@ use App\Models\WagonUnfitLog;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 final readonly class RunReportAction
@@ -38,6 +41,17 @@ final readonly class RunReportAction
         'penalty_register',
     ];
 
+    /**
+     * Coal Logestic Core reports (same generate endpoint as operational grid reports).
+     *
+     * @var list<string>
+     */
+    public const array COAL_LOGESTIC_CORE_REPORT_KEYS = [
+        'rail_dispatch_dpr',
+        'penalty_report',
+        'overloading_report',
+    ];
+
     public const array REPORT_KEYS = [
         'siding_coal_receipt' => ['name' => 'Siding Coal Receipt', 'description' => 'Shift-wise receipt report'],
         'rake_indent' => ['name' => 'Rake Indent', 'description' => 'Indent history report'],
@@ -55,11 +69,30 @@ final readonly class RunReportAction
         'financial_impact' => ['name' => 'Financial Impact', 'description' => 'Revenue impact and savings'],
         'rake_lifecycle' => ['name' => 'Rake Lifecycle', 'description' => 'Rake processing timeline'],
         'indent_fulfillment' => ['name' => 'Indent Fulfillment', 'description' => 'Indent allocation progress'],
+        'rail_dispatch_dpr' => ['name' => 'Rail Dispatch DPR', 'description' => 'Rail dispatch daily report by RR leg including diversions'],
+        'penalty_report' => ['name' => 'Penalty Report', 'description' => 'Penalty lines with pre/post RR filter (Coal Logestic Core)'],
+        'overloading_report' => ['name' => 'Overloading Report', 'description' => 'Wagon weighment overload lines with loader context (Coal Logestic Core)'],
     ];
+
+    private const string PENALTY_STAGE_PRE = 'Pre-RR';
+
+    private const string PENALTY_STAGE_POST = 'Post-RR';
+
+    private const string OVERLOADING_REPORT_PENALTY_IMPACT = 'Overload penalty';
+
+    /**
+     * Report keys accepted by POST /reports/generate for the grid UI (operational + core).
+     *
+     * @return list<string>
+     */
+    public static function reportGenerateKeys(): array
+    {
+        return array_values(array_unique([...self::RAKE_MANAGEMENT_REPORT_KEYS, ...self::COAL_LOGESTIC_CORE_REPORT_KEYS]));
+    }
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, power_plant_id?: int, penalty_stage?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     public function handle(string $key, array $sidingIds, array $params = []): array
@@ -73,7 +106,10 @@ final readonly class RunReportAction
             'weighment' => $this->weighmentReport($sidingIds, $params),
             'loader_vs_weighment' => $this->loaderVsWeighment($sidingIds, $params),
             'rr_summary' => $this->rrSummary($sidingIds, $params),
+            'rail_dispatch_dpr' => $this->railDispatchDpr($sidingIds, $params),
             'penalty_register' => $this->penaltyRegister($sidingIds, $params),
+            'penalty_report' => $this->penaltyReport($sidingIds, $params),
+            'overloading_report' => $this->overloadingReport($sidingIds, $params),
             'penalty_register_rr_snapshot' => $this->penaltyRegisterRrSnapshot($sidingIds, $params),
             'penalty_register_applied' => $this->penaltyRegisterApplied($sidingIds, $params),
             'daily_operations', 'demurrage_analysis', 'financial_impact', 'rake_lifecycle', 'indent_fulfillment' => $this->delegateToGenerateReports($key, $sidingIds, $params),
@@ -84,7 +120,7 @@ final readonly class RunReportAction
     /**
      * Paginated rows for the /reports UI (per_page capped at 60 in the controller).
      *
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, power_plant_id?: int, penalty_stage?: string}  $params
      * @return array{data: array<int, array<string, mixed>>, meta: array{current_page: int, per_page: int, total: int, last_page: int}}
      */
     public function handlePaginated(string $key, array $sidingIds, array $params, int $page, int $perPage): array
@@ -94,7 +130,11 @@ final readonly class RunReportAction
         $offset = ($page - 1) * $perPage;
 
         if ($key === 'penalty_register') {
-            $chunk = $this->penaltyRegisterPaginatedSlice($sidingIds, $params, $offset, $perPage);
+            $chunk = $this->penaltyRegisterPaginatedSlice($sidingIds, $params, $offset, $perPage, false);
+            $total = $chunk['total'];
+            $data = $chunk['data'];
+        } elseif ($key === 'penalty_report') {
+            $chunk = $this->penaltyRegisterPaginatedSlice($sidingIds, $params, $offset, $perPage, true);
             $total = $chunk['total'];
             $data = $chunk['data'];
         } else {
@@ -107,6 +147,8 @@ final readonly class RunReportAction
                 'weighment' => $this->weighmentReportCount($sidingIds, $params),
                 'loader_vs_weighment' => $this->loaderVsWeighmentCount($sidingIds, $params),
                 'rr_summary' => $this->rrSummaryCount($sidingIds, $params),
+                'rail_dispatch_dpr' => $this->railDispatchDprCount($sidingIds, $params),
+                'overloading_report' => $this->overloadingReportCount($sidingIds, $params),
                 default => 0,
             };
 
@@ -465,15 +507,54 @@ final readonly class RunReportAction
     }
 
     /**
-     * Merges applied + snapshot penalties, then slices one page (full merge in memory).
+     * Penalty merged rows without per-query limits (paginated grids load full merged set).
      *
      * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
-     * @return array{data: array<int, array<string, mixed>>, total: int}
      */
-    private function penaltyRegisterPaginatedSlice(array $sidingIds, array $params, int $offset, int $perPage): array
+    private function mergedPenaltyInternalRowsForGrid(array $sidingIds, array $params): Collection
+    {
+        [$appliedQuery, $snapshotQuery] = $this->penaltyRegisterBaseQueries($sidingIds, $params);
+
+        $appliedInternal = $appliedQuery->latest()->get()->map(fn (AppliedPenalty $p): array => $this->mapAppliedPenaltyToInternalRow($p));
+        $snapshotInternal = $snapshotQuery->latest()->get()->map(fn (RrPenaltySnapshot $p): array => $this->mapRrPenaltySnapshotToInternalRow($p));
+
+        return $appliedInternal
+            ->concat($snapshotInternal)
+            ->sortByDesc(fn (array $row): ?string => $row['report_date'])
+            ->values();
+    }
+
+    /**
+     * Penalty merged rows with legacy export limits applied to each query source.
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, limit?: int|null, no_limit?: bool}  $params
+     */
+    private function mergedPenaltyInternalRows(array $sidingIds, array $params): Collection
+    {
+        [$appliedQuery, $snapshotQuery] = $this->penaltyRegisterBaseQueries($sidingIds, $params);
+
+        $limit = $this->resolveLimit($params);
+        if ($limit !== null) {
+            $appliedQuery->limit($limit);
+            $snapshotQuery->limit($limit);
+        }
+
+        $appliedInternal = $appliedQuery->latest()->get()->map(fn (AppliedPenalty $p): array => $this->mapAppliedPenaltyToInternalRow($p));
+        $snapshotInternal = $snapshotQuery->latest()->get()->map(fn (RrPenaltySnapshot $p): array => $this->mapRrPenaltySnapshotToInternalRow($p));
+
+        return $appliedInternal
+            ->concat($snapshotInternal)
+            ->sortByDesc(fn (array $row): ?string => $row['report_date'])
+            ->values();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function penaltyRegisterBaseQueries(array $sidingIds, array $params): array
     {
         $appliedQuery = AppliedPenalty::query()
-            ->with(['rake.siding:id,name', 'penaltyType:id,code,name'])
+            ->with(['rake.siding:id,name', 'penaltyType:id,code,name,calculation_type'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 
         $snapshotQuery = RrPenaltySnapshot::query()
@@ -498,34 +579,197 @@ final readonly class RunReportAction
             $snapshotQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
 
-        $appliedRows = $appliedQuery->latest()->get()->map(fn (AppliedPenalty $p): array => [
-            'Date' => $p->rake?->created_at?->toDateString(),
-            'Siding' => $p->rake?->siding?->name,
-            'Rake No' => $p->rake?->rake_number,
-            'Penalty Type' => $p->penaltyType?->code ?? $p->penaltyType?->name,
-            'Reason' => '',
-            'Amount' => $p->amount !== null ? (float) $p->amount : null,
-            'Stage Detected (Pre-RR/Post-RR)' => 'Pre-RR',
-            'Remarks' => '',
-        ]);
+        return [$appliedQuery, $snapshotQuery];
+    }
 
-        $snapshotRows = $snapshotQuery->latest()->get()->map(fn (RrPenaltySnapshot $p): array => [
-            'Date' => $p->rake?->created_at?->toDateString(),
-            'Siding' => $p->rake?->siding?->name,
-            'Rake No' => $p->rake?->rake_number,
-            'Penalty Type' => $p->penalty_code,
-            'Reason' => '',
-            'Amount' => $p->amount !== null ? (float) $p->amount : null,
-            'Stage Detected (Pre-RR/Post-RR)' => 'Post-RR',
-            'Remarks' => '',
-        ]);
+    /**
+     * Normalized row for merging (includes optional overload delay fields for Coal Logestic penalty report).
+     *
+     * @return array{
+     *     report_date: ?string,
+     *     siding: ?string,
+     *     rake_no: ?string,
+     *     penalty_type: ?string,
+     *     amount: ?float,
+     *     stage_label: string,
+     *     overload_qty: ?float,
+     *     delay_time: ?string,
+     *     remarks: string
+     * }
+     */
+    private function mapAppliedPenaltyToInternalRow(AppliedPenalty $p): array
+    {
+        return [
+            'report_date' => $p->rake?->created_at?->toDateString(),
+            'siding' => $p->rake?->siding?->name,
+            'rake_no' => $p->rake?->rake_number,
+            'penalty_type' => $p->penaltyType?->code ?? $p->penaltyType?->name,
+            'amount' => $p->amount !== null ? (float) $p->amount : null,
+            'stage_label' => self::PENALTY_STAGE_PRE,
+            'overload_qty' => $this->overloadQtyFromAppliedPenalty($p),
+            'delay_time' => $this->delayDescriptionFromAppliedPenalty($p),
+            'remarks' => '',
+        ];
+    }
 
-        $merged = $appliedRows
-            ->concat($snapshotRows)
-            ->sortByDesc('Date')
-            ->values();
+    /**
+     * @return array{
+     *     report_date: ?string,
+     *     siding: ?string,
+     *     rake_no: ?string,
+     *     penalty_type: ?string,
+     *     amount: ?float,
+     *     stage_label: string,
+     *     overload_qty: ?float,
+     *     delay_time: ?string,
+     *     remarks: string
+     * }
+     */
+    private function mapRrPenaltySnapshotToInternalRow(RrPenaltySnapshot $p): array
+    {
+        return [
+            'report_date' => $p->rake?->created_at?->toDateString(),
+            'siding' => $p->rake?->siding?->name,
+            'rake_no' => $p->rake?->rake_number,
+            'penalty_type' => $p->penalty_code,
+            'amount' => $p->amount !== null ? (float) $p->amount : null,
+            'stage_label' => self::PENALTY_STAGE_POST,
+            'overload_qty' => $this->overloadQtyFromSnapshot($p),
+            'delay_time' => $this->delayDescriptionFromSnapshot($p),
+            'remarks' => '',
+        ];
+    }
+
+    /**
+     * @param  array{
+     *     report_date: ?string,
+     *     siding: ?string,
+     *     rake_no: ?string,
+     *     penalty_type: ?string,
+     *     amount: ?float,
+     *     stage_label: string,
+     *     overload_qty: ?float,
+     *     delay_time: ?string,
+     *     remarks: string
+     * }  $row
+     * @return array<string, mixed>
+     */
+    private function mapPenaltyInternalRowToLegacy(array $row): array
+    {
+        return [
+            'Date' => $row['report_date'],
+            'Siding' => $row['siding'],
+            'Rake No' => $row['rake_no'],
+            'Penalty Type' => $row['penalty_type'],
+            'Reason' => '',
+            'Amount' => $row['amount'],
+            'Stage Detected (Pre-RR/Post-RR)' => $row['stage_label'],
+            'Remarks' => $row['remarks'],
+        ];
+    }
+
+    /**
+     * @param  array{
+     *     report_date: ?string,
+     *     siding: ?string,
+     *     rake_no: ?string,
+     *     penalty_type: ?string,
+     *     amount: ?float,
+     *     stage_label: string,
+     *     overload_qty: ?float,
+     *     delay_time: ?string,
+     *     remarks: string
+     * }  $row
+     * @return array<string, mixed>
+     */
+    private function mapPenaltyInternalRowToCore(array $row): array
+    {
+        return [
+            'Date' => $row['report_date'],
+            'Siding' => $row['siding'],
+            'Rake No' => $row['rake_no'],
+            'Penalty Type' => $row['penalty_type'],
+            'Penalty Amount' => $row['amount'],
+            'Overload Qty' => $row['overload_qty'],
+            'Delay Time' => $row['delay_time'],
+            'Stage (Pre/Post RR)' => $row['stage_label'],
+            'Remarks' => $row['remarks'],
+        ];
+    }
+
+    private function overloadQtyFromAppliedPenalty(AppliedPenalty $p): ?float
+    {
+        if ($p->quantity === null) {
+            return null;
+        }
+
+        return round((float) $p->quantity, 3);
+    }
+
+    private function delayDescriptionFromAppliedPenalty(AppliedPenalty $p): ?string
+    {
+        $meta = $p->meta ?? [];
+        if (isset($meta['excess_minutes']) && is_numeric($meta['excess_minutes'])) {
+            return sprintf('%s min', $meta['excess_minutes']);
+        }
+        if (isset($meta['charged_hours']) && is_numeric($meta['charged_hours'])) {
+            return sprintf('%s hr', $meta['charged_hours']);
+        }
+
+        return null;
+    }
+
+    private function overloadQtyFromSnapshot(RrPenaltySnapshot $p): ?float
+    {
+        $meta = $p->meta ?? [];
+        foreach (['overload_mt', 'overload_qty', 'quantity_mt', 'quantity'] as $key) {
+            if (isset($meta[$key]) && is_numeric($meta[$key])) {
+                return round((float) $meta[$key], 3);
+            }
+        }
+
+        return null;
+    }
+
+    private function delayDescriptionFromSnapshot(RrPenaltySnapshot $p): ?string
+    {
+        $meta = $p->meta ?? [];
+        foreach (['excess_minutes', 'delay_minutes', 'total_delay_minutes'] as $key) {
+            if (isset($meta[$key]) && is_numeric($meta[$key])) {
+                return sprintf('%s min', $meta[$key]);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Merges applied + snapshot penalties, then slices one page (full merge in memory).
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, penalty_stage?: string}  $params
+     * @return array{data: array<int, array<string, mixed>>, total: int}
+     */
+    private function penaltyRegisterPaginatedSlice(array $sidingIds, array $params, int $offset, int $perPage, bool $coreReport): array
+    {
+        $merged = $this->mergedPenaltyInternalRowsForGrid($sidingIds, $params);
+
+        if ($coreReport) {
+            $stageFilter = isset($params['penalty_stage']) ? (string) $params['penalty_stage'] : '';
+            if ($stageFilter === 'pre_rr') {
+                $merged = $merged->filter(fn (array $row): bool => $row['stage_label'] === self::PENALTY_STAGE_PRE)->values();
+            } elseif ($stageFilter === 'post_rr') {
+                $merged = $merged->filter(fn (array $row): bool => $row['stage_label'] === self::PENALTY_STAGE_POST)->values();
+            }
+        }
+
         $total = $merged->count();
-        $data = $merged->slice($offset, $perPage)->values()->all();
+        $pageRows = $merged->slice($offset, $perPage)->values();
+        $data = $pageRows
+            ->map(fn (array $row): array => $coreReport
+                ? $this->mapPenaltyInternalRowToCore($row)
+                : $this->mapPenaltyInternalRowToLegacy($row))
+            ->values()
+            ->all();
 
         return ['data' => $data, 'total' => $total];
     }
@@ -748,6 +992,134 @@ final readonly class RunReportAction
     }
 
     /**
+     * Latest wagon_loading row per rake+wagon (MAX id), for loader / operator on overload lines.
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildOverloadingReportBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        $wlLatestIds = DB::table('wagon_loading')
+            ->selectRaw('rake_id, wagon_id, MAX(id) as wl_id')
+            ->groupBy('rake_id', 'wagon_id');
+
+        $q = DB::table('rake_wagon_weighments as rww')
+            ->join('rake_weighments as rwm', 'rwm.id', '=', 'rww.rake_weighment_id')
+            ->join('rakes as r', 'r.id', '=', 'rwm.rake_id')
+            ->join('sidings as s', 's.id', '=', 'r.siding_id')
+            ->leftJoin('wagons as w', 'w.id', '=', 'rww.wagon_id')
+            ->leftJoinSub($wlLatestIds, 'wl_latest', function ($join): void {
+                $join->on('wl_latest.rake_id', '=', 'r.id')
+                    ->on('wl_latest.wagon_id', '=', 'rww.wagon_id');
+            })
+            ->leftJoin('wagon_loading as wl', 'wl.id', '=', 'wl_latest.wl_id')
+            ->leftJoin('loaders as l', 'l.id', '=', 'wl.loader_id')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->where('rww.over_load_mt', '>', 0);
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $q->where('r.rake_number', 'like', '%'.$params['rake_number'].'%');
+        }
+
+        return $q;
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function overloadingReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildOverloadingReportBaseQuery($sidingIds, $params)->count('rww.id');
+    }
+
+    /**
+     * In-motion net used as "Actual Weight (MT)".
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function overloadingReport(array $sidingIds, array $params): array
+    {
+        $query = $this->buildOverloadingReportBaseQuery($sidingIds, $params)
+            ->select([
+                'rww.cc_capacity_mt',
+                'rww.net_weight_mt',
+                'rww.over_load_mt',
+                'rww.weighment_time',
+                'rww.action_taken',
+                'rww.wagon_number as rww_wagon_number',
+                'r.rake_number',
+                'r.loading_date',
+                's.name as siding_name',
+                'w.wagon_number as w_wagon_number',
+                'wl.loader_operator_name',
+                'l.code as loader_code',
+                'l.loader_name',
+                'l.id as loader_table_id',
+            ])
+            ->orderByDesc('rww.weighment_time');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $wagonNo = $r->rww_wagon_number;
+            if ($wagonNo === null || $wagonNo === '') {
+                $wagonNo = $r->w_wagon_number;
+            }
+
+            $loaderId = '';
+            if (isset($r->loader_code) && $r->loader_code !== null && $r->loader_code !== '') {
+                $loaderId = (string) $r->loader_code;
+            } elseif (isset($r->loader_name) && $r->loader_name !== null && $r->loader_name !== '') {
+                $loaderId = (string) $r->loader_name;
+            } elseif (isset($r->loader_table_id) && $r->loader_table_id !== null) {
+                $loaderId = (string) $r->loader_table_id;
+            }
+
+            $dateOut = '';
+            if (! empty($r->weighment_time)) {
+                $dateOut = Carbon::parse((string) $r->weighment_time)->toDateString();
+            } elseif (! empty($r->loading_date)) {
+                $dateOut = Carbon::parse((string) $r->loading_date)->toDateString();
+            }
+
+            $remarks = isset($r->action_taken) && $r->action_taken !== '' && $r->action_taken !== null
+                ? (string) $r->action_taken
+                : '';
+
+            return [
+                'Date' => $dateOut,
+                'Siding' => $r->siding_name !== null ? (string) $r->siding_name : '',
+                'Rake No' => $r->rake_number !== null ? (string) $r->rake_number : '',
+                'Wagon No' => $wagonNo !== null ? (string) $wagonNo : '',
+                'CC Capacity (MT)' => $r->cc_capacity_mt !== null ? round((float) $r->cc_capacity_mt, 2) : null,
+                'Actual Weight (MT)' => $r->net_weight_mt !== null ? round((float) $r->net_weight_mt, 2) : null,
+                'Overload Qty (MT)' => $r->over_load_mt !== null ? round((float) $r->over_load_mt, 2) : null,
+                'Loader ID' => $loaderId,
+                'Loader Operator' => isset($r->loader_operator_name) && $r->loader_operator_name !== null
+                    ? (string) $r->loader_operator_name
+                    : '',
+                'Penalty Impact' => self::OVERLOADING_REPORT_PENALTY_IMPACT,
+                'Remarks' => $remarks,
+            ];
+        })->values()->all();
+    }
+
+    /**
      * @param  array<int>  $sidingIds
      * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
@@ -877,70 +1249,166 @@ final readonly class RunReportAction
     }
 
     /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, power_plant_id?: int}  $params
+     */
+    private function railDispatchDprCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildRailDispatchDprDocumentsQuery($sidingIds, $params)->count();
+    }
+
+    /**
+     * RR documents visible in Rail Dispatch DPR (filtering on rake.loading_date and optional power plant code).
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, power_plant_id?: int}  $params
+     * @return EloquentBuilder<RrDocument>
+     */
+    private function buildRailDispatchDprDocumentsQuery(array $sidingIds, array $params): EloquentBuilder
+    {
+        $query = RrDocument::query()
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+        if (! empty($params['siding_id'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+        if (! empty($params['power_plant_id'])) {
+            $plantId = (int) $params['power_plant_id'];
+            $query->whereExists(function ($sub) use ($plantId): void {
+                $sub->selectRaw('1')
+                    ->from('power_plants as pp')
+                    ->whereColumn('pp.code', 'rr_documents.to_station_code')
+                    ->where('pp.id', '=', $plantId);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Rail dispatch DPR: one row per RrDocument leg; diversion rows get remarks; highlight all legs when rake is diverted or multi-RR.
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, power_plant_id?: int}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function railDispatchDpr(array $sidingIds, array $params): array
+    {
+        $query = $this->buildRailDispatchDprDocumentsQuery($sidingIds, $params);
+        $query->with([
+            'rake' => function ($q): void {
+                $q->with(['siding:id,name'])
+                    ->withCount(['diverrtDestinations', 'rrDocuments'])
+                    ->with(['rakeCharges:id,rake_id,diverrt_destination_id,charge_type,amount,is_actual_charges']);
+            },
+            'diverrtDestination:id,location,rake_id',
+        ])
+            ->withCount('wagonSnapshots');
+        $query->latest('rr_received_date');
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+        $rows = $query->get();
+
+        $codes = $rows->pluck('to_station_code')->filter()->unique()->values()->all();
+        $plantsByCode = $codes === []
+            ? collect()
+            : PowerPlant::query()->whereIn('code', $codes)->get()->keyBy('code');
+
+        return $rows->map(function (RrDocument $r) use ($plantsByCode): array {
+            $rake = $r->rake;
+
+            $toCode = $r->to_station_code;
+            $plant = $toCode ? $plantsByCode->get($toCode) : null;
+            $powerPlantLabel = $plant?->name
+                ?? ($r->diverrtDestination?->location)
+                ?? ($toCode ?: '');
+
+            $chargeScope = $rake?->rakeCharges
+                ?->filter(function (RakeCharge $charge) use ($r): bool {
+                    return $charge->is_actual_charges
+                        && (int) $charge->diverrt_destination_id === (int) $r->diverrt_destination_id;
+                });
+
+            $freight = (float) ($chargeScope?->firstWhere('charge_type', 'FREIGHT')?->amount ?? 0.0);
+            $penaltyAmount = (float) ($chargeScope?->firstWhere('charge_type', 'PENALTY')?->amount ?? 0.0);
+            $gstAmount = (float) ($chargeScope?->firstWhere('charge_type', 'GST')?->amount ?? 0.0);
+            $otherChargesAmount = (float) ($chargeScope?->firstWhere('charge_type', 'OTHER_CHARGE')?->amount ?? 0.0);
+            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount;
+
+            $rowHighlight = null;
+            if ($rake instanceof Rake && (
+                $rake->is_diverted
+                || (int) ($rake->diverrt_destinations_count ?? 0) > 0
+                || (int) ($rake->rr_documents_count ?? 0) > 1
+            )) {
+                $rowHighlight = 'diversion';
+            }
+
+            $remarks = '';
+            if ($r->diverrt_destination_id !== null) {
+                $remarks = 'Diverted to '.($powerPlantLabel !== '' ? $powerPlantLabel : 'Unknown');
+            }
+
+            $fmtDt = fn ($v): ?string => $v instanceof Carbon ? $v->toAtomString() : null;
+
+            return [
+                'Loading Date' => $rake?->loading_date?->toDateString(),
+                'Dispatch Time' => $fmtDt($rake?->dispatch_time),
+                'Loading Start' => $fmtDt($rake?->loading_start_time),
+                'Loading End' => $fmtDt($rake?->loading_end_time),
+                'Rake No' => $rake?->rake_number,
+                'Siding' => $rake?->siding?->name,
+                'RR No' => $r->rr_number,
+                'RR Date' => $r->rr_received_date?->toDateString(),
+                'To Power Plant' => $powerPlantLabel !== '' ? $powerPlantLabel : $toCode,
+                'Wagon Count (RR)' => $r->wagon_snapshots_count ?? 0,
+                'Charged Weight (MT)' => $r->rr_weight_mt !== null ? (float) $r->rr_weight_mt : null,
+                'Freight Amount' => round($freight, 2),
+                'Penalty Amount' => round($penaltyAmount, 2),
+                'GST Amount' => round($gstAmount, 2),
+                'Other Charges Amount' => round($otherChargesAmount, 2),
+                'Total Amount' => round($total, 2),
+                'Remarks' => $remarks,
+                '_row_highlight' => $rowHighlight,
+                '_rr_document_id' => $r->id,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * Coal Logestic Core penalty grid: same merge as penalty register with core column names + optional pre/post filter.
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, penalty_stage?: string, limit?: int|null, no_limit?: bool}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function penaltyReport(array $sidingIds, array $params): array
+    {
+        $merged = $this->mergedPenaltyInternalRows($sidingIds, $params);
+
+        $stageFilter = isset($params['penalty_stage']) ? (string) $params['penalty_stage'] : '';
+        if ($stageFilter === 'pre_rr') {
+            $merged = $merged->filter(fn (array $row): bool => $row['stage_label'] === self::PENALTY_STAGE_PRE)->values();
+        } elseif ($stageFilter === 'post_rr') {
+            $merged = $merged->filter(fn (array $row): bool => $row['stage_label'] === self::PENALTY_STAGE_POST)->values();
+        }
+
+        return $merged->map(fn (array $row): array => $this->mapPenaltyInternalRowToCore($row))->values()->all();
+    }
+
+    /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, limit?: int|null, no_limit?: bool}  $params
      * @return array<int, array<string, mixed>>
      */
     private function penaltyRegister(array $sidingIds, array $params): array
     {
-        $appliedQuery = AppliedPenalty::query()
-            ->with(['rake.siding:id,name', 'penaltyType:id,code,name'])
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-
-        $snapshotQuery = RrPenaltySnapshot::query()
-            ->with(['rake.siding:id,name'])
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-
-        // Use rake loading_date as business date for report filtering.
-        if (! empty($params['date_from'])) {
-            $appliedQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
-            $snapshotQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
-        }
-        if (! empty($params['date_to'])) {
-            $appliedQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
-            $snapshotQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
-        }
-
-        if (! empty($params['siding_id'])) {
-            $appliedQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
-            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
-        }
-        if (! empty($params['rake_number'])) {
-            $appliedQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
-            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
-        }
-
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $appliedQuery->limit($limit);
-            $snapshotQuery->limit($limit);
-        }
-
-        $appliedRows = $appliedQuery->latest()->get()->map(fn (AppliedPenalty $p): array => [
-            'Date' => $p->rake?->created_at?->toDateString(),
-            'Siding' => $p->rake?->siding?->name,
-            'Rake No' => $p->rake?->rake_number,
-            'Penalty Type' => $p->penaltyType?->code ?? $p->penaltyType?->name,
-            'Reason' => '',
-            'Amount' => $p->amount !== null ? (float) $p->amount : null,
-            'Stage Detected (Pre-RR/Post-RR)' => 'Pre-RR',
-            'Remarks' => '',
-        ]);
-
-        $snapshotRows = $snapshotQuery->latest()->get()->map(fn (RrPenaltySnapshot $p): array => [
-            'Date' => $p->rake?->created_at?->toDateString(),
-            'Siding' => $p->rake?->siding?->name,
-            'Rake No' => $p->rake?->rake_number,
-            'Penalty Type' => $p->penalty_code,
-            'Reason' => '',
-            'Amount' => $p->amount !== null ? (float) $p->amount : null,
-            'Stage Detected (Pre-RR/Post-RR)' => 'Post-RR',
-            'Remarks' => '',
-        ]);
-
-        return $appliedRows
-            ->concat($snapshotRows)
-            ->sortByDesc('Date')
+        return $this->mergedPenaltyInternalRows($sidingIds, $params)
+            ->map(fn (array $row): array => $this->mapPenaltyInternalRowToLegacy($row))
             ->values()
             ->all();
     }

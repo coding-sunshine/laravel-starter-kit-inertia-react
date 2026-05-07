@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Reports;
 use App\Actions\RunReportAction;
 use App\Exports\ReportArrayExport;
 use App\Http\Controllers\Controller;
+use App\Models\PowerPlant;
 use App\Models\Siding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,22 +36,35 @@ final class ReportsController extends Controller
                 $reports[$key] = RunReportAction::REPORT_KEYS[$key];
             }
         }
+        foreach (RunReportAction::COAL_LOGESTIC_CORE_REPORT_KEYS as $key) {
+            if (isset(RunReportAction::REPORT_KEYS[$key])) {
+                $reports[$key] = RunReportAction::REPORT_KEYS[$key];
+            }
+        }
+
+        $powerPlants = PowerPlant::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
 
         return Inertia::render('reports/index', [
             'reports' => $reports,
             'sidings' => $sidings,
+            'powerPlants' => $powerPlants,
         ]);
     }
 
     public function generate(Request $request): JsonResponse|StreamedResponse|BinaryFileResponse
     {
         $validated = $request->validate([
-            'key' => ['required', 'string', 'in:'.implode(',', RunReportAction::RAKE_MANAGEMENT_REPORT_KEYS)],
+            'key' => ['required', 'string', 'in:'.implode(',', RunReportAction::reportGenerateKeys())],
             'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'rake_number' => ['nullable', 'string', 'max:255'],
             'loader' => ['nullable', 'string', 'max:255'],
+            'power_plant_id' => ['nullable', 'integer', 'exists:power_plants,id'],
+            'penalty_stage' => ['nullable', 'string', 'in:pre_rr,post_rr'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:60'],
             'export_xlsx' => ['nullable', 'boolean'],
@@ -83,6 +97,8 @@ final class ReportsController extends Controller
             'date_to' => $validated['date_to'] ?? null,
             'rake_number' => $validated['rake_number'] ?? null,
             'loader' => $validated['loader'] ?? null,
+            'power_plant_id' => $validated['power_plant_id'] ?? null,
+            'penalty_stage' => $validated['penalty_stage'] ?? null,
         ]);
 
         $exportXlsx = $request->boolean('export_xlsx');

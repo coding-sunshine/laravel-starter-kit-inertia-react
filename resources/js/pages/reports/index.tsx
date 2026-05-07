@@ -36,6 +36,12 @@ interface Siding {
     code: string;
 }
 
+interface PowerPlantOption {
+    id: number;
+    name: string;
+    code: string;
+}
+
 interface ReportMeta {
     name: string;
     description: string;
@@ -44,6 +50,7 @@ interface ReportMeta {
 interface Props {
     reports: Record<string, ReportMeta>;
     sidings: Siding[];
+    powerPlants: PowerPlantOption[];
 }
 
 type ReportData = Record<string, unknown>[];
@@ -75,13 +82,19 @@ const RAKE_NUMBER_FILTER_REPORTS = new Set([
     'loader_vs_weighment',
     'rr_summary',
     'penalty_register',
+    'rail_dispatch_dpr',
+    'penalty_report',
+    'overloading_report',
 ]);
+
+const COAL_LOGESTIC_CORE_KEYS: string[] = [
+    'rail_dispatch_dpr',
+    'penalty_report',
+    'overloading_report',
+];
 
 /** Placeholder labels until backend report keys exist (sidebar only). */
 const COAL_LOGESTIC_CORE_REPORT_LABELS: string[] = [
-    'Rail Dispatch DPR',
-    'Penalty Report',
-    'Overloading Report',
     'Underloading',
     'Loader Performance',
     'Siding Dispatch',
@@ -147,6 +160,10 @@ function reportTableRowKey(
     page: number,
     index: number,
 ): string {
+    const docId = row['_rr_document_id'];
+    if (typeof docId === 'number' || typeof docId === 'string') {
+        return `${page}:doc:${docId}`;
+    }
     const digest = columns.map((c) => `${c}:${String(row[c] ?? '')}`).join('|');
 
     return `${page}:${index}:${digest}`;
@@ -176,7 +193,7 @@ function toLocalDateInput(date: Date): string {
     return `${year}-${month}-${day}`;
 }
 
-export default function ReportsIndex({ reports, sidings }: Props) {
+export default function ReportsIndex({ reports, sidings, powerPlants }: Props) {
     const [activeKey, setActiveKey] = useState<string>(Object.keys(reports)[0] ?? 'siding_coal_receipt');
     const [sidingId, setSidingId] = useState<string>('');
     const [dateFrom, setDateFrom] = useState<string>(() => {
@@ -185,6 +202,8 @@ export default function ReportsIndex({ reports, sidings }: Props) {
     });
     const [dateTo, setDateTo] = useState<string>(() => toLocalDateInput(new Date()));
     const [rakeNumber, setRakeNumber] = useState<string>('');
+    const [powerPlantId, setPowerPlantId] = useState<string>('');
+    const [penaltyStage, setPenaltyStage] = useState<string>('');
     const [loader, setLoader] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<ReportData | null>(null);
@@ -203,8 +222,15 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         () => RAKE_MANAGEMENT_REPORTS.some((k) => k === activeKey && Boolean(reports[k])),
         [activeKey, reports],
     );
+    const activeReportIsInCoreSection = useMemo(
+        () =>
+            COAL_LOGESTIC_CORE_KEYS.some((k) => k === activeKey && Boolean(reports[k])),
+        [activeKey, reports],
+    );
     const showsRakeNumberFilter = RAKE_NUMBER_FILTER_REPORTS.has(activeKey);
     const showsLoaderFilter = activeKey === 'wagon_loading';
+    const showsPowerPlantFilter = activeKey === 'rail_dispatch_dpr';
+    const showsPenaltyStageFilter = activeKey === 'penalty_report';
     const requestPayload = useMemo(
         () => ({
             key: activeKey,
@@ -213,8 +239,23 @@ export default function ReportsIndex({ reports, sidings }: Props) {
             date_to: dateTo || undefined,
             rake_number: showsRakeNumberFilter ? rakeNumber || undefined : undefined,
             loader: showsLoaderFilter ? loader || undefined : undefined,
+            power_plant_id: showsPowerPlantFilter && powerPlantId ? Number(powerPlantId) : undefined,
+            penalty_stage: showsPenaltyStageFilter && penaltyStage ? penaltyStage : undefined,
         }),
-        [activeKey, sidingId, dateFrom, dateTo, rakeNumber, loader, showsRakeNumberFilter, showsLoaderFilter],
+        [
+            activeKey,
+            sidingId,
+            dateFrom,
+            dateTo,
+            rakeNumber,
+            powerPlantId,
+            penaltyStage,
+            loader,
+            showsRakeNumberFilter,
+            showsLoaderFilter,
+            showsPowerPlantFilter,
+            showsPenaltyStageFilter,
+        ],
     );
 
     const loadReportPage = useCallback(
@@ -300,7 +341,9 @@ export default function ReportsIndex({ reports, sidings }: Props) {
             return [];
         }
         return Object.keys(tableRows[0]).filter(
-            (k) => typeof tableRows[0][k] !== 'object' || tableRows[0][k] === null,
+            (k) =>
+                !k.startsWith('_') &&
+                (typeof tableRows[0][k] !== 'object' || tableRows[0][k] === null),
         );
     }, [tableRows]);
 
@@ -323,46 +366,87 @@ export default function ReportsIndex({ reports, sidings }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reports" />
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
                 <Heading
                     title="Reports"
                     description="Generate and export operational reports"
                 />
 
-                <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+                <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
                     {/* Sidebar: Report Types */}
-                    <Card className="h-fit">
+                    <Card className="h-fit min-w-0 lg:max-w-[240px]">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-semibold text-foreground">Report Types</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2 p-3 pt-0">
                             <Collapsible open={coreSectionOpen} onOpenChange={setCoreSectionOpen}>
                                 <CollapsibleTrigger
-                                    className={SECTION_TRIGGER_NEUTRAL}
+                                    className={cn(
+                                        'flex w-full items-center justify-between gap-2 rounded-md border px-2 py-2 text-left text-xs font-semibold uppercase shadow-sm transition-colors',
+                                        activeReportIsInCoreSection
+                                            ? 'border-primary/55 bg-primary/15 text-primary hover:bg-primary/22 dark:bg-primary/22 dark:hover:bg-primary/30'
+                                            : SECTION_TRIGGER_NEUTRAL,
+                                        activeReportIsInCoreSection &&
+                                            !coreSectionOpen &&
+                                            'ring-2 ring-primary/35 ring-offset-2 ring-offset-background dark:ring-offset-background',
+                                    )}
                                     data-pan="reports-sidebar-section-core-toggle"
                                     type="button"
                                 >
                                     Coal Logestic Core Reports
                                     <ChevronDown
                                         className={cn(
-                                            'h-4 w-4 shrink-0 text-foreground/70 transition-transform dark:text-foreground/65',
+                                            'h-4 w-4 shrink-0 transition-transform',
+                                            activeReportIsInCoreSection
+                                                ? 'text-primary'
+                                                : 'text-foreground/70 dark:text-foreground/65',
                                             coreSectionOpen && 'rotate-180',
                                         )}
                                     />
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="pt-1">
-                                    <ul className="space-y-0.5">
+                                    <div className="space-y-0.5">
+                                        {COAL_LOGESTIC_CORE_KEYS.filter((k) => reports[k]).map((k) => (
+                                            <button
+                                                key={k}
+                                                type="button"
+                                                data-pan="reports-sidebar-core-report-select"
+                                                className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                                                    activeKey === k
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'hover:bg-muted'
+                                                }`}
+                                                onClick={() => {
+                                                    setActiveKey(k);
+                                                    setData(null);
+                                                    setPaginationMeta(null);
+                                                    setError(null);
+                                                    if (!RAKE_NUMBER_FILTER_REPORTS.has(k)) {
+                                                        setRakeNumber('');
+                                                    }
+                                                    if (k !== 'rail_dispatch_dpr') {
+                                                        setPowerPlantId('');
+                                                    }
+                                                    if (k !== 'penalty_report') {
+                                                        setPenaltyStage('');
+                                                    }
+                                                    setLoader('');
+                                                }}
+                                            >
+                                                {reports[k].name}
+                                            </button>
+                                        ))}
                                         {COAL_LOGESTIC_CORE_REPORT_LABELS.map((label) => (
-                                            <li key={label}>
+                                            <div key={label}>
                                                 <span
                                                     className="block cursor-not-allowed rounded-md px-2 py-1.5 text-sm text-foreground/80 dark:text-foreground/75"
                                                     title="Coming soon"
                                                 >
                                                     {label}
                                                 </span>
-                                            </li>
+                                            </div>
                                         ))}
-                                    </ul>
+                                    </div>
                                 </CollapsibleContent>
                             </Collapsible>
 
@@ -434,6 +518,8 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                     if (!RAKE_NUMBER_FILTER_REPORTS.has(k)) {
                                                         setRakeNumber('');
                                                     }
+                                                    setPowerPlantId('');
+                                                    setPenaltyStage('');
                                                     if (k !== 'wagon_loading') {
                                                         setLoader('');
                                                     }
@@ -455,10 +541,10 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                         </CardContent>
                     </Card>
 
-                    {/* Main area */}
-                    <div className="space-y-4">
+                    {/* Main area: min-w-0 so wide tables scroll inside this column instead of stretching the layout */}
+                    <div className="min-w-0 space-y-4 overflow-x-hidden">
                         {/* Controls bar */}
-                        <Card>
+                        <Card className="min-w-0 max-w-full">
                             <CardHeader className="pb-3">
                                 <CardTitle className="flex items-center gap-2">
                                     <FileSpreadsheet className="h-5 w-5" />
@@ -468,8 +554,8 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                     {activeReport?.description}
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-wrap items-end gap-3">
+                            <CardContent className="min-w-0">
+                                <div className="flex min-w-0 max-w-full flex-wrap items-end gap-3">
                                     <div className="grid gap-1.5">
                                         <label className="text-xs font-medium">Siding</label>
                                         <select
@@ -516,6 +602,40 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                 placeholder="Search rake number"
                                                 className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                                             />
+                                        </div>
+                                    )}
+                                    {showsPowerPlantFilter && (
+                                        <div className="grid gap-1.5">
+                                            <label className="text-xs font-medium">Power Plant</label>
+                                            <select
+                                                value={powerPlantId}
+                                                onChange={(e) => setPowerPlantId(e.target.value)}
+                                                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                data-pan="report-filter-power-plant"
+                                            >
+                                                <option value="">All power plants</option>
+                                                {powerPlants.map((pp) => (
+                                                    <option key={pp.id} value={String(pp.id)}>
+                                                        {pp.name}{' '}
+                                                        {pp.code ? `(${pp.code})` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                    {showsPenaltyStageFilter && (
+                                        <div className="grid gap-1.5">
+                                            <label className="text-xs font-medium">Stage (Pre / Post RR)</label>
+                                            <select
+                                                value={penaltyStage}
+                                                onChange={(e) => setPenaltyStage(e.target.value)}
+                                                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                data-pan="report-filter-penalty-stage"
+                                            >
+                                                <option value="">All stages</option>
+                                                <option value="pre_rr">Pre-RR</option>
+                                                <option value="post_rr">Post-RR</option>
+                                            </select>
                                         </div>
                                     )}
                                     {showsLoaderFilter && (
@@ -565,21 +685,21 @@ export default function ReportsIndex({ reports, sidings }: Props) {
 
                         {/* Results */}
                         {data !== null && (
-                            <Card>
+                            <Card className="min-w-0 max-w-full overflow-hidden">
                                 <CardHeader>
                                     <CardTitle>Results</CardTitle>
                                     {paginationMeta !== null && (
                                         <CardDescription>{resultsDescription}</CardDescription>
                                     )}
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="min-w-0 space-y-4">
                                     {/* Summary cards for delegated reports */}
                                     <ReportSummary data={data} reportKey={activeKey} />
 
                                     {/* Data table */}
                                     {tableRows.length > 0 && tableColumns.length > 0 ? (
-                                        <div className="overflow-x-auto rounded-md border">
-                                            <table className="w-full text-sm">
+                                        <div className="max-w-full min-w-0 overflow-x-auto rounded-md border">
+                                            <table className="w-max min-w-full text-sm">
                                                 <thead>
                                                     <tr className="border-b bg-muted/50">
                                                         {tableColumns.map((col) => (
@@ -605,7 +725,12 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                                 paginationMeta?.current_page ?? 1,
                                                                 idx,
                                                             )}
-                                                            className="border-b last:border-0 hover:bg-muted/30"
+                                                            className={cn(
+                                                                'border-b last:border-0 hover:bg-muted/30',
+                                                                row['_row_highlight'] === 'diversion'
+                                                                    ? 'bg-amber-100/85 dark:bg-amber-950/35'
+                                                                    : '',
+                                                            )}
                                                         >
                                                             {tableColumns.map((col) => {
                                                                 const val = row[col];
@@ -689,7 +814,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
 
                         {/* Initial state */}
                         {data === null && !loading && !error && (
-                            <Card>
+                            <Card className="min-w-0 max-w-full">
                                 <CardContent className="py-12">
                                     <div className="text-center text-sm text-muted-foreground">
                                         <FileSpreadsheet className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
@@ -706,7 +831,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
 
                         {/* Loading state */}
                         {loading && (
-                            <Card>
+                            <Card className="min-w-0 max-w-full">
                                 <CardContent className="py-12">
                                     <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
                                         <Loader2 className="h-8 w-8 animate-spin" />
