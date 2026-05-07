@@ -27,6 +27,7 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 import { useCallback, useMemo, useState } from 'react';
 
 interface Siding {
@@ -47,122 +48,12 @@ interface Props {
 
 type ReportData = Record<string, unknown>[];
 
-/** Report header → DB source (Siding Coal Receipt only; `daily_vehicle_entries` + `sidings`). */
-const SIDING_COAL_RECEIPT_COLUMN_SOURCES: { column: string; source: string }[] = [
-    {
-        column: 'Date',
-        source: 'date(daily_vehicle_entries.reached_at) — grouping key',
-    },
-    {
-        column: 'Shift',
-        source: 'daily_vehicle_entries.shift (shown as 1st / 2nd / 3rd)',
-    },
-    {
-        column: 'Siding (Pakur/Dumka/Kurwa)',
-        source: 'sidings.name',
-    },
-    { column: 'Vehicle No', source: 'daily_vehicle_entries.vehicle_no' },
-    {
-        column: 'Trips Received',
-        source: 'COUNT(*) — rows sharing same siding, date(reached_at), shift, vehicle',
-    },
-    {
-        column: 'Quantity Received (MT)',
-        source: 'SUM(daily_vehicle_entries.net_wt)',
-    },
-    {
-        column: 'Receipt Time',
-        source: 'MIN(daily_vehicle_entries.reached_at), app timezone',
-    },
-    {
-        column: 'Remarks',
-        source: 'Aggregated non-empty daily_vehicle_entries.remarks per group',
-    },
-];
-
-/** Report header -> DB source (Rake Indent only; `indents` + `sidings` + `users`). */
-const RAKE_INDENT_COLUMN_SOURCES: { column: string; source: string }[] = [
-    { column: 'Indent Date', source: 'indents.indent_date' },
-    { column: 'Siding', source: 'sidings.name via indents.siding_id' },
-    { column: 'Available Stock (MT)', source: 'indents.available_stock_mt' },
-    { column: 'Rake Target Qty (MT)', source: 'indents.target_quantity_mt' },
-    { column: 'Indent Raised By', source: 'users.name via indents.created_by' },
-    { column: 'Indent Time', source: 'indents.indent_time' },
-    { column: 'Railway Reference No', source: 'indents.railway_reference_no' },
-    { column: 'Remarks', source: 'indents.remarks' },
-];
-
-/** Report header -> DB source (TXR only; `txr` + `rakes` + `sidings` + `wagon_unfit_logs`). */
-const TXR_COLUMN_SOURCES: { column: string; source: string }[] = [
-    { column: 'Rake No', source: 'rakes.rake_number' },
-    { column: 'Siding', source: 'sidings.name via rakes.siding_id' },
-    { column: 'Rake Placement Time', source: 'rakes.placement_time' },
-    { column: 'TXR Start Time', source: 'txr.inspection_time' },
-    { column: 'TXR End Time', source: 'txr.inspection_end_time' },
-    { column: 'TXR Duration (Min)', source: 'computed from inspection start/end time' },
-    { column: 'No of Unfit Wagons', source: 'COUNT(wagon_unfit_logs.id) grouped by txr_id' },
-    { column: 'Remarks', source: 'always empty as requested' },
-];
-
-/** Report header -> DB source (Unfit Wagon only; `wagon_unfit_logs` + `wagons` + `rakes`). */
-const UNFIT_WAGON_COLUMN_SOURCES: { column: string; source: string }[] = [
-    { column: 'Rake No', source: 'rakes.rake_number via wagon_unfit_logs.txr_id -> txr.rake_id' },
-    { column: 'Wagon No', source: 'wagons.wagon_number via wagon_unfit_logs.wagon_id' },
-    { column: 'Wagon Type', source: 'wagons.wagon_type via wagon_unfit_logs.wagon_id' },
-    { column: 'Reason Unfit', source: 'wagon_unfit_logs.reason' },
-    { column: 'Marked By', source: 'always empty as requested' },
-    { column: 'Marking Method (Flag/Light)', source: 'wagon_unfit_logs.marking_method' },
-    { column: 'Time', source: 'wagon_unfit_logs.marked_at' },
-];
-
-/** Report header -> DB source (Inmotion Weighment; `rake_wagon_weighments` + related rake). */
-const WEIGHMENT_COLUMN_SOURCES: { column: string; source: string }[] = [
-    { column: 'Rake No', source: 'rakes.rake_number via rake_wagon_weighments.rake_weighment_id' },
-    { column: 'Wagon No', source: 'rake_wagon_weighments.wagon_number (from wagon_id -> wagons.wagon_number)' },
-    { column: 'Inmotion Gross (MT)', source: 'rake_wagon_weighments.actual_gross_mt' },
-    { column: 'Inmotion Tare (MT)', source: 'rake_wagon_weighments.actual_tare_mt' },
-    { column: 'Inmotion Net (MT)', source: 'rake_wagon_weighments.net_weight_mt' },
-    { column: 'Weighment Time', source: 'rake_wagon_weighments.weighment_time' },
-    { column: 'Slip No', source: 'rake_wagon_weighments.slip_number' },
-];
-
-/** Report header -> DB source (Loader vs Weighment; `wagon_loading` + `rake_wagon_weighments` + `wagons`). */
-const LOADER_VS_WEIGHMENT_COLUMN_SOURCES: { column: string; source: string }[] = [
-    { column: 'Rake No', source: 'rakes.rake_number via wagon_loading.rake_id' },
-    { column: 'Wagon No', source: 'rake_wagon_weighments.wagon_number via wagon_loading.wagon_id -> wagons.wagon_number' },
-    { column: 'Loader Qty (MT)', source: 'wagon_loading.loaded_quantity_mt' },
-    { column: 'Inmotion Qty (MT)', source: 'rake_wagon_weighments.net_weight_mt' },
-    { column: 'Difference (MT)', source: 'computed as Loader Qty - Inmotion Qty' },
-    { column: 'Overload/Underload Flag', source: 'computed as OVER / UNDER / OK from Difference' },
-    { column: 'Action Taken', source: 'always empty as requested' },
-];
-
-/** Report header -> DB source (Penalty Register; `applied_penalties` + `rr_penalty_snapshots`). */
-const PENALTY_REGISTER_COLUMN_SOURCES: { column: string; source: string }[] = [
-    { column: 'Date', source: 'rakes.created_at (as requested)' },
-    { column: 'Siding', source: 'sidings.name via rakes.siding_id' },
-    { column: 'Rake No', source: 'rakes.rake_number' },
-    { column: 'Penalty Type', source: 'applied_penalties.penalty_type OR rr_penalty_snapshots.penalty_code' },
-    { column: 'Reason', source: 'always empty as requested' },
-    { column: 'Amount', source: 'applied_penalties.amount OR rr_penalty_snapshots.amount' },
-    { column: 'Stage Detected (Pre-RR/Post-RR)', source: "'Pre-RR' for applied_penalties, 'Post-RR' for rr_penalty_snapshots" },
-    { column: 'Remarks', source: 'always empty as requested' },
-];
-
-/** Report header -> DB source (RR Summary; `rr_documents` + canonical `rake_charges`). */
-const RR_SUMMARY_COLUMN_SOURCES: { column: string; source: string }[] = [
-    { column: 'Rake No', source: 'rakes.rake_number via rr_documents.rake_id' },
-    { column: 'RR No', source: 'rr_documents.rr_number' },
-    { column: 'RR Date', source: 'rr_documents.rr_received_date' },
-    { column: 'From Siding', source: 'sidings.name via rr_documents.rake_id -> rakes.siding_id' },
-    { column: 'To Power Plant', source: 'rr_documents.to_station_code' },
-    { column: 'Charged Weight (MT)', source: 'rr_documents.rr_weight_mt' },
-    { column: 'Freight Amount', source: "rake_charges.amount where charge_type='FREIGHT' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
-    { column: 'Penalty Amount', source: "rake_charges.amount where charge_type='PENALTY' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
-    { column: 'GST Amount', source: "rake_charges.amount where charge_type='GST' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
-    { column: 'Other Charges Amount', source: "rake_charges.amount where charge_type='OTHER_CHARGE' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
-    { column: 'Total Amount', source: 'Freight Amount + Penalty Amount + GST Amount + Other Charges Amount' },
-];
+interface ReportGridMeta {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+}
 
 const RAKE_MANAGEMENT_REPORTS: string[] = [
     'siding_coal_receipt',
@@ -186,68 +77,38 @@ const RAKE_NUMBER_FILTER_REPORTS = new Set([
     'penalty_register',
 ]);
 
-/** Determine the best chart for a given report key. */
-function getChartType(key: string): 'area' | 'bar' | 'pie' | 'table' {
-    if (['demurrage_analysis', 'siding_coal_receipt'].includes(key)) return 'area';
-    if (['penalty_register', 'wagon_loading', 'loader_vs_weighment', 'unfit_wagon', 'weighment'].includes(key)) return 'bar';
-    if (['indent_fulfillment'].includes(key)) return 'pie';
-    return 'table';
-}
+/** Placeholder labels until backend report keys exist (sidebar only). */
+const COAL_LOGESTIC_CORE_REPORT_LABELS: string[] = [
+    'Rail Dispatch DPR',
+    'Penalty Report',
+    'Overloading Report',
+    'Underloading',
+    'Loader Performance',
+    'Siding Dispatch',
+    'PowerPlant Dispatch',
+    'Operator Performance',
+];
+
+const COAL_LOGESTIC_ADVANCE_REPORT_LABELS: string[] = [
+    'Weighment Analysis',
+    'Loader vs Weighment',
+    'Weighment Summary',
+    'RR Charges',
+    'RR Wagon Details',
+    'Weighment vs RR',
+    'Auto DPR Report',
+];
+
+const REPORTS_GRID_PER_PAGE = 60;
+
+/** Collapsible triggers for sections without a selected report (Core / Advance, or Reports fallback). */
+const SECTION_TRIGGER_NEUTRAL =
+    'flex w-full items-center justify-between gap-2 rounded-md border border-border bg-muted/60 px-2 py-2 text-left text-xs font-semibold uppercase text-foreground shadow-sm hover:bg-muted hover:text-foreground dark:bg-muted/45 dark:hover:bg-muted/80';
 
 function formatCurrency(n: number): string {
     if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
     if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
     return `₹${n.toFixed(0)}`;
-}
-
-/** Extract chart-friendly data from report results. */
-function extractChartData(key: string, data: ReportData): { chartData: Record<string, unknown>[]; xKey: string; yKey: string; nameKey?: string } | null {
-    if (!data || data.length === 0) return null;
-
-    // For delegated reports (daily_operations, etc.) the data comes wrapped
-    const first = data[0];
-
-    if (key === 'demurrage_analysis' && first?.by_month && Array.isArray(first.by_month)) {
-        return { chartData: first.by_month as Record<string, unknown>[], xKey: 'month', yKey: 'total' };
-    }
-    if (key === 'siding_coal_receipt') {
-        const grouped: Record<string, number> = {};
-        data.forEach((r) => {
-            const dt = String(r['Date'] ?? 'Unknown');
-            grouped[dt] =
-                (grouped[dt] ?? 0) + Number(r['Quantity Received (MT)'] ?? 0);
-        });
-        const chartData = Object.entries(grouped).map(([date, total_mt]) => ({ date, total_mt }));
-        return { chartData, xKey: 'date', yKey: 'total_mt' };
-    }
-    if (key === 'penalty_register') {
-        // Group by penalty_type for bar
-        const grouped: Record<string, number> = {};
-        data.forEach((r) => {
-            const t = String(r['Penalty Type'] ?? 'Unknown');
-            grouped[t] = (grouped[t] ?? 0) + Number(r['Amount'] ?? 0);
-        });
-        const chartData = Object.entries(grouped).map(([name, total]) => ({ name, total }));
-        return { chartData, xKey: 'name', yKey: 'total' };
-    }
-    if (key === 'indent_fulfillment' && first?.summary) {
-        const s = first.summary as Record<string, number>;
-        const chartData = [
-            { name: 'Fulfilled', value: s.fulfilled ?? 0 },
-            { name: 'Partial', value: s.partial ?? 0 },
-            { name: 'Pending', value: s.pending ?? 0 },
-            { name: 'Overdue', value: s.overdue ?? 0 },
-        ].filter((d) => d.value > 0);
-        return { chartData, xKey: 'name', yKey: 'value', nameKey: 'name' };
-    }
-    if (key === 'wagon_loading') {
-        return { chartData: data.slice(0, 20), xKey: 'wagon_number', yKey: 'loader_qty_mt' };
-    }
-    if (key === 'loader_vs_weighment') {
-        return { chartData: data.slice(0, 20), xKey: 'Wagon No', yKey: 'Difference (MT)' };
-    }
-
-    return null;
 }
 
 /** Render the summary section for delegated reports. */
@@ -279,6 +140,34 @@ function ReportSummary({ data, reportKey }: { data: ReportData; reportKey: strin
     );
 }
 
+/** Stable-enough React key for a paginated report row. */
+function reportTableRowKey(
+    row: Record<string, unknown>,
+    columns: string[],
+    page: number,
+    index: number,
+): string {
+    const digest = columns.map((c) => `${c}:${String(row[c] ?? '')}`).join('|');
+
+    return `${page}:${index}:${digest}`;
+}
+
+function flattenReportPageData(rows: ReportData): Record<string, unknown>[] {
+    if (!rows || rows.length === 0) {
+        return [];
+    }
+    const first = rows[0];
+    if (first && typeof first === 'object') {
+        const inner = first as Record<string, unknown>;
+        for (const k of ['transactions', 'rakes', 'indents', 'by_month']) {
+            if (Array.isArray(inner[k])) {
+                return inner[k] as Record<string, unknown>[];
+            }
+        }
+    }
+    return rows;
+}
+
 function toLocalDateInput(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -299,14 +188,21 @@ export default function ReportsIndex({ reports, sidings }: Props) {
     const [loader, setLoader] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<ReportData | null>(null);
+    const [paginationMeta, setPaginationMeta] = useState<ReportGridMeta | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [columnSourcesOpen, setColumnSourcesOpen] = useState(false);
+    const [coreSectionOpen, setCoreSectionOpen] = useState(true);
+    const [advanceSectionOpen, setAdvanceSectionOpen] = useState(true);
+    const [reportsSectionOpen, setReportsSectionOpen] = useState(true);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Reports', href: '/reports' },
     ];
 
     const activeReport = reports[activeKey];
+    const activeReportIsInOperationalSection = useMemo(
+        () => RAKE_MANAGEMENT_REPORTS.some((k) => k === activeKey && Boolean(reports[k])),
+        [activeKey, reports],
+    );
     const showsRakeNumberFilter = RAKE_NUMBER_FILTER_REPORTS.has(activeKey);
     const showsLoaderFilter = activeKey === 'wagon_loading';
     const requestPayload = useMemo(
@@ -321,26 +217,54 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         [activeKey, sidingId, dateFrom, dateTo, rakeNumber, loader, showsRakeNumberFilter, showsLoaderFilter],
     );
 
-    const generate = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        setData(null);
-        try {
-            const resp = await fetch('/reports/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrfToken() },
-                body: JSON.stringify({ ...requestPayload, preview: true, preview_limit: 25 }),
-            });
-            if (!resp.ok) throw new Error('Failed to generate report');
-            const json = await resp.json();
-            setData(json.data ?? []);
-        } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Failed to generate report';
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
-    }, [requestPayload]);
+    const loadReportPage = useCallback(
+        async (page: number) => {
+            setLoading(true);
+            setError(null);
+            setData(null);
+            setPaginationMeta(null);
+            try {
+                const resp = await fetch('/reports/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrfToken() },
+                    body: JSON.stringify({
+                        ...requestPayload,
+                        page,
+                        per_page: REPORTS_GRID_PER_PAGE,
+                    }),
+                });
+                if (!resp.ok) {
+                    throw new Error('Failed to generate report');
+                }
+                const json = (await resp.json()) as {
+                    data?: ReportData;
+                    meta?: ReportGridMeta;
+                };
+                const rows = json.data ?? [];
+                setData(rows);
+                if (json.meta) {
+                    setPaginationMeta(json.meta);
+                } else {
+                    setPaginationMeta({
+                        current_page: 1,
+                        per_page: rows.length,
+                        total: rows.length,
+                        last_page: 1,
+                    });
+                }
+            } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : 'Failed to generate report';
+                setError(msg);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [requestPayload],
+    );
+
+    const generate = useCallback(() => {
+        void loadReportPage(1);
+    }, [loadReportPage]);
 
     const downloadXlsx = useCallback(async () => {
         try {
@@ -364,37 +288,37 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         }
     }, [requestPayload, activeReport, activeKey]);
 
-    const chartInfo = useMemo(() => {
-        if (!data) return null;
-        return extractChartData(activeKey, data);
-    }, [data, activeKey]);
-
-    const chartType = getChartType(activeKey);
-
-    // Flatten data for table display
     const tableRows = useMemo<Record<string, unknown>[]>(() => {
-        if (!data || data.length === 0) return [];
-        const first = data[0];
-        // Delegated reports wrap data in summary/items — try to extract items
-        if (first && typeof first === 'object') {
-            const inner = (first as Record<string, unknown>);
-            // Look for array fields that contain the actual rows
-            for (const k of ['transactions', 'rakes', 'indents', 'by_month']) {
-                if (Array.isArray(inner[k])) {
-                    return inner[k] as Record<string, unknown>[];
-                }
-            }
+        if (!data || data.length === 0) {
+            return [];
         }
-        // Flat report data
-        return data;
+        return flattenReportPageData(data);
     }, [data]);
 
     const tableColumns = useMemo(() => {
-        if (tableRows.length === 0) return [];
+        if (tableRows.length === 0) {
+            return [];
+        }
         return Object.keys(tableRows[0]).filter(
             (k) => typeof tableRows[0][k] !== 'object' || tableRows[0][k] === null,
         );
     }, [tableRows]);
+
+    const resultsDescription = useMemo(() => {
+        if (!paginationMeta) {
+            return '';
+        }
+        if (paginationMeta.total === 0) {
+            return 'No records for the selected filters.';
+        }
+        const start = (paginationMeta.current_page - 1) * paginationMeta.per_page + 1;
+        const end = Math.min(
+            paginationMeta.current_page * paginationMeta.per_page,
+            paginationMeta.total,
+        );
+
+        return `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${paginationMeta.total.toLocaleString()} records (${paginationMeta.per_page} per page).`;
+    }, [paginationMeta]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -409,22 +333,103 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                     {/* Sidebar: Report Types */}
                     <Card className="h-fit">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm">Report Types</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-foreground">Report Types</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4 p-3 pt-0">
-                            <div>
-                                <p className="mb-1 px-2 text-xs font-medium text-muted-foreground uppercase">
+                        <CardContent className="space-y-2 p-3 pt-0">
+                            <Collapsible open={coreSectionOpen} onOpenChange={setCoreSectionOpen}>
+                                <CollapsibleTrigger
+                                    className={SECTION_TRIGGER_NEUTRAL}
+                                    data-pan="reports-sidebar-section-core-toggle"
+                                    type="button"
+                                >
+                                    Coal Logestic Core Reports
+                                    <ChevronDown
+                                        className={cn(
+                                            'h-4 w-4 shrink-0 text-foreground/70 transition-transform dark:text-foreground/65',
+                                            coreSectionOpen && 'rotate-180',
+                                        )}
+                                    />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="pt-1">
+                                    <ul className="space-y-0.5">
+                                        {COAL_LOGESTIC_CORE_REPORT_LABELS.map((label) => (
+                                            <li key={label}>
+                                                <span
+                                                    className="block cursor-not-allowed rounded-md px-2 py-1.5 text-sm text-foreground/80 dark:text-foreground/75"
+                                                    title="Coming soon"
+                                                >
+                                                    {label}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CollapsibleContent>
+                            </Collapsible>
+
+                            <Collapsible open={advanceSectionOpen} onOpenChange={setAdvanceSectionOpen}>
+                                <CollapsibleTrigger
+                                    className={SECTION_TRIGGER_NEUTRAL}
+                                    data-pan="reports-sidebar-section-advance-toggle"
+                                    type="button"
+                                >
+                                    Coal Logestic Advance Reports
+                                    <ChevronDown
+                                        className={cn(
+                                            'h-4 w-4 shrink-0 text-foreground/70 transition-transform dark:text-foreground/65',
+                                            advanceSectionOpen && 'rotate-180',
+                                        )}
+                                    />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="pt-1">
+                                    <ul className="space-y-0.5">
+                                        {COAL_LOGESTIC_ADVANCE_REPORT_LABELS.map((label) => (
+                                            <li key={label}>
+                                                <span
+                                                    className="block cursor-not-allowed rounded-md px-2 py-1.5 text-sm text-foreground/80 dark:text-foreground/75"
+                                                    title="Coming soon"
+                                                >
+                                                    {label}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CollapsibleContent>
+                            </Collapsible>
+
+                            <Collapsible open={reportsSectionOpen} onOpenChange={setReportsSectionOpen}>
+                                <CollapsibleTrigger
+                                    className={cn(
+                                        'flex w-full items-center justify-between gap-2 rounded-md border px-2 py-2 text-left text-xs font-semibold uppercase shadow-sm transition-colors',
+                                        activeReportIsInOperationalSection
+                                            ? 'border-primary/55 bg-primary/15 text-primary hover:bg-primary/22 dark:bg-primary/22 dark:hover:bg-primary/30'
+                                            : SECTION_TRIGGER_NEUTRAL,
+                                        activeReportIsInOperationalSection &&
+                                            !reportsSectionOpen &&
+                                            'ring-2 ring-primary/35 ring-offset-2 ring-offset-background dark:ring-offset-background',
+                                    )}
+                                    data-pan="reports-sidebar-section-reports-toggle"
+                                    type="button"
+                                >
                                     Reports
-                                </p>
-                                <div className="space-y-0.5">
-                                    {RAKE_MANAGEMENT_REPORTS
-                                        .filter((k) => reports[k])
-                                        .map((k) => (
+                                    <ChevronDown
+                                        className={cn(
+                                            'h-4 w-4 shrink-0 transition-transform',
+                                            activeReportIsInOperationalSection
+                                                ? 'text-primary'
+                                                : 'text-foreground/70 dark:text-foreground/65',
+                                            reportsSectionOpen && 'rotate-180',
+                                        )}
+                                    />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="pt-1">
+                                    <div className="space-y-0.5">
+                                        {RAKE_MANAGEMENT_REPORTS.filter((k) => reports[k]).map((k) => (
                                             <button
                                                 key={k}
                                                 onClick={() => {
                                                     setActiveKey(k);
                                                     setData(null);
+                                                    setPaginationMeta(null);
                                                     setError(null);
                                                     if (!RAKE_NUMBER_FILTER_REPORTS.has(k)) {
                                                         setRakeNumber('');
@@ -444,8 +449,9 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                 {reports[k].name}
                                             </button>
                                         ))}
-                                </div>
-                            </div>
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
                         </CardContent>
                     </Card>
 
@@ -461,65 +467,6 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardDescription>
                                     {activeReport?.description}
                                 </CardDescription>
-                                {false && (activeKey === 'siding_coal_receipt' || activeKey === 'rake_indent' || activeKey === 'txr' || activeKey === 'unfit_wagon' || activeKey === 'weighment' || activeKey === 'loader_vs_weighment' || activeKey === 'penalty_register' || activeKey === 'rr_summary') && (
-                                    <Collapsible
-                                        open={columnSourcesOpen}
-                                        onOpenChange={setColumnSourcesOpen}
-                                        className="mt-3 rounded-md border bg-muted/20"
-                                    >
-                                        <CollapsibleTrigger
-                                            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-medium hover:bg-muted/40"
-                                            data-pan="report-siding-coal-column-sources"
-                                            type="button"
-                                        >
-                                            Where this data comes from (column → database)
-                                            <ChevronDown
-                                                className={`h-4 w-4 shrink-0 transition-transform ${columnSourcesOpen ? 'rotate-180' : ''}`}
-                                            />
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent>
-                                            <div className="overflow-x-auto border-t px-3 py-2">
-                                                <table className="w-full text-xs">
-                                                    <thead>
-                                                        <tr className="border-b text-left text-muted-foreground">
-                                                            <th className="py-1.5 pr-4 font-medium">
-                                                                Report column
-                                                            </th>
-                                                            <th className="py-1.5 font-medium">Source</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {(activeKey === 'rake_indent'
-                                                            ? RAKE_INDENT_COLUMN_SOURCES
-                                                            : activeKey === 'txr'
-                                                              ? TXR_COLUMN_SOURCES
-                                                              : activeKey === 'unfit_wagon'
-                                                                ? UNFIT_WAGON_COLUMN_SOURCES
-                                                                : activeKey === 'weighment'
-                                                                  ? WEIGHMENT_COLUMN_SOURCES
-                                                                  : activeKey === 'loader_vs_weighment'
-                                                                    ? LOADER_VS_WEIGHMENT_COLUMN_SOURCES
-                                                                    : activeKey === 'penalty_register'
-                                                                      ? PENALTY_REGISTER_COLUMN_SOURCES
-                                                                  : activeKey === 'rr_summary'
-                                                                    ? RR_SUMMARY_COLUMN_SOURCES
-                                                              : SIDING_COAL_RECEIPT_COLUMN_SOURCES
-                                                        ).map((row) => (
-                                                            <tr key={row.column} className="border-b border-muted/50 last:border-0">
-                                                                <td className="whitespace-nowrap py-1.5 pr-4 align-top font-medium">
-                                                                    {row.column}
-                                                                </td>
-                                                                <td className="py-1.5 align-top text-muted-foreground">
-                                                                    {row.source}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </CollapsibleContent>
-                                    </Collapsible>
-                                )}
                             </CardHeader>
                             <CardContent>
                                 <div className="flex flex-wrap items-end gap-3">
@@ -595,7 +542,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                         )}
                                         Generate
                                     </Button>
-                                    {data && data.length > 0 && (
+                                    {data !== null && (paginationMeta?.total ?? 0) > 0 && (
                                         <Button
                                             variant="outline"
                                             onClick={downloadXlsx}
@@ -621,9 +568,9 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Results</CardTitle>
-                                    <CardDescription>
-                                        Showing first {tableRows.length} rows (preview). Export for full data.
-                                    </CardDescription>
+                                    {paginationMeta !== null && (
+                                        <CardDescription>{resultsDescription}</CardDescription>
+                                    )}
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     {/* Summary cards for delegated reports */}
@@ -650,9 +597,14 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {tableRows.slice(0, 100).map((row, idx) => (
+                                                    {tableRows.map((row, idx) => (
                                                         <tr
-                                                            key={idx}
+                                                            key={reportTableRowKey(
+                                                                row,
+                                                                tableColumns,
+                                                                paginationMeta?.current_page ?? 1,
+                                                                idx,
+                                                            )}
                                                             className="border-b last:border-0 hover:bg-muted/30"
                                                         >
                                                             {tableColumns.map((col) => {
@@ -689,9 +641,39 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                     ))}
                                                 </tbody>
                                             </table>
-                                            {tableRows.length > 100 && (
-                                                <div className="border-t px-4 py-2 text-center text-xs text-muted-foreground">
-                                                    Showing first 100 of {tableRows.length} records. Export XLSX for full data.
+                                            {paginationMeta && paginationMeta.last_page > 1 && (
+                                                <div className="flex flex-wrap items-center justify-center gap-2 border-t px-4 py-3">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={loading || paginationMeta.current_page <= 1}
+                                                        onClick={() => {
+                                                            void loadReportPage(paginationMeta.current_page - 1);
+                                                        }}
+                                                        data-pan="report-pagination-prev"
+                                                    >
+                                                        Previous
+                                                    </Button>
+                                                    <span className="text-sm text-muted-foreground tabular-nums">
+                                                        Page {paginationMeta.current_page} of{' '}
+                                                        {paginationMeta.last_page}
+                                                    </span>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={
+                                                            loading ||
+                                                            paginationMeta.current_page >= paginationMeta.last_page
+                                                        }
+                                                        onClick={() => {
+                                                            void loadReportPage(paginationMeta.current_page + 1);
+                                                        }}
+                                                        data-pan="report-pagination-next"
+                                                    >
+                                                        Next
+                                                    </Button>
                                                 </div>
                                             )}
                                         </div>

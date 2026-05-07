@@ -15,6 +15,8 @@ use App\Models\Txr;
 use App\Models\WagonLoading;
 use App\Models\WagonUnfitLog;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 final readonly class RunReportAction
@@ -80,11 +82,91 @@ final readonly class RunReportAction
     }
 
     /**
-     * @param  array<int>  $sidingIds
+     * Paginated rows for the /reports UI (per_page capped at 60 in the controller).
+     *
      * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
-     * @return array<int, array<string, mixed>>
+     * @return array{data: array<int, array<string, mixed>>, meta: array{current_page: int, per_page: int, total: int, last_page: int}}
      */
-    private function sidingCoalReceipt(array $sidingIds, array $params): array
+    public function handlePaginated(string $key, array $sidingIds, array $params, int $page, int $perPage): array
+    {
+        $page = max(1, $page);
+        $perPage = max(1, min(60, $perPage));
+        $offset = ($page - 1) * $perPage;
+
+        if ($key === 'penalty_register') {
+            $chunk = $this->penaltyRegisterPaginatedSlice($sidingIds, $params, $offset, $perPage);
+            $total = $chunk['total'];
+            $data = $chunk['data'];
+        } else {
+            $total = match ($key) {
+                'siding_coal_receipt' => $this->sidingCoalReceiptCount($sidingIds, $params),
+                'rake_indent' => $this->rakeIndentCount($sidingIds, $params),
+                'txr' => $this->txrReportCount($sidingIds, $params),
+                'unfit_wagon' => $this->unfitWagonCount($sidingIds, $params),
+                'wagon_loading' => $this->wagonLoadingCount($sidingIds, $params),
+                'weighment' => $this->weighmentReportCount($sidingIds, $params),
+                'loader_vs_weighment' => $this->loaderVsWeighmentCount($sidingIds, $params),
+                'rr_summary' => $this->rrSummaryCount($sidingIds, $params),
+                default => 0,
+            };
+
+            $gridParams = array_merge($params, [
+                'grid_pagination' => true,
+                'grid_offset' => $offset,
+                'grid_limit' => $perPage,
+            ]);
+            $data = $this->handle($key, $sidingIds, $gridParams);
+        }
+
+        $lastPage = $total === 0 ? 1 : max(1, (int) ceil($total / $perPage));
+
+        return [
+            'data' => $data,
+            'meta' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'last_page' => $lastPage,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, limit?: int|null, no_limit?: bool}  $params
+     * @param  EloquentBuilder<\Illuminate\Database\Eloquent\Model>|QueryBuilder  $query
+     */
+    private function applyLegacyLimitOrGridPagination(EloquentBuilder|QueryBuilder $query, array $params): void
+    {
+        if (! empty($params['grid_pagination'])) {
+            $query
+                ->offset(max(0, (int) ($params['grid_offset'] ?? 0)))
+                ->limit(max(1, (int) ($params['grid_limit'] ?? 60)));
+
+            return;
+        }
+
+        $limit = $this->resolveLimit($params);
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     */
+    private function sidingCoalReceiptCount(array $sidingIds, array $params): int
+    {
+        $query = $this->buildSidingCoalReceiptGroupedQuery($sidingIds, $params);
+
+        return (int) DB::query()->fromSub($query, 'siding_coal_receipt_agg')->count();
+    }
+
+    /**
+     * Grouped aggregate query before offset/limit (shared by count + rows).
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     */
+    private function buildSidingCoalReceiptGroupedQuery(array $sidingIds, array $params): QueryBuilder
     {
         $remarksExpr = $this->sidingCoalReceiptRemarksAggregateSql('dve.remarks');
 
@@ -123,10 +205,18 @@ final readonly class RunReportAction
         $query->orderBy('dve.shift');
         $query->orderBy('dve.vehicle_no');
 
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
+        return $query;
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function sidingCoalReceipt(array $sidingIds, array $params): array
+    {
+        $query = $this->buildSidingCoalReceiptGroupedQuery($sidingIds, $params);
+        $this->applyLegacyLimitOrGridPagination($query, $params);
 
         $rows = $query->get();
         $tz = config('app.timezone') ?? 'UTC';
@@ -166,6 +256,281 @@ final readonly class RunReportAction
     }
 
     /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     */
+    private function rakeIndentCount(array $sidingIds, array $params): int
+    {
+        $query = Indent::query()
+            ->whereIn('siding_id', $sidingIds);
+        $this->applyDateFilter($query, $params, 'indent_date', 'created_at');
+        if (! empty($params['siding_id'])) {
+            $query->where('siding_id', $params['siding_id']);
+        }
+
+        return (int) $query->count();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function txrReportCount(array $sidingIds, array $params): int
+    {
+        $query = Txr::query()
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+        if (! empty($params['siding_id'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+
+        return (int) $query->count();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function unfitWagonCount(array $sidingIds, array $params): int
+    {
+        $query = WagonUnfitLog::query()
+            ->whereHas('txr.rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        if (! empty($params['date_from'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+
+        if (! empty($params['siding_id'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+
+        return (int) $query->count();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
+     */
+    private function wagonLoadingCount(array $sidingIds, array $params): int
+    {
+        $query = WagonLoading::query()
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+
+        if (! empty($params['siding_id'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+        if (! empty($params['loader'])) {
+            $loaderFilter = mb_trim((string) $params['loader']);
+            $query->where(function ($q) use ($loaderFilter): void {
+                if (is_numeric($loaderFilter)) {
+                    $q->where('loader_id', (int) $loaderFilter)
+                        ->orWhereHas('loader', function ($loaderQuery) use ($loaderFilter): void {
+                            $loaderQuery
+                                ->where('loader_name', 'like', '%'.$loaderFilter.'%')
+                                ->orWhere('code', 'like', '%'.$loaderFilter.'%');
+                        });
+                } else {
+                    $q->whereHas('loader', function ($loaderQuery) use ($loaderFilter): void {
+                        $loaderQuery
+                            ->where('loader_name', 'like', '%'.$loaderFilter.'%')
+                            ->orWhere('code', 'like', '%'.$loaderFilter.'%');
+                    });
+                }
+            });
+        }
+
+        return (int) $query->count();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function weighmentReportCount(array $sidingIds, array $params): int
+    {
+        $query = RakeWagonWeighment::query()
+            ->whereHas('rakeWeighment.rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+
+        if (! empty($params['siding_id'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+
+        return (int) $query->count();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function loaderVsWeighmentCount(array $sidingIds, array $params): int
+    {
+        $query = $this->buildLoaderVsWeighmentBaseQuery($sidingIds, $params);
+
+        return (int) $query->count();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function rrSummaryCount(array $sidingIds, array $params): int
+    {
+        $query = RrDocument::query()
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+        if (! empty($params['siding_id'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+
+        return (int) $query->count();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildLoaderVsWeighmentBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        $latestWeighmentPerRake = DB::table('rake_weighments')
+            ->selectRaw('MAX(id) as id, rake_id')
+            ->groupBy('rake_id');
+
+        $query = DB::table('wagon_loading as wl')
+            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->leftJoin('sidings as s', 's.id', '=', 'r.siding_id')
+            ->leftJoinSub($latestWeighmentPerRake, 'lrw', fn ($join) => $join->on('lrw.rake_id', '=', 'wl.rake_id'))
+            ->leftJoin('rake_weighments as rw', 'rw.id', '=', 'lrw.id')
+            ->leftJoin('rake_wagon_weighments as rww', function ($join): void {
+                $join->on('rww.rake_weighment_id', '=', 'rw.id')
+                    ->on('rww.wagon_id', '=', 'wl.wagon_id');
+            })
+            ->whereIn('r.siding_id', $sidingIds);
+
+        if (! empty($params['siding_id'])) {
+            $query->where('r.siding_id', '=', $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $query->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+        if (! empty($params['rake_number'])) {
+            $query->where('r.rake_number', 'like', '%'.$params['rake_number'].'%');
+        }
+
+        return $query->select([
+            'r.rake_number as rake_no',
+            'wl.wagon_id',
+            'rww.wagon_number as weighment_wagon_no',
+            'wl.loaded_quantity_mt as loader_qty_mt',
+            'rww.net_weight_mt as inmotion_qty_mt',
+            'rww.action_taken as action_taken',
+        ])->addSelect(DB::raw('s.name as siding'));
+    }
+
+    /**
+     * Merges applied + snapshot penalties, then slices one page (full merge in memory).
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     * @return array{data: array<int, array<string, mixed>>, total: int}
+     */
+    private function penaltyRegisterPaginatedSlice(array $sidingIds, array $params, int $offset, int $perPage): array
+    {
+        $appliedQuery = AppliedPenalty::query()
+            ->with(['rake.siding:id,name', 'penaltyType:id,code,name'])
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        $snapshotQuery = RrPenaltySnapshot::query()
+            ->with(['rake.siding:id,name'])
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        if (! empty($params['date_from'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+
+        if (! empty($params['siding_id'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+
+        $appliedRows = $appliedQuery->latest()->get()->map(fn (AppliedPenalty $p): array => [
+            'Date' => $p->rake?->created_at?->toDateString(),
+            'Siding' => $p->rake?->siding?->name,
+            'Rake No' => $p->rake?->rake_number,
+            'Penalty Type' => $p->penaltyType?->code ?? $p->penaltyType?->name,
+            'Reason' => '',
+            'Amount' => $p->amount !== null ? (float) $p->amount : null,
+            'Stage Detected (Pre-RR/Post-RR)' => 'Pre-RR',
+            'Remarks' => '',
+        ]);
+
+        $snapshotRows = $snapshotQuery->latest()->get()->map(fn (RrPenaltySnapshot $p): array => [
+            'Date' => $p->rake?->created_at?->toDateString(),
+            'Siding' => $p->rake?->siding?->name,
+            'Rake No' => $p->rake?->rake_number,
+            'Penalty Type' => $p->penalty_code,
+            'Reason' => '',
+            'Amount' => $p->amount !== null ? (float) $p->amount : null,
+            'Stage Detected (Pre-RR/Post-RR)' => 'Post-RR',
+            'Remarks' => '',
+        ]);
+
+        $merged = $appliedRows
+            ->concat($snapshotRows)
+            ->sortByDesc('Date')
+            ->values();
+        $total = $merged->count();
+        $data = $merged->slice($offset, $perPage)->values()->all();
+
+        return ['data' => $data, 'total' => $total];
+    }
+
+    /**
      * @param  array<int>  $sidingIds
      * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
      * @return array<int, array<string, mixed>>
@@ -179,11 +544,9 @@ final readonly class RunReportAction
         if (! empty($params['siding_id'])) {
             $query->where('siding_id', $params['siding_id']);
         }
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
-        $rows = $query->latest('indent_date')->latest()->get();
+        $query->latest('indent_date')->latest();
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+        $rows = $query->get();
 
         return $rows->map(fn ($r): array => [
             'Indent Date' => $r->indent_date?->toDateString(),
@@ -220,11 +583,9 @@ final readonly class RunReportAction
         if (! empty($params['rake_number'])) {
             $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
-        $rows = $query->orderByDesc('inspection_time')->latest()->get();
+        $query->orderByDesc('inspection_time')->latest();
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+        $rows = $query->get();
 
         return $rows->map(function (Txr $r): array {
             $durationMin = null;
@@ -270,12 +631,9 @@ final readonly class RunReportAction
             $query->whereHas('txr.rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
 
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
-
-        $rows = $query->orderByDesc('marked_at')->latest()->get();
+        $query->orderByDesc('marked_at')->latest();
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+        $rows = $query->get();
 
         return $rows->map(fn ($r): array => [
             'Rake No' => $r->txr?->rake?->rake_number,
@@ -332,12 +690,9 @@ final readonly class RunReportAction
             });
         }
 
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
-
-        $rows = $query->latest('loading_time')->latest()->get();
+        $query->latest('loading_time')->latest();
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+        $rows = $query->get();
 
         return $rows->map(fn ($r): array => [
             'rake_no' => $r->rake?->rake_number,
@@ -377,12 +732,9 @@ final readonly class RunReportAction
             $query->whereHas('rakeWeighment.rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
 
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
-
-        $rows = $query->orderByDesc('weighment_time')->latest()->get();
+        $query->orderByDesc('weighment_time')->latest();
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+        $rows = $query->get();
 
         return $rows->map(fn ($r): array => [
             'Rake No' => $r->rakeWeighment?->rake?->rake_number,
@@ -491,12 +843,9 @@ final readonly class RunReportAction
         if (! empty($params['rake_number'])) {
             $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
-
-        $rows = $query->latest('rr_received_date')->get();
+        $query->latest('rr_received_date');
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+        $rows = $query->get();
 
         return $rows->map(function (RrDocument $r): array {
             $chargeScope = $r->rake?->rakeCharges
@@ -703,7 +1052,7 @@ final readonly class RunReportAction
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  EloquentBuilder  $query
      * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
      */
     private function applyDateFilter($query, array $params, string $column, ?string $fallback = null): void
