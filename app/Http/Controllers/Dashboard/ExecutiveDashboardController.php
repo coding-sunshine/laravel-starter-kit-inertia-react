@@ -206,7 +206,7 @@ final class ExecutiveDashboardController extends Controller
         abort_unless(DashboardWidgetPermissions::userCanSeeDashboardSection($user, 'rake-performance'), 403);
 
         $resolved = $this->filters->resolve($request);
-        $perPage = min(50, max(1, (int) $request->query('per_page', 15)));
+        $perPage = min(100, max(1, (int) $request->query('per_page', 100)));
         $page = max(1, (int) $request->query('page', 1));
 
         $sidingIdFilter = $request->filled('siding_id') ? (int) $request->query('siding_id') : null;

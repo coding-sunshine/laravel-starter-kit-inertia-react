@@ -607,12 +607,17 @@
         "RunReportAction": {
             "documented": true,
             "path": "./runreportaction.md",
+            "lastUpdated": "2026-05-07",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
                     "AppliedPenalty",
                     "DailyVehicleEntry",
+                    "DiverrtDestination",
                     "Indent",
+                    "Loader",
+                    "PowerPlant",
+                    "Rake",
                     "RakeCharge",
                     "RakeWagonWeighment",
                     "RrDocument",
