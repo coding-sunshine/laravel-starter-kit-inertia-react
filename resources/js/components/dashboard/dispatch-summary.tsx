@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { Truck } from 'lucide-react';
 
 interface SidingStock {
@@ -9,7 +10,13 @@ interface SidingStock {
 
 const mt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 
-export function DispatchSummary({ stocks }: { stocks: Record<number, SidingStock> }) {
+export function DispatchSummary({
+    stocks,
+    className,
+}: {
+    stocks: Record<number, SidingStock>;
+    className?: string;
+}) {
     const entries = Object.values(stocks);
     const totalDispatched = entries.reduce((sum, s) => sum + (s.dispatched_mt ?? 0), 0);
     const totalReceived = entries.reduce((sum, s) => sum + (s.received_mt ?? 0), 0);
@@ -18,14 +25,14 @@ export function DispatchSummary({ stocks }: { stocks: Record<number, SidingStock
         totalDispatched > 0 ? Math.min(100, (totalReceived / totalDispatched) * 100) : 0;
 
     return (
-        <Card className="shadow-sm">
+        <Card className={cn('shadow-sm', className)}>
             <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Truck className="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
                     Today's dispatch
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="flex flex-1 flex-col space-y-4">
                 {/* Two compact stats */}
                 <div className="grid grid-cols-2 gap-3">
                     <Stat label="Dispatched" value={totalDispatched} />

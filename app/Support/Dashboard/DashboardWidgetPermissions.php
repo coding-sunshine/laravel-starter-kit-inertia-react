@@ -39,7 +39,7 @@ final class DashboardWidgetPermissions
             'dashboard.widgets.operations_truck_receipt_trend' => 'Operations — Truck receipt trend',
             'dashboard.widgets.operations_shift_vehicle_receipt' => 'Operations — Shift-wise vehicle receipt',
             'dashboard.widgets.operations_live_rake_status' => 'Operations — Live rake status',
-            'dashboard.widgets.penalty_control_type_distribution' => 'Penalty control — Type distribution',
+            'dashboard.widgets.penalty_control_type_distribution' => 'Penalty control — Penalties and Charges',
             'dashboard.widgets.penalty_control_yesterday_predicted' => 'Penalty control — Yesterday predicted',
             'dashboard.widgets.penalty_control_penalty_by_siding' => 'Penalty control — Penalty by siding',
             'dashboard.widgets.penalty_control_applied_vs_rr' => 'Penalty control — Applied vs RR',
