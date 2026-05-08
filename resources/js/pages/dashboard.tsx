@@ -1,4 +1,5 @@
 import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
+import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +34,7 @@ import {
 import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
 import AppLayout from '@/layouts/app-layout';
 import { laravelJsonFetch } from '@/lib/laravel-json-fetch';
+import { cn } from '@/lib/utils';
 import { ExecutiveOverview } from '@/pages/dashboard/ExecutiveOverview';
 import { LoaderOverloading } from '@/pages/dashboard/LoaderOverloading';
 import { Operations } from '@/pages/dashboard/Operations';
@@ -216,12 +218,8 @@ function dashboardSectionVisible(
                     'dashboard.widgets.penalty_control_type_distribution',
                 ) ||
                 canWidget(
-                    'dashboard.widgets.penalty_control_yesterday_predicted',
-                ) ||
-                canWidget(
                     'dashboard.widgets.penalty_control_penalty_by_siding',
-                ) ||
-                canWidget('dashboard.widgets.penalty_control_applied_vs_rr')
+                )
             );
         case 'rake-performance':
             return canWidget('dashboard.widgets.rake_performance');
@@ -641,10 +639,9 @@ interface DashboardKpis {
     trucksReceivedToday: number;
 }
 
-interface PenaltyTrendPoint {
-    date: string;
-    label: string;
-    total: number;
+interface PenaltyTrendChartPayload {
+    series: Array<{ key: string; label: string; siding_id: number }>;
+    points: Array<Record<string, string | number>>;
 }
 
 interface PenaltyByTypePoint {
@@ -800,9 +797,9 @@ interface ExecutiveYesterdayData {
             dispatch: { roadQty: number; railQty: number };
         }>;
     };
-    /** Per chart-period slices (anchor-relative), same ranges as road/rail production charts. */
+    /** Per chart-period slices (anchor-relative), same ranges as road/rail production charts, plus last_month for penalty control. */
     penaltyBySidingByPeriod?: Record<
-        'yesterday' | 'today' | 'month' | 'fy',
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
         PenaltyBySidingPoint[]
     >;
     powerPlantDispatchByPeriod?: Record<
@@ -964,7 +961,7 @@ type DashboardProps = SharedData & {
     filters?: DashboardFilters;
     filterOptions?: FilterOptions;
     kpis?: DashboardKpis;
-    penaltyTrendDaily?: PenaltyTrendPoint[];
+    penaltyTrendDaily?: PenaltyTrendChartPayload;
     penaltyByType?: PenaltyByTypePoint[];
     penaltyBySiding?: PenaltyBySidingPoint[];
     notifications?: Array<{
@@ -1461,23 +1458,53 @@ export const PENALTY_BY_SIDING_CHART_COLORS = [
     '#DB2777',
 ];
 
+/** Period keys for penalty-by-siding chart (includes last calendar month). */
+export type PenaltyBySidingChartPeriodKey =
+    | ExecutiveChartPeriodKey
+    | 'last_month';
+
+export const PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS: {
+    value: PenaltyBySidingChartPeriodKey;
+    label: string;
+}[] = [
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'last_month', label: 'Last month' },
+    { value: 'month', label: 'This month' },
+    { value: 'fy', label: 'Year' },
+];
+
 export function DashboardPenaltyBySidingChart({
     data,
     period,
     onPeriodChange,
+    periodOptions,
+    className,
 }: {
     data: PenaltyBySidingPoint[];
-    period?: ExecutiveChartPeriodKey;
-    onPeriodChange?: (p: ExecutiveChartPeriodKey) => void;
+    period?: PenaltyBySidingChartPeriodKey;
+    onPeriodChange?: (p: PenaltyBySidingChartPeriodKey) => void;
+    periodOptions?: { value: PenaltyBySidingChartPeriodKey; label: string }[];
+    className?: string;
 }) {
     const sorted = useMemo(
         () => [...data].sort((a, b) => b.total - a.total),
         [data],
     );
     const showPeriod = onPeriodChange != null && period != null;
+    const selectOptions =
+        periodOptions ??
+        (EXEC_CHART_PERIOD_OPTIONS as {
+            value: PenaltyBySidingChartPeriodKey;
+            label: string;
+        }[]);
 
     return (
-        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+        <div
+            className={cn(
+                'dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0',
+                className,
+            )}
+        >
             <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
                 {showPeriod ? (
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -1489,14 +1516,14 @@ export function DashboardPenaltyBySidingChart({
                         <Select
                             value={period}
                             onValueChange={(v) =>
-                                onPeriodChange(v as ExecutiveChartPeriodKey)
+                                onPeriodChange(v as PenaltyBySidingChartPeriodKey)
                             }
                         >
                             <SelectTrigger className="h-9 w-[160px] text-xs">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                {selectOptions.map((o) => (
                                     <SelectItem
                                         key={o.value}
                                         value={o.value}
@@ -1674,6 +1701,7 @@ export function ExecutiveYesterdaySection({
     showViewToggle = false,
     penaltyBySiding = [],
     powerPlantDispatch = [],
+    sidingStocks = {},
     canWidget,
 }: {
     data: ExecutiveYesterdayData;
@@ -1682,6 +1710,7 @@ export function ExecutiveYesterdaySection({
     showViewToggle?: boolean;
     penaltyBySiding?: PenaltyBySidingPoint[];
     powerPlantDispatch?: PowerPlantDispatchItem[];
+    sidingStocks?: Record<number, SidingStock>;
     canWidget: (permissionName: string) => boolean;
 }) {
     const [executiveData, setExecutiveData] =
@@ -1712,14 +1741,14 @@ export function ExecutiveYesterdaySection({
         'count' | 'qty'
     >('count');
     const [productionChartPeriod, setProductionChartPeriod] =
-        useState<ExecutiveChartPeriodKey>('yesterday');
+        useState<ExecutiveChartPeriodKey>('month');
     const [productionChartMetric, setProductionChartMetric] = useState<
         'trips' | 'qty'
     >('trips');
     const [penaltyChartPeriod, setPenaltyChartPeriod] =
-        useState<ExecutiveChartPeriodKey>('yesterday');
+        useState<PenaltyBySidingChartPeriodKey>('month');
     const [powerPlantChartPeriod, setPowerPlantChartPeriod] =
-        useState<ExecutiveChartPeriodKey>('yesterday');
+        useState<ExecutiveChartPeriodKey>('month');
     const [powerPlantMetric, setPowerPlantMetric] = useState<'rakes' | 'qty'>(
         'rakes',
     );
@@ -1989,6 +2018,7 @@ export function ExecutiveYesterdaySection({
 
     const TableView = (
         <div className="space-y-6">
+            <DispatchSummary stocks={sidingStocks} />
             {canWidget('dashboard.widgets.executive_tables_road_dispatch') ? (
                 <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                     <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
@@ -2955,18 +2985,30 @@ export function ExecutiveYesterdaySection({
             {canWidget(
                 'dashboard.widgets.executive_chart_powerplant_dispatch',
             ) ? (
-                <RakesPerPowerPlantExecutiveChart
-                    data={powerPlantChartData}
-                    {...(hasPowerPlantPeriodSlices
-                        ? {
-                              period: powerPlantChartPeriod,
-                              onPeriodChange: setPowerPlantChartPeriod,
-                              metric: powerPlantMetric,
-                              onMetricChange: setPowerPlantMetric,
-                          }
-                        : {})}
-                />
-            ) : null}
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+                    <div className="min-w-0">
+                        <RakesPerPowerPlantExecutiveChart
+                            data={powerPlantChartData}
+                            {...(hasPowerPlantPeriodSlices
+                                ? {
+                                      period: powerPlantChartPeriod,
+                                      onPeriodChange: setPowerPlantChartPeriod,
+                                      metric: powerPlantMetric,
+                                      onMetricChange: setPowerPlantMetric,
+                                  }
+                                : {})}
+                        />
+                    </div>
+                    <div className="min-w-0">
+                        <DispatchSummary
+                            stocks={sidingStocks}
+                            className="flex h-full flex-col"
+                        />
+                    </div>
+                </div>
+            ) : (
+                <DispatchSummary stocks={sidingStocks} />
+            )}
 
             {canWidget('dashboard.widgets.executive_chart_fy') ? (
                 <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
@@ -6225,7 +6267,10 @@ export default function Dashboard() {
         loaderOperatorsByLoader: {},
     };
     const kpis = props.kpis;
-    const penaltyTrendDaily = props.penaltyTrendDaily ?? [];
+    const penaltyTrendDaily = props.penaltyTrendDaily ?? {
+        series: [],
+        points: [],
+    };
     const penaltyByType = props.penaltyByType ?? [];
     const penaltyBySiding = props.penaltyBySiding ?? [];
     const liveRakeStatus = props.liveRakeStatus ?? [];
@@ -6234,11 +6279,6 @@ export default function Dashboard() {
     const truckReceiptTrend = props.truckReceiptTrend ?? [];
     const shiftWiseVehicleReceipt = props.shiftWiseVehicleReceipt ?? [];
     const stockGauge = props.stockGauge;
-    const predictedVsActualPenalty = props.predictedVsActualPenalty ?? {
-        predicted: 0,
-        actual: 0,
-        bySiding: [],
-    };
     const baseSidingStocks = props.sidingStocks ?? {};
     const operatorRake = props.operatorRake ?? null;
     const penaltyPredictions = props.penaltyPredictions ?? [];
@@ -6357,7 +6397,6 @@ export default function Dashboard() {
     );
 
     const powerPlantDispatch = props.powerPlantDispatch ?? [];
-    const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
     const executiveYesterday = props.executiveYesterday;
 
     const filteredSidings = useMemo(() => {
@@ -6770,15 +6809,6 @@ export default function Dashboard() {
                                                 penaltyByType={penaltyByType}
                                                 penaltyBySiding={
                                                     penaltyBySiding
-                                                }
-                                                yesterdayPredictedPenalties={
-                                                    yesterdayPredictedPenalties
-                                                }
-                                                predictedVsActualPenalty={
-                                                    predictedVsActualPenalty
-                                                }
-                                                filteredSidings={
-                                                    filteredSidings
                                                 }
                                                 executiveYesterday={
                                                     executiveYesterday

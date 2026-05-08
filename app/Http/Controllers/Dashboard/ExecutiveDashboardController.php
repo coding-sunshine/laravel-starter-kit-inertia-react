@@ -687,6 +687,11 @@ final class ExecutiveDashboardController extends Controller
             $powerPlantDispatchByPeriod[$periodKey] = $this->buildPowerPlantDispatch($sidingIds, $fromCarbon, $toCarbon, []);
         }
 
+        $lastMonthStart = $anchor->copy()->startOfMonth()->subMonth();
+        $lastMonthFrom = $lastMonthStart->copy()->startOfDay();
+        $lastMonthTo = $lastMonthStart->copy()->endOfMonth()->endOfDay();
+        $penaltyBySidingByPeriod['last_month'] = $this->buildPenaltyBySiding($sidingIds, $lastMonthFrom, $lastMonthTo, []);
+
         return [
             'anchorDate' => $anchor->toDateString(),
             'fyLabel' => $fyLabel,
@@ -949,16 +954,15 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Penalty trend: date vs total amount. Uses rr_penalty_snapshots.created_at for
-     * date-wise filter and grouping. Respects the selected date range (capped to 30 days).
+     * Penalty trend: one line per siding (date vs amount). Uses rakes.loading_date for grouping.
+     * Respects the selected date range (daily buckets, capped at 90 days; longer ranges use monthly buckets).
      *
      * @param  array<int>  $sidingIds
      * @param  array{period: string, power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
-     * @return array<int, array{date: string, total: float, label: string}>
+     * @return array{series: list<array{key: string, label: string, siding_id: int}>, points: list<array<string, mixed>>}
      */
     public function buildPenaltyTrendDaily(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
-
         $start = Carbon::parse($from)->startOfDay();
         $end = Carbon::parse($to)->endOfDay();
         $diffDays = $start->diffInDays($end) + 1;
@@ -967,37 +971,57 @@ final class ExecutiveDashboardController extends Controller
         if (! empty($filterContext['rake_number']) || ! empty($filterContext['power_plant'])) {
             $rakeIds = $this->getFilteredRakeIds($sidingIds, $filterContext);
             if ($rakeIds === []) {
-                return [];
+                return ['series' => [], 'points' => []];
             }
         }
 
-        $tz = config('app.timezone', 'UTC');
         $driver = DB::getDriverName();
 
-        // Long range: aggregate by month (one point per month) so chart spans full range with year in label.
         if ($diffDays > 90) {
-            return $this->buildPenaltyTrendMonthly($sidingIds, $start, $end, $rakeIds, $driver, $tz);
+            return $this->buildPenaltyTrendMonthly($sidingIds, $start, $end, $rakeIds, $driver);
         }
 
-        // Short range: daily points, cap at 90 days. Label includes year (e.g. "10 Mar 2024").
         $maxDays = 90;
         if ($diffDays > $maxDays) {
             $end = $start->copy()->addDays($maxDays - 1)->endOfDay();
         }
 
-        $days = [];
+        $orderedSidingIds = array_values(array_unique(array_map(intval(...), $sidingIds)));
+        sort($orderedSidingIds);
+
+        $daysTemplate = [];
         $cursor = $start->copy();
         while ($cursor->lte($end)) {
-            $days[] = [
+            $daysTemplate[] = [
                 'date' => $cursor->toDateString(),
                 'label' => $cursor->format('d M Y'),
-                'total' => 0.0,
             ];
             $cursor->addDay();
         }
 
-        if ($sidingIds === [] || $days === []) {
-            return $days;
+        if ($orderedSidingIds === []) {
+            return [
+                'series' => [],
+                'points' => $daysTemplate,
+            ];
+        }
+
+        $sidingLabels = Siding::query()
+            ->whereIn('id', $orderedSidingIds)
+            ->pluck('name', 'id')
+            ->all();
+
+        $series = [];
+        foreach ($orderedSidingIds as $sid) {
+            $series[] = [
+                'key' => $this->penaltyTrendSidingSeriesKey($sid),
+                'label' => (string) ($sidingLabels[$sid] ?? 'Siding '.$sid),
+                'siding_id' => $sid,
+            ];
+        }
+
+        if ($daysTemplate === []) {
+            return ['series' => $series, 'points' => []];
         }
 
         if ($driver === 'pgsql') {
@@ -1015,15 +1039,15 @@ final class ExecutiveDashboardController extends Controller
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rr_penalty_snapshots.rake_id', $rakeIds);
         } else {
-            $penaltyQuery->whereIn('rakes.siding_id', $sidingIds);
+            $penaltyQuery->whereIn('rakes.siding_id', $orderedSidingIds);
         }
 
         $rows = $penaltyQuery
-            ->selectRaw("{$dateSql} as d, sum(rr_penalty_snapshots.amount * 1.05) as total")
-            ->groupBy(DB::raw($dateSql))
+            ->selectRaw("{$dateSql} as d, rakes.siding_id as siding_id, sum(rr_penalty_snapshots.amount * 1.05) as total")
+            ->groupBy(DB::raw($dateSql), 'rakes.siding_id')
             ->get();
 
-        $byDate = [];
+        $byDateSiding = [];
         foreach ($rows as $row) {
             $dateStr = $row->d instanceof DateTimeInterface
                 ? Carbon::parse($row->d)->format('Y-m-d')
@@ -1031,41 +1055,68 @@ final class ExecutiveDashboardController extends Controller
             if (mb_strlen($dateStr) > 10) {
                 $dateStr = Carbon::parse($dateStr)->format('Y-m-d');
             }
-            $byDate[$dateStr] = (float) $row->total;
+            $sid = (int) $row->siding_id;
+            $byDateSiding[$dateStr][$sid] = (float) $row->total;
         }
 
-        foreach ($days as $i => $day) {
-            if (isset($byDate[$day['date']])) {
-                $days[$i]['total'] = $byDate[$day['date']];
+        $points = [];
+        foreach ($daysTemplate as $day) {
+            $row = $day;
+            foreach ($orderedSidingIds as $sid) {
+                $row[$this->penaltyTrendSidingSeriesKey($sid)] = (float) ($byDateSiding[$day['date']][$sid] ?? 0.0);
             }
+            $points[] = $row;
         }
 
-        return $days;
+        return ['series' => $series, 'points' => $points];
     }
 
     /**
-     * Penalty trend by month for long ranges. One point per month, label e.g. "Mar 2024".
+     * Penalty trend by month for long ranges. One point per month per siding.
      *
      * @param  array<int>  $sidingIds
      * @param  array<int>|null  $rakeIds
-     * @return array<int, array{date: string, label: string, total: float}>
+     * @return array{series: list<array{key: string, label: string, siding_id: int}>, points: list<array<string, mixed>>}
      */
-    public function buildPenaltyTrendMonthly(array $sidingIds, Carbon $start, Carbon $end, ?array $rakeIds, string $driver, string $tz): array
+    public function buildPenaltyTrendMonthly(array $sidingIds, Carbon $start, Carbon $end, ?array $rakeIds, string $driver): array
     {
-        $months = [];
+        $orderedSidingIds = array_values(array_unique(array_map(intval(...), $sidingIds)));
+        sort($orderedSidingIds);
+
+        $monthsTemplate = [];
         $cursor = $start->copy()->startOfMonth();
         $endMonth = $end->copy()->startOfMonth();
         while ($cursor->lte($endMonth)) {
-            $months[] = [
+            $monthsTemplate[] = [
                 'date' => $cursor->format('Y-m'),
                 'label' => $cursor->format('M Y'),
-                'total' => 0.0,
             ];
             $cursor->addMonth();
         }
 
-        if ($sidingIds === [] || $months === []) {
-            return $months;
+        if ($orderedSidingIds === []) {
+            return [
+                'series' => [],
+                'points' => $monthsTemplate,
+            ];
+        }
+
+        $sidingLabels = Siding::query()
+            ->whereIn('id', $orderedSidingIds)
+            ->pluck('name', 'id')
+            ->all();
+
+        $series = [];
+        foreach ($orderedSidingIds as $sid) {
+            $series[] = [
+                'key' => $this->penaltyTrendSidingSeriesKey($sid),
+                'label' => (string) ($sidingLabels[$sid] ?? 'Siding '.$sid),
+                'siding_id' => $sid,
+            ];
+        }
+
+        if ($monthsTemplate === []) {
+            return ['series' => $series, 'points' => []];
         }
 
         if ($driver === 'pgsql') {
@@ -1083,29 +1134,33 @@ final class ExecutiveDashboardController extends Controller
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rr_penalty_snapshots.rake_id', $rakeIds);
         } else {
-            $penaltyQuery->whereIn('rakes.siding_id', $sidingIds);
+            $penaltyQuery->whereIn('rakes.siding_id', $orderedSidingIds);
         }
 
         $rows = $penaltyQuery
-            ->selectRaw("{$monthSql} as m, sum(rr_penalty_snapshots.amount + rr_penalty_snapshots.amount * 0.05) as total")
-            ->groupBy(DB::raw($monthSql))
+            ->selectRaw("{$monthSql} as m, rakes.siding_id as siding_id, sum(rr_penalty_snapshots.amount * 1.05) as total")
+            ->groupBy(DB::raw($monthSql), 'rakes.siding_id')
             ->get();
 
-        $byMonth = [];
+        $byMonthSiding = [];
         foreach ($rows as $row) {
             $key = $row->m instanceof DateTimeInterface
                 ? Carbon::parse($row->m)->format('Y-m')
                 : mb_substr((string) $row->m, 0, 7);
-            $byMonth[$key] = (float) $row->total;
+            $sid = (int) $row->siding_id;
+            $byMonthSiding[$key][$sid] = (float) $row->total;
         }
 
-        foreach ($months as $i => $month) {
-            if (isset($byMonth[$month['date']])) {
-                $months[$i]['total'] = $byMonth[$month['date']];
+        $points = [];
+        foreach ($monthsTemplate as $month) {
+            $row = $month;
+            foreach ($orderedSidingIds as $sid) {
+                $row[$this->penaltyTrendSidingSeriesKey($sid)] = (float) ($byMonthSiding[$month['date']][$sid] ?? 0.0);
             }
+            $points[] = $row;
         }
 
-        return $months;
+        return ['series' => $series, 'points' => $points];
     }
 
     /**
@@ -2842,6 +2897,14 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Stable chart series key per siding (avoids unsafe property names from siding labels).
+     */
+    private function penaltyTrendSidingSeriesKey(int $sidingId): string
+    {
+        return 'siding_'.$sidingId;
     }
 
     /**

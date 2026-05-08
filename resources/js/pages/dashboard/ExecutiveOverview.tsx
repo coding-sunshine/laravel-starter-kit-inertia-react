@@ -1,3 +1,4 @@
+import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
 import { PenaltyPredictionsWidget } from '@/components/dashboard/penalty-predictions-widget';
 import { SlidingNumber } from '@/components/SlidingNumber';
@@ -169,6 +170,10 @@ export function ExecutiveOverview({
                     </div>
                 )}
 
+            {isExecutive && !executiveYesterday && (
+                <DispatchSummary stocks={sidingStocks} />
+            )}
+
             {/* ── Executive charts / tables ── */}
             {executiveYesterday ? (
                 <ExecutiveYesterdaySection
@@ -178,6 +183,7 @@ export function ExecutiveOverview({
                     showViewToggle={showExecutiveYesterdayViewToggle}
                     penaltyBySiding={penaltyBySiding}
                     powerPlantDispatch={powerPlantDispatch}
+                    sidingStocks={sidingStocks}
                     canWidget={canWidget}
                 />
             ) : (

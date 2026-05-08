@@ -149,10 +149,17 @@ export interface DashboardKpis {
     trucksReceivedToday: number;
 }
 
-export interface PenaltyTrendPoint {
-    date: string;
+export interface PenaltyTrendSeriesItem {
+    key: string;
     label: string;
-    total: number;
+    siding_id: number;
+}
+
+/** Multi-series penalty trend: one line per siding. */
+export interface PenaltyTrendChartPayload {
+    series: PenaltyTrendSeriesItem[];
+    /** Each row: `date`, `label`, plus one numeric field per series `key`. */
+    points: Array<Record<string, string | number>>;
 }
 
 export interface PenaltyByTypePoint {
@@ -316,7 +323,7 @@ export interface ExecutiveYesterdayData {
         }>;
     };
     penaltyBySidingByPeriod?: Record<
-        'yesterday' | 'today' | 'month' | 'fy',
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
         PenaltyBySidingPoint[]
     >;
     powerPlantDispatchByPeriod?: Record<
