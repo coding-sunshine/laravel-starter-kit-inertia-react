@@ -126,13 +126,13 @@ const COAL_LOGESTIC_CORE_REPORT_LABELS: string[] = [
 ];
 
 const COAL_LOGESTIC_ADVANCE_KEYS: string[] = [
-    'weighment_summary_report',
-    'weighment_vs_rr_report',
-    'auto_dpr_report',
-    'rr_charges_report',
-    'rr_wagon_details_report',
     'weighment_analysis_report',
     'loader_vs_weighment_report',
+    'weighment_summary_report',
+    'rr_charges_report',
+    'rr_wagon_details_report',
+    'weighment_vs_rr_report',
+    'auto_dpr_report',
 ];
 
 const COAL_LOGESTIC_ADVANCE_REPORT_LABELS: string[] = [];

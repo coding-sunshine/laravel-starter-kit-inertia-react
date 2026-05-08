@@ -65,9 +65,9 @@ final readonly class RunReportAction
         'weighment_analysis_report',
         'loader_vs_weighment_report',
         'weighment_summary_report',
-        'weighment_vs_rr_report',
         'rr_charges_report',
         'rr_wagon_details_report',
+        'weighment_vs_rr_report',
         'auto_dpr_report',
     ];
 
