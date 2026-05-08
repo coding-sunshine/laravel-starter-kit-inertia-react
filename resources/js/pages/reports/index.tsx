@@ -101,6 +101,8 @@ const RAKE_NUMBER_FILTER_REPORTS = new Set([
     'penalty_report',
     'overloading_report',
     'underloading_report',
+    'loader_performance_report',
+    'operator_performance_report',
     'weighment_analysis_report',
     'loader_vs_weighment_report',
     'weighment_summary_report',
@@ -116,14 +118,18 @@ const COAL_LOGESTIC_CORE_KEYS: string[] = [
     'overloading_report',
     'underloading_report',
     'loader_performance_report',
+    'operator_performance_report',
     'siding_dispatch_report',
     'power_plant_dispatch_report',
 ];
 
 /** Placeholder labels until backend report keys exist (sidebar only). */
-const COAL_LOGESTIC_CORE_REPORT_LABELS: string[] = [
-    'Operator Performance',
-];
+const COAL_LOGESTIC_CORE_REPORT_LABELS: string[] = [];
+
+const REPORTS_WITH_LOADER_PERFORMANCE_FILTERS = new Set([
+    'loader_performance_report',
+    'operator_performance_report',
+]);
 
 const COAL_LOGESTIC_ADVANCE_KEYS: string[] = [
     'weighment_analysis_report',
@@ -212,6 +218,10 @@ function reportTableRowKey(
     if (typeof rakeSummaryId === 'number' || typeof rakeSummaryId === 'string') {
         return `${page}:rake:${rakeSummaryId}`;
     }
+    const operatorPerfKey = row['_operator_perf_key'];
+    if (typeof operatorPerfKey === 'string' && operatorPerfKey !== '') {
+        return `${page}:op_perf:${operatorPerfKey}`;
+    }
     const digest = columns.map((c) => `${c}:${String(row[c] ?? '')}`).join('|');
 
     return `${page}:${index}:${digest}`;
@@ -268,7 +278,9 @@ function formatReportsTableCellDisplay(raw: unknown, columnKey: string): string 
     const col = columnKey;
     const isCurrency =
         col.includes('amount') ||
-        col.includes('total') ||
+        (col.includes('total') && col !== 'Total Wagons') ||
+        col.includes('Freight') ||
+        col.includes('GST') ||
         col.includes('penalty') ||
         col.includes('weight') ||
         col.includes('_mt') ||
@@ -332,7 +344,7 @@ export default function ReportsIndex({
         activeKey === 'auto_dpr_report';
     const showsPenaltyStageFilter = activeKey === 'penalty_report';
     const showsUnderloadingThresholdFilter = activeKey === 'underloading_report';
-    const showsLoaderPerformanceFilters = activeKey === 'loader_performance_report';
+    const showsLoaderPerformanceFilters = REPORTS_WITH_LOADER_PERFORMANCE_FILTERS.has(activeKey);
 
     const loadersForPerformanceFilter = useMemo(() => {
         if (!sidingId) {
@@ -578,7 +590,7 @@ export default function ReportsIndex({
                                                     if (!REPORTS_WITH_LOADER_FILTER.has(k)) {
                                                         setLoader('');
                                                     }
-                                                    if (k !== 'loader_performance_report') {
+                                                    if (!REPORTS_WITH_LOADER_PERFORMANCE_FILTERS.has(k)) {
                                                         setReportPerformanceLoaderId('');
                                                         setReportPerformanceOperatorId('');
                                                     }
@@ -659,7 +671,7 @@ export default function ReportsIndex({
                                                     if (!REPORTS_WITH_LOADER_FILTER.has(k)) {
                                                         setLoader('');
                                                     }
-                                                    if (k !== 'loader_performance_report') {
+                                                    if (!REPORTS_WITH_LOADER_PERFORMANCE_FILTERS.has(k)) {
                                                         setReportPerformanceLoaderId('');
                                                         setReportPerformanceOperatorId('');
                                                     }
@@ -725,7 +737,7 @@ export default function ReportsIndex({
                                                     if (!REPORTS_WITH_LOADER_FILTER.has(k)) {
                                                         setLoader('');
                                                     }
-                                                    if (k !== 'loader_performance_report') {
+                                                    if (!REPORTS_WITH_LOADER_PERFORMANCE_FILTERS.has(k)) {
                                                         setReportPerformanceLoaderId('');
                                                         setReportPerformanceOperatorId('');
                                                     }

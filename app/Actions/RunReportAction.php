@@ -52,6 +52,7 @@ final readonly class RunReportAction
         'overloading_report',
         'underloading_report',
         'loader_performance_report',
+        'operator_performance_report',
         'siding_dispatch_report',
         'power_plant_dispatch_report',
     ];
@@ -93,6 +94,7 @@ final readonly class RunReportAction
         'overloading_report' => ['name' => 'Overloading Report', 'description' => 'Wagon weighment overload lines with loader context (Coal Logestic Core)'],
         'underloading_report' => ['name' => 'Underloading Report', 'description' => 'Wagon weighment underload vs CC threshold % (Coal Logestic Core)'],
         'loader_performance_report' => ['name' => 'Loader Performance', 'description' => 'Per-loader loading accuracy from wagon_loading (Coal Logestic Core)'],
+        'operator_performance_report' => ['name' => 'Operator Performance', 'description' => 'Per-operator and loader aggregates from wagon_loading: overload / underload cases and accuracy % (Coal Logestic Core)'],
         'siding_dispatch_report' => ['name' => 'Siding Dispatch', 'description' => 'Daily siding KPIs from rakes, RR penalty snapshots, and indent targets (Coal Logestic Core)'],
         'power_plant_dispatch_report' => ['name' => 'Power Plant Dispatch', 'description' => 'Daily dispatch by destination plant and source siding from rakes and latest weighment net (Coal Logestic Core)'],
         'weighment_analysis_report' => ['name' => 'Weighment Analysis', 'description' => 'Per-wagon weighment lines from the latest rake weighment (Coal Logestic Advance)'],
@@ -151,6 +153,7 @@ final readonly class RunReportAction
             'overloading_report' => $this->overloadingReport($sidingIds, $params),
             'underloading_report' => $this->underloadingReport($sidingIds, $params),
             'loader_performance_report' => $this->loaderPerformanceReport($sidingIds, $params),
+            'operator_performance_report' => $this->operatorPerformanceReport($sidingIds, $params),
             'siding_dispatch_report' => $this->sidingDispatchReport($sidingIds, $params),
             'power_plant_dispatch_report' => $this->powerPlantDispatchReport($sidingIds, $params),
             'weighment_analysis_report' => $this->weighmentAnalysisReport($sidingIds, $params),
@@ -201,6 +204,7 @@ final readonly class RunReportAction
                 'overloading_report' => $this->overloadingReportCount($sidingIds, $params),
                 'underloading_report' => $this->underloadingReportCount($sidingIds, $params),
                 'loader_performance_report' => $this->loaderPerformanceReportCount($sidingIds, $params),
+                'operator_performance_report' => $this->operatorPerformanceReportCount($sidingIds, $params),
                 'siding_dispatch_report' => $this->sidingDispatchReportCount($sidingIds, $params),
                 'power_plant_dispatch_report' => $this->powerPlantDispatchReportCount($sidingIds, $params),
                 'weighment_analysis_report' => $this->weighmentAnalysisReportCount($sidingIds, $params),
@@ -251,6 +255,17 @@ final readonly class RunReportAction
         }
 
         return sprintf('%.1f%%', $percentRoundedToOneDecimal);
+    }
+
+    /** Normalized wagon_loading operator bucket for GROUP BY (empty name → ''). */
+    private function operatorPerformanceSqlOperatorGroupKeyExpr(string $wlAlias = 'wl'): string
+    {
+        $col = "{$wlAlias}.loader_operator_name";
+
+        return match (DB::connection()->getDriverName()) {
+            'pgsql' => 'CASE WHEN '.$col.' IS NULL OR trim(both from '.$col.") = '' THEN '' ELSE trim(both from {$col}) END",
+            default => 'CASE WHEN '.$col.' IS NULL OR TRIM('.$col.") = '' THEN '' ELSE TRIM({$col}) END",
+        };
     }
 
     private function formatOptionalAverageLoadingMinutes(?float $minutes): string
@@ -3148,6 +3163,154 @@ final readonly class RunReportAction
         $grouped = $this->buildLoaderPerformanceGroupedSubquery($sidingIds, $params, $threshold);
 
         return (int) DB::query()->fromSub($grouped, 'c')->count();
+    }
+
+    /**
+     * Coal Logestic Core: wagon_loading aggregated per operator × loader × siding (overload / underload rules match Loader Performance).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, underload_threshold_percent?: float, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function operatorPerformanceReport(array $sidingIds, array $params): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $threshold = $this->resolveUnderloadingThresholdPercent($params);
+        $grouped = $this->buildOperatorPerformanceGroupedSubquery($sidingIds, $params, $threshold);
+
+        $query = DB::query()->fromSub($grouped, 'operator_perf')
+            ->orderBy('siding_name')
+            ->orderBy('operator_bucket')
+            ->orderBy('loader_name_sort');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $r): array {
+            $total = (int) $r->total_wagons_loaded;
+            $overload = (int) $r->overload_count;
+            $underload = (int) $r->underload_count;
+            $accuracyFraction = $total > 0
+                ? 100.0 * ($total - $overload - $underload) / $total
+                : null;
+            $accuracyDisplay = $accuracyFraction === null
+                ? '—'
+                : $this->formatLoaderPerformanceAccuracyPercent(round($accuracyFraction, 1));
+
+            $loaderIdOut = '';
+            if (isset($r->loader_code) && $r->loader_code !== null && $r->loader_code !== '') {
+                $loaderIdOut = (string) $r->loader_code;
+            } elseif (isset($r->loader_name) && $r->loader_name !== null && $r->loader_name !== '') {
+                $loaderIdOut = (string) $r->loader_name;
+            } elseif (isset($r->loader_table_id) && $r->loader_table_id !== null) {
+                $loaderIdOut = (string) $r->loader_table_id;
+            }
+
+            $bucket = isset($r->operator_bucket) && $r->operator_bucket !== null ? (string) $r->operator_bucket : '';
+
+            return [
+                'Operator Name' => $bucket !== '' ? $bucket : '—',
+                'Loader ID' => $loaderIdOut,
+                'Siding' => isset($r->siding_name) ? (string) $r->siding_name : '',
+                'Total Wagons' => $total,
+                'Overload Cases' => $overload,
+                'Underload Cases' => $underload,
+                'Accuracy %' => $accuracyDisplay,
+                'Remarks' => isset($r->remarks_agg) && $r->remarks_agg !== null && $r->remarks_agg !== '' ? (string) $r->remarks_agg : '',
+                '_operator_perf_key' => $bucket.'|'.$loaderIdOut.'|'.(isset($r->siding_name) ? (string) $r->siding_name : ''),
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, underload_threshold_percent?: float}  $params
+     */
+    private function operatorPerformanceReportCount(array $sidingIds, array $params): int
+    {
+        if ($sidingIds === []) {
+            return 0;
+        }
+
+        $threshold = $this->resolveUnderloadingThresholdPercent($params);
+        $grouped = $this->buildOperatorPerformanceGroupedSubquery($sidingIds, $params, $threshold);
+
+        return (int) DB::query()->fromSub($grouped, 'c')->count();
+    }
+
+    /**
+     * Grouped operator + loader + siding rows from `wagon_loading`.
+     *
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string}  $params
+     */
+    private function buildOperatorPerformanceGroupedSubquery(array $sidingIds, array $params, float $underloadThresholdPercent): QueryBuilder
+    {
+        $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
+        $eligible = '(wl.loaded_quantity_mt IS NOT NULL AND '.$ccEff.' IS NOT NULL AND '.$ccEff.' > 0)';
+        $overloadClause = "{$eligible} AND wl.loaded_quantity_mt > {$ccEff}";
+        $underloadClause = "{$eligible} AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= ?";
+
+        $opKey = $this->operatorPerformanceSqlOperatorGroupKeyExpr('wl');
+        $remarksAgg = $this->sidingCoalReceiptRemarksAggregateSql('wl.remarks');
+
+        $q = DB::table('wagon_loading as wl')
+            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
+            ->join('loaders as l', 'l.id', '=', 'wl.loader_id')
+            ->join('sidings as ls', 'ls.id', '=', 'l.siding_id')
+            ->whereNull('l.deleted_at')
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->whereNotNull('wl.loader_id');
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $needle = mb_trim((string) $params['rake_number']);
+            if ($needle !== '') {
+                $q->where('r.rake_number', 'like', '%'.$needle.'%');
+            }
+        }
+
+        if (! empty($params['loader_id'])) {
+            $q->where('wl.loader_id', '=', (int) $params['loader_id']);
+        }
+
+        if (! empty($params['loader_operator_name'])) {
+            $op = mb_trim((string) $params['loader_operator_name']);
+            if ($op !== '') {
+                $q->where('wl.loader_operator_name', '=', $op);
+            }
+        }
+
+        return $q
+            ->groupByRaw($opKey.', l.id, ls.name, l.code, l.loader_name')
+            ->selectRaw(
+                $opKey.' as operator_bucket,'.
+                ' l.id as loader_table_id,'.
+                ' l.code as loader_code,'.
+                ' l.loader_name,'.
+                ' ls.name as siding_name,'.
+                ' l.loader_name as loader_name_sort,'.
+                ' SUM(CASE WHEN '.$eligible.' THEN 1 ELSE 0 END) as total_wagons_loaded,'.
+                ' SUM(CASE WHEN '.$overloadClause.' THEN 1 ELSE 0 END) as overload_count,'.
+                ' SUM(CASE WHEN '.$underloadClause.' THEN 1 ELSE 0 END) as underload_count,'.
+                ' '.$remarksAgg.' as remarks_agg',
+                [$underloadThresholdPercent],
+            );
     }
 
     /**
