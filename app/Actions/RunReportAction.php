@@ -109,6 +109,12 @@ final readonly class RunReportAction
     /** Default matches rake-performance modal (% of CC, shortfall from weighment under_load_mt). */
     private const float DEFAULT_UNDERLOAD_THRESHOLD_PERCENT = 1.0;
 
+    /**
+     * Loader / operator performance: loads at or above this fraction of effective CC count as accurate (not underload).
+     * Underload = eligible, not overloaded, and loaded_quantity_mt < CC × this value.
+     */
+    private const float LOADER_OPERATOR_PERFORMANCE_MIN_ACCEPTABLE_LOAD_FRACTION_OF_CC = 0.97;
+
     private const string PENALTY_STAGE_PRE = 'Pre-RR';
 
     private const string PENALTY_STAGE_POST = 'Post-RR';
@@ -3087,11 +3093,11 @@ final readonly class RunReportAction
     /**
      * Coal Logestic Core: one row per loader (wagon_loading vs CC on wagons).
      *
-     * Overload / underload match {@see \App\Services\Dashboard\LoaderOverloadMetricsService} rules; optional `underload_threshold_percent`
-     * defaults via {@see self::resolveUnderloadingThresholdPercent}.
+     * Overload: loaded &gt; effective CC. Underload: eligible, not overloaded, and fill &lt; 97% of effective CC
+     * (see {@see self::LOADER_OPERATOR_PERFORMANCE_MIN_ACCEPTABLE_LOAD_FRACTION_OF_CC}). `underload_threshold_percent` does not apply.
      *
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, underload_threshold_percent?: float, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
      * @return array<int, array<string, mixed>>
      */
     private function loaderPerformanceReport(array $sidingIds, array $params): array
@@ -3100,8 +3106,7 @@ final readonly class RunReportAction
             return [];
         }
 
-        $threshold = $this->resolveUnderloadingThresholdPercent($params);
-        $grouped = $this->buildLoaderPerformanceGroupedSubquery($sidingIds, $params, $threshold);
+        $grouped = $this->buildLoaderPerformanceGroupedSubquery($sidingIds, $params);
 
         $query = DB::query()->fromSub($grouped, 'loader_perf')
             ->orderBy('siding_name')
@@ -3151,7 +3156,7 @@ final readonly class RunReportAction
     }
 
     /**
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, underload_threshold_percent?: float}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string}  $params
      */
     private function loaderPerformanceReportCount(array $sidingIds, array $params): int
     {
@@ -3159,17 +3164,16 @@ final readonly class RunReportAction
             return 0;
         }
 
-        $threshold = $this->resolveUnderloadingThresholdPercent($params);
-        $grouped = $this->buildLoaderPerformanceGroupedSubquery($sidingIds, $params, $threshold);
+        $grouped = $this->buildLoaderPerformanceGroupedSubquery($sidingIds, $params);
 
         return (int) DB::query()->fromSub($grouped, 'c')->count();
     }
 
     /**
-     * Coal Logestic Core: wagon_loading aggregated per operator × loader × siding (overload / underload rules match Loader Performance).
+     * Coal Logestic Core: wagon_loading aggregated per operator × loader × siding (same overload / underload rules as Loader Performance).
      *
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, underload_threshold_percent?: float, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
      * @return array<int, array<string, mixed>>
      */
     private function operatorPerformanceReport(array $sidingIds, array $params): array
@@ -3178,8 +3182,7 @@ final readonly class RunReportAction
             return [];
         }
 
-        $threshold = $this->resolveUnderloadingThresholdPercent($params);
-        $grouped = $this->buildOperatorPerformanceGroupedSubquery($sidingIds, $params, $threshold);
+        $grouped = $this->buildOperatorPerformanceGroupedSubquery($sidingIds, $params);
 
         $query = DB::query()->fromSub($grouped, 'operator_perf')
             ->orderBy('siding_name')
@@ -3228,7 +3231,7 @@ final readonly class RunReportAction
     }
 
     /**
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string, underload_threshold_percent?: float}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string}  $params
      */
     private function operatorPerformanceReportCount(array $sidingIds, array $params): int
     {
@@ -3236,8 +3239,7 @@ final readonly class RunReportAction
             return 0;
         }
 
-        $threshold = $this->resolveUnderloadingThresholdPercent($params);
-        $grouped = $this->buildOperatorPerformanceGroupedSubquery($sidingIds, $params, $threshold);
+        $grouped = $this->buildOperatorPerformanceGroupedSubquery($sidingIds, $params);
 
         return (int) DB::query()->fromSub($grouped, 'c')->count();
     }
@@ -3247,12 +3249,13 @@ final readonly class RunReportAction
      *
      * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string}  $params
      */
-    private function buildOperatorPerformanceGroupedSubquery(array $sidingIds, array $params, float $underloadThresholdPercent): QueryBuilder
+    private function buildOperatorPerformanceGroupedSubquery(array $sidingIds, array $params): QueryBuilder
     {
         $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
         $eligible = '(wl.loaded_quantity_mt IS NOT NULL AND '.$ccEff.' IS NOT NULL AND '.$ccEff.' > 0)';
         $overloadClause = "{$eligible} AND wl.loaded_quantity_mt > {$ccEff}";
-        $underloadClause = "{$eligible} AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= ?";
+        $minFill = $this->loaderOperatorPerformanceMinAcceptableLoadFractionSql();
+        $underloadClause = "{$eligible} AND wl.loaded_quantity_mt <= {$ccEff} AND wl.loaded_quantity_mt < ({$ccEff} * {$minFill})";
 
         $opKey = $this->operatorPerformanceSqlOperatorGroupKeyExpr('wl');
         $remarksAgg = $this->sidingCoalReceiptRemarksAggregateSql('wl.remarks');
@@ -3309,7 +3312,6 @@ final readonly class RunReportAction
                 ' SUM(CASE WHEN '.$overloadClause.' THEN 1 ELSE 0 END) as overload_count,'.
                 ' SUM(CASE WHEN '.$underloadClause.' THEN 1 ELSE 0 END) as underload_count,'.
                 ' '.$remarksAgg.' as remarks_agg',
-                [$underloadThresholdPercent],
             );
     }
 
@@ -3318,12 +3320,13 @@ final readonly class RunReportAction
      *
      * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader_id?: int, loader_operator_name?: string}  $params
      */
-    private function buildLoaderPerformanceGroupedSubquery(array $sidingIds, array $params, float $underloadThresholdPercent): QueryBuilder
+    private function buildLoaderPerformanceGroupedSubquery(array $sidingIds, array $params): QueryBuilder
     {
         $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
         $eligible = '(wl.loaded_quantity_mt IS NOT NULL AND '.$ccEff.' IS NOT NULL AND '.$ccEff.' > 0)';
         $overloadClause = "{$eligible} AND wl.loaded_quantity_mt > {$ccEff}";
-        $underloadClause = "{$eligible} AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= ?";
+        $minFill = $this->loaderOperatorPerformanceMinAcceptableLoadFractionSql();
+        $underloadClause = "{$eligible} AND wl.loaded_quantity_mt <= {$ccEff} AND wl.loaded_quantity_mt < ({$ccEff} * {$minFill})";
 
         $q = DB::table('wagon_loading as wl')
             ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
@@ -3369,8 +3372,12 @@ final readonly class RunReportAction
                 ' SUM(CASE WHEN '.$underloadClause.' THEN 1 ELSE 0 END) as underload_count,'.
                 ' AVG(CASE WHEN '.$eligible.' THEN wl.loaded_quantity_mt END) as avg_load,'.
                 ' AVG(CASE WHEN '.$eligible.' THEN ABS(wl.loaded_quantity_mt - ('.$ccEff.')) END) as avg_deviation_mt',
-                [$underloadThresholdPercent],
             );
+    }
+
+    private function loaderOperatorPerformanceMinAcceptableLoadFractionSql(): string
+    {
+        return number_format(self::LOADER_OPERATOR_PERFORMANCE_MIN_ACCEPTABLE_LOAD_FRACTION_OF_CC, 4, '.', '');
     }
 
     /**
