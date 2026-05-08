@@ -4244,7 +4244,7 @@ export function RakePerformanceSection({
             filters,
             allSidingIds,
             page,
-            perPage: 15,
+            perPage: 100,
             sidingId:
                 selectedSidingTab === 'all' ? undefined : selectedSidingTab,
         });
