@@ -6228,7 +6228,6 @@ export default function Dashboard() {
     const penaltyTrendDaily = props.penaltyTrendDaily ?? [];
     const penaltyByType = props.penaltyByType ?? [];
     const penaltyBySiding = props.penaltyBySiding ?? [];
-    const alerts = props.alerts ?? [];
     const liveRakeStatus = props.liveRakeStatus ?? [];
     const dailyRakeDetails = props.dailyRakeDetails;
     const coalTransportReport = props.coalTransportReport;
@@ -6241,14 +6240,8 @@ export default function Dashboard() {
         bySiding: [],
     };
     const baseSidingStocks = props.sidingStocks ?? {};
-    const penaltySummary = props.penaltySummary;
-    const activeRakePipeline = props.activeRakePipeline;
-    const riskScores = props.riskScores ?? {};
-    const alertsData = props.alerts ?? {};
     const operatorRake = props.operatorRake ?? null;
     const penaltyPredictions = props.penaltyPredictions ?? [];
-    const overloadPatterns = props.overloadPatterns ?? [];
-    const sidingStocksMap = props.sidingStocks ?? {};
     const allowedWidgets = props.allowedDashboardWidgets ?? [];
     const isExecutive = allowedWidgets.some((w) =>
         [
@@ -6695,20 +6688,8 @@ export default function Dashboard() {
                                             <ExecutiveOverview
                                                 isExecutive={isExecutive}
                                                 operatorRake={operatorRake}
-                                                penaltySummary={penaltySummary}
-                                                activeRakePipeline={
-                                                    activeRakePipeline
-                                                }
-                                                sidingStocksMap={
-                                                    sidingStocksMap
-                                                }
-                                                riskScores={riskScores}
-                                                alertsData={alertsData}
                                                 penaltyPredictions={
                                                     penaltyPredictions
-                                                }
-                                                overloadPatterns={
-                                                    overloadPatterns
                                                 }
                                                 filteredSidings={
                                                     filteredSidings

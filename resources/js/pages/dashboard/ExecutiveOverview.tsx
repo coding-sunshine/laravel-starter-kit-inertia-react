@@ -1,12 +1,5 @@
-import { ActiveRakePipeline } from '@/components/dashboard/active-rake-pipeline';
-import { AlertFeed } from '@/components/dashboard/alert-feed';
-import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
-import { OverloadPatternsWidget } from '@/components/dashboard/overload-patterns-widget';
-import { PenaltyExposureStrip } from '@/components/dashboard/penalty-exposure-strip';
 import { PenaltyPredictionsWidget } from '@/components/dashboard/penalty-predictions-widget';
-import { SidingCoalStock } from '@/components/dashboard/siding-coal-stock';
-import { SidingRiskScoreWidget } from '@/components/dashboard/siding-risk-score';
 import { SlidingNumber } from '@/components/SlidingNumber';
 import { ExecutiveYesterdaySection } from '../dashboard';
 import type {
@@ -25,62 +18,6 @@ const SIDING_ACCENT: Record<string, string> = {
     Pakur: '#F59E0B',
 };
 
-interface PenaltySummary {
-    today_rs: number;
-    trend_7d: { date: string; rs: number }[];
-    preventable_pct: number;
-}
-
-type RakeLifecycleStage =
-    | 'awaiting_placement'
-    | 'loading'
-    | 'awaiting_dispatch'
-    | 'dispatched'
-    | 'in_transit'
-    | 'delivered';
-
-interface RakePipelineCard {
-    rake_id: number;
-    rake_number: string;
-    siding_name: string;
-    siding_code: string;
-    wagon_count: number;
-    overloaded_count: number;
-    penalty_risk_rs: number;
-    state: string;
-    stage: RakeLifecycleStage;
-    stage_label: string;
-    loading_date: string | null;
-}
-
-interface ActiveRakePipelineData {
-    awaiting_placement: RakePipelineCard[];
-    loading: RakePipelineCard[];
-    awaiting_dispatch: RakePipelineCard[];
-    dispatched: RakePipelineCard[];
-}
-
-interface SidingRiskScoreData {
-    siding_id: number;
-    siding_name: string;
-    siding_code: string;
-    score: number;
-    trend: string;
-    risk_factors: string[];
-    calculated_at: string | null;
-}
-
-interface AlertRecord {
-    id: number;
-    type: string;
-    title: string;
-    body: string;
-    severity: string;
-    siding_id: number | null;
-    rake_id: number | null;
-    created_at: string;
-}
-
 interface OperatorRake {
     rake_id: number;
     rake_number: string;
@@ -95,26 +32,12 @@ interface OperatorRake {
 interface Props {
     isExecutive: boolean;
     operatorRake: OperatorRake | null;
-    penaltySummary: PenaltySummary | undefined;
-    activeRakePipeline: ActiveRakePipelineData | undefined;
-    sidingStocksMap: Record<number, SidingStock>;
-    riskScores: Record<number, SidingRiskScoreData>;
-    alertsData: Record<string, AlertRecord[]>;
     penaltyPredictions: Array<{
         siding_name: string;
         risk_level: 'high' | 'medium' | 'low';
         predicted_amount_min: number;
         predicted_amount_max: number;
         top_recommendation: string | null;
-    }>;
-    overloadPatterns: Array<{
-        siding_name: string;
-        patterns: Array<{
-            wagon_type: string;
-            overload_rate_percent: number;
-            overloaded_count: number;
-            total_count: number;
-        }>;
     }>;
     filteredSidings: SidingOption[];
     sidingStocks: Record<number, SidingStock>;
@@ -130,13 +53,7 @@ interface Props {
 export function ExecutiveOverview({
     isExecutive,
     operatorRake,
-    penaltySummary,
-    activeRakePipeline,
-    sidingStocksMap,
-    riskScores,
-    alertsData,
     penaltyPredictions,
-    overloadPatterns,
     filteredSidings,
     sidingStocks,
     canWidget,
@@ -154,35 +71,9 @@ export function ExecutiveOverview({
                 {!isExecutive && <OperatorRakeWidget rake={operatorRake} />}
 
                 {isExecutive && (
-                    <>
-                        {penaltySummary && (
-                            <PenaltyExposureStrip data={penaltySummary} />
-                        )}
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                            {activeRakePipeline && (
-                                <div className="lg:col-span-2">
-                                    <ActiveRakePipeline
-                                        data={activeRakePipeline}
-                                    />
-                                </div>
-                            )}
-                            <DispatchSummary stocks={sidingStocksMap} />
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                            <SidingCoalStock stocks={sidingStocksMap} />
-                            <SidingRiskScoreWidget scores={riskScores} />
-                            <AlertFeed alerts={alertsData} />
-                        </div>
-
-                        <PenaltyPredictionsWidget
-                            predictions={penaltyPredictions}
-                        />
-                        <OverloadPatternsWidget
-                            overloadPatterns={overloadPatterns}
-                        />
-                    </>
+                    <PenaltyPredictionsWidget
+                        predictions={penaltyPredictions}
+                    />
                 )}
             </div>
 
