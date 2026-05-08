@@ -104,7 +104,10 @@ const RAKE_NUMBER_FILTER_REPORTS = new Set([
     'weighment_analysis_report',
     'loader_vs_weighment_report',
     'weighment_summary_report',
+    'weighment_vs_rr_report',
     'rr_charges_report',
+    'rr_wagon_details_report',
+    'auto_dpr_report',
 ]);
 
 const COAL_LOGESTIC_CORE_KEYS: string[] = [
@@ -124,16 +127,15 @@ const COAL_LOGESTIC_CORE_REPORT_LABELS: string[] = [
 
 const COAL_LOGESTIC_ADVANCE_KEYS: string[] = [
     'weighment_summary_report',
+    'weighment_vs_rr_report',
+    'auto_dpr_report',
     'rr_charges_report',
+    'rr_wagon_details_report',
     'weighment_analysis_report',
     'loader_vs_weighment_report',
 ];
 
-const COAL_LOGESTIC_ADVANCE_REPORT_LABELS: string[] = [
-    'RR Wagon Details',
-    'Weighment vs RR',
-    'Auto DPR Report',
-];
+const COAL_LOGESTIC_ADVANCE_REPORT_LABELS: string[] = [];
 
 const REPORTS_GRID_PER_PAGE = 60;
 
@@ -190,6 +192,10 @@ function reportTableRowKey(
     page: number,
     index: number,
 ): string {
+    const snapshotWagonRowId = row['_rws_id'];
+    if (typeof snapshotWagonRowId === 'number' || typeof snapshotWagonRowId === 'string') {
+        return `${page}:rws:${snapshotWagonRowId}`;
+    }
     const docId = row['_rr_document_id'];
     if (typeof docId === 'number' || typeof docId === 'string') {
         return `${page}:doc:${docId}`;
@@ -321,7 +327,9 @@ export default function ReportsIndex({
     const showsRakeNumberFilter = RAKE_NUMBER_FILTER_REPORTS.has(activeKey);
     const showsLoaderFilter = REPORTS_WITH_LOADER_FILTER.has(activeKey);
     const showsPowerPlantFilter =
-        activeKey === 'rail_dispatch_dpr' || activeKey === 'power_plant_dispatch_report';
+        activeKey === 'rail_dispatch_dpr' ||
+        activeKey === 'power_plant_dispatch_report' ||
+        activeKey === 'auto_dpr_report';
     const showsPenaltyStageFilter = activeKey === 'penalty_report';
     const showsUnderloadingThresholdFilter = activeKey === 'underloading_report';
     const showsLoaderPerformanceFilters = activeKey === 'loader_performance_report';
@@ -559,7 +567,8 @@ export default function ReportsIndex({
                                                     }
                                                     if (
                                                         k !== 'rail_dispatch_dpr' &&
-                                                        k !== 'power_plant_dispatch_report'
+                                                        k !== 'power_plant_dispatch_report' &&
+                                                        k !== 'auto_dpr_report'
                                                     ) {
                                                         setPowerPlantId('');
                                                     }
@@ -639,7 +648,8 @@ export default function ReportsIndex({
                                                     }
                                                     if (
                                                         k !== 'rail_dispatch_dpr' &&
-                                                        k !== 'power_plant_dispatch_report'
+                                                        k !== 'power_plant_dispatch_report' &&
+                                                        k !== 'auto_dpr_report'
                                                     ) {
                                                         setPowerPlantId('');
                                                     }

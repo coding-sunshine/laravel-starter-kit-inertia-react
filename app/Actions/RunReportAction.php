@@ -65,7 +65,10 @@ final readonly class RunReportAction
         'weighment_analysis_report',
         'loader_vs_weighment_report',
         'weighment_summary_report',
+        'weighment_vs_rr_report',
         'rr_charges_report',
+        'rr_wagon_details_report',
+        'auto_dpr_report',
     ];
 
     public const array REPORT_KEYS = [
@@ -95,7 +98,10 @@ final readonly class RunReportAction
         'weighment_analysis_report' => ['name' => 'Weighment Analysis', 'description' => 'Per-wagon weighment lines from the latest rake weighment (Coal Logestic Advance)'],
         'loader_vs_weighment_report' => ['name' => 'Loader vs Weighment', 'description' => 'Loader quantities vs latest in-motion net per wagon (Coal Logestic Advance)'],
         'weighment_summary_report' => ['name' => 'Weighment Summary', 'description' => 'Per-rake totals from the latest rake weighment (Coal Logestic Advance)'],
+        'weighment_vs_rr_report' => ['name' => 'Weighment vs RR', 'description' => 'Per-rake in-motion net vs summed RR chargeable weight, overloads, and penalty impact (Coal Logestic Advance)'],
         'rr_charges_report' => ['name' => 'RR Charges', 'description' => 'Per-RR freight and weights from wagon snapshots and rake charges (Coal Logestic Advance)'],
+        'rr_wagon_details_report' => ['name' => 'RR Wagon Details', 'description' => 'Per-wagon RR PDF weights, chargeable allocation, and rates (Coal Logestic Advance)'],
+        'auto_dpr_report' => ['name' => 'Auto DPR Report', 'description' => 'Per-rake dispatch summary from RR wagon snapshots, chargeable weights, and actual rake charges (Coal Logestic Advance)'],
     ];
 
     /** Default matches rake-performance modal (% of CC, shortfall from weighment under_load_mt). */
@@ -150,7 +156,10 @@ final readonly class RunReportAction
             'weighment_analysis_report' => $this->weighmentAnalysisReport($sidingIds, $params),
             'loader_vs_weighment_report' => $this->loaderVsWeighmentAdvanceReport($sidingIds, $params),
             'weighment_summary_report' => $this->weighmentSummaryReport($sidingIds, $params),
+            'weighment_vs_rr_report' => $this->weighmentVsRrReport($sidingIds, $params),
             'rr_charges_report' => $this->rrChargesReport($sidingIds, $params),
+            'rr_wagon_details_report' => $this->rrWagonDetailsReport($sidingIds, $params),
+            'auto_dpr_report' => $this->autoDprReport($sidingIds, $params),
             'penalty_register_rr_snapshot' => $this->penaltyRegisterRrSnapshot($sidingIds, $params),
             'penalty_register_applied' => $this->penaltyRegisterApplied($sidingIds, $params),
             'daily_operations', 'demurrage_analysis', 'financial_impact', 'rake_lifecycle', 'indent_fulfillment' => $this->delegateToGenerateReports($key, $sidingIds, $params),
@@ -197,7 +206,10 @@ final readonly class RunReportAction
                 'weighment_analysis_report' => $this->weighmentAnalysisReportCount($sidingIds, $params),
                 'loader_vs_weighment_report' => $this->loaderVsWeighmentAdvanceReportCount($sidingIds, $params),
                 'weighment_summary_report' => $this->weighmentSummaryReportCount($sidingIds, $params),
+                'weighment_vs_rr_report' => $this->weighmentVsRrReportCount($sidingIds, $params),
                 'rr_charges_report' => $this->rrChargesReportCount($sidingIds, $params),
+                'rr_wagon_details_report' => $this->rrWagonDetailsReportCount($sidingIds, $params),
+                'auto_dpr_report' => $this->autoDprReportCount($sidingIds, $params),
                 default => 0,
             };
 
@@ -220,6 +232,16 @@ final readonly class RunReportAction
                 'last_page' => $lastPage,
             ],
         ];
+    }
+
+    private static function normalizeRrWagonSnapshotWagonKey(string $wagonNumber): ?string
+    {
+        $t = mb_trim($wagonNumber);
+        if ($t === '') {
+            return null;
+        }
+
+        return mb_strtoupper($t);
     }
 
     private function formatLoaderPerformanceAccuracyPercent(float $percentRoundedToOneDecimal): string
@@ -358,6 +380,30 @@ final readonly class RunReportAction
             'pgsql' => 'COALESCE('.$loaded.'::double precision, ('.$grossMinusTare.'))',
             'sqlite' => 'COALESCE(CAST('.$loaded.' AS REAL), ('.$grossMinusTare.'))',
             default => 'COALESCE('.$loaded.', ('.$grossMinusTare.'))',
+        };
+    }
+
+    /**
+     * Shortfall vs PCC / permissible on one `rr_wagon_snapshots` row (0 when not applicable).
+     */
+    private function sqlRrWagonSnapshotLineUnderloadMt(string $alias = 'rws'): string
+    {
+        $lineNet = '('.$this->sqlRrWagonSnapshotLineNetMt($alias).')';
+        $pcc = "{$alias}.pcc_weight_mt";
+        $perm = "{$alias}.permissible_weight_mt";
+        $cap = match (DB::getDriverName()) {
+            'pgsql' => "COALESCE({$pcc}, {$perm})",
+            'sqlite' => "COALESCE(CAST({$pcc} AS REAL), CAST({$perm} AS REAL))",
+            default => "COALESCE({$pcc}, {$perm})",
+        };
+
+        return match (DB::getDriverName()) {
+            'pgsql' => "CASE WHEN {$cap} IS NOT NULL AND {$lineNet} IS NOT NULL AND {$cap}::double precision > {$lineNet}::double precision "
+                ."THEN ({$cap}::double precision - {$lineNet}::double precision) ELSE 0 END",
+            'sqlite' => "CASE WHEN {$cap} IS NOT NULL AND {$lineNet} IS NOT NULL AND {$cap} > {$lineNet} "
+                ."THEN ({$cap} - {$lineNet}) ELSE 0 END",
+            default => "CASE WHEN {$cap} IS NOT NULL AND {$lineNet} IS NOT NULL AND {$cap} > {$lineNet} "
+                ."THEN ({$cap} - {$lineNet}) ELSE 0 END",
         };
     }
 
@@ -913,6 +959,397 @@ final readonly class RunReportAction
     /**
      * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
      */
+    private function applyWeighmentVsRrRakeFiltersOnAlias(QueryBuilder $q, string $rAliasWithoutDot, array $params): void
+    {
+        if (! empty($params['siding_id'])) {
+            $q->where($rAliasWithoutDot.'.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate($rAliasWithoutDot.'.loading_date', '>=', $params['date_from']);
+        }
+
+        if (! empty($params['date_to'])) {
+            $q->whereDate($rAliasWithoutDot.'.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $needle = mb_trim((string) $params['rake_number']);
+            if ($needle !== '') {
+                $q->where($rAliasWithoutDot.'.rake_number', 'like', '%'.$needle.'%');
+            }
+        }
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildWeighmentVsRrReportBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        if ($sidingIds === []) {
+            return DB::table('rakes as r')->whereRaw('1 = 0');
+        }
+
+        $wmSub = $this->buildWeighmentSummaryBaseQuery($sidingIds, $params);
+
+        $rrChargeable = DB::table('rr_documents as rr')->join('rakes as rk', function ($join): void {
+            $join->on('rk.id', '=', 'rr.rake_id')->whereNull('rk.deleted_at');
+        })
+            ->whereNotNull('rr.rake_id')
+            ->whereIn('rk.siding_id', $sidingIds);
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($rrChargeable, 'rk', $params);
+        $rrChargeable = $rrChargeable
+            ->groupBy('rr.rake_id')
+            ->selectRaw('rr.rake_id as rake_id, SUM(COALESCE(rr.rr_weight_mt, 0)) as rr_chargeable_mt');
+
+        $rrOverload = DB::table('rr_wagon_snapshots as rws')
+            ->join('rr_documents as rr2', 'rr2.id', '=', 'rws.rr_document_id')
+            ->join('rakes as rk2', function ($join): void {
+                $join->on('rk2.id', '=', 'rr2.rake_id')->whereNull('rk2.deleted_at');
+            })
+            ->whereNotNull('rr2.rake_id')
+            ->whereIn('rk2.siding_id', $sidingIds);
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($rrOverload, 'rk2', $params);
+        $rrOverload = $rrOverload->groupBy('rr2.rake_id')
+            ->selectRaw('rr2.rake_id as rake_id, SUM(COALESCE(rws.overload_weight_mt, 0)) as rr_overload_mt');
+
+        $penSnapAgg = DB::table('rr_penalty_snapshots as rps')
+            ->join('rakes as rkps', function ($join): void {
+                $join->on('rkps.id', '=', 'rps.rake_id')->whereNull('rkps.deleted_at');
+            })
+            ->whereNotNull('rps.rake_id')
+            ->whereIn('rkps.siding_id', $sidingIds);
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($penSnapAgg, 'rkps', $params);
+        $penSnapAgg = $penSnapAgg->groupBy('rps.rake_id')
+            ->selectRaw('rps.rake_id as rake_id, SUM(COALESCE(rps.amount, 0)) as penalty_snap_total');
+
+        $penChargeAgg = DB::table('rake_charges as rch')->join('rakes as rkch', function ($join): void {
+            $join->on('rkch.id', '=', 'rch.rake_id')->whereNull('rkch.deleted_at');
+        })
+            ->where('rch.charge_type', '=', 'PENALTY')
+            ->where('rch.is_actual_charges', '=', true)
+            ->whereIn('rkch.siding_id', $sidingIds);
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($penChargeAgg, 'rkch', $params);
+        $penChargeAgg = $penChargeAgg->groupBy('rch.rake_id')
+            ->selectRaw('rch.rake_id as rake_id, SUM(COALESCE(rch.amount, 0)) as penalty_charge_total');
+
+        $q = DB::table('rakes as r')
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds);
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($q, 'r', $params);
+
+        return $q
+            ->leftJoinSub($wmSub, 'wm', 'wm.rake_id', '=', 'r.id')
+            ->leftJoinSub($rrChargeable, 'rrc', 'rrc.rake_id', '=', 'r.id')
+            ->leftJoinSub($rrOverload, 'rro', 'rro.rake_id', '=', 'r.id')
+            ->leftJoinSub($penSnapAgg, 'psa', 'psa.rake_id', '=', 'r.id')
+            ->leftJoinSub($penChargeAgg, 'pca', 'pca.rake_id', '=', 'r.id')
+            ->where(function ($w): void {
+                $w->whereNotNull('wm.rake_id')
+                    ->orWhereNotNull('rrc.rake_id')
+                    ->orWhereNotNull('rro.rake_id');
+            })
+            ->selectRaw(
+                'r.id as rake_id, r.rake_number as rake_number, r.loading_date,'.
+                ' wm.total_net_mt as weighment_total_mt,'.
+                ' wm.total_over_mt as overload_weighment_mt,'.
+                ' rrc.rr_chargeable_mt as rr_chargeable_mt,'.
+                ' rro.rr_overload_mt as rr_overload_mt,'.
+                ' psa.penalty_snap_total as penalty_snap_total,'.
+                ' pca.penalty_charge_total as penalty_charge_total'
+            );
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function weighmentVsRrReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildWeighmentVsRrReportBaseQuery($sidingIds, $params)->count('r.id');
+    }
+
+    /**
+     * Coal Logestic Advance — one row per rake: latest weighment net vs summed RR chargeable weight.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function weighmentVsRrReport(array $sidingIds, array $params): array
+    {
+        $query = $this->buildWeighmentVsRrReportBaseQuery($sidingIds, $params)
+            ->orderByDesc('r.loading_date')
+            ->orderBy('r.rake_number');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        return $rows->map(function (object $row): array {
+            $roundWt = fn (?float $v): ?float => $v !== null && is_finite($v) ? round($v, 2) : null;
+
+            $wmTotal = isset($row->weighment_total_mt) && $row->weighment_total_mt !== null ? (float) $row->weighment_total_mt : null;
+            $rrChg = isset($row->rr_chargeable_mt) && $row->rr_chargeable_mt !== null ? (float) $row->rr_chargeable_mt : null;
+
+            $difference = null;
+            if ($wmTotal !== null && is_finite($wmTotal) && $rrChg !== null && is_finite($rrChg)) {
+                $difference = round($wmTotal - $rrChg, 2);
+            }
+
+            $snapPen = isset($row->penalty_snap_total) && $row->penalty_snap_total !== null ? (float) $row->penalty_snap_total : null;
+            $chgPen = isset($row->penalty_charge_total) && $row->penalty_charge_total !== null ? (float) $row->penalty_charge_total : null;
+
+            $penaltyImpact = null;
+            if ($snapPen !== null && is_finite($snapPen) && abs($snapPen) > 1e-6) {
+                $penaltyImpact = round($snapPen, 2);
+            } elseif ($chgPen !== null && is_finite($chgPen) && abs($chgPen) > 1e-6) {
+                $penaltyImpact = round($chgPen, 2);
+            }
+
+            $rrOverload = isset($row->rr_overload_mt) && $row->rr_overload_mt !== null ? (float) $row->rr_overload_mt : null;
+
+            return [
+                'Rake No' => isset($row->rake_number) ? (string) $row->rake_number : '',
+                'Weighment Total (MT)' => $roundWt($wmTotal),
+                'RR Chargeable Weight (MT)' => $roundWt($rrChg),
+                'Difference (MT)' => $difference,
+                'Overload (Weighment)' => $roundWt(isset($row->overload_weighment_mt) && $row->overload_weighment_mt !== null ? (float) $row->overload_weighment_mt : null),
+                'Overload (RR)' => $roundWt($rrOverload),
+                'Penalty Impact' => $penaltyImpact,
+                '_rake_id' => (int) $row->rake_id,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, power_plant_id?: int}  $params
+     */
+    private function buildAutoDprReportBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        if ($sidingIds === []) {
+            return DB::table('rakes as r')->whereRaw('1 = 0');
+        }
+
+        $lineNet = $this->sqlRrWagonSnapshotLineNetMt('rws');
+        $underLine = $this->sqlRrWagonSnapshotLineUnderloadMt('rws');
+
+        $snapshotAgg = DB::table('rr_wagon_snapshots as rws')
+            ->join('rr_documents as rrd', 'rrd.id', '=', 'rws.rr_document_id')
+            ->join('rakes as rks', function ($join): void {
+                $join->on('rks.id', '=', 'rrd.rake_id')->whereNull('rks.deleted_at');
+            })
+            ->whereNotNull('rrd.rake_id')
+            ->whereIn('rks.siding_id', $sidingIds);
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($snapshotAgg, 'rks', $params);
+        $snapshotAgg = $snapshotAgg->groupBy('rrd.rake_id')->selectRaw(
+            'rrd.rake_id as rake_id,'.
+            ' COUNT(rws.id) as snapshot_wagon_count,'.
+            ' SUM(COALESCE(('.$lineNet.'), 0)) as total_snapshot_net_mt,'.
+            ' SUM(COALESCE(rws.overload_weight_mt, 0)) as total_snapshot_overload_mt,'.
+            ' SUM(('.$underLine.')) as total_snapshot_underload_mt'
+        );
+
+        $rrChargeable = DB::table('rr_documents as rr')->join('rakes as rk', function ($join): void {
+            $join->on('rk.id', '=', 'rr.rake_id')->whereNull('rk.deleted_at');
+        })
+            ->whereNotNull('rr.rake_id')
+            ->whereIn('rk.siding_id', $sidingIds);
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($rrChargeable, 'rk', $params);
+        $rrChargeable = $rrChargeable
+            ->groupBy('rr.rake_id')
+            ->selectRaw('rr.rake_id as rake_id, SUM(COALESCE(rr.rr_weight_mt, 0)) as rr_chargeable_mt');
+
+        $chargesByRake = DB::table('rake_charges as rch')->join('rakes as rkch', function ($join): void {
+            $join->on('rkch.id', '=', 'rch.rake_id')->whereNull('rkch.deleted_at');
+        })
+            ->where('rch.is_actual_charges', '=', true)
+            ->whereIn('rkch.siding_id', $sidingIds);
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($chargesByRake, 'rkch', $params);
+        $chargesByRake = $chargesByRake->groupBy('rch.rake_id')->selectRaw(
+            'rch.rake_id as rake_id,'.
+            ' SUM(CASE WHEN rch.charge_type = \'FREIGHT\' THEN rch.amount ELSE 0 END) as amt_freight,'.
+            ' SUM(CASE WHEN rch.charge_type = \'GST\' THEN rch.amount ELSE 0 END) as amt_gst,'.
+            ' SUM(rch.amount) as amt_total'
+        );
+
+        $primaryDoc = DB::table('rr_documents')
+            ->whereNull('diverrt_destination_id')
+            ->whereNotNull('rake_id')
+            ->groupBy('rake_id')
+            ->selectRaw('rake_id, MIN(id) as primary_rr_document_id');
+
+        $q = DB::table('rakes as r')
+            ->join('sidings as s', 's.id', '=', 'r.siding_id')
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->whereExists(function ($sub): void {
+                $sub->selectRaw('1')
+                    ->from('rr_documents as rrx')
+                    ->whereColumn('rrx.rake_id', 'r.id');
+            });
+        $this->applyWeighmentVsRrRakeFiltersOnAlias($q, 'r', $params);
+
+        if (! empty($params['power_plant_id'])) {
+            $plantCode = PowerPlant::query()->whereKey((int) $params['power_plant_id'])->value('code');
+            if (is_string($plantCode) && $plantCode !== '') {
+                $q->whereExists(function ($sub) use ($plantCode): void {
+                    $sub->selectRaw('1')
+                        ->from('rr_documents as rrf')
+                        ->whereColumn('rrf.rake_id', 'r.id')
+                        ->where('rrf.to_station_code', '=', $plantCode);
+                });
+            }
+        }
+
+        return $q
+            ->leftJoinSub($snapshotAgg, 'sa', 'sa.rake_id', '=', 'r.id')
+            ->leftJoinSub($rrChargeable, 'rrc', 'rrc.rake_id', '=', 'r.id')
+            ->leftJoinSub($chargesByRake, 'ch', 'ch.rake_id', '=', 'r.id')
+            ->leftJoinSub($primaryDoc, 'prd', 'prd.rake_id', '=', 'r.id')
+            ->leftJoin('rr_documents as rr_pri', 'rr_pri.id', '=', 'prd.primary_rr_document_id')
+            ->leftJoin('power_plants as pp', 'pp.code', '=', 'rr_pri.to_station_code')
+            ->selectRaw(
+                'r.id as rake_id,'.
+                ' r.rake_number,'.
+                ' r.loading_date,'.
+                ' r.destination as rake_destination_text,'.
+                ' r.remarks as rake_remarks,'.
+                ' s.name as siding_name,'.
+                ' pp.name as destination_plant_name,'.
+                ' rr_pri.to_station_code as primary_to_station_code,'.
+                ' COALESCE(sa.snapshot_wagon_count, 0) as snapshot_wagon_count,'.
+                ' sa.total_snapshot_net_mt,'.
+                ' rrc.rr_chargeable_mt,'.
+                ' sa.total_snapshot_overload_mt,'.
+                ' sa.total_snapshot_underload_mt,'.
+                ' ch.amt_freight,'.
+                ' ch.amt_gst,'.
+                ' ch.amt_total'
+            );
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, power_plant_id?: int}  $params
+     */
+    private function autoDprReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildAutoDprReportBaseQuery($sidingIds, $params)->count('r.id');
+    }
+
+    /**
+     * Coal Logestic Advance — per-rake DPR-style line built from RR PDF snapshots + rake charges (+ penalty snapshot remarks).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, power_plant_id?: int, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function autoDprReport(array $sidingIds, array $params): array
+    {
+        $query = $this->buildAutoDprReportBaseQuery($sidingIds, $params)
+            ->orderByDesc('r.loading_date')
+            ->orderBy('r.rake_number');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        $rakeIds = [];
+        foreach ($rows as $row) {
+            if (property_exists($row, 'rake_id') && $row->rake_id !== null) {
+                $rakeIds[] = (int) $row->rake_id;
+            }
+        }
+        $rakeIds = array_values(array_unique($rakeIds));
+        $penRemarkByRake = $this->autoDprReportPenaltyRemarkMapByRakeId($rakeIds);
+
+        return $rows->map(function (object $row) use ($penRemarkByRake): array {
+            $round2 = fn ($v): ?float => $v !== null && is_finite((float) $v) ? round((float) $v, 2) : null;
+            $roundMoney = fn ($v): float => round((float) ($v ?? 0), 2);
+
+            $rk = (int) $row->rake_id;
+            $destText = property_exists($row, 'rake_destination_text') && $row->rake_destination_text !== null
+                ? mb_trim((string) $row->rake_destination_text) : '';
+            $plant = property_exists($row, 'destination_plant_name') && $row->destination_plant_name !== null
+                ? mb_trim((string) $row->destination_plant_name) : '';
+            $toCode = property_exists($row, 'primary_to_station_code') && $row->primary_to_station_code !== null
+                ? mb_trim((string) $row->primary_to_station_code) : '';
+
+            $destination = $destText !== '' ? $destText : ($plant !== '' ? $plant : $toCode);
+
+            $rakeRem = property_exists($row, 'rake_remarks') && $row->rake_remarks !== null
+                ? mb_trim((string) $row->rake_remarks) : '';
+            $penStr = $penRemarkByRake[$rk] ?? '';
+            $remarkParts = array_values(array_filter([$rakeRem, $penStr], fn (string $s): bool => $s !== ''));
+            $remarks = implode('; ', $remarkParts);
+
+            $day = property_exists($row, 'loading_date') && $row->loading_date !== null
+                ? (string) $row->loading_date
+                : '';
+
+            return [
+                'Date' => $day,
+                'Rake No' => property_exists($row, 'rake_number') && $row->rake_number !== null ? (string) $row->rake_number : '',
+                'Siding' => property_exists($row, 'siding_name') && $row->siding_name !== null ? (string) $row->siding_name : '',
+                'Destination' => $destination,
+                'Total Wagons' => (int) ($row->snapshot_wagon_count ?? 0),
+                'Total Net Weight (MT)' => $round2(
+                    isset($row->total_snapshot_net_mt) && $row->total_snapshot_net_mt !== null ? (float) $row->total_snapshot_net_mt : null,
+                ),
+                'Chargeable Weight (MT)' => $round2(
+                    isset($row->rr_chargeable_mt) && $row->rr_chargeable_mt !== null ? (float) $row->rr_chargeable_mt : null,
+                ),
+                'Overload (MT)' => $round2(
+                    isset($row->total_snapshot_overload_mt) && $row->total_snapshot_overload_mt !== null
+                        ? (float) $row->total_snapshot_overload_mt : null,
+                ),
+                'Underload (MT)' => $round2(
+                    isset($row->total_snapshot_underload_mt) && $row->total_snapshot_underload_mt !== null
+                        ? (float) $row->total_snapshot_underload_mt : null,
+                ),
+                'Freight' => $roundMoney($row->amt_freight ?? null),
+                'GST' => $roundMoney($row->amt_gst ?? null),
+                'Total Amount' => $roundMoney($row->amt_total ?? null),
+                'Remarks' => $remarks,
+                '_rake_id' => $rk,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  array<int>  $rakeIds
+     * @return array<int, string>
+     */
+    private function autoDprReportPenaltyRemarkMapByRakeId(array $rakeIds): array
+    {
+        if ($rakeIds === []) {
+            return [];
+        }
+
+        $rows = DB::table('rr_penalty_snapshots')
+            ->whereIn('rake_id', $rakeIds)
+            ->orderBy('penalty_code')
+            ->get(['rake_id', 'penalty_code', 'amount']);
+
+        $grouped = [];
+        foreach ($rows as $r) {
+            $rid = (int) $r->rake_id;
+            $amt = round((float) $r->amount, 2);
+            $grouped[$rid][] = mb_trim((string) $r->penalty_code).': '.$amt;
+        }
+
+        $out = [];
+        foreach ($grouped as $rid => $parts) {
+            $out[$rid] = implode(', ', $parts);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
     private function buildRrChargesReportBaseQuery(array $sidingIds, array $params): QueryBuilder
     {
         if ($sidingIds === []) {
@@ -1046,6 +1483,318 @@ final readonly class RunReportAction
                 '_rr_document_id' => (int) $row->rr_document_id,
             ];
         })->values()->all();
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function buildRrWagonDetailsReportBaseQuery(array $sidingIds, array $params): QueryBuilder
+    {
+        if ($sidingIds === []) {
+            return DB::table('rr_wagon_snapshots as rws')->whereRaw('1 = 0');
+        }
+
+        $lineNetAgg = $this->sqlRrWagonSnapshotLineNetMt('rws2');
+
+        $docNetSum = DB::table('rr_wagon_snapshots as rws2')
+            ->groupBy('rws2.rr_document_id')
+            ->selectRaw(
+                'rws2.rr_document_id AS rr_document_id,'.
+                ' SUM(COALESCE(('.$lineNetAgg.'), 0)) AS doc_sum_net_mt'
+            );
+
+        $lineNetRow = $this->sqlRrWagonSnapshotLineNetMt('rws');
+
+        $q = DB::table('rr_wagon_snapshots as rws')
+            ->join('rr_documents as rr', 'rr.id', '=', 'rws.rr_document_id')
+            ->join('rakes as r', 'r.id', '=', 'rr.rake_id')
+            ->leftJoinSub($docNetSum, 'dsl', 'dsl.rr_document_id', '=', 'rws.rr_document_id')
+            ->whereNull('r.deleted_at')
+            ->whereNotNull('rr.rake_id')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->select([
+                'rws.id as rws_id',
+                'rws.wagon_sequence as wagon_sequence',
+                'rws.wagon_number as wagon_number',
+                'rws.pcc_weight_mt',
+                'rws.permissible_weight_mt',
+                'rws.overload_weight_mt',
+                'r.rake_number',
+                'rr.rate',
+                'rr.id as rr_document_id',
+                'rr.rr_weight_mt',
+                'dsl.doc_sum_net_mt',
+                DB::raw('('.$lineNetRow.') as row_net_mt'),
+            ]);
+
+        if (! empty($params['siding_id'])) {
+            $q->where('r.siding_id', '=', (int) $params['siding_id']);
+        }
+
+        if (! empty($params['date_from'])) {
+            $q->whereDate('r.loading_date', '>=', $params['date_from']);
+        }
+
+        if (! empty($params['date_to'])) {
+            $q->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+
+        if (! empty($params['rake_number'])) {
+            $needle = mb_trim((string) $params['rake_number']);
+            if ($needle !== '') {
+                $q->where('r.rake_number', 'like', '%'.$needle.'%');
+            }
+        }
+
+        return $q;
+    }
+
+    /**
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string}  $params
+     */
+    private function rrWagonDetailsReportCount(array $sidingIds, array $params): int
+    {
+        return (int) $this->buildRrWagonDetailsReportBaseQuery($sidingIds, $params)->count('rws.id');
+    }
+
+    /**
+     * Coal Logestic Advance — wagon lines from `rr_wagon_snapshots` joined to rake + RR (weights, chargeable allocation, rates).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, grid_pagination?: bool, grid_offset?: int, grid_limit?: int, no_limit?: bool, limit?: int|null}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function rrWagonDetailsReport(array $sidingIds, array $params): array
+    {
+        $query = $this->buildRrWagonDetailsReportBaseQuery($sidingIds, $params)
+            ->orderByDesc('r.loading_date')
+            ->orderByDesc('rr.id')
+            ->orderByRaw('COALESCE(rws.wagon_sequence, 999999)')
+            ->orderBy('rws.id');
+
+        $this->applyLegacyLimitOrGridPagination($query, $params);
+
+        /** @var Collection<int, object> $rows */
+        $rows = $query->get();
+
+        $docIds = $rows->pluck('rr_document_id')->filter()->unique()->values()->all();
+        /** @var Collection<int, Collection<int, RrPenaltySnapshot>> $penaltiesGrouped */
+        $penaltiesGrouped = Collection::make();
+        if ($docIds !== []) {
+            /** @var Collection<int, RrPenaltySnapshot> $snapshots */
+            $snapshots = RrPenaltySnapshot::query()
+                ->whereIn('rr_document_id', $docIds)
+                ->whereNotNull('rr_document_id')
+                ->whereIn('penalty_code', ['POL1', 'POLA', 'PLO', 'PCLA', 'ENHC'])
+                ->get();
+            /** @phpstan-ignore argument.type ($snapshots grouped by rr_document_id) */
+            $penaltiesGrouped = $snapshots->groupBy(fn (RrPenaltySnapshot $p): int => (int) ($p->rr_document_id ?? 0));
+        }
+
+        /** @var array<int, array{wagon: array<string, array<string, float>>, sequence: array<int, array<string, float>>, broad: array<string, float>}> $mapCache */
+        $mapCache = [];
+
+        $roundWt = fn ($v): ?float => $v !== null && $v !== '' && is_finite((float) $v) ? round((float) $v, 2) : null;
+        $roundRate = fn ($v): ?float => $v !== null && $v !== '' && is_finite((float) $v) ? round((float) $v, 4) : null;
+
+        return $rows->map(function (object $row) use ($penaltiesGrouped, &$mapCache, $roundWt, $roundRate): array {
+            $docId = (int) ($row->rr_document_id ?? 0);
+
+            if ($docId > 0 && ! isset($mapCache[$docId])) {
+                /** @var Collection<int, RrPenaltySnapshot>|null $forDoc */
+                $forDoc = $penaltiesGrouped->get($docId);
+                $mapCache[$docId] = $this->punitiveRateMapsForRrSnapshots(
+                    $forDoc instanceof Collection ? $forDoc : collect()
+                );
+            }
+
+            /** @var array{wagon: array<string, array<string, float>>, sequence: array<int, array<string, float>>, broad: array<string, float>} $maps */
+            $maps = $docId > 0
+                ? ($mapCache[$docId] ?? ['wagon' => [], 'sequence' => [], 'broad' => []])
+                : ['wagon' => [], 'sequence' => [], 'broad' => []];
+
+            $wagonSeq = null;
+            if (property_exists($row, 'wagon_sequence') && $row->wagon_sequence !== null) {
+                $wagonSeq = (int) $row->wagon_sequence;
+            }
+
+            $punitive = $docId > 0
+                ? $this->punitiveRatePickFromMaps(
+                    $maps,
+                    property_exists($row, 'wagon_number') ? (string) $row->wagon_number : null,
+                    $wagonSeq,
+                )
+                : null;
+
+            $wagonNoUi = property_exists($row, 'wagon_number') && $row->wagon_number !== null && $row->wagon_number !== ''
+                ? mb_trim((string) $row->wagon_number)
+                : '';
+
+            return [
+                'Rake No' => property_exists($row, 'rake_number') && $row->rake_number !== null ? (string) $row->rake_number : '',
+                'Wagon No' => $wagonNoUi,
+                'CC Capacity (MT)' => $roundWt($row->pcc_weight_mt ?? null),
+                'Actual Weight (MT)' => $roundWt($row->row_net_mt ?? null),
+                'Permissible Weight (MT)' => $roundWt($row->permissible_weight_mt ?? null),
+                'Chargeable Weight (MT)' => $roundWt($this->rrWagonDetailsChargeableWeightMt($row)),
+                'Overload (MT)' => $roundWt($row->overload_weight_mt ?? null),
+                'Normal Rate' => $roundRate($row->rate ?? null),
+                'Punitive Rate' => $roundRate($punitive),
+                '_rws_id' => (int) $row->rws_id,
+            ];
+        })->values()->all();
+    }
+
+    private function rrWagonDetailsChargeableWeightMt(object $row): ?float
+    {
+        $docWt = isset($row->rr_weight_mt) && $row->rr_weight_mt !== null ? (float) $row->rr_weight_mt : null;
+        $docSumParsed = isset($row->doc_sum_net_mt) && $row->doc_sum_net_mt !== null ? (float) $row->doc_sum_net_mt : 0.0;
+        $rowNet = isset($row->row_net_mt) && $row->row_net_mt !== null ? (float) $row->row_net_mt : null;
+        $pcc = isset($row->pcc_weight_mt) && $row->pcc_weight_mt !== null ? (float) $row->pcc_weight_mt : null;
+        $perm = isset($row->permissible_weight_mt) && $row->permissible_weight_mt !== null ? (float) $row->permissible_weight_mt : null;
+
+        if ($docWt !== null && $docSumParsed > 0.0) {
+            $numerator = $rowNet !== null ? max(0.0, $rowNet) : 0.0;
+
+            return round($docWt * $numerator / $docSumParsed, 2);
+        }
+
+        if ($docWt !== null && ($docSumParsed <= 0.0) && ($pcc !== null || $perm !== null)) {
+            return round((float) ($pcc ?? $perm), 2);
+        }
+
+        if ($pcc !== null) {
+            return round($pcc, 2);
+        }
+
+        if ($perm !== null) {
+            return round($perm, 2);
+        }
+
+        return null;
+    }
+
+    /**
+     * Group penalty snapshot rows → maps by wagon_number, wagon_sequence, or whole-RR buckets.
+     *
+     * @param  Collection<int, RrPenaltySnapshot>  $snapshotsForDoc
+     * @return array{wagon: array<string, array<string, float>>, sequence: array<int, array<string, float>>, broad: array<string, float>}
+     */
+    private function punitiveRateMapsForRrSnapshots(Collection $snapshotsForDoc): array
+    {
+        /** @var array<string, array<string, float>> $wagon */
+        $wagon = [];
+        /** @var array<int, array<string, float>> $sequence */
+        $sequence = [];
+        /** @var array<string, float> $broad */
+        $broad = [];
+
+        foreach ($snapshotsForDoc as $snap) {
+            if (! $snap instanceof RrPenaltySnapshot) {
+                continue;
+            }
+            $rate = $this->extractPunitiveRateFromPenaltySnapshotMeta($snap->meta ?? null);
+            if ($rate === null) {
+                continue;
+            }
+
+            $code = $snap->penalty_code !== null && $snap->penalty_code !== ''
+                ? mb_strtoupper(mb_trim((string) $snap->penalty_code))
+                : '';
+
+            $wn = self::normalizeRrWagonSnapshotWagonKey((string) ($snap->wagon_number ?? ''));
+            $seqRaw = $snap->wagon_sequence;
+
+            if ($wn !== null) {
+                if (! isset($wagon[$wn])) {
+                    $wagon[$wn] = [];
+                }
+
+                $wagon[$wn][$code !== '' ? $code : '__'] = (float) $rate;
+
+                continue;
+            }
+
+            if ($seqRaw !== null && (string) $seqRaw !== '') {
+                $sq = (int) $seqRaw;
+                if (! isset($sequence[$sq])) {
+                    $sequence[$sq] = [];
+                }
+                $sequence[$sq][$code !== '' ? $code : '__'] = (float) $rate;
+
+                continue;
+            }
+
+            if ($code !== '') {
+                $broad[$code] = (float) $rate;
+            }
+        }
+
+        return [
+            'wagon' => $wagon,
+            'sequence' => $sequence,
+            'broad' => $broad,
+        ];
+    }
+
+    /**
+     * @param  array{wagon: array<string, array<string, float>>, sequence: array<int, array<string, float>>, broad: array<string, float>}  $maps
+     */
+    private function punitiveRatePickFromMaps(array $maps, ?string $wagonNumber, ?int $wagonSeq): ?float
+    {
+        $wnKey = self::normalizeRrWagonSnapshotWagonKey((string) ($wagonNumber ?? ''));
+
+        if ($wnKey !== null && isset($maps['wagon'][$wnKey])) {
+            return $this->pickPreferredOverloadPenaltyCodeRates($maps['wagon'][$wnKey]);
+        }
+
+        if ($wagonSeq !== null && isset($maps['sequence'][$wagonSeq])) {
+            return $this->pickPreferredOverloadPenaltyCodeRates($maps['sequence'][$wagonSeq]);
+        }
+
+        return $this->pickPreferredOverloadPenaltyCodeRates($maps['broad']);
+    }
+
+    /** @param  array<string, float>  $codeRates */
+    private function pickPreferredOverloadPenaltyCodeRates(array $codeRates): ?float
+    {
+        if ($codeRates === []) {
+            return null;
+        }
+
+        foreach (['POL1', 'POLA', 'PLO', 'PCLA', 'ENHC'] as $code) {
+            if (isset($codeRates[$code]) && is_finite($codeRates[$code])) {
+                return (float) $codeRates[$code];
+            }
+        }
+
+        foreach ($codeRates as $rate) {
+            if (is_finite($rate)) {
+                return (float) $rate;
+            }
+        }
+
+        return null;
+    }
+
+    private function extractPunitiveRateFromPenaltySnapshotMeta(?array $meta): ?float
+    {
+        if ($meta === []) {
+            return null;
+        }
+
+        foreach ([
+            'punitive_rate',
+            'punitive_freight_rate',
+            'overload_punitive_rate',
+            'punitiveRate',
+        ] as $key) {
+            if (isset($meta[$key]) && is_numeric($meta[$key])) {
+                return (float) $meta[$key];
+            }
+        }
+
+        return null;
     }
 
     /**
