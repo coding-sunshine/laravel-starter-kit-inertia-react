@@ -198,6 +198,38 @@ final class ExecutiveDashboardController extends Controller
         );
     }
 
+    /**
+     * JSON payload for siding performance charts with independent date ranges (fetch, no Inertia).
+     *
+     * Query: `sp_rakes_period`, `sp_penalty_period` — each `main` (default, uses dashboard range),
+     * `yesterday`, `today`, `month`, `last_month`, or `custom` with `{prefix}_from` / `{prefix}_to` (Y-m-d).
+     */
+    public function sidingPerformanceMetrics(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(
+            $user->can('bypass-permissions') || $user->hasPermissionTo('dashboard.widgets.siding_overview_performance'),
+            403,
+        );
+
+        $resolved = $this->filters->resolve($request);
+        $sidingIds = $resolved['filteredSidingIds'];
+        $filterContext = $resolved['filterContext'];
+
+        [$rakesFrom, $rakesTo] = $this->resolveSidingPerformanceChartBounds($request, $resolved, 'sp_rakes');
+        [$penaltyFrom, $penaltyTo] = $this->resolveSidingPerformanceChartBounds($request, $resolved, 'sp_penalty');
+
+        $rakes = $this->buildSidingPerformanceRakesSeries($sidingIds, $rakesFrom, $rakesTo, $filterContext);
+        $penalties = $this->buildSidingPerformancePenaltySeries($sidingIds, $penaltyFrom, $penaltyTo, $filterContext);
+
+        return response()->json([
+            'rakes' => $rakes,
+            'penalties' => $penalties,
+        ]);
+    }
+
     public function rakePerformanceList(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -2323,48 +2355,13 @@ final class ExecutiveDashboardController extends Controller
             return [];
         }
 
-        $rakeIds = null;
-        if (! empty($filterContext['rake_number']) || ! empty($filterContext['power_plant'])) {
-            $rakeIds = $this->getFilteredRakeIds($sidingIds, $filterContext);
-            if ($rakeIds === []) {
-                return [];
-            }
+        $rakeIds = $this->optionalFilteredRakeIdsForSidingPerformance($sidingIds, $filterContext);
+        if ($rakeIds !== null && $rakeIds === []) {
+            return [];
         }
 
-        $fromDate = $from->toDateString();
-        $toDate = $to->toDateString();
-        // Filter by loading_date (business date) so date selection is correct. Only rakes with loading_date set are counted.
-        $rakeQuery = Rake::query()
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate])
-            ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q));
-        if ($rakeIds !== null) {
-            $rakeQuery->whereIn('rakes.id', $rakeIds);
-        }
-        $rakesBySiding = $rakeQuery
-            ->selectRaw('sidings.name, count(*) as total_rakes')
-            ->groupBy('sidings.name')
-            ->pluck('total_rakes', 'name')
-            ->all();
-
-        // Actual penalties (RR penalty snapshots) for rakes in the same period (filter by rakes.loading_date).
-        $penaltyQuery = RrPenaltySnapshot::query()
-            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
-        if ($rakeIds !== null) {
-            $penaltyQuery->whereIn('rakes.id', $rakeIds);
-        } else {
-            $penaltyQuery->whereIn('rakes.siding_id', $sidingIds);
-        }
-        $penaltiesBySiding = $penaltyQuery
-            ->selectRaw('sidings.name, count(*) as penalty_count, count(DISTINCT rr_penalty_snapshots.rake_id) as penalised_rakes, sum(rr_penalty_snapshots.amount) as penalty_total')
-            ->groupBy('sidings.name')
-            ->get()
-            ->keyBy('name');
+        $rakesBySiding = $this->buildSidingPerformanceRakesByName($sidingIds, $from, $to, $rakeIds);
+        $penaltiesBySiding = $this->buildSidingPerformancePenaltiesAggregatedByName($sidingIds, $from, $to, $rakeIds);
 
         // Include all selected sidings so "All sidings" shows every siding (0 when no data in range).
         $sidingNamesById = Siding::query()
@@ -2392,6 +2389,160 @@ final class ExecutiveDashboardController extends Controller
         usort($result, fn ($a, $b) => $b['penalty_amount'] <=> $a['penalty_amount']);
 
         return $result;
+    }
+
+    /**
+     * Rake counts per siding name for chart/API use.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array<int>|null  $rakeIds  Null = no rake-id filter; non-null = restrict to these rake ids
+     * @return array<string, int>
+     */
+    public function buildSidingPerformanceRakesByName(
+        array $sidingIds,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        ?array $rakeIds,
+    ): array {
+        if ($sidingIds === [] || ($rakeIds !== null && $rakeIds === [])) {
+            return [];
+        }
+
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
+        $rakeQuery = Rake::query()
+            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
+            ->whereIn('rakes.siding_id', $sidingIds)
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate])
+            ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q));
+        if ($rakeIds !== null) {
+            $rakeQuery->whereIn('rakes.id', $rakeIds);
+        }
+
+        return $rakeQuery
+            ->selectRaw('sidings.name, count(*) as total_rakes')
+            ->groupBy('sidings.name')
+            ->pluck('total_rakes', 'name')
+            ->map(fn ($v): int => (int) $v)
+            ->all();
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @param  array<int>|null  $rakeIds
+     * @return Collection<string, object{penalty_count: int, penalised_rakes: int, penalty_total: float}>
+     */
+    public function buildSidingPerformancePenaltiesAggregatedByName(
+        array $sidingIds,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        ?array $rakeIds,
+    ): Collection {
+        if ($sidingIds === [] || ($rakeIds !== null && $rakeIds === [])) {
+            return collect();
+        }
+
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
+        $penaltyQuery = RrPenaltySnapshot::query()
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
+        if ($rakeIds !== null) {
+            $penaltyQuery->whereIn('rakes.id', $rakeIds);
+        } else {
+            $penaltyQuery->whereIn('rakes.siding_id', $sidingIds);
+        }
+
+        return $penaltyQuery
+            ->selectRaw('sidings.name, count(*) as penalty_count, count(DISTINCT rr_penalty_snapshots.rake_id) as penalised_rakes, sum(rr_penalty_snapshots.amount) as penalty_total')
+            ->groupBy('sidings.name')
+            ->get()
+            ->keyBy('name');
+    }
+
+    /**
+     * Ordered rows for the rakes-dispatched chart (siding id order).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array<string, mixed>  $filterContext
+     * @return array<int, array{name: string, rakes: int}>
+     */
+    public function buildSidingPerformanceRakesSeries(
+        array $sidingIds,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $filterContext = [],
+    ): array {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $rakeIds = $this->optionalFilteredRakeIdsForSidingPerformance($sidingIds, $filterContext);
+        if ($rakeIds !== null && $rakeIds === []) {
+            return [];
+        }
+
+        $rakesByName = $this->buildSidingPerformanceRakesByName($sidingIds, $from, $to, $rakeIds);
+        $sidingNamesById = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->pluck('name', 'id')
+            ->all();
+
+        $rows = [];
+        foreach ($sidingIds as $sid) {
+            $name = (string) ($sidingNamesById[$sid] ?? "Siding {$sid}");
+            $rows[] = [
+                'name' => $name,
+                'rakes' => (int) ($rakesByName[$name] ?? 0),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Ordered rows for the penalty-by-siding chart (siding id order).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array<string, mixed>  $filterContext
+     * @return array<int, array{name: string, penalty_amount: float}>
+     */
+    public function buildSidingPerformancePenaltySeries(
+        array $sidingIds,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $filterContext = [],
+    ): array {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $rakeIds = $this->optionalFilteredRakeIdsForSidingPerformance($sidingIds, $filterContext);
+        if ($rakeIds !== null && $rakeIds === []) {
+            return [];
+        }
+
+        $penaltiesBySiding = $this->buildSidingPerformancePenaltiesAggregatedByName($sidingIds, $from, $to, $rakeIds);
+        $sidingNamesById = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->pluck('name', 'id')
+            ->all();
+
+        $rows = [];
+        foreach ($sidingIds as $sid) {
+            $name = (string) ($sidingNamesById[$sid] ?? "Siding {$sid}");
+            $penaltyData = $penaltiesBySiding->get($name);
+            $penaltyAmount = $penaltyData ? (float) $penaltyData->penalty_total : 0.0;
+            $rows[] = [
+                'name' => $name,
+                'penalty_amount' => round($penaltyAmount, 2),
+            ];
+        }
+
+        return $rows;
     }
 
     /**
@@ -2897,6 +3048,62 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $resolved
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    private function resolveSidingPerformanceChartBounds(Request $request, array $resolved, string $prefix): array
+    {
+        $periodKey = "{$prefix}_period";
+        $period = mb_strtolower((string) $request->query($periodKey, 'main'));
+        if ($period === '' || $period === 'main') {
+            return [$resolved['from'], $resolved['to']];
+        }
+
+        $allowed = ['yesterday', 'today', 'month', 'last_month', 'custom'];
+        if (! in_array($period, $allowed, true)) {
+            abort(422, "Invalid {$periodKey}.");
+        }
+
+        if ($period === 'custom') {
+            $fromStr = $request->query("{$prefix}_from");
+            $toStr = $request->query("{$prefix}_to");
+            if (! is_string($fromStr) || $fromStr === '' || ! is_string($toStr) || $toStr === '') {
+                abort(422, "Custom range requires {$prefix}_from and {$prefix}_to.");
+            }
+
+            [$from, $to] = $this->filters->boundsForPeriod('custom', $fromStr, $toStr);
+            if ($from->greaterThan($to)) {
+                abort(422, 'Custom range from must be before or equal to to.');
+            }
+
+            $maxDays = 731;
+            if ($from->diffInDays($to) + 1 > $maxDays) {
+                abort(422, "Custom range may not exceed {$maxDays} days.");
+            }
+
+            return [$from, $to];
+        }
+
+        return $this->filters->boundsForPeriod($period, null, null);
+    }
+
+    /**
+     * Null = no rake-id constraint from power plant / rake number filters. Empty array = no matching rakes.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array<string, mixed>  $filterContext
+     * @return ?array<int>
+     */
+    private function optionalFilteredRakeIdsForSidingPerformance(array $sidingIds, array $filterContext): ?array
+    {
+        if (empty($filterContext['rake_number']) && empty($filterContext['power_plant'])) {
+            return null;
+        }
+
+        return $this->getFilteredRakeIds($sidingIds, $filterContext);
     }
 
     /**

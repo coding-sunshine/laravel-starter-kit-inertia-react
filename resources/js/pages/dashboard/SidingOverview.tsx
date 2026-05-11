@@ -52,6 +52,7 @@ export function SidingOverview({
     sidingPerformance,
     penaltyTrendDaily,
     powerPlantDispatch,
+    filters,
 }: Props) {
     const { series, points } = penaltyTrendDaily;
     const showPenaltyTrend =
@@ -61,7 +62,10 @@ export function SidingOverview({
         <div className="space-y-6">
             {canWidget('dashboard.widgets.siding_overview_performance') ? (
                 sidingPerformance.length > 0 ? (
-                    <SidingPerformanceSection data={sidingPerformance} />
+                    <SidingPerformanceSection
+                        data={sidingPerformance}
+                        filters={filters}
+                    />
                 ) : (
                     <div className="dashboard-card rounded-xl border-0 p-6">
                         <SectionHeader
