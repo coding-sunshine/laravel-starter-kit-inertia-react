@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Dashboard\ExecutiveDashboardController;
 use App\Models\PenaltyType;
+use App\Models\Rake;
 use App\Support\Dashboard\DashboardFilterResolver;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -249,6 +250,27 @@ final class MobileDashboardController extends Controller
         ]);
     }
 
+    /**
+     * Paginated rake-wise performance list (summary rows only). Same JSON as web `GET /dashboard/rake-performance/rakes`.
+     * Prefer this and {@see rakePerformanceRakeShow} over {@see rakePerformance} for mobile (pagination, smaller payloads).
+     */
+    public function rakePerformanceRakesIndex(Request $request): JsonResponse
+    {
+        return $this->dashboard->rakePerformanceList($request);
+    }
+
+    /**
+     * Single rake detail with wagon weighments and loader/operator metadata.
+     * Same `data` shape as web detail; scope is rake id + user siding access only (see {@see ExecutiveDashboardController::rakePerformanceDetailForApi}).
+     */
+    public function rakePerformanceRakeShow(Request $request, Rake $rake): JsonResponse
+    {
+        return $this->dashboard->rakePerformanceDetailForApi($request, $rake);
+    }
+
+    /**
+     * @deprecated Prefer `rake-performance/rakes` + `rake-performance/rakes/{rake}` — returns all matching rakes with full wagon arrays in one response (heavy).
+     */
     public function rakePerformance(Request $request): JsonResponse
     {
         $resolved = $this->filters->resolve($request);

@@ -106,6 +106,8 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
             Route::get('executive-overview', [MobileDashboardController::class, 'executiveOverview'])->name('executive-overview');
             Route::get('operations', [MobileDashboardController::class, 'operations'])->name('operations');
             Route::get('penalty-control', [MobileDashboardController::class, 'penaltyControl'])->name('penalty-control');
+            Route::get('rake-performance/rakes', [MobileDashboardController::class, 'rakePerformanceRakesIndex'])->name('rake-performance.rakes.index');
+            Route::get('rake-performance/rakes/{rake}', [MobileDashboardController::class, 'rakePerformanceRakeShow'])->name('rake-performance.rakes.show');
             Route::get('rake-performance', [MobileDashboardController::class, 'rakePerformance'])->name('rake-performance');
             Route::get('loader-overload', [MobileDashboardController::class, 'loaderOverload'])->name('loader-overload');
             Route::get('power-plant', [MobileDashboardController::class, 'powerPlant'])->name('power-plant');

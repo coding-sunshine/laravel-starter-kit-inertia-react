@@ -2748,6 +2748,66 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * API-only: same assembled row as {@see buildRakePerformanceDetail} (including `wagon_overloads`),
+     * but eligibility uses only the rake id plus the user’s siding access — no list date range or
+     * `rake_number` / `power_plant` / `rake_penalty_scope` re-filtering.
+     *
+     * Still requires operational `data_source` and rake + wagon weighment rows (same quality bar as the list).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function buildRakePerformanceDetailForApi(Request $request, Rake $rake): ?array
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return null;
+        }
+
+        $accessibleSidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        if ($accessibleSidingIds === [] || ! in_array($rake->siding_id, $accessibleSidingIds, true)) {
+            return null;
+        }
+
+        $model = $this->rakePerformanceDetailByIdBaseQuery($accessibleSidingIds)
+            ->where('rakes.id', $rake->id)
+            ->with('siding:id,name,code')
+            ->first();
+
+        if ($model === null) {
+            return null;
+        }
+
+        $rows = $this->assembleRakePerformanceRows(collect([$model]), true);
+
+        return $rows[0] ?? null;
+    }
+
+    /**
+     * Mobile API detail JSON: same `data` shape as web detail; `filters` only echoes `rake_id`.
+     * Web continues to use {@see rakePerformanceDetail} (date- and filter-scoped).
+     */
+    public function rakePerformanceDetailForApi(Request $request, Rake $rake): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(DashboardWidgetPermissions::userCanSeeDashboardSection($user, 'rake-performance'), 403);
+
+        $row = $this->buildRakePerformanceDetailForApi($request, $rake);
+        if ($row === null) {
+            abort(404);
+        }
+
+        return response()->json([
+            'filters' => ['rake_id' => $rake->id],
+            'data' => $row,
+        ]);
+    }
+
+    /**
      * Loader-wise overloading and underloading trends (monthly buckets scoped to the dashboard date range on `rakes.loading_date`).
      *
      * Rows are limited to rakes whose `loading_date` falls between `$from` and `$to` (inclusive, calendar dates). Month buckets use `rakes.loading_date`, not `wagon_loading.loading_time`.
@@ -3048,6 +3108,37 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Rake-wise performance row eligibility by siding, without dashboard date or executive filters.
+     *
+     * @param  array<int>  $sidingIds
+     */
+    private function rakePerformanceDetailByIdBaseQuery(array $sidingIds): Builder
+    {
+        return Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->where(function ($q): void {
+                $q->whereNull('data_source')
+                    ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
+            })
+            ->whereExists(function ($subQuery): void {
+                $subQuery->selectRaw('1')
+                    ->from('rake_weighments')
+                    ->whereColumn('rake_weighments.rake_id', 'rakes.id');
+            })
+            ->whereExists(function ($subQuery): void {
+                $subQuery->selectRaw('1')
+                    ->from('rake_wagon_weighments')
+                    ->join(
+                        'rake_weighments',
+                        'rake_weighments.id',
+                        '=',
+                        'rake_wagon_weighments.rake_weighment_id',
+                    )
+                    ->whereColumn('rake_weighments.rake_id', 'rakes.id');
+            });
     }
 
     /**

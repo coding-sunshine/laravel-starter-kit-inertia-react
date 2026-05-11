@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-05-11 (mobile dashboard siding performance metrics API)
+**Last Updated**: 2026-05-11 (mobile dashboard rake-wise performance list/detail API)
 
 ## Closure
 
@@ -663,11 +663,16 @@ Parses multipart `pdf`; returns rake/e-demand preview JSON (same shape as web `r
 
 **Controller**: `App\Http\Controllers\Api\Dashboard\MobileDashboardController`
 
-Split-chart siding performance for native clients (same contract as web `dashboard.siding-performance-metrics`). See [ExecutiveDashboardController > sidingPerformanceMetrics](../backend/controllers/executivedashboardcontroller.md#sidingperformancemetrics-query-parameters).
+Management dashboard JSON for native clients (`/api/v1/dashboard/*`). See [Dashboard rake performance (API)](./dashboard-rake-performance.md), [Mobile rake performance rakes API](./mobile-rake-performance-rakes-api.md) (list + detail only), and [ExecutiveDashboardController](../backend/controllers/executivedashboardcontroller.md).
 
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
 | GET | `api/v1/dashboard/siding-performance-metrics` | api.v1.dashboard.siding-performance-metrics | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/rake-performance/rakes` | api.v1.dashboard.rake-performance.rakes.index | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/rake-performance/rakes/{rake}` | api.v1.dashboard.rake-performance.rakes.show | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/rake-performance` | api.v1.dashboard.rake-performance | api, throttle:60,1, auth:sanctum, feature:api_access |
+
+`siding-performance-metrics` delegates to web `ExecutiveDashboardController::sidingPerformanceMetrics` (same contract as `dashboard.siding-performance-metrics`). `rake-performance/rakes` delegates to `rakePerformanceList` (same as web list). `rake-performance/rakes/{rake}` uses `rakePerformanceDetailForApi` (same **`data`** shape as web detail; not date/filter-scoped like web `rakePerformanceDetail`). Legacy `rake-performance` returns the full `buildRakePerformance()` array (deprecated for large scopes).
 
 ## Impersonation (filament-impersonate)
 
