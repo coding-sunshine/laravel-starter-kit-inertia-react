@@ -4691,10 +4691,14 @@ export function RakePerformanceSection({
     );
 
     const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(100);
     const [selectedSidingTab, setSelectedSidingTab] = useState<'all' | number>(
         'all',
     );
     const [rows, setRows] = useState<RakePerformanceSummaryItem[]>([]);
+    const [prefetchedRows, setPrefetchedRows] = useState<
+        RakePerformanceSummaryItem[]
+    >([]);
     const [listMeta, setListMeta] = useState<{
         current_page: number;
         last_page: number;
@@ -4702,6 +4706,8 @@ export function RakePerformanceSection({
         total: number;
     } | null>(null);
     const [listLoading, setListLoading] = useState(true);
+    const [listLoadingMore, setListLoadingMore] = useState(false);
+    const [apiEndReached, setApiEndReached] = useState(false);
     const [listError, setListError] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalRakeId, setModalRakeId] = useState<number | null>(null);
@@ -4716,6 +4722,11 @@ export function RakePerformanceSection({
 
     useEffect(() => {
         setPage(1);
+        setPerPage(100);
+        setRows([]);
+        setPrefetchedRows([]);
+        setListMeta(null);
+        setApiEndReached(false);
     }, [filterKey, selectedSidingTab]);
 
     useEffect(() => {
@@ -4729,13 +4740,15 @@ export function RakePerformanceSection({
 
     useEffect(() => {
         let cancelled = false;
-        setListLoading(true);
+        const isInitialLoad = page === 1 && perPage === 100;
+        setListLoading(isInitialLoad);
+        setListLoadingMore(!isInitialLoad);
         setListError(null);
         const qs = buildRakePerformanceApiSearchParams({
             filters,
             allSidingIds,
             page,
-            perPage: 100,
+            perPage,
             sidingId:
                 selectedSidingTab === 'all' ? undefined : selectedSidingTab,
         });
@@ -4750,8 +4763,32 @@ export function RakePerformanceSection({
         }>(`/dashboard/rake-performance/rakes?${qs}`)
             .then((res) => {
                 if (!cancelled) {
-                    setRows(res.data);
+                    if (isInitialLoad) {
+                        // For testing: show only the first 50 rows initially.
+                        // Keep the rest ready to append in 20-row chunks on scroll.
+                        setRows(res.data.slice(0, 50));
+                        setPrefetchedRows(res.data.slice(50));
+                    } else {
+                        setRows((prev) => {
+                        if (prev.length === 0) {
+                            return res.data;
+                        }
+                        const seen = new Set(prev.map((r) => r.id));
+                        const merged = [...prev];
+                        res.data.forEach((r) => {
+                            if (!seen.has(r.id)) {
+                                merged.push(r);
+                                seen.add(r.id);
+                            }
+                        });
+                        return merged;
+                        });
+                    }
                     setListMeta(res.meta);
+                    setApiEndReached(
+                        res.data.length === 0 ||
+                            res.meta.current_page >= res.meta.last_page,
+                    );
                 }
             })
             .catch((e: unknown) => {
@@ -4764,12 +4801,49 @@ export function RakePerformanceSection({
             .finally(() => {
                 if (!cancelled) {
                     setListLoading(false);
+                    setListLoadingMore(false);
                 }
             });
         return () => {
             cancelled = true;
         };
-    }, [filterKey, allSidingIds, page, selectedSidingTab]);
+    }, [filterKey, allSidingIds, page, perPage, selectedSidingTab]);
+
+    const loadMore = useCallback(() => {
+        const endReached = apiEndReached && prefetchedRows.length === 0;
+        if (listLoading || listLoadingMore || endReached || listError != null) {
+            return;
+        }
+        if (rows.length === 0) {
+            return;
+        }
+
+        if (prefetchedRows.length > 0) {
+            const next = prefetchedRows.slice(0, 20);
+            setRows((prev) => [...prev, ...next]);
+            setPrefetchedRows((prev) => prev.slice(20));
+            return;
+        }
+
+        // After the initial 100-row load (page=1, perPage=100), jump to the
+        // next 20-row page that starts after the first 100 results.
+        if (page === 1 && perPage === 100) {
+            setPerPage(20);
+            setPage(6);
+            return;
+        }
+
+        setPage((p) => p + 1);
+    }, [
+        apiEndReached,
+        listError,
+        listLoading,
+        listLoadingMore,
+        page,
+        perPage,
+        prefetchedRows.length,
+        rows.length,
+    ]);
 
     useEffect(() => {
         if (modalRakeId == null) {
@@ -5012,38 +5086,41 @@ export function RakePerformanceSection({
                 )}
             </div>
 
-            {listMeta != null && listMeta.total > 0 && (
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
-                    <p>
-                        Page {listMeta.current_page} of {listMeta.last_page} (
-                        {listMeta.total} rakes)
-                    </p>
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={listMeta.current_page <= 1}
-                            onClick={() => {
-                                setPage((p) => Math.max(1, p - 1));
-                            }}
-                        >
-                            Previous
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={
-                                listMeta.current_page >= listMeta.last_page
-                            }
-                            onClick={() => {
-                                setPage((p) => p + 1);
-                            }}
-                        >
-                            Next
-                        </Button>
-                    </div>
+            {rows.length > 0 && (
+                <div className="mt-3">
+                    {(() => {
+                        const endReached =
+                            apiEndReached && prefetchedRows.length === 0;
+                        return (
+                            <div className="space-y-2">
+                                <div className="text-center text-xs text-gray-500">
+                                    {listLoadingMore
+                                        ? 'Loading more…'
+                                        : endReached
+                                          ? 'All records retrieved.'
+                                          : 'Load more records.'}
+                                </div>
+                                <div className="flex flex-col items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={
+                                            listLoading ||
+                                            listLoadingMore ||
+                                            endReached ||
+                                            listError != null
+                                        }
+                                        onClick={() => {
+                                            loadMore();
+                                        }}
+                                    >
+                                        Load more
+                                    </Button>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
