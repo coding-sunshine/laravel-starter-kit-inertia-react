@@ -7346,7 +7346,7 @@ export default function Dashboard() {
                             )}
                         </div>
 
-                        {kpiCards.length > 0 && (
+                        {false && kpiCards.length > 0 && (
                             <aside className="group sticky top-20 h-[calc(100vh-6rem)] shrink-0 self-start">
                                 <div className="flex h-full w-14 flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-[width] duration-200 ease-out group-hover:w-72">
                                     <div className="flex flex-1 flex-col gap-2 p-2">
