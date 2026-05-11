@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-05-05 (RR import preview by FNR)
+**Last Updated**: 2026-05-11 (mobile dashboard siding performance metrics API)
 
 ## Closure
 
@@ -53,6 +53,7 @@ This document lists all available routes in the application.
 | GET | `help/{helpArticle:slug}` | help.show | web |
 | POST | `help/{helpArticle:slug}/rate` | help.rate | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
+| GET | `dashboard/siding-performance-metrics` | dashboard.siding-performance-metrics | web, auth, verified |
 | GET | `profile/export-pdf` | profile.export-pdf | web, auth, verified |
 | GET, POST, PUT, PATCH, DELETE | `settings` | settings | web, auth |
 | GET | `settings/appearance` | appearance.edit | web, auth |
@@ -657,6 +658,16 @@ Parses multipart `pdf`; returns rake/e-demand preview JSON (same shape as web `r
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
 | POST | `api/v1/railway-receipts/upload` | api.v1.railway-receipts.upload | api, throttle:60,1, auth:sanctum, feature:api_access |
+
+## MobileDashboardController
+
+**Controller**: `App\Http\Controllers\Api\Dashboard\MobileDashboardController`
+
+Split-chart siding performance for native clients (same contract as web `dashboard.siding-performance-metrics`). See [ExecutiveDashboardController > sidingPerformanceMetrics](../backend/controllers/executivedashboardcontroller.md#sidingperformancemetrics-query-parameters).
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `api/v1/dashboard/siding-performance-metrics` | api.v1.dashboard.siding-performance-metrics | api, throttle:60,1, auth:sanctum, feature:api_access |
 
 ## Impersonation (filament-impersonate)
 

@@ -2004,7 +2004,7 @@
         "ExecutiveDashboardController": {
             "documented": true,
             "path": "./executivedashboardcontroller.md",
-            "lastUpdated": "2026-04-27",
+            "lastUpdated": "2026-05-11",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2517,6 +2517,7 @@
         "MobileDashboardController": {
             "documented": true,
             "path": "./mobiledashboardcontroller.md",
+            "lastUpdated": "2026-05-11",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],

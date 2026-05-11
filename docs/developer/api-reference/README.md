@@ -28,6 +28,7 @@ For the complete list of routes, see [Routes Documentation](./routes.md).
 ## Integration guides
 
 - **[Railway Receipt import preview (multipart)](./railway-receipt-import-preview-api.md)** — Developer copy; same specification as **[mobile handoff: `docs/mobile/railway-receipt-import-preview-api.md`](../../mobile/railway-receipt-import-preview-api.md)** (`POST /api/v1/railway-receipts/import-preview`): auth, multipart `pdf`, success and all error scenarios. Success responses return a plain JSON body (fields at top level), not necessarily the **`essa/api-toolkit`** `{ status, message, data }` envelope used by many other JSON endpoints — see each guide.
+- **[Dashboard siding overview & performance metrics](./dashboard-siding-performance.md)** — Filters (including `sp_*` split-chart overrides), date formats, and success/error responses for the dashboard siding endpoints used by web and mobile.
 
 ## Filter, sort, include, and fields (v1 list endpoints)
 
