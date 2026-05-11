@@ -663,7 +663,7 @@ Parses multipart `pdf`; returns rake/e-demand preview JSON (same shape as web `r
 
 **Controller**: `App\Http\Controllers\Api\Dashboard\MobileDashboardController`
 
-Management dashboard JSON for native clients (`/api/v1/dashboard/*`). See [Dashboard rake performance (API)](./dashboard-rake-performance.md), [Mobile rake performance rakes API](./mobile-rake-performance-rakes-api.md) (list + detail only), and [ExecutiveDashboardController](../backend/controllers/executivedashboardcontroller.md).
+Management dashboard JSON for native clients (`/api/v1/dashboard/*`). See [Dashboard rake performance (API)](./dashboard-rake-performance.md), [Mobile rake performance rakes API](./mobile-rake-performance-rakes-api.md) (list + detail only), [Mobile loader overload API](./mobile-loader-overload-api.md), and [ExecutiveDashboardController](../backend/controllers/executivedashboardcontroller.md).
 
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
@@ -671,8 +671,13 @@ Management dashboard JSON for native clients (`/api/v1/dashboard/*`). See [Dashb
 | GET | `api/v1/dashboard/rake-performance/rakes` | api.v1.dashboard.rake-performance.rakes.index | api, throttle:60,1, auth:sanctum, feature:api_access |
 | GET | `api/v1/dashboard/rake-performance/rakes/{rake}` | api.v1.dashboard.rake-performance.rakes.show | api, throttle:60,1, auth:sanctum, feature:api_access |
 | GET | `api/v1/dashboard/rake-performance` | api.v1.dashboard.rake-performance | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/loader-overload/loaders` | api.v1.dashboard.loader-overload.loaders.index | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/loader-overload/loaders/{loader}` | api.v1.dashboard.loader-overload.loaders.show | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/loader-overload/operators` | api.v1.dashboard.loader-overload.operators.index | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/loader-overload/operators/show` | api.v1.dashboard.loader-overload.operators.show | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/loader-overload` | api.v1.dashboard.loader-overload | api, throttle:60,1, auth:sanctum, feature:api_access |
 
-`siding-performance-metrics` delegates to web `ExecutiveDashboardController::sidingPerformanceMetrics` (same contract as `dashboard.siding-performance-metrics`). `rake-performance/rakes` delegates to `rakePerformanceList` (same as web list). `rake-performance/rakes/{rake}` uses `rakePerformanceDetailForApi` (same **`data`** shape as web detail; not date/filter-scoped like web `rakePerformanceDetail`). Legacy `rake-performance` returns the full `buildRakePerformance()` array (deprecated for large scopes).
+`siding-performance-metrics` delegates to web `ExecutiveDashboardController::sidingPerformanceMetrics` (same contract as `dashboard.siding-performance-metrics`). `rake-performance/rakes` delegates to `rakePerformanceList` (same as web list). `rake-performance/rakes/{rake}` uses `rakePerformanceDetailForApi` (same **`data`** shape as web detail; not date/filter-scoped like web `rakePerformanceDetail`). Legacy `rake-performance` returns the full `buildRakePerformance()` array (deprecated for large scopes). **`loader-overload/loaders`** and related routes use `LoaderOverloadMetricsService` with the same JSON as web `LoaderOverloadWebController`; legacy **`loader-overload`** returns `loaderOverloadTrends` only (deprecated for UI parity).
 
 ## Impersonation (filament-impersonate)
 
