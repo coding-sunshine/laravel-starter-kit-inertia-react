@@ -14,7 +14,7 @@ Serves the main Inertia dashboard (`/dashboard`) and related JSON endpoints for 
 |--------|------------|-------|---------|
 | `__invoke` | GET | `dashboard` | Inertia dashboard page with filters and props |
 | `executiveYesterdayData` | GET | `dashboard/executive-yesterday-data` | JSON for executive yesterday tab / custom ranges |
-| `sidingPerformanceMetrics` | GET | `dashboard/siding-performance-metrics` | JSON for siding performance charts (independent `sp_rakes_*` / `sp_penalty_*` date slices) |
+| `sidingPerformanceMetrics` | GET | `dashboard/siding-performance-metrics`; mobile delegates from `GET /api/v1/dashboard/siding-performance-metrics` | JSON for siding performance charts (independent `sp_rakes_*` / `sp_penalty_*` date slices) |
 | `rakePerformanceList` | GET | `dashboard/rake-performance/rakes` | JSON list for rake performance |
 | `rakePerformanceDetail` | GET | `dashboard/rake-performance/rakes/{rake}` | JSON detail for one rake |
 
@@ -39,7 +39,8 @@ Per-chart overrides (optional):
 
 - `dashboard`: `GET /dashboard` — Inertia
 - `dashboard.executive-yesterday-data`: `GET /dashboard/executive-yesterday-data` — JSON
-- `dashboard.siding-performance-metrics`: `GET /dashboard/siding-performance-metrics` — JSON
+- `dashboard.siding-performance-metrics`: `GET /dashboard/siding-performance-metrics` — JSON (web session)
+- `api.v1.dashboard.siding-performance-metrics`: `GET /api/v1/dashboard/siding-performance-metrics` — same JSON; Sanctum + `feature:api_access`; delegates to this controller via `MobileDashboardController::sidingPerformanceMetrics`
 - `dashboard.rake-performance.rakes.index`: `GET /dashboard/rake-performance/rakes` — JSON
 
 ## Related Components

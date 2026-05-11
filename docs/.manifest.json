@@ -2517,6 +2517,7 @@
         "MobileDashboardController": {
             "documented": true,
             "path": "./mobiledashboardcontroller.md",
+            "lastUpdated": "2026-05-11",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],

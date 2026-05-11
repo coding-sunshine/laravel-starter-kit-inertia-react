@@ -221,6 +221,15 @@ final class MobileDashboardController extends Controller
     }
 
     /**
+     * Split siding performance series (rakes vs penalty) with optional `sp_rakes_*` / `sp_penalty_*` overrides.
+     * Same query contract and JSON body as web `GET /dashboard/siding-performance-metrics`.
+     */
+    public function sidingPerformanceMetrics(Request $request): JsonResponse
+    {
+        return $this->dashboard->sidingPerformanceMetrics($request);
+    }
+
+    /**
      * Same widgets as web "Penalty control" section (no executive-only or unused chart bundles).
      */
     public function penaltyControl(Request $request): JsonResponse
