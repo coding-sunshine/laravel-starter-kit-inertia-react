@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-05-06",
+    "lastGenerated": "2026-05-11",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -613,9 +613,7 @@
                 "usesModels": [
                     "AppliedPenalty",
                     "DailyVehicleEntry",
-                    "DiverrtDestination",
                     "Indent",
-                    "Loader",
                     "PowerPlant",
                     "Rake",
                     "RakeCharge",
@@ -1473,6 +1471,22 @@
                     "PenaltyReconciliation"
                 ],
                 "relatedRoutes": []
+            }
+        },
+        "PreviewRailwayReceiptImport": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User",
+                    "Siding"
+                ],
+                "relatedRoutes": [
+                    "api.v1.railway-receipts.import-preview",
+                    "railway-receipts.import-preview",
+                    "railway-receipts.import"
+                ]
             }
         }
     },
@@ -3079,56 +3093,6 @@
                 "relatedRoutes": [],
                 "rendersPages": []
             }
-        },
-        "LiveMonitorController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [
-                    "control-room.index",
-                    "control-room.show"
-                ],
-                "rendersPages": [
-                    "control-room/index",
-                    "control-room/show"
-                ]
-            }
-        },
-        "CommandPaletteSearchController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "QuickPlacementController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "sidings/quick-placement"
-                ]
-            }
-        },
-        "SidingMonitorController": {
-            "documented": false,
-            "path": null,
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "sidings/monitor"
-                ]
-            }
         }
     },
     "pages": {
@@ -3277,9 +3241,12 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
                     "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance.rakes.index",
+                    "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
@@ -3305,6 +3272,7 @@
                     "control-room.index",
                     "control-room.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -3602,6 +3570,7 @@
                 "relatedRoutes": [
                     "dashboard",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show"
                 ]
@@ -3969,9 +3938,12 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
                     "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance.rakes.index",
+                    "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
@@ -3997,6 +3969,7 @@
                     "control-room.index",
                     "control-room.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -4444,9 +4417,12 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
                     "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance.rakes.index",
+                    "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
@@ -4472,6 +4448,7 @@
                     "control-room.index",
                     "control-room.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -4905,9 +4882,12 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
                     "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance.rakes.index",
+                    "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
@@ -4933,6 +4913,7 @@
                     "control-room.index",
                     "control-room.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",

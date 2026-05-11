@@ -29,6 +29,9 @@ For the complete list of routes, see [Routes Documentation](./routes.md).
 
 - **[Railway Receipt import preview (multipart)](./railway-receipt-import-preview-api.md)** — Developer copy; same specification as **[mobile handoff: `docs/mobile/railway-receipt-import-preview-api.md`](../../mobile/railway-receipt-import-preview-api.md)** (`POST /api/v1/railway-receipts/import-preview`): auth, multipart `pdf`, success and all error scenarios. Success responses return a plain JSON body (fields at top level), not necessarily the **`essa/api-toolkit`** `{ status, message, data }` envelope used by many other JSON endpoints — see each guide.
 - **[Dashboard siding overview & performance metrics](./dashboard-siding-performance.md)** — Filters (including `sp_*` split-chart overrides), date formats, and success/error responses for the dashboard siding endpoints used by web and mobile.
+- **[Dashboard rake-wise performance](./dashboard-rake-performance.md)** — Web + mobile rake performance routes and legacy monolithic mobile endpoint.
+- **[Mobile rake performance rakes API](./mobile-rake-performance-rakes-api.md)** — Only `GET /api/v1/dashboard/rake-performance/rakes` and `GET /api/v1/dashboard/rake-performance/rakes/{rake}`: every query parameter (names and formats), success JSON, and HTTP errors.
+- **[Mobile loader overload API](./mobile-loader-overload-api.md)** — Full reference for the four `GET /api/v1/dashboard/loader-overload/*` endpoints: every query parameter, success JSON field-by-field, **401/403/404/422/429**, and operator-name matching notes; legacy aggregate endpoint noted.
 
 ## Filter, sort, include, and fields (v1 list endpoints)
 
