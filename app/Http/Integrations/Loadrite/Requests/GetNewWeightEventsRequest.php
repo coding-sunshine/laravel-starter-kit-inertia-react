@@ -15,6 +15,7 @@ final class GetNewWeightEventsRequest extends Request
         private readonly string $site,
         private readonly ?string $fromLocalTime = null,
         private readonly ?string $toLocalTime = null,
+        private readonly ?int $page = null,
     ) {}
 
     public function resolveEndpoint(): string
@@ -28,6 +29,7 @@ final class GetNewWeightEventsRequest extends Request
             'Site' => $this->site,
             'FromLocalTime' => $this->fromLocalTime,
             'ToLocalTime' => $this->toLocalTime,
+            'Page' => $this->page,
         ], fn ($v) => $v !== null);
     }
 }
