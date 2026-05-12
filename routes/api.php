@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\IndentController;
 use App\Http\Controllers\Api\V1\PowerPlantApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
+use App\Http\Controllers\Api\V1\RailwayReceiptImportPreviewController;
 use App\Http\Controllers\Api\V1\RailwayReceiptUploadController;
 use App\Http\Controllers\Api\V1\RakeController;
 use App\Http\Controllers\Api\V1\RakeRrDiversionApiController;
@@ -58,6 +59,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('indents/{indent}/download', [IndentController::class, 'download'])->name('indents.download');
 
         // Railway receipts
+        Route::post('railway-receipts/import-preview', [RailwayReceiptImportPreviewController::class, 'store'])->name('railway-receipts.import-preview');
         Route::post('railway-receipts/upload', [RailwayReceiptUploadController::class, 'store'])->name('railway-receipts.upload');
         Route::get('railway-receipts', [RailwayReceiptApiController::class, 'index'])->name('railway-receipts.index');
         Route::get('railway-receipts/{rrDocument}', [RailwayReceiptApiController::class, 'show'])->name('railway-receipts.show');
@@ -100,10 +102,17 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
             Route::get('executive', [MobileDashboardController::class, 'executive'])->name('executive');
             Route::get('executive/custom-range', [MobileDashboardController::class, 'executiveCustomRange'])->name('executive.custom-range');
             Route::get('siding-overview', [MobileDashboardController::class, 'sidingOverview'])->name('siding-overview');
+            Route::get('siding-performance-metrics', [MobileDashboardController::class, 'sidingPerformanceMetrics'])->name('siding-performance-metrics');
             Route::get('executive-overview', [MobileDashboardController::class, 'executiveOverview'])->name('executive-overview');
             Route::get('operations', [MobileDashboardController::class, 'operations'])->name('operations');
             Route::get('penalty-control', [MobileDashboardController::class, 'penaltyControl'])->name('penalty-control');
+            Route::get('rake-performance/rakes', [MobileDashboardController::class, 'rakePerformanceRakesIndex'])->name('rake-performance.rakes.index');
+            Route::get('rake-performance/rakes/{rake}', [MobileDashboardController::class, 'rakePerformanceRakeShow'])->name('rake-performance.rakes.show');
             Route::get('rake-performance', [MobileDashboardController::class, 'rakePerformance'])->name('rake-performance');
+            Route::get('loader-overload/loaders', [MobileDashboardController::class, 'loaderOverloadLoadersIndex'])->name('loader-overload.loaders.index');
+            Route::get('loader-overload/loaders/{loader}', [MobileDashboardController::class, 'loaderOverloadLoaderShow'])->name('loader-overload.loaders.show');
+            Route::get('loader-overload/operators', [MobileDashboardController::class, 'loaderOverloadOperatorsIndex'])->name('loader-overload.operators.index');
+            Route::get('loader-overload/operators/show', [MobileDashboardController::class, 'loaderOverloadOperatorShow'])->name('loader-overload.operators.show');
             Route::get('loader-overload', [MobileDashboardController::class, 'loaderOverload'])->name('loader-overload');
             Route::get('power-plant', [MobileDashboardController::class, 'powerPlant'])->name('power-plant');
         });

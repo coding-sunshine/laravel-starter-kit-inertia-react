@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\RR;
 
+use App\Actions\PreviewRailwayReceiptImport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreRrImportPreviewRequest;
 use App\Http\Requests\StoreRrUploadRequest;
 use App\Models\DiverrtDestination;
 use App\Models\Rake;
+use App\Models\User;
 use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
+use App\Services\TenantContext;
 use App\Support\RakeRrHubPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +27,32 @@ final class RrUploadController extends Controller
         private readonly RrParserService $parser,
         private readonly RrImportService $rrImportService,
     ) {}
+
+    public function importPreview(
+        StoreRrImportPreviewRequest $request,
+        PreviewRailwayReceiptImport $previewRailwayReceiptImport,
+    ): JsonResponse {
+        /** @var User $user */
+        $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.upload'), 403);
+
+        try {
+            return response()->json(
+                $previewRailwayReceiptImport->handle($user, $request->file('pdf')),
+            );
+        } catch (InvalidArgumentException $e) {
+            Log::warning('RR import preview validation failed', ['error' => $e->getMessage()]);
+
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            Log::error('RR import preview failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            report($e);
+
+            return response()->json([
+                'message' => 'Failed to process Railway Receipt preview. Please ensure the PDF is valid and try again.',
+            ], 500);
+        }
+    }
 
     public function store(StoreRrUploadRequest $request): RedirectResponse|JsonResponse
     {
@@ -88,5 +118,18 @@ final class RrUploadController extends Controller
 
             return back()->withErrors(['pdf' => 'Failed to process Railway Receipt. Please ensure the PDF is valid and try again.']);
         }
+    }
+
+    private function hasSectionPermission(User $user, string $permission): bool
+    {
+        if ($user->can('bypass-permissions')) {
+            return true;
+        }
+
+        if (TenantContext::check() && $user->canInCurrentOrganization($permission)) {
+            return true;
+        }
+
+        return $user->hasPermissionTo($permission);
     }
 }

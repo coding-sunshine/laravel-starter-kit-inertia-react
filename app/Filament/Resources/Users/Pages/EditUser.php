@@ -209,7 +209,9 @@ final class EditUser extends EditRecord
         }
 
         if ($this->pendingRoleId !== null) {
-            $this->record->syncRoles([$this->pendingRoleId], 0);
+
+            $organization_id = 0;
+            $this->record->syncRoles([$this->pendingRoleId]);
         }
         $this->record->load('roles', 'sidings');
         resolve(ActivityLogRbac::class)->logRolesUpdated(

@@ -36,10 +36,6 @@ final class RrDocumentController extends Controller
             $tab = 'rakes';
         }
 
-        if ($tab === 'standalone' && ! $user->isSuperAdmin()) {
-            return redirect()->route('railway-receipts.index');
-        }
-
         if ($tab === 'standalone') {
             $tableData = RailwayReceiptsStandaloneRrDataTable::makeTable($request);
         } else {
@@ -47,11 +43,12 @@ final class RrDocumentController extends Controller
             $tableData = RailwayReceiptsRakeDataTable::makeTable($request);
         }
 
+        // Standalone list: hidden in UI (`showStandaloneTab`); open via `?tab=standalone`. Toggle prop to restore tab.
         return Inertia::render('railway-receipts/index', [
             'tableData' => $tableData,
             'activeTab' => $tab,
             'can_upload_rr' => $this->hasSectionPermission($user, 'sections.railway_receipts.upload'),
-            'showStandaloneTab' => $user->isSuperAdmin(),
+            'showStandaloneTab' => false,
             'can_manage_rake_diversion' => $this->hasSectionPermission($user, 'sections.rakes.update'),
         ]);
     }

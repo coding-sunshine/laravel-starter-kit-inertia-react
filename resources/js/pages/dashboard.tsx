@@ -1,4 +1,5 @@
 import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
+import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +33,8 @@ import {
 } from '@/components/ui/table';
 import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
 import AppLayout from '@/layouts/app-layout';
-import { laravelJsonFetch } from '@/lib/laravel-json-fetch';
+import { JsonFetchError, laravelJsonFetch } from '@/lib/laravel-json-fetch';
+import { cn } from '@/lib/utils';
 import { ExecutiveOverview } from '@/pages/dashboard/ExecutiveOverview';
 import { LoaderOverloading } from '@/pages/dashboard/LoaderOverloading';
 import { Operations } from '@/pages/dashboard/Operations';
@@ -40,6 +42,18 @@ import { PenaltyControl } from '@/pages/dashboard/PenaltyControl';
 import { PowerPlant } from '@/pages/dashboard/PowerPlant';
 import { RakePerformance } from '@/pages/dashboard/RakePerformance';
 import { SidingOverview } from '@/pages/dashboard/SidingOverview';
+import type {
+    DashboardFilters,
+    SidingPerformanceChartUiPeriod,
+    SidingPerformanceMetricsPenaltyRow,
+    SidingPerformanceMetricsRakeRow,
+    SidingPerformanceMetricsResponse,
+} from '@/pages/dashboard/types';
+import {
+    deriveSidingPerformanceChartStateFromDashboardFilters,
+    sidingPerformanceChartMatchesDashboard,
+    sidingPerformanceSpQueryForChart,
+} from '@/pages/dashboard/types';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
@@ -216,12 +230,8 @@ function dashboardSectionVisible(
                     'dashboard.widgets.penalty_control_type_distribution',
                 ) ||
                 canWidget(
-                    'dashboard.widgets.penalty_control_yesterday_predicted',
-                ) ||
-                canWidget(
                     'dashboard.widgets.penalty_control_penalty_by_siding',
-                ) ||
-                canWidget('dashboard.widgets.penalty_control_applied_vs_rr')
+                )
             );
         case 'rake-performance':
             return canWidget('dashboard.widgets.rake_performance');
@@ -641,10 +651,9 @@ interface DashboardKpis {
     trucksReceivedToday: number;
 }
 
-interface PenaltyTrendPoint {
-    date: string;
-    label: string;
-    total: number;
+interface PenaltyTrendChartPayload {
+    series: Array<{ key: string; label: string; siding_id: number }>;
+    points: Array<Record<string, string | number>>;
 }
 
 interface PenaltyByTypePoint {
@@ -800,9 +809,9 @@ interface ExecutiveYesterdayData {
             dispatch: { roadQty: number; railQty: number };
         }>;
     };
-    /** Per chart-period slices (anchor-relative), same ranges as road/rail production charts. */
+    /** Per chart-period slices (anchor-relative), same ranges as road/rail production charts, plus last_month for penalty control. */
     penaltyBySidingByPeriod?: Record<
-        'yesterday' | 'today' | 'month' | 'fy',
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
         PenaltyBySidingPoint[]
     >;
     powerPlantDispatchByPeriod?: Record<
@@ -964,7 +973,7 @@ type DashboardProps = SharedData & {
     filters?: DashboardFilters;
     filterOptions?: FilterOptions;
     kpis?: DashboardKpis;
-    penaltyTrendDaily?: PenaltyTrendPoint[];
+    penaltyTrendDaily?: PenaltyTrendChartPayload;
     penaltyByType?: PenaltyByTypePoint[];
     penaltyBySiding?: PenaltyBySidingPoint[];
     notifications?: Array<{
@@ -1461,23 +1470,53 @@ export const PENALTY_BY_SIDING_CHART_COLORS = [
     '#DB2777',
 ];
 
+/** Period keys for penalty-by-siding chart (includes last calendar month). */
+export type PenaltyBySidingChartPeriodKey =
+    | ExecutiveChartPeriodKey
+    | 'last_month';
+
+export const PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS: {
+    value: PenaltyBySidingChartPeriodKey;
+    label: string;
+}[] = [
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'last_month', label: 'Last month' },
+    { value: 'month', label: 'This month' },
+    { value: 'fy', label: 'Year' },
+];
+
 export function DashboardPenaltyBySidingChart({
     data,
     period,
     onPeriodChange,
+    periodOptions,
+    className,
 }: {
     data: PenaltyBySidingPoint[];
-    period?: ExecutiveChartPeriodKey;
-    onPeriodChange?: (p: ExecutiveChartPeriodKey) => void;
+    period?: PenaltyBySidingChartPeriodKey;
+    onPeriodChange?: (p: PenaltyBySidingChartPeriodKey) => void;
+    periodOptions?: { value: PenaltyBySidingChartPeriodKey; label: string }[];
+    className?: string;
 }) {
     const sorted = useMemo(
         () => [...data].sort((a, b) => b.total - a.total),
         [data],
     );
     const showPeriod = onPeriodChange != null && period != null;
+    const selectOptions =
+        periodOptions ??
+        (EXEC_CHART_PERIOD_OPTIONS as {
+            value: PenaltyBySidingChartPeriodKey;
+            label: string;
+        }[]);
 
     return (
-        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+        <div
+            className={cn(
+                'dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0',
+                className,
+            )}
+        >
             <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
                 {showPeriod ? (
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -1489,14 +1528,14 @@ export function DashboardPenaltyBySidingChart({
                         <Select
                             value={period}
                             onValueChange={(v) =>
-                                onPeriodChange(v as ExecutiveChartPeriodKey)
+                                onPeriodChange(v as PenaltyBySidingChartPeriodKey)
                             }
                         >
                             <SelectTrigger className="h-9 w-[160px] text-xs">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                {selectOptions.map((o) => (
                                     <SelectItem
                                         key={o.value}
                                         value={o.value}
@@ -1674,6 +1713,7 @@ export function ExecutiveYesterdaySection({
     showViewToggle = false,
     penaltyBySiding = [],
     powerPlantDispatch = [],
+    sidingStocks = {},
     canWidget,
 }: {
     data: ExecutiveYesterdayData;
@@ -1682,6 +1722,7 @@ export function ExecutiveYesterdaySection({
     showViewToggle?: boolean;
     penaltyBySiding?: PenaltyBySidingPoint[];
     powerPlantDispatch?: PowerPlantDispatchItem[];
+    sidingStocks?: Record<number, SidingStock>;
     canWidget: (permissionName: string) => boolean;
 }) {
     const [executiveData, setExecutiveData] =
@@ -1712,14 +1753,14 @@ export function ExecutiveYesterdaySection({
         'count' | 'qty'
     >('count');
     const [productionChartPeriod, setProductionChartPeriod] =
-        useState<ExecutiveChartPeriodKey>('yesterday');
+        useState<ExecutiveChartPeriodKey>('month');
     const [productionChartMetric, setProductionChartMetric] = useState<
         'trips' | 'qty'
     >('trips');
     const [penaltyChartPeriod, setPenaltyChartPeriod] =
-        useState<ExecutiveChartPeriodKey>('yesterday');
+        useState<PenaltyBySidingChartPeriodKey>('month');
     const [powerPlantChartPeriod, setPowerPlantChartPeriod] =
-        useState<ExecutiveChartPeriodKey>('yesterday');
+        useState<ExecutiveChartPeriodKey>('month');
     const [powerPlantMetric, setPowerPlantMetric] = useState<'rakes' | 'qty'>(
         'rakes',
     );
@@ -1989,6 +2030,7 @@ export function ExecutiveYesterdaySection({
 
     const TableView = (
         <div className="space-y-6">
+            <DispatchSummary stocks={sidingStocks} />
             {canWidget('dashboard.widgets.executive_tables_road_dispatch') ? (
                 <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                     <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
@@ -2955,18 +2997,30 @@ export function ExecutiveYesterdaySection({
             {canWidget(
                 'dashboard.widgets.executive_chart_powerplant_dispatch',
             ) ? (
-                <RakesPerPowerPlantExecutiveChart
-                    data={powerPlantChartData}
-                    {...(hasPowerPlantPeriodSlices
-                        ? {
-                              period: powerPlantChartPeriod,
-                              onPeriodChange: setPowerPlantChartPeriod,
-                              metric: powerPlantMetric,
-                              onMetricChange: setPowerPlantMetric,
-                          }
-                        : {})}
-                />
-            ) : null}
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+                    <div className="min-w-0">
+                        <RakesPerPowerPlantExecutiveChart
+                            data={powerPlantChartData}
+                            {...(hasPowerPlantPeriodSlices
+                                ? {
+                                      period: powerPlantChartPeriod,
+                                      onPeriodChange: setPowerPlantChartPeriod,
+                                      metric: powerPlantMetric,
+                                      onMetricChange: setPowerPlantMetric,
+                                  }
+                                : {})}
+                        />
+                    </div>
+                    <div className="min-w-0">
+                        <DispatchSummary
+                            stocks={sidingStocks}
+                            className="flex h-full flex-col"
+                        />
+                    </div>
+                </div>
+            ) : (
+                <DispatchSummary stocks={sidingStocks} />
+            )}
 
             {canWidget('dashboard.widgets.executive_chart_fy') ? (
                 <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
@@ -3234,21 +3288,391 @@ const SIDING_PERF_COLORS = [
     '#a855f7', // purple
 ];
 
+const SIDING_PERFORMANCE_CHART_SELECT_OPTIONS: {
+    value: SidingPerformanceChartUiPeriod;
+    label: string;
+}[] = [
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'today', label: 'Today' },
+    { value: 'month', label: 'This month' },
+    { value: 'last_month', label: 'Last month' },
+    { value: 'custom', label: 'Custom range' },
+];
+
+function SidingPerformanceChartPeriodSelect({
+    period,
+    onPeriodChange,
+    draftFrom,
+    draftTo,
+    onDraftFromChange,
+    onDraftToChange,
+    onApplyCustom,
+    panSelectName,
+}: {
+    period: SidingPerformanceChartUiPeriod;
+    onPeriodChange: (next: SidingPerformanceChartUiPeriod) => void;
+    draftFrom: string;
+    draftTo: string;
+    onDraftFromChange: (v: string) => void;
+    onDraftToChange: (v: string) => void;
+    onApplyCustom: () => void;
+    panSelectName: string;
+}) {
+    return (
+        <div className="space-y-2">
+            <Select
+                value={period}
+                onValueChange={(v) =>
+                    onPeriodChange(v as SidingPerformanceChartUiPeriod)
+                }
+            >
+                <SelectTrigger
+                    className="h-8 w-full max-w-[240px] text-xs"
+                    data-pan={panSelectName}
+                >
+                    <SelectValue placeholder="Period" />
+                </SelectTrigger>
+                <SelectContent>
+                    {SIDING_PERFORMANCE_CHART_SELECT_OPTIONS.map(
+                        ({ value, label }) => (
+                            <SelectItem key={value} value={value}>
+                                {label}
+                            </SelectItem>
+                        ),
+                    )}
+                </SelectContent>
+            </Select>
+            {period === 'custom' ? (
+                <div className="flex flex-wrap items-end gap-2">
+                    <div className="flex min-w-[8rem] flex-col gap-0.5">
+                        <span className="text-[10px] font-medium text-gray-500">
+                            From
+                        </span>
+                        <Input
+                            type="date"
+                            className="h-8 text-xs"
+                            value={draftFrom}
+                            onChange={(e) => onDraftFromChange(e.target.value)}
+                            data-pan={`${panSelectName}-custom-from`}
+                        />
+                    </div>
+                    <div className="flex min-w-[8rem] flex-col gap-0.5">
+                        <span className="text-[10px] font-medium text-gray-500">
+                            To
+                        </span>
+                        <Input
+                            type="date"
+                            className="h-8 text-xs"
+                            value={draftTo}
+                            onChange={(e) => onDraftToChange(e.target.value)}
+                            data-pan={`${panSelectName}-custom-to`}
+                        />
+                    </div>
+                    <Button
+                        type="button"
+                        size="sm"
+                        className="h-8"
+                        data-pan={`${panSelectName}-custom-apply`}
+                        onClick={onApplyCustom}
+                    >
+                        Apply
+                    </Button>
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 export function SidingPerformanceSection({
     data,
+    filters,
 }: {
     data: SidingPerformanceItem[];
+    filters: DashboardFilters;
 }) {
-    const chartData = useMemo(
+    const pageUrl = usePage().url;
+    const queryString = pageUrl.includes('?')
+        ? pageUrl.slice(pageUrl.indexOf('?') + 1)
+        : '';
+
+    const [rakesPeriod, setRakesPeriod] =
+        useState<SidingPerformanceChartUiPeriod>(() => {
+            return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+                .period;
+        });
+    const [penaltyPeriod, setPenaltyPeriod] =
+        useState<SidingPerformanceChartUiPeriod>(() => {
+            return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+                .period;
+        });
+
+    const [rakesCustomFrom, setRakesCustomFrom] = useState(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        return d.period === 'custom' ? d.customFrom : '';
+    });
+    const [rakesCustomTo, setRakesCustomTo] = useState(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        return d.period === 'custom' ? d.customTo : '';
+    });
+    const [rakesDraftFrom, setRakesDraftFrom] = useState(() => {
+        return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+            .customFrom;
+    });
+    const [rakesDraftTo, setRakesDraftTo] = useState(() => {
+        return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+            .customTo;
+    });
+
+    const [penaltyCustomFrom, setPenaltyCustomFrom] = useState(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        return d.period === 'custom' ? d.customFrom : '';
+    });
+    const [penaltyCustomTo, setPenaltyCustomTo] = useState(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        return d.period === 'custom' ? d.customTo : '';
+    });
+    const [penaltyDraftFrom, setPenaltyDraftFrom] = useState(() => {
+        return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+            .customFrom;
+    });
+    const [penaltyDraftTo, setPenaltyDraftTo] = useState(() => {
+        return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+            .customTo;
+    });
+
+    const [fetchedRakes, setFetchedRakes] = useState<
+        SidingPerformanceMetricsRakeRow[] | null
+    >(null);
+    const [fetchedPenalties, setFetchedPenalties] = useState<
+        SidingPerformanceMetricsPenaltyRow[] | null
+    >(null);
+    const [chartLoading, setChartLoading] = useState(false);
+    const [chartFetchError, setChartFetchError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        setRakesPeriod(d.period);
+        setPenaltyPeriod(d.period);
+        if (d.period === 'custom') {
+            setRakesCustomFrom(d.customFrom);
+            setRakesCustomTo(d.customTo);
+            setPenaltyCustomFrom(d.customFrom);
+            setPenaltyCustomTo(d.customTo);
+        } else {
+            setRakesCustomFrom('');
+            setRakesCustomTo('');
+            setPenaltyCustomFrom('');
+            setPenaltyCustomTo('');
+        }
+        setRakesDraftFrom(d.customFrom);
+        setRakesDraftTo(d.customTo);
+        setPenaltyDraftFrom(d.customFrom);
+        setPenaltyDraftTo(d.customTo);
+    }, [filters.period, filters.from, filters.to]);
+
+    const rakesMatchesDashboard = sidingPerformanceChartMatchesDashboard(
+        rakesPeriod,
+        rakesCustomFrom,
+        rakesCustomTo,
+        filters,
+    );
+    const penaltyMatchesDashboard = sidingPerformanceChartMatchesDashboard(
+        penaltyPeriod,
+        penaltyCustomFrom,
+        penaltyCustomTo,
+        filters,
+    );
+
+    const rakesSp = sidingPerformanceSpQueryForChart(
+        rakesPeriod,
+        rakesCustomFrom,
+        rakesCustomTo,
+        filters,
+    );
+    const penaltySp = sidingPerformanceSpQueryForChart(
+        penaltyPeriod,
+        penaltyCustomFrom,
+        penaltyCustomTo,
+        filters,
+    );
+
+    const chartsDivergeFromDashboard =
+        !rakesMatchesDashboard || !penaltyMatchesDashboard;
+
+    const rakesFetchReady =
+        rakesMatchesDashboard ||
+        (rakesSp.period !== 'custom' ||
+            Boolean(rakesSp.from && rakesSp.to));
+    const penaltyFetchReady =
+        penaltyMatchesDashboard ||
+        (penaltySp.period !== 'custom' ||
+            Boolean(penaltySp.from && penaltySp.to));
+
+    const shouldRunFetch =
+        chartsDivergeFromDashboard &&
+        rakesFetchReady &&
+        penaltyFetchReady;
+
+    useEffect(() => {
+        if (!chartsDivergeFromDashboard) {
+            setFetchedRakes(null);
+            setFetchedPenalties(null);
+            setChartFetchError(null);
+            setChartLoading(false);
+
+            return;
+        }
+
+        if (!shouldRunFetch) {
+            setFetchedRakes(null);
+            setFetchedPenalties(null);
+            setChartFetchError(null);
+            setChartLoading(false);
+
+            return;
+        }
+
+        let cancelled = false;
+        setChartLoading(true);
+        setChartFetchError(null);
+
+        const run = async (): Promise<void> => {
+            try {
+                const base =
+                    dashboard().url.split('?')[0] || dashboard().url || '';
+                const url = new URL(
+                    `${base.replace(/\/$/, '')}/siding-performance-metrics`,
+                    window.location.origin,
+                );
+                const qs = new URLSearchParams(
+                    queryString.length > 0
+                        ? queryString
+                        : window.location.search.replace(/^\?/, ''),
+                );
+                qs.forEach((v, k) => {
+                    url.searchParams.set(k, v);
+                });
+                url.searchParams.set('sp_rakes_period', rakesSp.period);
+                url.searchParams.set('sp_penalty_period', penaltySp.period);
+                if (rakesSp.period === 'custom' && rakesSp.from && rakesSp.to) {
+                    url.searchParams.set('sp_rakes_from', rakesSp.from);
+                    url.searchParams.set('sp_rakes_to', rakesSp.to);
+                }
+                if (
+                    penaltySp.period === 'custom' &&
+                    penaltySp.from &&
+                    penaltySp.to
+                ) {
+                    url.searchParams.set('sp_penalty_from', penaltySp.from);
+                    url.searchParams.set('sp_penalty_to', penaltySp.to);
+                }
+
+                const body = await laravelJsonFetch<SidingPerformanceMetricsResponse>(
+                    url.toString(),
+                    { method: 'GET' },
+                );
+                if (cancelled) {
+                    return;
+                }
+                setFetchedRakes(body.rakes);
+                setFetchedPenalties(body.penalties);
+            } catch (e) {
+                if (cancelled) {
+                    return;
+                }
+                const message =
+                    e instanceof JsonFetchError
+                        ? e.message
+                        : e instanceof Error
+                          ? e.message
+                          : 'Request failed';
+                setChartFetchError(message);
+                setFetchedRakes(null);
+                setFetchedPenalties(null);
+            } finally {
+                if (!cancelled) {
+                    setChartLoading(false);
+                }
+            }
+        };
+
+        void run();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        shouldRunFetch,
+        chartsDivergeFromDashboard,
+        rakesSp.period,
+        rakesSp.from,
+        rakesSp.to,
+        penaltySp.period,
+        penaltySp.from,
+        penaltySp.to,
+        queryString,
+        filters.period,
+        filters.from,
+        filters.to,
+    ]);
+
+    const mergedChartData = useMemo(() => {
+        const rakeMap = new Map<string, number>();
+        const penMap = new Map<string, number>();
+
+        if (rakesMatchesDashboard) {
+            data.forEach((d) => rakeMap.set(d.name, d.rakes));
+        } else if (fetchedRakes) {
+            fetchedRakes.forEach((r) => rakeMap.set(r.name, r.rakes));
+        } else {
+            data.forEach((d) => rakeMap.set(d.name, d.rakes));
+        }
+
+        if (penaltyMatchesDashboard) {
+            data.forEach((d) => penMap.set(d.name, d.penalty_amount));
+        } else if (fetchedPenalties) {
+            fetchedPenalties.forEach((p) =>
+                penMap.set(p.name, p.penalty_amount),
+            );
+        } else {
+            data.forEach((d) => penMap.set(d.name, d.penalty_amount));
+        }
+
+        const namesInOrder = data.map((d) => d.name);
+        const allNames = new Set([
+            ...namesInOrder,
+            ...rakeMap.keys(),
+            ...penMap.keys(),
+        ]);
+        const orderedNames =
+            namesInOrder.length > 0
+                ? namesInOrder
+                : [...allNames].sort((a, b) => a.localeCompare(b));
+
+        return orderedNames.map((name) => {
+            const propRow = data.find((d) => d.name === name);
+            return {
+                name,
+                rakes: rakeMap.get(name) ?? 0,
+                penalty_amount: penMap.get(name) ?? 0,
+                penalty_rate: propRow?.penalty_rate ?? 0,
+                penalties: propRow?.penalties ?? 0,
+            };
+        });
+    }, [
+        data,
+        fetchedRakes,
+        fetchedPenalties,
+        rakesMatchesDashboard,
+        penaltyMatchesDashboard,
+    ]);
+
+    const penaltyChips = useMemo(
         () =>
-            data.map((s) => ({
-                ...s,
-                name: s.name,
-                rakes: s.rakes,
-                penalty_amount: s.penalty_amount,
-                penalty_rate: s.penalty_rate,
-            })),
-        [data],
+            [...mergedChartData].sort(
+                (a, b) => b.penalty_amount - a.penalty_amount,
+            ),
+        [mergedChartData],
     );
 
     return (
@@ -3259,14 +3683,51 @@ export function SidingPerformanceSection({
                 subtitle="Rakes dispatched & penalty amount by siding"
             />
 
+            {chartFetchError ? (
+                <p className="mt-3 text-sm text-red-600">{chartFetchError}</p>
+            ) : null}
+
             <div className="mt-5 grid gap-6 lg:grid-cols-2">
-                <div>
-                    <p className="mb-2 text-xs font-medium text-gray-600">
+                <div
+                    className={cn(
+                        'min-w-0 space-y-2',
+                        chartLoading && 'opacity-60',
+                    )}
+                >
+                    <p className="text-xs font-medium text-gray-600">
                         Rakes dispatched
                     </p>
+                    <SidingPerformanceChartPeriodSelect
+                        period={rakesPeriod}
+                        onPeriodChange={(next) => {
+                            setRakesPeriod(next);
+                            if (next === 'custom') {
+                                const seed =
+                                    deriveSidingPerformanceChartStateFromDashboardFilters(
+                                        filters,
+                                    );
+                                setRakesDraftFrom(seed.customFrom);
+                                setRakesDraftTo(seed.customTo);
+                                setRakesCustomFrom(seed.customFrom);
+                                setRakesCustomTo(seed.customTo);
+                            } else {
+                                setRakesCustomFrom('');
+                                setRakesCustomTo('');
+                            }
+                        }}
+                        draftFrom={rakesDraftFrom}
+                        draftTo={rakesDraftTo}
+                        onDraftFromChange={setRakesDraftFrom}
+                        onDraftToChange={setRakesDraftTo}
+                        onApplyCustom={() => {
+                            setRakesCustomFrom(rakesDraftFrom);
+                            setRakesCustomTo(rakesDraftTo);
+                        }}
+                        panSelectName="siding-perf-rakes-period-select"
+                    />
                     <ResponsiveContainer width="100%" height={260}>
                         <RechartsBarChart
-                            data={chartData}
+                            data={mergedChartData}
                             layout="horizontal"
                             margin={{ top: 8, right: 16, bottom: 0, left: 16 }}
                         >
@@ -3297,13 +3758,46 @@ export function SidingPerformanceSection({
                         </RechartsBarChart>
                     </ResponsiveContainer>
                 </div>
-                <div>
-                    <p className="mb-2 text-xs font-medium text-gray-600">
+                <div
+                    className={cn(
+                        'min-w-0 space-y-2',
+                        chartLoading && 'opacity-60',
+                    )}
+                >
+                    <p className="text-xs font-medium text-gray-600">
                         Penalty amount by siding
                     </p>
+                    <SidingPerformanceChartPeriodSelect
+                        period={penaltyPeriod}
+                        onPeriodChange={(next) => {
+                            setPenaltyPeriod(next);
+                            if (next === 'custom') {
+                                const seed =
+                                    deriveSidingPerformanceChartStateFromDashboardFilters(
+                                        filters,
+                                    );
+                                setPenaltyDraftFrom(seed.customFrom);
+                                setPenaltyDraftTo(seed.customTo);
+                                setPenaltyCustomFrom(seed.customFrom);
+                                setPenaltyCustomTo(seed.customTo);
+                            } else {
+                                setPenaltyCustomFrom('');
+                                setPenaltyCustomTo('');
+                            }
+                        }}
+                        draftFrom={penaltyDraftFrom}
+                        draftTo={penaltyDraftTo}
+                        onDraftFromChange={setPenaltyDraftFrom}
+                        onDraftToChange={setPenaltyDraftTo}
+                        onApplyCustom={() => {
+                            setPenaltyCustomFrom(penaltyDraftFrom);
+                            setPenaltyCustomTo(penaltyDraftTo);
+                        }}
+                        panSelectName="siding-perf-penalty-period-select"
+                    />
                     <ResponsiveContainer width="100%" height={260}>
                         <RechartsBarChart
-                            data={chartData}
+                            data={mergedChartData}
                             margin={{ top: 8, right: 16, bottom: 0, left: 8 }}
                         >
                             <CartesianGrid
@@ -3338,20 +3832,17 @@ export function SidingPerformanceSection({
                         </RechartsBarChart>
                     </ResponsiveContainer>
                     <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
-                        {data
-                            .slice()
-                            .sort((a, b) => b.penalty_amount - a.penalty_amount)
-                            .map((s) => (
-                                <div
-                                    key={s.name}
-                                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-800"
-                                >
-                                    <span>{s.name}:</span>
-                                    <span className="font-semibold tabular-nums">
-                                        {formatCurrency(s.penalty_amount)}
-                                    </span>
-                                </div>
-                            ))}
+                        {penaltyChips.map((s) => (
+                            <div
+                                key={s.name}
+                                className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-800"
+                            >
+                                <span>{s.name}:</span>
+                                <span className="font-semibold tabular-nums">
+                                    {formatCurrency(s.penalty_amount)}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -4200,10 +4691,14 @@ export function RakePerformanceSection({
     );
 
     const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(100);
     const [selectedSidingTab, setSelectedSidingTab] = useState<'all' | number>(
         'all',
     );
     const [rows, setRows] = useState<RakePerformanceSummaryItem[]>([]);
+    const [prefetchedRows, setPrefetchedRows] = useState<
+        RakePerformanceSummaryItem[]
+    >([]);
     const [listMeta, setListMeta] = useState<{
         current_page: number;
         last_page: number;
@@ -4211,6 +4706,8 @@ export function RakePerformanceSection({
         total: number;
     } | null>(null);
     const [listLoading, setListLoading] = useState(true);
+    const [listLoadingMore, setListLoadingMore] = useState(false);
+    const [apiEndReached, setApiEndReached] = useState(false);
     const [listError, setListError] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalRakeId, setModalRakeId] = useState<number | null>(null);
@@ -4225,6 +4722,11 @@ export function RakePerformanceSection({
 
     useEffect(() => {
         setPage(1);
+        setPerPage(100);
+        setRows([]);
+        setPrefetchedRows([]);
+        setListMeta(null);
+        setApiEndReached(false);
     }, [filterKey, selectedSidingTab]);
 
     useEffect(() => {
@@ -4238,13 +4740,15 @@ export function RakePerformanceSection({
 
     useEffect(() => {
         let cancelled = false;
-        setListLoading(true);
+        const isInitialLoad = page === 1 && perPage === 100;
+        setListLoading(isInitialLoad);
+        setListLoadingMore(!isInitialLoad);
         setListError(null);
         const qs = buildRakePerformanceApiSearchParams({
             filters,
             allSidingIds,
             page,
-            perPage: 15,
+            perPage,
             sidingId:
                 selectedSidingTab === 'all' ? undefined : selectedSidingTab,
         });
@@ -4259,8 +4763,32 @@ export function RakePerformanceSection({
         }>(`/dashboard/rake-performance/rakes?${qs}`)
             .then((res) => {
                 if (!cancelled) {
-                    setRows(res.data);
+                    if (isInitialLoad) {
+                        // For testing: show only the first 50 rows initially.
+                        // Keep the rest ready to append in 20-row chunks on scroll.
+                        setRows(res.data.slice(0, 50));
+                        setPrefetchedRows(res.data.slice(50));
+                    } else {
+                        setRows((prev) => {
+                        if (prev.length === 0) {
+                            return res.data;
+                        }
+                        const seen = new Set(prev.map((r) => r.id));
+                        const merged = [...prev];
+                        res.data.forEach((r) => {
+                            if (!seen.has(r.id)) {
+                                merged.push(r);
+                                seen.add(r.id);
+                            }
+                        });
+                        return merged;
+                        });
+                    }
                     setListMeta(res.meta);
+                    setApiEndReached(
+                        res.data.length === 0 ||
+                            res.meta.current_page >= res.meta.last_page,
+                    );
                 }
             })
             .catch((e: unknown) => {
@@ -4273,12 +4801,49 @@ export function RakePerformanceSection({
             .finally(() => {
                 if (!cancelled) {
                     setListLoading(false);
+                    setListLoadingMore(false);
                 }
             });
         return () => {
             cancelled = true;
         };
-    }, [filterKey, allSidingIds, page, selectedSidingTab]);
+    }, [filterKey, allSidingIds, page, perPage, selectedSidingTab]);
+
+    const loadMore = useCallback(() => {
+        const endReached = apiEndReached && prefetchedRows.length === 0;
+        if (listLoading || listLoadingMore || endReached || listError != null) {
+            return;
+        }
+        if (rows.length === 0) {
+            return;
+        }
+
+        if (prefetchedRows.length > 0) {
+            const next = prefetchedRows.slice(0, 20);
+            setRows((prev) => [...prev, ...next]);
+            setPrefetchedRows((prev) => prev.slice(20));
+            return;
+        }
+
+        // After the initial 100-row load (page=1, perPage=100), jump to the
+        // next 20-row page that starts after the first 100 results.
+        if (page === 1 && perPage === 100) {
+            setPerPage(20);
+            setPage(6);
+            return;
+        }
+
+        setPage((p) => p + 1);
+    }, [
+        apiEndReached,
+        listError,
+        listLoading,
+        listLoadingMore,
+        page,
+        perPage,
+        prefetchedRows.length,
+        rows.length,
+    ]);
 
     useEffect(() => {
         if (modalRakeId == null) {
@@ -4521,38 +5086,41 @@ export function RakePerformanceSection({
                 )}
             </div>
 
-            {listMeta != null && listMeta.total > 0 && (
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
-                    <p>
-                        Page {listMeta.current_page} of {listMeta.last_page} (
-                        {listMeta.total} rakes)
-                    </p>
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={listMeta.current_page <= 1}
-                            onClick={() => {
-                                setPage((p) => Math.max(1, p - 1));
-                            }}
-                        >
-                            Previous
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={
-                                listMeta.current_page >= listMeta.last_page
-                            }
-                            onClick={() => {
-                                setPage((p) => p + 1);
-                            }}
-                        >
-                            Next
-                        </Button>
-                    </div>
+            {rows.length > 0 && (
+                <div className="mt-3">
+                    {(() => {
+                        const endReached =
+                            apiEndReached && prefetchedRows.length === 0;
+                        return (
+                            <div className="space-y-2">
+                                <div className="text-center text-xs text-gray-500">
+                                    {listLoadingMore
+                                        ? 'Loading more…'
+                                        : endReached
+                                          ? 'All records retrieved.'
+                                          : 'Load more records.'}
+                                </div>
+                                <div className="flex flex-col items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={
+                                            listLoading ||
+                                            listLoadingMore ||
+                                            endReached ||
+                                            listError != null
+                                        }
+                                        onClick={() => {
+                                            loadMore();
+                                        }}
+                                    >
+                                        Load more
+                                    </Button>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -6225,30 +6793,21 @@ export default function Dashboard() {
         loaderOperatorsByLoader: {},
     };
     const kpis = props.kpis;
-    const penaltyTrendDaily = props.penaltyTrendDaily ?? [];
+    const penaltyTrendDaily = props.penaltyTrendDaily ?? {
+        series: [],
+        points: [],
+    };
     const penaltyByType = props.penaltyByType ?? [];
     const penaltyBySiding = props.penaltyBySiding ?? [];
-    const alerts = props.alerts ?? [];
     const liveRakeStatus = props.liveRakeStatus ?? [];
     const dailyRakeDetails = props.dailyRakeDetails;
     const coalTransportReport = props.coalTransportReport;
     const truckReceiptTrend = props.truckReceiptTrend ?? [];
     const shiftWiseVehicleReceipt = props.shiftWiseVehicleReceipt ?? [];
     const stockGauge = props.stockGauge;
-    const predictedVsActualPenalty = props.predictedVsActualPenalty ?? {
-        predicted: 0,
-        actual: 0,
-        bySiding: [],
-    };
     const baseSidingStocks = props.sidingStocks ?? {};
-    const penaltySummary = props.penaltySummary;
-    const activeRakePipeline = props.activeRakePipeline;
-    const riskScores = props.riskScores ?? {};
-    const alertsData = props.alerts ?? {};
     const operatorRake = props.operatorRake ?? null;
     const penaltyPredictions = props.penaltyPredictions ?? [];
-    const overloadPatterns = props.overloadPatterns ?? [];
-    const sidingStocksMap = props.sidingStocks ?? {};
     const allowedWidgets = props.allowedDashboardWidgets ?? [];
     const isExecutive = allowedWidgets.some((w) =>
         [
@@ -6364,7 +6923,6 @@ export default function Dashboard() {
     );
 
     const powerPlantDispatch = props.powerPlantDispatch ?? [];
-    const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
     const executiveYesterday = props.executiveYesterday;
 
     const filteredSidings = useMemo(() => {
@@ -6695,20 +7253,8 @@ export default function Dashboard() {
                                             <ExecutiveOverview
                                                 isExecutive={isExecutive}
                                                 operatorRake={operatorRake}
-                                                penaltySummary={penaltySummary}
-                                                activeRakePipeline={
-                                                    activeRakePipeline
-                                                }
-                                                sidingStocksMap={
-                                                    sidingStocksMap
-                                                }
-                                                riskScores={riskScores}
-                                                alertsData={alertsData}
                                                 penaltyPredictions={
                                                     penaltyPredictions
-                                                }
-                                                overloadPatterns={
-                                                    overloadPatterns
                                                 }
                                                 filteredSidings={
                                                     filteredSidings
@@ -6790,15 +7336,6 @@ export default function Dashboard() {
                                                 penaltyBySiding={
                                                     penaltyBySiding
                                                 }
-                                                yesterdayPredictedPenalties={
-                                                    yesterdayPredictedPenalties
-                                                }
-                                                predictedVsActualPenalty={
-                                                    predictedVsActualPenalty
-                                                }
-                                                filteredSidings={
-                                                    filteredSidings
-                                                }
                                                 executiveYesterday={
                                                     executiveYesterday
                                                 }
@@ -6810,6 +7347,7 @@ export default function Dashboard() {
                                             (sidingPerformance.length > 0 ? (
                                                 <SidingPerformanceSection
                                                     data={sidingPerformance}
+                                                    filters={filters}
                                                 />
                                             ) : (
                                                 <div className="dashboard-card rounded-xl border-0 p-6">
@@ -6885,7 +7423,7 @@ export default function Dashboard() {
                             )}
                         </div>
 
-                        {kpiCards.length > 0 && (
+                        {false && kpiCards.length > 0 && (
                             <aside className="group sticky top-20 h-[calc(100vh-6rem)] shrink-0 self-start">
                                 <div className="flex h-full w-14 flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-[width] duration-200 ease-out group-hover:w-72">
                                     <div className="flex flex-1 flex-col gap-2 p-2">

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Dashboard;
 
 use App\Models\Siding;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +46,7 @@ final class DashboardFilterResolver
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
 
-        [$from, $to] = $this->resolveDateRange($request);
+        [$from, $to] = $this->resolveDateRangeFromRequest($request);
 
         $parsedSidingIds = $this->parseRequestedSidingIds($request);
 
@@ -179,6 +180,65 @@ final class DashboardFilterResolver
     }
 
     /**
+     * Inclusive date bounds for a dashboard period preset (or custom Y-m-d strings).
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    public function boundsForPeriod(
+        string $period,
+        ?string $fromYmd = null,
+        ?string $toYmd = null,
+        ?CarbonInterface $now = null,
+    ): array {
+        $tz = config('app.timezone', 'UTC');
+        $nowCarbon = $now !== null
+            ? Carbon::parse($now->toDateTimeString(), $tz)
+            : now($tz);
+
+        if ($period === 'custom') {
+            $from = ($fromYmd !== null && $fromYmd !== '')
+                ? Carbon::parse($fromYmd, $tz)->startOfDay()
+                : $nowCarbon->copy()->startOfMonth();
+            $to = ($toYmd !== null && $toYmd !== '')
+                ? Carbon::parse($toYmd, $tz)->copy()->endOfDay()
+                : $nowCarbon->copy()->endOfDay();
+
+            return [$from, $to];
+        }
+
+        return match ($period) {
+            'yesterday' => [
+                $nowCarbon->copy()->subDay()->startOfDay(),
+                $nowCarbon->copy()->subDay()->endOfDay(),
+            ],
+            'today' => [
+                $nowCarbon->copy()->startOfDay(),
+                $nowCarbon->copy()->endOfDay(),
+            ],
+            'week' => [
+                $nowCarbon->copy()->startOfWeek(),
+                $nowCarbon->copy()->endOfDay(),
+            ],
+            'last_week' => [
+                $nowCarbon->copy()->subWeek()->startOfWeek(),
+                $nowCarbon->copy()->subWeek()->endOfWeek(),
+            ],
+            'month' => [
+                $nowCarbon->copy()->startOfMonth(),
+                $nowCarbon->copy()->endOfDay(),
+            ],
+            'last_month' => [
+                $nowCarbon->copy()->subMonthNoOverflow()->startOfMonth(),
+                $nowCarbon->copy()->subMonthNoOverflow()->endOfMonth(),
+            ],
+            default => [
+                $nowCarbon->copy()->subDay()->startOfDay(),
+                $nowCarbon->copy()->subDay()->endOfDay(),
+            ],
+        };
+    }
+
+    /**
      * @return list<int>
      */
     private function parseRequestedSidingIds(Request $request): array
@@ -207,56 +267,28 @@ final class DashboardFilterResolver
     /**
      * @return array{0: CarbonInterface, 1: CarbonInterface}
      */
-    private function resolveDateRange(Request $request): array
+    private function resolveDateRangeFromRequest(Request $request): array
     {
         $period = (string) $request->input('period', 'yesterday');
         $tz = config('app.timezone', 'UTC');
         $now = now($tz);
 
         if ($period === 'custom') {
-            $from = $this->parseRequestDate($request, 'from', $tz) ?? $now->copy()->startOfMonth();
-            $to = $now->copy()->endOfDay();
-            $parsedTo = $this->parseRequestDate($request, 'to', $tz);
-            if ($parsedTo !== null) {
-                $to = $parsedTo->copy()->endOfDay();
-            }
+            $fromParsed = $this->parseRequestDate($request, 'from', $tz);
+            $toParsed = $this->parseRequestDate($request, 'to', $tz);
 
-            return [$from, $to];
+            return $this->boundsForPeriod(
+                'custom',
+                $fromParsed?->toDateString(),
+                $toParsed?->toDateString(),
+                $now,
+            );
         }
 
-        return match ($period) {
-            'yesterday' => [
-                $now->copy()->subDay()->startOfDay(),
-                $now->copy()->subDay()->endOfDay(),
-            ],
-            'today' => [
-                $now->copy()->startOfDay(),
-                $now->copy()->endOfDay(),
-            ],
-            'week' => [
-                $now->copy()->startOfWeek(),
-                $now->copy()->endOfDay(),
-            ],
-            'last_week' => [
-                $now->copy()->subWeek()->startOfWeek(),
-                $now->copy()->subWeek()->endOfWeek(),
-            ],
-            'month' => [
-                $now->copy()->startOfMonth(),
-                $now->copy()->endOfDay(),
-            ],
-            'last_month' => [
-                $now->copy()->subMonthNoOverflow()->startOfMonth(),
-                $now->copy()->subMonthNoOverflow()->endOfMonth(),
-            ],
-            default => [
-                $now->copy()->subDay()->startOfDay(),
-                $now->copy()->subDay()->endOfDay(),
-            ],
-        };
+        return $this->boundsForPeriod($period, null, null, $now);
     }
 
-    private function parseRequestDate(Request $request, string $key, string $tz): ?\Carbon\Carbon
+    private function parseRequestDate(Request $request, string $key, string $tz): ?Carbon
     {
         $value = $request->query($key) ?? $request->input($key);
         if ($value === null || $value === '') {
@@ -264,10 +296,10 @@ final class DashboardFilterResolver
         }
 
         if ($value instanceof CarbonInterface) {
-            return \Carbon\Carbon::parse($value->format('Y-m-d'), $tz)->startOfDay();
+            return Carbon::parse($value->format('Y-m-d'), $tz)->startOfDay();
         }
 
-        return \Carbon\Carbon::parse((string) $value, $tz)->startOfDay();
+        return Carbon::parse((string) $value, $tz)->startOfDay();
     }
 
     private function parseSingleDate(Request $request, string $key, CarbonInterface $default): CarbonInterface

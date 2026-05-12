@@ -196,6 +196,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('control-room/{rake}', [App\Http\Controllers\LiveMonitorController::class, 'show'])->name('control-room.show');
     Route::get('dashboard/executive-yesterday-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'executiveYesterdayData'])
         ->name('dashboard.executive-yesterday-data');
+    Route::get('dashboard/siding-performance-metrics', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'sidingPerformanceMetrics'])
+        ->name('dashboard.siding-performance-metrics');
     Route::get('dashboard/rake-performance/rakes', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceList'])
         ->name('dashboard.rake-performance.rakes.index');
     Route::get('dashboard/rake-performance/rakes/{rake}', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceDetail'])
@@ -438,6 +440,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Railway Receipts (RR) and Penalties
     Route::get('railway-receipts', [RrDocumentController::class, 'index'])->name('railway-receipts.index');
+    Route::post('railway-receipts/import-preview', [RrUploadController::class, 'importPreview'])->name('railway-receipts.import-preview');
     Route::post('railway-receipts/import', [RrUploadController::class, 'store'])->name('railway-receipts.import');
     Route::post('railway-receipts/upload', [RrDocumentController::class, 'upload'])->name('railway-receipts.upload');
     Route::get('railway-receipts/create', [RrDocumentController::class, 'create'])->name('railway-receipts.create');

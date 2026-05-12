@@ -1,21 +1,27 @@
 interface PccStatusPillsProps {
     ok: number;
     near: number;
+    low: number;
     over: number;
     empty: number;
 }
 
-export function PccStatusPills({ ok, near, over, empty }: PccStatusPillsProps) {
+export function PccStatusPills({ ok, near, low, over, empty }: PccStatusPillsProps) {
     return (
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
             {ok > 0 && (
                 <span className="flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-green-700">
-                    ✓ {ok} OK
+                    ✓ {ok} On target
                 </span>
             )}
             {near > 0 && (
                 <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">
-                    ⚡ {near} Near
+                    ⚡ {near} Underload
+                </span>
+            )}
+            {low > 0 && (
+                <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-violet-800">
+                    ▼ {low} Low load
                 </span>
             )}
             {over > 0 && (

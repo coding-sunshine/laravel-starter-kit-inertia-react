@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-05-05",
+    "lastGenerated": "2026-05-11",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -592,15 +592,30 @@
                 "relatedRoutes": []
             }
         },
+        "ResolveRakeForRrImportPreview": {
+            "documented": true,
+            "path": "./resolverakeforrrimportpreview.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Indent",
+                    "Rake"
+                ],
+                "relatedRoutes": []
+            }
+        },
         "RunReportAction": {
             "documented": true,
             "path": "./runreportaction.md",
+            "lastUpdated": "2026-05-07",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
                     "AppliedPenalty",
                     "DailyVehicleEntry",
                     "Indent",
+                    "PowerPlant",
+                    "Rake",
                     "RakeCharge",
                     "RakeWagonWeighment",
                     "RrDocument",
@@ -1457,6 +1472,22 @@
                 ],
                 "relatedRoutes": []
             }
+        },
+        "PreviewRailwayReceiptImport": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User",
+                    "Siding"
+                ],
+                "relatedRoutes": [
+                    "api.v1.railway-receipts.import-preview",
+                    "railway-receipts.import-preview",
+                    "railway-receipts.import"
+                ]
+            }
         }
     },
     "controllers": {
@@ -1987,7 +2018,7 @@
         "ExecutiveDashboardController": {
             "documented": true,
             "path": "./executivedashboardcontroller.md",
-            "lastUpdated": "2026-04-27",
+            "lastUpdated": "2026-05-11",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2500,6 +2531,7 @@
         "MobileDashboardController": {
             "documented": true,
             "path": "./mobiledashboardcontroller.md",
+            "lastUpdated": "2026-05-11",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -2724,8 +2756,11 @@
             "documented": true,
             "path": "./rruploadcontroller.md",
             "relationships": {
-                "usesActions": [],
+                "usesActions": [
+                    "PreviewRailwayReceiptImport"
+                ],
                 "usesFormRequests": [
+                    "StoreRrImportPreviewRequest",
                     "StoreRrUploadRequest"
                 ],
                 "relatedRoutes": [],
@@ -3045,6 +3080,19 @@
                     "sidings/monitor"
                 ]
             }
+        },
+        "RailwayReceiptImportPreviewController": {
+            "documented": true,
+            "path": "./railwayreceiptimportpreviewcontroller.md",
+            "lastUpdated": "2026-05-06",
+            "relationships": {
+                "usesActions": [
+                    "PreviewRailwayReceiptImport"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
         }
     },
     "pages": {
@@ -3163,6 +3211,7 @@
                     "api.v1.indents.show",
                     "api.v1.indents.assign-rake-number",
                     "api.v1.indents.download",
+                    "api.v1.railway-receipts.import-preview",
                     "api.v1.railway-receipts.upload",
                     "api.v1.railway-receipts.index",
                     "api.v1.railway-receipts.show",
@@ -3192,9 +3241,12 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
                     "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance.rakes.index",
+                    "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
@@ -3220,6 +3272,7 @@
                     "control-room.index",
                     "control-room.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -3444,6 +3497,7 @@
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import-preview",
                     "railway-receipts.import",
                     "railway-receipts.upload",
                     "railway-receipts.create",
@@ -3516,6 +3570,7 @@
                 "relatedRoutes": [
                     "dashboard",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show"
                 ]
@@ -3853,6 +3908,7 @@
                     "api.v1.indents.show",
                     "api.v1.indents.assign-rake-number",
                     "api.v1.indents.download",
+                    "api.v1.railway-receipts.import-preview",
                     "api.v1.railway-receipts.upload",
                     "api.v1.railway-receipts.index",
                     "api.v1.railway-receipts.show",
@@ -3882,9 +3938,12 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
                     "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance.rakes.index",
+                    "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
@@ -3910,6 +3969,7 @@
                     "control-room.index",
                     "control-room.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -4134,6 +4194,7 @@
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import-preview",
                     "railway-receipts.import",
                     "railway-receipts.upload",
                     "railway-receipts.create",
@@ -4326,6 +4387,7 @@
                     "api.v1.indents.show",
                     "api.v1.indents.assign-rake-number",
                     "api.v1.indents.download",
+                    "api.v1.railway-receipts.import-preview",
                     "api.v1.railway-receipts.upload",
                     "api.v1.railway-receipts.index",
                     "api.v1.railway-receipts.show",
@@ -4355,9 +4417,12 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
                     "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance.rakes.index",
+                    "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
@@ -4383,6 +4448,7 @@
                     "control-room.index",
                     "control-room.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -4607,6 +4673,7 @@
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import-preview",
                     "railway-receipts.import",
                     "railway-receipts.upload",
                     "railway-receipts.create",
@@ -4785,6 +4852,7 @@
                     "api.v1.indents.show",
                     "api.v1.indents.assign-rake-number",
                     "api.v1.indents.download",
+                    "api.v1.railway-receipts.import-preview",
                     "api.v1.railway-receipts.upload",
                     "api.v1.railway-receipts.index",
                     "api.v1.railway-receipts.show",
@@ -4814,9 +4882,12 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
                     "api.v1.dashboard.penalty-control",
+                    "api.v1.dashboard.rake-performance.rakes.index",
+                    "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
@@ -4842,6 +4913,7 @@
                     "control-room.index",
                     "control-room.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.siding-performance-metrics",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -5066,6 +5138,7 @@
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
+                    "railway-receipts.import-preview",
                     "railway-receipts.import",
                     "railway-receipts.upload",
                     "railway-receipts.create",

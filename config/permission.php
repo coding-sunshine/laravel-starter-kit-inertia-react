@@ -234,6 +234,8 @@ return [
         'boost.*',
         'scramble.*',
         'exports.coal-transport-report',
+        // Sub-step of RR upload: authorize via sections.railway_receipts.upload in RrUploadController; no separate route permission.
+        'railway-receipts.import-preview',
     ],
 
     /*

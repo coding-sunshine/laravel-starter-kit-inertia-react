@@ -25,6 +25,30 @@ export interface SidingPerformanceItem {
     penalty_rate: number;
 }
 
+/** Period keys for `GET /dashboard/siding-performance-metrics` (`sp_rakes_*` / `sp_penalty_*`). */
+export type SidingPerformanceChartPeriodKey =
+    | 'main'
+    | 'yesterday'
+    | 'today'
+    | 'month'
+    | 'last_month'
+    | 'custom';
+
+export interface SidingPerformanceMetricsRakeRow {
+    name: string;
+    rakes: number;
+}
+
+export interface SidingPerformanceMetricsPenaltyRow {
+    name: string;
+    penalty_amount: number;
+}
+
+export interface SidingPerformanceMetricsResponse {
+    rakes: SidingPerformanceMetricsRakeRow[];
+    penalties: SidingPerformanceMetricsPenaltyRow[];
+}
+
 export interface SidingWiseMonthlyPoint {
     month: string;
     [sidingName: string]: string | number;
@@ -132,6 +156,95 @@ export interface DashboardFilters {
     coal_transport_date?: string;
 }
 
+/** Presets exposed on siding performance chart dropdowns (subset of dashboard `period`). */
+export const SIDING_PERFORMANCE_CHART_PRESET_PERIODS = [
+    'yesterday',
+    'today',
+    'month',
+    'last_month',
+] as const;
+
+export type SidingPerformanceChartUiPeriod =
+    (typeof SIDING_PERFORMANCE_CHART_PRESET_PERIODS)[number] | 'custom';
+
+/**
+ * Map main dashboard filters to chart UI: same preset when supported; otherwise Custom using resolved `from`/`to`.
+ */
+export function deriveSidingPerformanceChartStateFromDashboardFilters(
+    filters: DashboardFilters,
+): {
+    period: SidingPerformanceChartUiPeriod;
+    customFrom: string;
+    customTo: string;
+} {
+    const p = filters.period;
+    if (
+        (SIDING_PERFORMANCE_CHART_PRESET_PERIODS as readonly string[]).includes(
+            p,
+        )
+    ) {
+        return {
+            period: p as SidingPerformanceChartUiPeriod,
+            customFrom: filters.from,
+            customTo: filters.to,
+        };
+    }
+
+    return {
+        period: 'custom',
+        customFrom: filters.from,
+        customTo: filters.to,
+    };
+}
+
+export function sidingPerformanceChartMatchesDashboard(
+    uiPeriod: SidingPerformanceChartUiPeriod,
+    committedCustomFrom: string,
+    committedCustomTo: string,
+    filters: DashboardFilters,
+): boolean {
+    const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+    if (uiPeriod !== d.period) {
+        return false;
+    }
+    if (uiPeriod === 'custom') {
+        return (
+            committedCustomFrom === d.customFrom &&
+            committedCustomTo === d.customTo
+        );
+    }
+
+    return true;
+}
+
+/** Query params for one chart on `GET /dashboard/siding-performance-metrics`. */
+export function sidingPerformanceSpQueryForChart(
+    uiPeriod: SidingPerformanceChartUiPeriod,
+    committedCustomFrom: string,
+    committedCustomTo: string,
+    filters: DashboardFilters,
+): { period: SidingPerformanceChartPeriodKey; from?: string; to?: string } {
+    if (
+        sidingPerformanceChartMatchesDashboard(
+            uiPeriod,
+            committedCustomFrom,
+            committedCustomTo,
+            filters,
+        )
+    ) {
+        return { period: 'main' };
+    }
+    if (uiPeriod === 'custom') {
+        return {
+            period: 'custom',
+            from: committedCustomFrom,
+            to: committedCustomTo,
+        };
+    }
+
+    return { period: uiPeriod };
+}
+
 export interface FilterOptions {
     powerPlants: Array<{ value: string; label: string }>;
     loaders: Array<{ id: number; name: string; siding_name: string }>;
@@ -149,10 +262,17 @@ export interface DashboardKpis {
     trucksReceivedToday: number;
 }
 
-export interface PenaltyTrendPoint {
-    date: string;
+export interface PenaltyTrendSeriesItem {
+    key: string;
     label: string;
-    total: number;
+    siding_id: number;
+}
+
+/** Multi-series penalty trend: one line per siding. */
+export interface PenaltyTrendChartPayload {
+    series: PenaltyTrendSeriesItem[];
+    /** Each row: `date`, `label`, plus one numeric field per series `key`. */
+    points: Array<Record<string, string | number>>;
 }
 
 export interface PenaltyByTypePoint {
@@ -316,7 +436,7 @@ export interface ExecutiveYesterdayData {
         }>;
     };
     penaltyBySidingByPeriod?: Record<
-        'yesterday' | 'today' | 'month' | 'fy',
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
         PenaltyBySidingPoint[]
     >;
     powerPlantDispatchByPeriod?: Record<

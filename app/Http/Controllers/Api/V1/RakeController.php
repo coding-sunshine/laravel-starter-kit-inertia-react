@@ -50,8 +50,8 @@ final class RakeController extends Controller
 
         /** @var LengthAwarePaginator $paginator */
         $paginator = QueryBuilder::for($query, $request)
-            ->allowedFilters(RakeDataTable::tableAllowedFilters())
-            ->allowedSorts(RakeDataTable::tableAllowedSorts())
+            ->allowedFilters(...RakeDataTable::tableAllowedFilters())
+            ->allowedSorts(...RakeDataTable::tableAllowedSorts())
             ->defaultSort(RakeDataTable::tableDefaultSort())
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
@@ -244,8 +244,8 @@ final class RakeController extends Controller
         );
 
         $rakes = QueryBuilder::for($query, $request)
-            ->allowedFilters(RakeDataTable::tableAllowedFilters())
-            ->allowedSorts(RakeDataTable::tableAllowedSorts())
+            ->allowedFilters(...RakeDataTable::tableAllowedFilters())
+            ->allowedSorts(...RakeDataTable::tableAllowedSorts())
             ->defaultSort(RakeDataTable::tableDefaultSort())
             ->get();
 

@@ -119,5 +119,6 @@ All Controllers:
 | CommandPaletteSearchController | N/A | ❌ |
 | QuickPlacementController | N/A | ❌ |
 | SidingMonitorController | N/A | ❌ |
+| [RailwayReceiptImportPreviewController](./railwayreceiptimportpreviewcontroller.md) | N/A | ✅ |
 
 

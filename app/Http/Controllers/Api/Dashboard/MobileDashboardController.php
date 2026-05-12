@@ -6,8 +6,12 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Dashboard\ExecutiveDashboardController;
+use App\Models\Loader;
 use App\Models\PenaltyType;
+use App\Models\Rake;
+use App\Services\Dashboard\LoaderOverloadMetricsService;
 use App\Support\Dashboard\DashboardFilterResolver;
+use App\Support\Dashboard\DashboardWidgetPermissions;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +22,7 @@ final class MobileDashboardController extends Controller
     public function __construct(
         private readonly DashboardFilterResolver $filters,
         private readonly ExecutiveDashboardController $dashboard,
+        private readonly LoaderOverloadMetricsService $loaderOverloadMetrics,
     ) {}
 
     /**
@@ -221,6 +226,15 @@ final class MobileDashboardController extends Controller
     }
 
     /**
+     * Split siding performance series (rakes vs penalty) with optional `sp_rakes_*` / `sp_penalty_*` overrides.
+     * Same query contract and JSON body as web `GET /dashboard/siding-performance-metrics`.
+     */
+    public function sidingPerformanceMetrics(Request $request): JsonResponse
+    {
+        return $this->dashboard->sidingPerformanceMetrics($request);
+    }
+
+    /**
      * Same widgets as web "Penalty control" section (no executive-only or unused chart bundles).
      */
     public function penaltyControl(Request $request): JsonResponse
@@ -240,6 +254,27 @@ final class MobileDashboardController extends Controller
         ]);
     }
 
+    /**
+     * Paginated rake-wise performance list (summary rows only). Same JSON as web `GET /dashboard/rake-performance/rakes`.
+     * Prefer this and {@see rakePerformanceRakeShow} over {@see rakePerformance} for mobile (pagination, smaller payloads).
+     */
+    public function rakePerformanceRakesIndex(Request $request): JsonResponse
+    {
+        return $this->dashboard->rakePerformanceList($request);
+    }
+
+    /**
+     * Single rake detail with wagon weighments and loader/operator metadata.
+     * Same `data` shape as web detail; scope is rake id + user siding access only (see {@see ExecutiveDashboardController::rakePerformanceDetailForApi}).
+     */
+    public function rakePerformanceRakeShow(Request $request, Rake $rake): JsonResponse
+    {
+        return $this->dashboard->rakePerformanceDetailForApi($request, $rake);
+    }
+
+    /**
+     * @deprecated Prefer `rake-performance/rakes` + `rake-performance/rakes/{rake}` — returns all matching rakes with full wagon arrays in one response (heavy).
+     */
     public function rakePerformance(Request $request): JsonResponse
     {
         $resolved = $this->filters->resolve($request);
@@ -254,8 +289,14 @@ final class MobileDashboardController extends Controller
         ]);
     }
 
+    /**
+     * @deprecated Prefer {@see loaderOverloadLoadersIndex}, {@see loaderOverloadOperatorsIndex},
+     *             {@see loaderOverloadLoaderShow}, and {@see loaderOverloadOperatorShow} — same data as web
+     *             but split for pagination and smaller payloads.
+     */
     public function loaderOverload(Request $request): JsonResponse
     {
+        $this->assertCanAccessLoaderOverload($request);
         $resolved = $this->filters->resolve($request);
 
         return response()->json([
@@ -268,6 +309,127 @@ final class MobileDashboardController extends Controller
                     $resolved['filterContext'],
                 ),
             ],
+        ]);
+    }
+
+    /**
+     * Paginated loaders with wagon activity in range. Same JSON as web `GET /dashboard/loader-overload/loaders`.
+     */
+    public function loaderOverloadLoadersIndex(Request $request): JsonResponse
+    {
+        $this->assertCanAccessLoaderOverload($request);
+        $resolved = $this->filters->resolve($request);
+        $perPage = min(50, max(1, (int) $request->query('per_page', 10)));
+        $page = max(1, (int) $request->query('page', 1));
+
+        $paginator = $this->loaderOverloadMetrics->paginateLoadersWithActivity(
+            $resolved['filteredSidingIds'],
+            $resolved['from'],
+            $resolved['to'],
+            $resolved['filterContext'],
+            $perPage,
+            $page,
+        );
+
+        return response()->json([
+            'filters' => $this->serializeLoaderOverloadListFilters($resolved),
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Single-loader overload detail. Same JSON as web `GET /dashboard/loader-overload/loaders/{loader}`.
+     */
+    public function loaderOverloadLoaderShow(Request $request, Loader $loader): JsonResponse
+    {
+        $this->assertCanAccessLoaderOverload($request);
+        $resolved = $this->filters->resolve($request);
+        $data = $this->loaderOverloadMetrics->loaderDetail(
+            $loader,
+            $resolved['filteredSidingIds'],
+            $resolved['from'],
+            $resolved['to'],
+            $resolved['filterContext'],
+        );
+        if ($data === null) {
+            abort(404);
+        }
+
+        return response()->json([
+            'filters' => $this->serializeLoaderOverloadListFilters($resolved),
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Paginated operator names (per siding) with activity in range.
+     * Same JSON as web `GET /dashboard/loader-overload/operators`.
+     */
+    public function loaderOverloadOperatorsIndex(Request $request): JsonResponse
+    {
+        $this->assertCanAccessLoaderOverload($request);
+        $resolved = $this->filters->resolve($request);
+        $perPage = min(50, max(1, (int) $request->query('per_page', 10)));
+        $page = max(1, (int) $request->query('page', 1));
+
+        $paginator = $this->loaderOverloadMetrics->paginateOperatorsWithActivity(
+            $resolved['filteredSidingIds'],
+            $resolved['from'],
+            $resolved['to'],
+            $resolved['filterContext'],
+            $perPage,
+            $page,
+        );
+
+        return response()->json([
+            'filters' => $this->serializeLoaderOverloadListFilters($resolved),
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Single-operator overload detail. Same JSON as web `GET /dashboard/loader-overload/operators/show`.
+     */
+    public function loaderOverloadOperatorShow(Request $request): JsonResponse
+    {
+        $this->assertCanAccessLoaderOverload($request);
+        $resolved = $this->filters->resolve($request);
+        $sidingId = (int) $request->query('siding_id', 0);
+        $operator = (string) $request->query('operator', '');
+        if ($sidingId <= 0 || mb_trim($operator) === '') {
+            abort(422, 'siding_id and operator are required.');
+        }
+        if (! in_array($sidingId, $resolved['filteredSidingIds'], true)) {
+            abort(422, 'The selected siding is not in the current filter scope.');
+        }
+
+        $data = $this->loaderOverloadMetrics->operatorDetail(
+            $sidingId,
+            $operator,
+            $resolved['filteredSidingIds'],
+            $resolved['from'],
+            $resolved['to'],
+            $resolved['filterContext'],
+        );
+        if ($data === null) {
+            abort(404);
+        }
+
+        return response()->json([
+            'filters' => $this->serializeLoaderOverloadListFilters($resolved),
+            'data' => $data,
         ]);
     }
 
@@ -312,6 +474,36 @@ final class MobileDashboardController extends Controller
             'coal_transport_date' => $resolved['coalTransportDate']->toDateString(),
             'section' => $resolved['section'],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $resolved
+     * @return array<string, mixed>
+     */
+    private function serializeLoaderOverloadListFilters(array $resolved): array
+    {
+        return [
+            'period' => $resolved['period'],
+            'from' => $resolved['from']->toDateString(),
+            'to' => $resolved['to']->toDateString(),
+            'siding_ids' => array_values($resolved['filteredSidingIds']),
+            'power_plant' => $resolved['powerPlant'],
+            'rake_number' => $resolved['rakeNumber'],
+            'loader_id' => $resolved['loaderId'],
+            'loader_operator' => $resolved['loaderOperatorName'],
+            'underload_threshold' => $resolved['underloadThresholdPercent'],
+            'shift' => $resolved['shift'],
+            'penalty_type' => $resolved['penaltyTypeId'],
+            'rake_penalty_scope' => $resolved['rakePenaltyScope'],
+        ];
+    }
+
+    private function assertCanAccessLoaderOverload(Request $request): void
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(DashboardWidgetPermissions::userCanSeeDashboardSection($user, 'loader-overload'), 403);
     }
 
     private function resolveSection(Request $request): string

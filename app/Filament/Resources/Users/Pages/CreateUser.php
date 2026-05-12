@@ -128,7 +128,8 @@ final class CreateUser extends CreateRecord
 
         if ($this->pendingRoleId !== null) {
             // Assign roles for the global team (organization_id = 0).
-            $this->record->syncRoles([$this->pendingRoleId], 0);
+            $organization_id = 0;
+            $this->record->syncRoles([$this->pendingRoleId]);
         }
         $this->record->load('roles', 'sidings');
         resolve(ActivityLogRbac::class)->logRolesAssigned(
