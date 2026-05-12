@@ -29,7 +29,7 @@ final class LoadriteBackfillCommand extends Command
     {
         $from = $this->option('from')
             ? Carbon::parse($this->option('from'))->startOfDay()
-            : now()->subDays(7)->startOfDay();
+            : now()->subMonths(2)->startOfDay();
 
         $to = $this->option('to')
             ? Carbon::parse($this->option('to'))->endOfDay()
