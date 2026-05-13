@@ -198,6 +198,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('dashboard.executive-yesterday-data');
     Route::get('dashboard/siding-performance-metrics', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'sidingPerformanceMetrics'])
         ->name('dashboard.siding-performance-metrics');
+    Route::get('dashboard/road-trip-summary', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'roadTripSummary'])
+        ->name('dashboard.road-trip-summary');
+    Route::get('dashboard/section-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'dashboardSectionData'])
+        ->name('dashboard.section-data');
     Route::get('dashboard/rake-performance/rakes', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceList'])
         ->name('dashboard.rake-performance.rakes.index');
     Route::get('dashboard/rake-performance/rakes/{rake}', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceDetail'])

@@ -1,10 +1,9 @@
 import {
     DashboardPenaltyBySidingChart,
-    formatCurrency,
     PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS,
-    SectionHeader,
     type PenaltyBySidingChartPeriodKey,
 } from '../dashboard';
+import { formatCurrency, SectionHeader } from './shared';
 import type {
     PenaltyByTypePoint,
     PenaltyBySidingPoint,

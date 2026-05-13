@@ -171,7 +171,8 @@ final class MobileDashboardController extends Controller
         $data = [
             'kpis' => $this->dashboard->buildKpis($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'sidingStocks' => $this->dashboard->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'dispatchSummaryByPeriod' => $this->dashboard->buildDispatchSummaryByPeriod($resolved['filteredSidingIds']),
+            // TEMP: dispatch summary disabled — bisecting dashboard load perf issue
+            // 'dispatchSummaryByPeriod' => $this->dashboard->buildDispatchSummaryByPeriod($resolved['filteredSidingIds']),
             'roadTripSummaryByPeriod' => $this->dashboard->buildRoadTripSummaryByPeriod($resolved['filteredSidingIds']),
             'sidingPerformance' => $this->dashboard->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'penaltyTrendDaily' => $this->dashboard->buildPenaltyTrendDaily($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),

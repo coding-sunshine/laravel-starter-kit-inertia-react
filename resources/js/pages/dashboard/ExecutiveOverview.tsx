@@ -1,12 +1,9 @@
-import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
 import { PenaltyPredictionsWidget } from '@/components/dashboard/penalty-predictions-widget';
 import { SlidingNumber } from '@/components/SlidingNumber';
 import type { ReactNode } from 'react';
 import type {
-    DispatchSummaryByPeriod,
     ExecutiveYesterdayData,
-    RoadTripSummaryByPeriod,
     SidingOption,
     SidingStock,
 } from './types';
@@ -42,8 +39,6 @@ interface Props {
     }>;
     filteredSidings: SidingOption[];
     sidingStocks: Record<number, SidingStock>;
-    dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
-    roadTripSummaryByPeriod?: RoadTripSummaryByPeriod | null;
     canWidget: (name: string) => boolean;
     executiveYesterday: ExecutiveYesterdayData | undefined;
     executiveYesterdaySection?: ReactNode;
@@ -55,8 +50,6 @@ export function ExecutiveOverview({
     penaltyPredictions,
     filteredSidings,
     sidingStocks,
-    dispatchSummaryByPeriod,
-    roadTripSummaryByPeriod,
     canWidget,
     executiveYesterday,
     executiveYesterdaySection,
@@ -180,14 +173,6 @@ export function ExecutiveOverview({
                         </div>
                     </div>
                 )}
-
-            {isExecutive && !executiveYesterday && (
-                <DispatchSummary
-                    data={dispatchSummaryByPeriod}
-                    roadTripData={roadTripSummaryByPeriod}
-                    sidings={filteredSidings}
-                />
-            )}
 
             {/* ── Executive charts / tables ── */}
             {executiveYesterday ? (

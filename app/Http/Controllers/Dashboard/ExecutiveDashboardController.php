@@ -27,11 +27,13 @@ use App\Models\SidingOpeningBalance;
 use App\Models\SidingRiskScore;
 use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
+use App\Models\User;
 use App\Models\VehicleUnload;
 use App\Models\WagonLoading;
 use App\Services\CoalTransportReport\CoalTransportReportDataBuilder;
 use App\Services\Dashboard\LoaderOverloadMetricsService;
 use App\Support\Dashboard\DashboardFilterResolver;
+use App\Support\Dashboard\DashboardSectionPropCatalog;
 use App\Support\Dashboard\DashboardWidgetPermissions;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -44,6 +46,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use InvalidArgumentException;
 use Throwable;
 
 final class ExecutiveDashboardController extends Controller
@@ -67,6 +70,9 @@ final class ExecutiveDashboardController extends Controller
 
     public function __invoke(Request $request): Response
     {
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+
         $resolved = $this->filters->resolve($request);
         $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
         $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);
@@ -83,76 +89,83 @@ final class ExecutiveDashboardController extends Controller
             $resolved['to'],
         );
 
-        $user = $request->user();
-        $executiveYesterdayPayload = DashboardWidgetPermissions::userHasAnyExecutiveWidget($user)
-            ? $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges)
-            : null;
+        $sectionKeys = DashboardSectionPropCatalog::propKeysForSection($resolved['section']);
+        $builtDeferred = $this->buildDeferredDashboardProps(
+            $user,
+            $resolved['section'],
+            $resolved,
+            $executiveYesterdayDate,
+            $executiveCustomRanges,
+            $sectionKeys,
+        );
+        $deferredProps = array_merge(DashboardSectionPropCatalog::defaultDeferredProps(), $builtDeferred);
 
-        // dd($this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext));
-        return Inertia::render('dashboard', [
-            'sidings' => $allSidings,
-            'section' => $resolved['section'],
-            'filters' => [
-                'period' => $resolved['period'],
-                'from' => $resolved['from']->toDateString(),
-                'to' => $resolved['to']->toDateString(),
-                'siding_ids' => $resolved['filteredSidingIds'],
-                'power_plant' => $resolved['powerPlant'],
-                'rake_number' => $resolved['rakeNumber'],
-                'loader_id' => $resolved['loaderId'],
-                'loader_operator' => $resolved['loaderOperatorName'],
-                'underload_threshold' => $resolved['underloadThresholdPercent'],
-                'shift' => $resolved['shift'],
-                'penalty_type' => $resolved['penaltyTypeId'],
-                'rake_penalty_scope' => $resolved['rakePenaltyScope'],
-                'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
-                'coal_transport_date' => $resolved['coalTransportDate']->toDateString(),
+        return Inertia::render('dashboard', array_merge(
+            [
+                'sidings' => $allSidings,
+                'section' => $resolved['section'],
+                'filters' => [
+                    'period' => $resolved['period'],
+                    'from' => $resolved['from']->toDateString(),
+                    'to' => $resolved['to']->toDateString(),
+                    'siding_ids' => $resolved['filteredSidingIds'],
+                    'power_plant' => $resolved['powerPlant'],
+                    'rake_number' => $resolved['rakeNumber'],
+                    'loader_id' => $resolved['loaderId'],
+                    'loader_operator' => $resolved['loaderOperatorName'],
+                    'underload_threshold' => $resolved['underloadThresholdPercent'],
+                    'shift' => $resolved['shift'],
+                    'penalty_type' => $resolved['penaltyTypeId'],
+                    'rake_penalty_scope' => $resolved['rakePenaltyScope'],
+                    'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
+                    'coal_transport_date' => $resolved['coalTransportDate']->toDateString(),
+                ],
+                'filterOptions' => $filterOptions,
+                'kpis' => $this->buildKpis($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+                'notifications' => $this->buildDashboardNotifications($request),
+                'notificationsUnreadCount' => $this->buildDashboardUnreadNotificationCount($request),
+                'allowedDashboardWidgets' => DashboardWidgetPermissions::allowedNamesForUser($user),
+                'rakePerformance' => [],
+                'loaderOverloadTrends' => [
+                    'loaders' => [],
+                    'monthly' => [],
+                ],
             ],
-            'filterOptions' => $filterOptions,
-            'kpis' => $this->buildKpis($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'penaltyTrendDaily' => $this->buildPenaltyTrendDaily($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'penaltyByType' => $this->buildPenaltyByType($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'penaltyBySiding' => $this->buildPenaltyBySiding($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'penaltyControlRrCoverage' => $this->buildPenaltyControlRrCoverage($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'notifications' => $this->buildDashboardNotifications($request),
-            'notificationsUnreadCount' => $this->buildDashboardUnreadNotificationCount($request),
-            'liveRakeStatus' => $this->buildLiveRakeStatus(
-                $resolved['filteredSidingIds'],
-                $resolved['filterContext'],
-                $resolved['from'],
-                $resolved['to'],
+            $deferredProps,
+        ));
+    }
+
+    public function dashboardSectionData(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+
+        $section = $request->query('section');
+        abort_unless(is_string($section) && $section !== '', 422);
+
+        abort_unless(in_array($section, DashboardSectionPropCatalog::allowedSectionIds(), true), 422);
+
+        abort_unless(DashboardWidgetPermissions::userCanSeeDashboardSection($user, $section), 403);
+
+        $resolved = $this->filters->resolve($request);
+        abort_unless($resolved['section'] === $section, 422);
+
+        $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
+        $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);
+
+        $keys = DashboardSectionPropCatalog::propKeysForSection($section);
+
+        return response()->json(
+            $this->buildDeferredDashboardProps(
+                $user,
+                $section,
+                $resolved,
+                $executiveYesterdayDate,
+                $executiveCustomRanges,
+                $keys,
             ),
-            'dailyRakeDetails' => $this->buildDailyRakeDetails($resolved['filteredSidingIds'], $resolved['dailyRakeDate']),
-            'coalTransportReport' => $this->coalTransportReportDataBuilder->buildCoalTransportReport($resolved['filteredSidingIds'], $resolved['coalTransportDate'], $resolved['filterContext']['shift'] ?? null),
-            'truckReceiptTrend' => $this->buildTruckReceiptTrend($resolved['filteredSidingIds'], $resolved['filterContext']),
-            'shiftWiseVehicleReceipt' => $this->buildShiftWiseVehicleReceipt($resolved['filteredSidingIds'], $resolved['filterContext']['shift'] ?? null),
-            // 'stockGauge' => $this->buildStockGauge($resolved['filteredSidingIds'], $resolved['to']), // hidden for now
-            'predictedVsActualPenalty' => $this->buildPredictedVsActualPenalty($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'yesterdayPredictedPenalties' => $this->buildYesterdayPredictedPenalties($resolved['allSidingIds']),
-            'sidingWiseMonthly' => $this->buildSidingWiseMonthly($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'sidingRadar' => $this->buildSidingRadar($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'sidingPerformance' => $this->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'dispatchSummaryByPeriod' => $this->buildDispatchSummaryByPeriod($resolved['filteredSidingIds']),
-            'roadTripSummaryByPeriod' => $this->buildRoadTripSummaryByPeriod($resolved['filteredSidingIds']),
-            'penaltySummary' => $this->buildPenaltySummary($resolved['filteredSidingIds']),
-            'activeRakePipeline' => $this->buildActiveRakePipeline($resolved['filteredSidingIds']),
-            'riskScores' => $this->buildRiskScores($resolved['filteredSidingIds']),
-            'alerts' => $this->buildCommandCenterAlerts($resolved['filteredSidingIds']),
-            'penaltyPredictions' => $this->buildPenaltyPredictions($resolved['filteredSidingIds']),
-            'overloadPatterns' => $this->buildOverloadPatterns($resolved['filteredSidingIds']),
-            'operatorRake' => $this->buildOperatorRake($resolved['filteredSidingIds']),
-            'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'rakePerformance' => [],
-            'loaderOverloadTrends' => [
-                'loaders' => [],
-                'monthly' => [],
-            ],
-            'powerPlantDispatch' => $this->buildPowerPlantDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'allowedDashboardWidgets' => DashboardWidgetPermissions::allowedNamesForUser($user),
-            // Executive Yesterday tab uses its own date picker and ignores main dashboard filters.
-            'executiveYesterday' => $executiveYesterdayPayload,
-        ]);
+        );
     }
 
     public function executiveYesterdayData(Request $request): JsonResponse
@@ -230,6 +243,22 @@ final class ExecutiveDashboardController extends Controller
         return response()->json([
             'rakes' => $rakes,
             'penalties' => $penalties,
+        ]);
+    }
+
+    /**
+     * Lazy JSON payload for road trip KPIs inside the dispatch summary card.
+     */
+    public function roadTripSummary(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+
+        $resolved = $this->filters->resolve($request);
+
+        return response()->json([
+            'roadTripSummaryByPeriod' => $this->buildRoadTripSummaryByPeriod($resolved['filteredSidingIds']),
         ]);
     }
 
@@ -3382,6 +3411,84 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Builds Inertia/JSON props for {@see DashboardSectionPropCatalog} keys (one section bundle).
+     *
+     * @param  array<string, mixed>  $resolved
+     * @param  list<string>  $keys
+     * @return array<string, mixed>
+     */
+    private function buildDeferredDashboardProps(
+        User $user,
+        string $activeSectionId,
+        array $resolved,
+        CarbonInterface $executiveYesterdayDate,
+        array $executiveCustomRanges,
+        array $keys,
+    ): array {
+        $keys = array_values(array_unique($keys));
+        $filteredSidingIds = $resolved['filteredSidingIds'];
+        $allSidingIds = $resolved['allSidingIds'];
+        $filterContext = $resolved['filterContext'];
+        $from = $resolved['from'];
+        $to = $resolved['to'];
+
+        $shouldBuildExecutiveYesterday = in_array('executiveYesterday', $keys, true)
+            && (
+                DashboardWidgetPermissions::userHasAnyExecutiveWidget($user)
+                || $activeSectionId === 'penalty-control'
+            );
+
+        $built = [];
+        foreach ($keys as $key) {
+            if ($key === 'executiveYesterday' && ! $shouldBuildExecutiveYesterday) {
+                $built[$key] = null;
+
+                continue;
+            }
+
+            $built[$key] = match ($key) {
+                'penaltyTrendDaily' => $this->buildPenaltyTrendDaily($filteredSidingIds, $from, $to, $filterContext),
+                'penaltyByType' => $this->buildPenaltyByType($filteredSidingIds, $from, $to, $filterContext),
+                'penaltyBySiding' => $this->buildPenaltyBySiding($filteredSidingIds, $from, $to, $filterContext),
+                'penaltyControlRrCoverage' => $this->buildPenaltyControlRrCoverage($filteredSidingIds, $from, $to),
+                'liveRakeStatus' => $this->buildLiveRakeStatus(
+                    $filteredSidingIds,
+                    $filterContext,
+                    $from,
+                    $to,
+                ),
+                'dailyRakeDetails' => $this->buildDailyRakeDetails($filteredSidingIds, $resolved['dailyRakeDate']),
+                'coalTransportReport' => $this->coalTransportReportDataBuilder->buildCoalTransportReport(
+                    $filteredSidingIds,
+                    $resolved['coalTransportDate'],
+                    $filterContext['shift'] ?? null,
+                ),
+                'truckReceiptTrend' => $this->buildTruckReceiptTrend($filteredSidingIds, $filterContext),
+                'shiftWiseVehicleReceipt' => $this->buildShiftWiseVehicleReceipt($filteredSidingIds, $filterContext['shift'] ?? null),
+                'predictedVsActualPenalty' => $this->buildPredictedVsActualPenalty($filteredSidingIds, $from, $to, $filterContext),
+                'yesterdayPredictedPenalties' => $this->buildYesterdayPredictedPenalties($allSidingIds),
+                'sidingWiseMonthly' => $this->buildSidingWiseMonthly($filteredSidingIds, $from, $to),
+                'sidingRadar' => $this->buildSidingRadar($filteredSidingIds, $from, $to),
+                'sidingPerformance' => $this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext),
+                'sidingStocks' => $this->buildSidingStocks($filteredSidingIds, $from, $to),
+                'penaltySummary' => $this->buildPenaltySummary($filteredSidingIds),
+                'activeRakePipeline' => $this->buildActiveRakePipeline($filteredSidingIds),
+                'riskScores' => $this->buildRiskScores($filteredSidingIds),
+                'alerts' => $this->buildCommandCenterAlerts($filteredSidingIds),
+                'penaltyPredictions' => $this->buildPenaltyPredictions($filteredSidingIds),
+                'overloadPatterns' => $this->buildOverloadPatterns($filteredSidingIds),
+                'operatorRake' => $this->buildOperatorRake($filteredSidingIds),
+                'dateWiseDispatch' => $this->buildDateWiseDispatch($filteredSidingIds, $from, $to),
+                'powerPlantDispatch' => $this->buildPowerPlantDispatch($filteredSidingIds, $from, $to, $filterContext),
+                'executiveYesterday' => $this->buildExecutiveYesterdayData($allSidingIds, $executiveYesterdayDate, $executiveCustomRanges),
+                default => throw new InvalidArgumentException('Unknown dashboard deferred prop key: '.$key),
+            };
+        }
+
+        return $built;
     }
 
     /**

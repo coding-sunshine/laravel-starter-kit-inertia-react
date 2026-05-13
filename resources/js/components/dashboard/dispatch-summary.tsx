@@ -80,11 +80,17 @@ type ViewMode = 'trips' | 'qty';
 export function DispatchSummary({
     data,
     roadTripData,
+    roadTripLoading = false,
+    roadTripError = null,
+    loadRoadTrip = false,
     sidings = [],
     className,
 }: {
     data?: DispatchSummaryByPeriod | null;
     roadTripData?: RoadTripSummaryByPeriod | null;
+    roadTripLoading?: boolean;
+    roadTripError?: string | null;
+    loadRoadTrip?: boolean;
     sidings?: SidingOption[];
     className?: string;
 }) {
@@ -125,7 +131,10 @@ export function DispatchSummary({
     }, [period, slice?.from]);
 
     const roadRows = roadSlice.rows ?? [];
-    const showRoadTripSection = roadTrip != null && sidings.length > 0;
+    const showRoadTripSection =
+        loadRoadTrip &&
+        sidings.length > 0 &&
+        (roadTripLoading || roadTrip != null || roadTripError != null);
 
     return (
         <Card className={cn('h-full shadow-sm', className)}>
@@ -167,34 +176,62 @@ export function DispatchSummary({
                             <p className="text-xs font-semibold text-muted-foreground">
                                 Road trips
                             </p>
-                            <div className="inline-flex rounded-lg border bg-muted/40 p-0.5">
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={
-                                        viewMode === 'trips'
-                                            ? 'default'
-                                            : 'ghost'
-                                    }
-                                    className="h-7 px-3 text-xs"
-                                    onClick={() => setViewMode('trips')}
-                                >
-                                    Trips
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={
-                                        viewMode === 'qty' ? 'default' : 'ghost'
-                                    }
-                                    className="h-7 px-3 text-xs"
-                                    onClick={() => setViewMode('qty')}
-                                >
-                                    Qty
-                                </Button>
-                            </div>
+                            {roadTrip != null && !roadTripLoading ? (
+                                <div className="inline-flex rounded-lg border bg-muted/40 p-0.5">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={
+                                            viewMode === 'trips'
+                                                ? 'default'
+                                                : 'ghost'
+                                        }
+                                        className="h-7 px-3 text-xs"
+                                        onClick={() => setViewMode('trips')}
+                                    >
+                                        Trips
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={
+                                            viewMode === 'qty'
+                                                ? 'default'
+                                                : 'ghost'
+                                        }
+                                        className="h-7 px-3 text-xs"
+                                        onClick={() => setViewMode('qty')}
+                                    >
+                                        Qty
+                                    </Button>
+                                </div>
+                            ) : null}
                         </div>
 
+                        {roadTripLoading ? (
+                            <div className="space-y-2">
+                                {sidings.slice(0, 3).map((siding) => (
+                                    <div
+                                        key={siding.value}
+                                        className="animate-pulse rounded-lg border bg-card p-3"
+                                    >
+                                        <div className="mb-2 h-3 w-24 rounded bg-muted" />
+                                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                            {[0, 1, 2, 3].map((i) => (
+                                                <div
+                                                    key={i}
+                                                    className="h-10 rounded bg-muted"
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : roadTripError ? (
+                            <p className="text-xs text-destructive">
+                                {roadTripError}
+                            </p>
+                        ) : (
                         <div className="space-y-2">
                             {roadRows.map((row) => {
                                 const accent =
@@ -252,6 +289,7 @@ export function DispatchSummary({
                                 );
                             })}
                         </div>
+                        )}
                     </div>
                 )}
 
