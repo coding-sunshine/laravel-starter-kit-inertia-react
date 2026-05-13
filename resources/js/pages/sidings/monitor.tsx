@@ -47,7 +47,7 @@ function SidingMonitorContent({ siding, free_minutes, loadrite_active }: PagePro
     const alerts = useSidingStore((s) => s.alerts);
 
     const activeWagon = Object.values(wagons)
-        .filter((w) => w.weightSource === 'loadrite')
+        .filter((w) => w.loadriteWeightMt !== null && w.ccCapacityMt > 0)
         .sort((a, b) => b.sequence - a.sequence)[0] ?? null;
 
     return (
