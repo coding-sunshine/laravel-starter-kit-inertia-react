@@ -72,10 +72,16 @@ final class LoadriteReattributeEventsCommand extends Command
 
                 if ($changes !== []) {
                     $reattributed++;
+                    // Capture OLD rake_id BEFORE update so its wagon_loading
+                    // total also gets recomputed (drops to 0 if it no longer
+                    // owns any events for this wagon_sequence).
+                    $oldRakeId = $event->rake_id;
                     if (! $dryRun) {
                         $event->update($changes);
                     }
-                    $touched[$event->rake_id.'|'.$event->wagon_sequence] = true;
+                    if ($oldRakeId !== null) {
+                        $touched[$oldRakeId.'|'.$event->wagon_sequence] = true;
+                    }
                     $touched[$correctRakeId.'|'.$event->wagon_sequence] = true;
                 } else {
                     $unchanged++;
