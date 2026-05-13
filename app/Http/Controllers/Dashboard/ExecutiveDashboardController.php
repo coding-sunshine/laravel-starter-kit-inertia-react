@@ -132,6 +132,7 @@ final class ExecutiveDashboardController extends Controller
             'sidingRadar' => $this->buildSidingRadar($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'sidingPerformance' => $this->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
+            'dispatchSummaryByPeriod' => $this->buildDispatchSummaryByPeriod($resolved['filteredSidingIds']),
             'penaltySummary' => $this->buildPenaltySummary($resolved['filteredSidingIds']),
             'activeRakePipeline' => $this->buildActiveRakePipeline($resolved['filteredSidingIds']),
             'riskScores' => $this->buildRiskScores($resolved['filteredSidingIds']),
@@ -1396,6 +1397,73 @@ final class ExecutiveDashboardController extends Controller
         }
 
         return $result;
+    }
+
+    /**
+     * Road receipt + rail dispatch totals for the dispatch summary card (all preset periods precomputed).
+     * Received: completed daily vehicle entries with stock posted (entry_date).
+     * Dispatched: rakes with loading_date and weighment (weight from rake_weighments).
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{
+     *     periods: array<string, array{received_mt: float, dispatched_mt: float, from: string, to: string}>,
+     *     default_period: string
+     * }
+     */
+    public function buildDispatchSummaryByPeriod(array $sidingIds): array
+    {
+        $periodKeys = ['today', 'yesterday', 'month', 'last_month', 'fy'];
+        $periods = [];
+
+        foreach ($periodKeys as $periodKey) {
+            [$from, $to] = $this->filters->boundsForDispatchSummaryPeriod($periodKey);
+            $fromDate = $from->toDateString();
+            $toDate = $to->toDateString();
+
+            $receivedMt = 0.0;
+            $dispatchedMt = 0.0;
+
+            if ($sidingIds !== []) {
+                $receivedMt = (float) DailyVehicleEntry::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+                    ->where('status', 'completed')
+                    ->whereHas('stockLedger')
+                    ->whereBetween('entry_date', [$fromDate, $toDate])
+                    ->sum('net_wt');
+
+                $rakeIds = Rake::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                    ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
+                    ->pluck('id');
+
+                if ($rakeIds->isNotEmpty()) {
+                    $dispatchedMt = (float) RakeWeighment::query()
+                        ->whereIn('rake_id', $rakeIds->all())
+                        ->sum('total_net_weight_mt');
+
+                    if ($dispatchedMt === 0.0) {
+                        $dispatchedMt = (float) Rake::query()
+                            ->whereIn('id', $rakeIds->all())
+                            ->sum('loaded_weight_mt');
+                    }
+                }
+            }
+
+            $periods[$periodKey] = [
+                'received_mt' => round($receivedMt, 2),
+                'dispatched_mt' => round($dispatchedMt, 2),
+                'from' => $fromDate,
+                'to' => $toDate,
+            ];
+        }
+
+        return [
+            'periods' => $periods,
+            'default_period' => 'today',
+        ];
     }
 
     /**

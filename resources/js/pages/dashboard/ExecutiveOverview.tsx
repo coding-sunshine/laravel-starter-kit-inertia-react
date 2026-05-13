@@ -2,11 +2,10 @@ import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
 import { PenaltyPredictionsWidget } from '@/components/dashboard/penalty-predictions-widget';
 import { SlidingNumber } from '@/components/SlidingNumber';
-import { ExecutiveYesterdaySection } from '../dashboard';
+import type { ReactNode } from 'react';
 import type {
+    DispatchSummaryByPeriod,
     ExecutiveYesterdayData,
-    PenaltyBySidingPoint,
-    PowerPlantDispatchItem,
     SidingOption,
     SidingStock,
 } from './types';
@@ -42,13 +41,10 @@ interface Props {
     }>;
     filteredSidings: SidingOption[];
     sidingStocks: Record<number, SidingStock>;
+    dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
     canWidget: (name: string) => boolean;
     executiveYesterday: ExecutiveYesterdayData | undefined;
-    executiveYesterdayViewMode: 'table' | 'charts';
-    onExecutiveYesterdayViewModeChange?: (mode: 'table' | 'charts') => void;
-    showExecutiveYesterdayViewToggle?: boolean;
-    penaltyBySiding: PenaltyBySidingPoint[];
-    powerPlantDispatch: PowerPlantDispatchItem[];
+    executiveYesterdaySection?: ReactNode;
 }
 
 export function ExecutiveOverview({
@@ -57,13 +53,10 @@ export function ExecutiveOverview({
     penaltyPredictions,
     filteredSidings,
     sidingStocks,
+    dispatchSummaryByPeriod,
     canWidget,
     executiveYesterday,
-    executiveYesterdayViewMode,
-    onExecutiveYesterdayViewModeChange,
-    showExecutiveYesterdayViewToggle = false,
-    penaltyBySiding,
-    powerPlantDispatch,
+    executiveYesterdaySection,
 }: Props) {
     return (
         <div className="space-y-6">
@@ -186,21 +179,16 @@ export function ExecutiveOverview({
                 )}
 
             {isExecutive && !executiveYesterday && (
-                <DispatchSummary stocks={sidingStocks} />
+                <DispatchSummary data={dispatchSummaryByPeriod} />
             )}
 
             {/* ── Executive charts / tables ── */}
             {executiveYesterday ? (
-                <ExecutiveYesterdaySection
-                    data={executiveYesterday}
-                    viewMode={executiveYesterdayViewMode}
-                    onViewModeChange={onExecutiveYesterdayViewModeChange}
-                    showViewToggle={showExecutiveYesterdayViewToggle}
-                    penaltyBySiding={penaltyBySiding}
-                    powerPlantDispatch={powerPlantDispatch}
-                    sidingStocks={sidingStocks}
-                    canWidget={canWidget}
-                />
+                executiveYesterdaySection ?? (
+                    <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
+                        Yesterday data is not available.
+                    </div>
+                )
             ) : (
                 <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
                     Yesterday data is not available.

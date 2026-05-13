@@ -44,6 +44,7 @@ import { RakePerformance } from '@/pages/dashboard/RakePerformance';
 import { SidingOverview } from '@/pages/dashboard/SidingOverview';
 import type {
     DashboardFilters,
+    DispatchSummaryByPeriod,
     SidingPerformanceChartUiPeriod,
     SidingPerformanceMetricsPenaltyRow,
     SidingPerformanceMetricsRakeRow,
@@ -997,6 +998,7 @@ type DashboardProps = SharedData & {
         bySiding?: Array<{ name: string; predicted: number; actual: number }>;
     };
     sidingStocks?: Record<number, SidingStock>;
+    dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
     sidingPerformance?: SidingPerformanceItem[];
     sidingWiseMonthly?: SidingWiseMonthlyPoint[];
     sidingRadar?: SidingComparisonData;
@@ -1715,6 +1717,7 @@ export function ExecutiveYesterdaySection({
     penaltyBySiding = [],
     powerPlantDispatch = [],
     sidingStocks = {},
+    dispatchSummaryByPeriod = null,
     canWidget,
 }: {
     data: ExecutiveYesterdayData;
@@ -1724,6 +1727,7 @@ export function ExecutiveYesterdaySection({
     penaltyBySiding?: PenaltyBySidingPoint[];
     powerPlantDispatch?: PowerPlantDispatchItem[];
     sidingStocks?: Record<number, SidingStock>;
+    dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
     canWidget: (permissionName: string) => boolean;
 }) {
     const [executiveData, setExecutiveData] =
@@ -2031,7 +2035,7 @@ export function ExecutiveYesterdaySection({
 
     const TableView = (
         <div className="space-y-6">
-            <DispatchSummary stocks={sidingStocks} />
+            <DispatchSummary data={dispatchSummaryByPeriod} />
             {canWidget('dashboard.widgets.executive_tables_road_dispatch') ? (
                 <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                     <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
@@ -3014,13 +3018,13 @@ export function ExecutiveYesterdaySection({
                     </div>
                     <div className="min-w-0">
                         <DispatchSummary
-                            stocks={sidingStocks}
+                            data={dispatchSummaryByPeriod}
                             className="flex h-full flex-col"
                         />
                     </div>
                 </div>
             ) : (
-                <DispatchSummary stocks={sidingStocks} />
+                <DispatchSummary data={dispatchSummaryByPeriod} />
             )}
 
             {canWidget('dashboard.widgets.executive_chart_fy') ? (
@@ -6807,6 +6811,7 @@ export default function Dashboard() {
     const shiftWiseVehicleReceipt = props.shiftWiseVehicleReceipt ?? [];
     const stockGauge = props.stockGauge;
     const baseSidingStocks = props.sidingStocks ?? {};
+    const dispatchSummaryByPeriod = props.dispatchSummaryByPeriod ?? null;
     const operatorRake = props.operatorRake ?? null;
     const penaltyPredictions = props.penaltyPredictions ?? [];
     const allowedWidgets = props.allowedDashboardWidgets ?? [];
@@ -7262,24 +7267,45 @@ export default function Dashboard() {
                                                     filteredSidings
                                                 }
                                                 sidingStocks={sidingStocks}
+                                                dispatchSummaryByPeriod={
+                                                    dispatchSummaryByPeriod
+                                                }
                                                 canWidget={canWidget}
                                                 executiveYesterday={
                                                     executiveYesterday
                                                 }
-                                                executiveYesterdayViewMode={
-                                                    executiveYesterdayViewMode
-                                                }
-                                                onExecutiveYesterdayViewModeChange={
-                                                    setExecutiveYesterdayViewMode
-                                                }
-                                                showExecutiveYesterdayViewToggle={
-                                                    showExecutiveYesterdayViewToggle
-                                                }
-                                                penaltyBySiding={
-                                                    penaltyBySiding
-                                                }
-                                                powerPlantDispatch={
-                                                    powerPlantDispatch
+                                                executiveYesterdaySection={
+                                                    executiveYesterday ? (
+                                                        <ExecutiveYesterdaySection
+                                                            data={
+                                                                executiveYesterday
+                                                            }
+                                                            viewMode={
+                                                                executiveYesterdayViewMode
+                                                            }
+                                                            onViewModeChange={
+                                                                setExecutiveYesterdayViewMode
+                                                            }
+                                                            showViewToggle={
+                                                                showExecutiveYesterdayViewToggle
+                                                            }
+                                                            penaltyBySiding={
+                                                                penaltyBySiding
+                                                            }
+                                                            powerPlantDispatch={
+                                                                powerPlantDispatch
+                                                            }
+                                                            sidingStocks={
+                                                                sidingStocks
+                                                            }
+                                                            dispatchSummaryByPeriod={
+                                                                dispatchSummaryByPeriod
+                                                            }
+                                                            canWidget={
+                                                                canWidget
+                                                            }
+                                                        />
+                                                    ) : undefined
                                                 }
                                             />
                                         )}

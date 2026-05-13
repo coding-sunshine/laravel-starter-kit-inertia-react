@@ -239,6 +239,38 @@ final class DashboardFilterResolver
     }
 
     /**
+     * Inclusive date bounds for the dispatch summary card (independent of global dashboard period).
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    public function boundsForDispatchSummaryPeriod(
+        string $period,
+        ?CarbonInterface $now = null,
+    ): array {
+        $tz = config('app.timezone', 'UTC');
+        $nowCarbon = $now !== null
+            ? Carbon::parse($now->toDateTimeString(), $tz)
+            : now($tz);
+
+        if (in_array($period, ['today', 'yesterday', 'month', 'last_month'], true)) {
+            return $this->boundsForPeriod($period, null, null, $nowCarbon);
+        }
+
+        if ($period === 'fy') {
+            $fyStart = $nowCarbon->month >= 4
+                ? $nowCarbon->copy()->startOfDay()->setDate($nowCarbon->year, 4, 1)
+                : $nowCarbon->copy()->startOfDay()->setDate($nowCarbon->year - 1, 4, 1);
+
+            return [
+                $fyStart,
+                $fyStart->copy()->addYear()->subDay()->endOfDay(),
+            ];
+        }
+
+        return $this->boundsForPeriod('today', null, null, $nowCarbon);
+    }
+
+    /**
      * @return list<int>
      */
     private function parseRequestedSidingIds(Request $request): array

@@ -18,6 +18,25 @@ export interface SidingStock {
     e_demand_raised: number;
 }
 
+export type DispatchSummaryPeriodKey =
+    | 'today'
+    | 'yesterday'
+    | 'month'
+    | 'last_month'
+    | 'fy';
+
+export interface DispatchSummaryPeriodSlice {
+    received_mt: number;
+    dispatched_mt: number;
+    from: string;
+    to: string;
+}
+
+export interface DispatchSummaryByPeriod {
+    periods: Record<DispatchSummaryPeriodKey, DispatchSummaryPeriodSlice>;
+    default_period: DispatchSummaryPeriodKey;
+}
+
 export interface SidingPerformanceItem {
     name: string;
     rakes: number;
