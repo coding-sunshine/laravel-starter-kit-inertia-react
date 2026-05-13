@@ -66,17 +66,24 @@ function AnimatedNumber({
         formatNumber ? formatNumber(0) : defaultFormat(0, decimals),
     );
 
+    // Subscribe once on mount; rounded is a new ref each render but the underlying
+    // MotionValue chain is stable, so a one-time subscription is correct.
     useEffect(() => {
         const unsubscribe = rounded.on('change', (v) => setDisplay(v));
+        return unsubscribe;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Animate only when target changes. Without splitting these effects, every
+    // parent re-render (e.g. from a broadcast) restarted the tween from the current
+    // motion-value position, making the displayed number oscillate.
+    useEffect(() => {
         const controls = animate(motionValue, target, {
             duration: 0.6,
             ease: 'easeOut',
         });
-        return () => {
-            controls.stop();
-            unsubscribe();
-        };
-    }, [target, motionValue, rounded]);
+        return () => controls.stop();
+    }, [target, motionValue]);
 
     return <span>{display}</span>;
 }
