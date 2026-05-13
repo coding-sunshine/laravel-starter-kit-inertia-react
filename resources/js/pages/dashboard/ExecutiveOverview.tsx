@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import type {
     DispatchSummaryByPeriod,
     ExecutiveYesterdayData,
+    RoadTripSummaryByPeriod,
     SidingOption,
     SidingStock,
 } from './types';
@@ -42,6 +43,7 @@ interface Props {
     filteredSidings: SidingOption[];
     sidingStocks: Record<number, SidingStock>;
     dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
+    roadTripSummaryByPeriod?: RoadTripSummaryByPeriod | null;
     canWidget: (name: string) => boolean;
     executiveYesterday: ExecutiveYesterdayData | undefined;
     executiveYesterdaySection?: ReactNode;
@@ -54,6 +56,7 @@ export function ExecutiveOverview({
     filteredSidings,
     sidingStocks,
     dispatchSummaryByPeriod,
+    roadTripSummaryByPeriod,
     canWidget,
     executiveYesterday,
     executiveYesterdaySection,
@@ -179,7 +182,11 @@ export function ExecutiveOverview({
                 )}
 
             {isExecutive && !executiveYesterday && (
-                <DispatchSummary data={dispatchSummaryByPeriod} />
+                <DispatchSummary
+                    data={dispatchSummaryByPeriod}
+                    roadTripData={roadTripSummaryByPeriod}
+                    sidings={filteredSidings}
+                />
             )}
 
             {/* ── Executive charts / tables ── */}

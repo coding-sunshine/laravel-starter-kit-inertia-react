@@ -133,6 +133,7 @@ final class ExecutiveDashboardController extends Controller
             'sidingPerformance' => $this->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'dispatchSummaryByPeriod' => $this->buildDispatchSummaryByPeriod($resolved['filteredSidingIds']),
+            'roadTripSummaryByPeriod' => $this->buildRoadTripSummaryByPeriod($resolved['filteredSidingIds']),
             'penaltySummary' => $this->buildPenaltySummary($resolved['filteredSidingIds']),
             'activeRakePipeline' => $this->buildActiveRakePipeline($resolved['filteredSidingIds']),
             'riskScores' => $this->buildRiskScores($resolved['filteredSidingIds']),
@@ -1463,6 +1464,163 @@ final class ExecutiveDashboardController extends Controller
         return [
             'periods' => $periods,
             'default_period' => 'today',
+        ];
+    }
+
+    /**
+     * Road dispatch trip/qty summary by siding for the executive overview table (all preset periods precomputed).
+     * Stock added: completed daily vehicle entries with a stock ledger receipt.
+     * Pending trips: total minus stock added; pending qty uses gross_wt for non-stock-added rows.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{
+     *     default_period: string,
+     *     periods: array<string, array{
+     *         from: string,
+     *         to: string,
+     *         rows: list<array{
+     *             siding_id: int,
+     *             siding_name: string,
+     *             trips: array{total: int, stock_added: int, pending: int, dispatched: int},
+     *             qty: array{total_mt: float, stock_added_mt: float, pending_mt: float, dispatched_mt: float}
+     *         }>,
+     *         totals: array{
+     *             trips: array{total: int, stock_added: int, pending: int, dispatched: int},
+     *             qty: array{total_mt: float, stock_added_mt: float, pending_mt: float, dispatched_mt: float}
+     *         }
+     *     }>
+     * }
+     */
+    public function buildRoadTripSummaryByPeriod(array $sidingIds): array
+    {
+        $periodKeys = ['today', 'yesterday', 'month', 'last_month', 'fy'];
+        $periods = [];
+        $stockAddedSql = "status = 'completed' and exists (select 1 from stock_ledgers where stock_ledgers.daily_vehicle_entry_id = daily_vehicle_entries.id)";
+
+        $sidings = $sidingIds === []
+            ? collect()
+            : Siding::query()
+                ->whereIn('id', $sidingIds)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+        foreach ($periodKeys as $periodKey) {
+            [$from, $to] = $this->filters->boundsForDispatchSummaryPeriod($periodKey);
+            $fromDate = $from->toDateString();
+            $toDate = $to->toDateString();
+
+            $aggregatesBySiding = collect();
+
+            if ($sidingIds !== []) {
+                $aggregatesBySiding = DailyVehicleEntry::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+                    ->whereBetween('entry_date', [$fromDate, $toDate])
+                    ->groupBy('siding_id')
+                    ->selectRaw(
+                        'siding_id,
+                        count(*) as total_trips,
+                        sum(case when '.$stockAddedSql.' then 1 else 0 end) as stock_added_trips,
+                        sum(case when '.$stockAddedSql.' then coalesce(net_wt, 0) else 0 end) as stock_added_mt,
+                        sum(case when not ('.$stockAddedSql.') then coalesce(gross_wt, 0) else 0 end) as pending_mt',
+                    )
+                    ->get()
+                    ->keyBy('siding_id');
+
+                $dispatchedCountsBySiding = Rake::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                    ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
+                    ->groupBy('siding_id')
+                    ->selectRaw('siding_id, count(*) as dispatched_rakes')
+                    ->get()
+                    ->keyBy('siding_id');
+
+                $dispatchedMtBySiding = Rake::query()
+                    ->whereIn('rakes.siding_id', $sidingIds)
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                    ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
+                    ->join('rake_weighments', 'rake_weighments.rake_id', '=', 'rakes.id')
+                    ->groupBy('rakes.siding_id')
+                    ->selectRaw('rakes.siding_id, sum(rake_weighments.total_net_weight_mt) as dispatched_mt')
+                    ->get()
+                    ->keyBy('siding_id');
+            } else {
+                $dispatchedCountsBySiding = collect();
+                $dispatchedMtBySiding = collect();
+            }
+
+            $rows = [];
+            $totalsTrips = ['total' => 0, 'stock_added' => 0, 'pending' => 0, 'dispatched' => 0];
+            $totalsQty = ['total_mt' => 0.0, 'stock_added_mt' => 0.0, 'pending_mt' => 0.0, 'dispatched_mt' => 0.0];
+
+            foreach ($sidings as $siding) {
+                $agg = $aggregatesBySiding->get($siding->id);
+                $totalTrips = (int) ($agg->total_trips ?? 0);
+                $stockAddedTrips = (int) ($agg->stock_added_trips ?? 0);
+                $pendingTrips = $totalTrips - $stockAddedTrips;
+                $stockAddedMt = round((float) ($agg->stock_added_mt ?? 0), 2);
+                $pendingMt = round((float) ($agg->pending_mt ?? 0), 2);
+                $totalMt = round($stockAddedMt + $pendingMt, 2);
+                $dispatchedRakes = (int) ($dispatchedCountsBySiding->get($siding->id)?->dispatched_rakes ?? 0);
+                $dispatchedMt = round((float) ($dispatchedMtBySiding->get($siding->id)?->dispatched_mt ?? 0), 2);
+
+                if ($dispatchedMt === 0.0 && $dispatchedRakes > 0) {
+                    $dispatchedMt = round((float) Rake::query()
+                        ->where('siding_id', $siding->id)
+                        ->whereNotNull('loading_date')
+                        ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                        ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
+                        ->sum('loaded_weight_mt'), 2);
+                }
+
+                $rows[] = [
+                    'siding_id' => $siding->id,
+                    'siding_name' => $siding->name,
+                    'trips' => [
+                        'total' => $totalTrips,
+                        'stock_added' => $stockAddedTrips,
+                        'pending' => $pendingTrips,
+                        'dispatched' => $dispatchedRakes,
+                    ],
+                    'qty' => [
+                        'total_mt' => $totalMt,
+                        'stock_added_mt' => $stockAddedMt,
+                        'pending_mt' => $pendingMt,
+                        'dispatched_mt' => $dispatchedMt,
+                    ],
+                ];
+
+                $totalsTrips['total'] += $totalTrips;
+                $totalsTrips['stock_added'] += $stockAddedTrips;
+                $totalsTrips['pending'] += $pendingTrips;
+                $totalsTrips['dispatched'] += $dispatchedRakes;
+                $totalsQty['stock_added_mt'] += $stockAddedMt;
+                $totalsQty['pending_mt'] += $pendingMt;
+                $totalsQty['dispatched_mt'] += $dispatchedMt;
+            }
+
+            $totalsQty['total_mt'] = round($totalsQty['stock_added_mt'] + $totalsQty['pending_mt'], 2);
+            $totalsQty['stock_added_mt'] = round($totalsQty['stock_added_mt'], 2);
+            $totalsQty['pending_mt'] = round($totalsQty['pending_mt'], 2);
+            $totalsQty['dispatched_mt'] = round($totalsQty['dispatched_mt'], 2);
+
+            $periods[$periodKey] = [
+                'from' => $fromDate,
+                'to' => $toDate,
+                'rows' => $rows,
+                'totals' => [
+                    'trips' => $totalsTrips,
+                    'qty' => $totalsQty,
+                ],
+            ];
+        }
+
+        return [
+            'default_period' => 'today',
+            'periods' => $periods,
         ];
     }
 

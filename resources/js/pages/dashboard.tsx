@@ -45,6 +45,7 @@ import { SidingOverview } from '@/pages/dashboard/SidingOverview';
 import type {
     DashboardFilters,
     DispatchSummaryByPeriod,
+    RoadTripSummaryByPeriod,
     SidingPerformanceChartUiPeriod,
     SidingPerformanceMetricsPenaltyRow,
     SidingPerformanceMetricsRakeRow,
@@ -999,6 +1000,7 @@ type DashboardProps = SharedData & {
     };
     sidingStocks?: Record<number, SidingStock>;
     dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
+    roadTripSummaryByPeriod?: RoadTripSummaryByPeriod | null;
     sidingPerformance?: SidingPerformanceItem[];
     sidingWiseMonthly?: SidingWiseMonthlyPoint[];
     sidingRadar?: SidingComparisonData;
@@ -1718,6 +1720,8 @@ export function ExecutiveYesterdaySection({
     powerPlantDispatch = [],
     sidingStocks = {},
     dispatchSummaryByPeriod = null,
+    roadTripSummaryByPeriod = null,
+    filteredSidings = [],
     canWidget,
 }: {
     data: ExecutiveYesterdayData;
@@ -1728,6 +1732,8 @@ export function ExecutiveYesterdaySection({
     powerPlantDispatch?: PowerPlantDispatchItem[];
     sidingStocks?: Record<number, SidingStock>;
     dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
+    roadTripSummaryByPeriod?: RoadTripSummaryByPeriod | null;
+    filteredSidings?: SidingOption[];
     canWidget: (permissionName: string) => boolean;
 }) {
     const [executiveData, setExecutiveData] =
@@ -2035,7 +2041,11 @@ export function ExecutiveYesterdaySection({
 
     const TableView = (
         <div className="space-y-6">
-            <DispatchSummary data={dispatchSummaryByPeriod} />
+            <DispatchSummary
+                data={dispatchSummaryByPeriod}
+                roadTripData={roadTripSummaryByPeriod}
+                sidings={filteredSidings}
+            />
             {canWidget('dashboard.widgets.executive_tables_road_dispatch') ? (
                 <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                     <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
@@ -3002,8 +3012,8 @@ export function ExecutiveYesterdaySection({
             {canWidget(
                 'dashboard.widgets.executive_chart_powerplant_dispatch',
             ) ? (
-                <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
-                    <div className="min-w-0">
+                <div className="grid items-stretch gap-4 lg:grid-cols-2">
+                    <div className="flex h-full min-w-0 flex-col">
                         <RakesPerPowerPlantExecutiveChart
                             data={powerPlantChartData}
                             {...(hasPowerPlantPeriodSlices
@@ -3016,15 +3026,21 @@ export function ExecutiveYesterdaySection({
                                 : {})}
                         />
                     </div>
-                    <div className="min-w-0">
+                    <div className="flex h-full min-w-0 flex-col">
                         <DispatchSummary
                             data={dispatchSummaryByPeriod}
+                            roadTripData={roadTripSummaryByPeriod}
+                            sidings={filteredSidings}
                             className="flex h-full flex-col"
                         />
                     </div>
                 </div>
             ) : (
-                <DispatchSummary data={dispatchSummaryByPeriod} />
+                <DispatchSummary
+                    data={dispatchSummaryByPeriod}
+                    roadTripData={roadTripSummaryByPeriod}
+                    sidings={filteredSidings}
+                />
             )}
 
             {canWidget('dashboard.widgets.executive_chart_fy') ? (
@@ -5228,10 +5244,9 @@ function RakesPerPowerPlantExecutiveChart({
         period != null &&
         onMetricChange != null &&
         metric != null;
-    const chartHeight = Math.max(260, chartRows.length * 40);
 
     return (
-        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+        <div className="dashboard-card flex h-full flex-col overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
             <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
                 {showControls ? (
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -5296,9 +5311,9 @@ function RakesPerPowerPlantExecutiveChart({
                     />
                 )}
             </div>
-            <div className="relative bg-[#fbfbfc] p-4">
-                <div className="relative min-h-[260px]">
-                    <ResponsiveContainer width="100%" height={chartHeight}>
+            <div className="relative flex min-h-0 flex-1 flex-col bg-[#fbfbfc] p-4">
+                <div className="relative min-h-[260px] flex-1">
+                    <ResponsiveContainer width="100%" height="100%">
                         <RechartsBarChart
                             data={chartRows}
                             margin={{ top: 8, right: 16, bottom: 0, left: 8 }}
@@ -6812,6 +6827,7 @@ export default function Dashboard() {
     const stockGauge = props.stockGauge;
     const baseSidingStocks = props.sidingStocks ?? {};
     const dispatchSummaryByPeriod = props.dispatchSummaryByPeriod ?? null;
+    const roadTripSummaryByPeriod = props.roadTripSummaryByPeriod ?? null;
     const operatorRake = props.operatorRake ?? null;
     const penaltyPredictions = props.penaltyPredictions ?? [];
     const allowedWidgets = props.allowedDashboardWidgets ?? [];
@@ -7270,6 +7286,9 @@ export default function Dashboard() {
                                                 dispatchSummaryByPeriod={
                                                     dispatchSummaryByPeriod
                                                 }
+                                                roadTripSummaryByPeriod={
+                                                    roadTripSummaryByPeriod
+                                                }
                                                 canWidget={canWidget}
                                                 executiveYesterday={
                                                     executiveYesterday
@@ -7300,6 +7319,12 @@ export default function Dashboard() {
                                                             }
                                                             dispatchSummaryByPeriod={
                                                                 dispatchSummaryByPeriod
+                                                            }
+                                                            roadTripSummaryByPeriod={
+                                                                roadTripSummaryByPeriod
+                                                            }
+                                                            filteredSidings={
+                                                                filteredSidings
                                                             }
                                                             canWidget={
                                                                 canWidget

@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import {
     Select,
     SelectContent,
@@ -10,11 +11,21 @@ import { cn } from '@/lib/utils';
 import type {
     DispatchSummaryByPeriod,
     DispatchSummaryPeriodKey,
+    RoadTripSummaryByPeriod,
+    RoadTripSummaryQty,
+    RoadTripSummarySidingRow,
+    RoadTripSummaryTrips,
+    SidingOption,
 } from '@/pages/dashboard/types';
 import { Truck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 const mt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const qtyFmt = new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+});
+const intFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 
 const PERIOD_OPTIONS: {
     value: DispatchSummaryPeriodKey;
@@ -32,6 +43,12 @@ const PERIOD_OPTIONS: {
     { value: 'fy', label: 'FY', title: 'FY dispatch' },
 ];
 
+const SIDING_ACCENT: Record<string, string> = {
+    Dumka: '#3B82F6',
+    Kurwa: '#10B981',
+    Pakur: '#F59E0B',
+};
+
 const EMPTY_DISPATCH_SUMMARY: DispatchSummaryByPeriod = {
     default_period: 'today',
     periods: {
@@ -43,19 +60,45 @@ const EMPTY_DISPATCH_SUMMARY: DispatchSummaryByPeriod = {
     },
 };
 
+const EMPTY_ROAD_TRIP_SLICE = {
+    from: '',
+    to: '',
+    rows: [] as RoadTripSummarySidingRow[],
+    totals: {
+        trips: { total: 0, stock_added: 0, pending: 0, dispatched: 0 },
+        qty: {
+            total_mt: 0,
+            stock_added_mt: 0,
+            pending_mt: 0,
+            dispatched_mt: 0,
+        },
+    },
+};
+
+type ViewMode = 'trips' | 'qty';
+
 export function DispatchSummary({
     data,
+    roadTripData,
+    sidings = [],
     className,
 }: {
     data?: DispatchSummaryByPeriod | null;
+    roadTripData?: RoadTripSummaryByPeriod | null;
+    sidings?: SidingOption[];
     className?: string;
 }) {
     const summary = data ?? EMPTY_DISPATCH_SUMMARY;
+    const roadTrip = roadTripData;
     const [period, setPeriod] = useState<DispatchSummaryPeriodKey>(
         summary.default_period ?? 'today',
     );
+    const [viewMode, setViewMode] = useState<ViewMode>('trips');
 
     const slice = summary.periods[period] ?? summary.periods.today;
+    const roadSlice =
+        roadTrip?.periods[period] ?? roadTrip?.periods.today ?? EMPTY_ROAD_TRIP_SLICE;
+
     const totalDispatched = slice?.dispatched_mt ?? 0;
     const totalReceived = slice?.received_mt ?? 0;
     const variance = totalDispatched - totalReceived;
@@ -81,8 +124,11 @@ export function DispatchSummary({
         return opt?.title ?? "Today's dispatch";
     }, [period, slice?.from]);
 
+    const roadRows = roadSlice.rows ?? [];
+    const showRoadTripSection = roadTrip != null && sidings.length > 0;
+
     return (
-        <Card className={cn('shadow-sm', className)}>
+        <Card className={cn('h-full shadow-sm', className)}>
             <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Truck
@@ -115,7 +161,101 @@ export function DispatchSummary({
                     <Stat label="Received" value={totalReceived} />
                 </div>
 
-                <div>
+                {showRoadTripSection && (
+                    <div className="space-y-3 border-t pt-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold text-muted-foreground">
+                                Road trips
+                            </p>
+                            <div className="inline-flex rounded-lg border bg-muted/40 p-0.5">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={
+                                        viewMode === 'trips'
+                                            ? 'default'
+                                            : 'ghost'
+                                    }
+                                    className="h-7 px-3 text-xs"
+                                    onClick={() => setViewMode('trips')}
+                                >
+                                    Trips
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={
+                                        viewMode === 'qty' ? 'default' : 'ghost'
+                                    }
+                                    className="h-7 px-3 text-xs"
+                                    onClick={() => setViewMode('qty')}
+                                >
+                                    Qty
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            {roadRows.map((row) => {
+                                const accent =
+                                    SIDING_ACCENT[row.siding_name] ?? '#6B7280';
+
+                                return (
+                                    <div
+                                        key={row.siding_id}
+                                        className="rounded-lg border bg-card p-3"
+                                    >
+                                        <p
+                                            className="mb-2 text-xs font-semibold"
+                                            style={{ color: accent }}
+                                        >
+                                            {row.siding_name}
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                            <TripKpi
+                                                label="Total"
+                                                viewMode={viewMode}
+                                                trips={row.trips}
+                                                qty={row.qty}
+                                                kind="total"
+                                                compact
+                                            />
+                                            <TripKpi
+                                                label="Stock added"
+                                                viewMode={viewMode}
+                                                trips={row.trips}
+                                                qty={row.qty}
+                                                kind="stock_added"
+                                                variant="success"
+                                                compact
+                                            />
+                                            <TripKpi
+                                                label="Pending"
+                                                viewMode={viewMode}
+                                                trips={row.trips}
+                                                qty={row.qty}
+                                                kind="pending"
+                                                variant="warning"
+                                                compact
+                                            />
+                                            <TripKpi
+                                                label="Dispatched"
+                                                viewMode={viewMode}
+                                                trips={row.trips}
+                                                qty={row.qty}
+                                                kind="dispatched"
+                                                variant="info"
+                                                compact
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                <div className="mt-auto">
                     <div className="mb-1 flex items-center justify-between text-[11px]">
                         <span className="text-muted-foreground">
                             Net (dispatched − received)
@@ -163,6 +303,74 @@ function Stat({ label, value }: { label: string; value: number }) {
                 <span className="ml-1 text-[11px] font-normal text-muted-foreground">
                     MT
                 </span>
+            </p>
+        </div>
+    );
+}
+
+function TripKpi({
+    label,
+    viewMode,
+    trips,
+    qty,
+    kind,
+    variant = 'default',
+    compact = false,
+}: {
+    label: string;
+    viewMode: ViewMode;
+    trips: RoadTripSummaryTrips;
+    qty: RoadTripSummaryQty;
+    kind: 'total' | 'stock_added' | 'pending' | 'dispatched';
+    variant?: 'default' | 'success' | 'warning' | 'info';
+    compact?: boolean;
+}) {
+    const tripValue =
+        kind === 'total'
+            ? trips.total
+            : kind === 'stock_added'
+              ? trips.stock_added
+              : kind === 'pending'
+                ? trips.pending
+                : trips.dispatched;
+    const qtyValue =
+        kind === 'total'
+            ? qty.total_mt
+            : kind === 'stock_added'
+              ? qty.stock_added_mt
+              : kind === 'pending'
+                ? qty.pending_mt
+                : qty.dispatched_mt;
+
+    const valueClass =
+        variant === 'success'
+            ? 'text-emerald-700 dark:text-emerald-400'
+            : variant === 'warning'
+              ? 'text-amber-700 dark:text-amber-400'
+              : variant === 'info'
+                ? 'text-blue-700 dark:text-blue-400'
+                : 'text-foreground';
+
+    return (
+        <div
+            className={cn(
+                'rounded-md border bg-muted/20 p-2.5',
+                compact && 'p-2',
+            )}
+        >
+            <p className="mb-0.5 text-[10px] font-medium text-muted-foreground">
+                {label}
+            </p>
+            <p
+                className={cn(
+                    'font-mono font-bold tabular-nums',
+                    compact ? 'text-base' : 'text-lg',
+                    valueClass,
+                )}
+            >
+                {viewMode === 'trips'
+                    ? intFmt.format(tripValue)
+                    : `${qtyFmt.format(qtyValue)} MT`}
             </p>
         </div>
     );

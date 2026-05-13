@@ -37,6 +37,44 @@ export interface DispatchSummaryByPeriod {
     default_period: DispatchSummaryPeriodKey;
 }
 
+export type RoadTripSummaryPeriodKey = DispatchSummaryPeriodKey;
+
+export interface RoadTripSummaryTrips {
+    total: number;
+    stock_added: number;
+    pending: number;
+    dispatched: number;
+}
+
+export interface RoadTripSummaryQty {
+    total_mt: number;
+    stock_added_mt: number;
+    pending_mt: number;
+    dispatched_mt: number;
+}
+
+export interface RoadTripSummarySidingRow {
+    siding_id: number;
+    siding_name: string;
+    trips: RoadTripSummaryTrips;
+    qty: RoadTripSummaryQty;
+}
+
+export interface RoadTripSummaryPeriodSlice {
+    from: string;
+    to: string;
+    rows: RoadTripSummarySidingRow[];
+    totals: {
+        trips: RoadTripSummaryTrips;
+        qty: RoadTripSummaryQty;
+    };
+}
+
+export interface RoadTripSummaryByPeriod {
+    default_period: RoadTripSummaryPeriodKey;
+    periods: Record<RoadTripSummaryPeriodKey, RoadTripSummaryPeriodSlice>;
+}
+
 export interface SidingPerformanceItem {
     name: string;
     rakes: number;
