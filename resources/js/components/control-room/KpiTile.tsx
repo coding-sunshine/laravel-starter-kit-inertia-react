@@ -110,29 +110,22 @@ export function KpiTile({
     const unitSize = compact ? 'text-[11px]' : 'text-xs';
     const gap = compact ? 'gap-2.5' : 'gap-3';
 
+    // Always render the value directly. Number tweens on a constantly-updating
+    // monitoring dashboard read as "unstable" to operators — they want to trust
+    // the digit, not chase it. Animation was also racing during heavy ingestion.
     let valueNode: React.ReactNode;
     if (value === null) {
         valueNode = <span className="text-muted-foreground">—</span>;
     } else if (typeof value === 'string') {
         valueNode = <span>{value}</span>;
     } else {
-        if (reduceMotion) {
-            valueNode = (
-                <span>
-                    {formatNumber
-                        ? formatNumber(value)
-                        : defaultFormat(value, decimals)}
-                </span>
-            );
-        } else {
-            valueNode = (
-                <AnimatedNumber
-                    target={value}
-                    decimals={decimals}
-                    formatNumber={formatNumber}
-                />
-            );
-        }
+        valueNode = (
+            <span>
+                {formatNumber
+                    ? formatNumber(value)
+                    : defaultFormat(value, decimals)}
+            </span>
+        );
     }
 
     return (
