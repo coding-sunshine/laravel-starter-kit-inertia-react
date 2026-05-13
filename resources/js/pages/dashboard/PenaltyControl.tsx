@@ -155,7 +155,7 @@ export function PenaltyControl({
     executiveYesterday,
 }: Props) {
     const [sidingOverviewPenaltyPeriod, setSidingOverviewPenaltyPeriod] =
-        useState<PenaltyBySidingChartPeriodKey>('yesterday');
+        useState<PenaltyBySidingChartPeriodKey>('month');
 
     const penaltyBySidingForSidingOverview = useMemo(() => {
         const slices = executiveYesterday?.penaltyBySidingByPeriod;

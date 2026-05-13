@@ -5921,13 +5921,13 @@ function DashboardFiltersBar({
     }, [allSidingIds, applyFilters]);
 
     const resetAllFilters = useCallback(() => {
-        setPeriod('yesterday');
+        setPeriod('month');
         setCustomFrom(filters.from);
         setCustomTo(filters.to);
         setPendingSidingIds(allSidingIds);
         setRakeNumberInput('');
         applyFilters({
-            period: 'yesterday',
+            period: 'month',
             siding_ids: allSidingIds,
             power_plant: null,
             rake_number: null,
@@ -6608,7 +6608,7 @@ export default function Dashboard() {
         [csrfToken],
     );
     const defaultFilters: DashboardFilters = {
-        period: 'yesterday',
+        period: 'month',
         from: '',
         to: '',
         siding_ids: [],
@@ -6659,7 +6659,7 @@ export default function Dashboard() {
             case 'custom':
                 return 'selected period';
             default:
-                return 'yesterday';
+                return 'this month';
         }
     }, [filters.period, filters.from, filters.to]);
 
@@ -6960,7 +6960,7 @@ export default function Dashboard() {
     }, [sidings, filters.siding_ids]);
 
     const hasActiveFilters = useMemo(() => {
-        if (filters.period !== 'yesterday') return true;
+        if (filters.period !== 'month') return true;
         if (filters.power_plant) return true;
         if (filters.rake_number?.trim()) return true;
         if (filters.loader_id != null) return true;
@@ -6990,7 +6990,7 @@ export default function Dashboard() {
 
     const activeFilterCount = useMemo(() => {
         let n = 0;
-        if (filters.period !== 'yesterday') n += 1;
+        if (filters.period !== 'month') n += 1;
         if (filters.power_plant) n += 1;
         if (filters.rake_number?.trim()) n += 1;
         if (filters.loader_id != null) n += 1;

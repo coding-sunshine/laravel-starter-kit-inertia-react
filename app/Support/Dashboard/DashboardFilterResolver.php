@@ -36,7 +36,7 @@ final class DashboardFilterResolver
     public function resolve(Request $request): array
     {
         $user = $request->user();
-        $period = (string) $request->input('period', 'yesterday');
+        $period = (string) $request->input('period', 'month');
 
         if ($period !== 'custom') {
             $request->merge(['from' => null, 'to' => null]);
@@ -301,7 +301,7 @@ final class DashboardFilterResolver
      */
     private function resolveDateRangeFromRequest(Request $request): array
     {
-        $period = (string) $request->input('period', 'yesterday');
+        $period = (string) $request->input('period', 'month');
         $tz = config('app.timezone', 'UTC');
         $now = now($tz);
 
