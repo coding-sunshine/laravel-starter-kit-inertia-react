@@ -42,15 +42,15 @@ final class SidingMonitorController extends Controller
             'wagons' => $activeRake
                 ? $activeRake->wagonLoadings->map(fn ($wl) => [
                     'id' => $wl->wagon_id,
-                    'sequence' => $wl->wagon?->wagon_number,
-                    'loadrite_weight_mt' => $wl->loadrite_weight_mt,
-                    'loaded_quantity_mt' => $wl->loaded_quantity_mt,
-                    'cc_capacity_mt' => $wl->cc_capacity_mt,
+                    'sequence' => $wl->wagon?->wagon_sequence,
+                    'loadrite_weight_mt' => $wl->loadrite_weight_mt !== null ? (float) $wl->loadrite_weight_mt : null,
+                    'loaded_quantity_mt' => $wl->loaded_quantity_mt !== null ? (float) $wl->loaded_quantity_mt : null,
+                    'cc_capacity_mt' => (float) $wl->cc_capacity_mt,
                     'weight_source' => $wl->weight_source,
                     'percentage' => $wl->cc_capacity_mt > 0
-                        ? round((float) (($wl->loadrite_weight_mt ?? $wl->loaded_quantity_mt ?? 0) / $wl->cc_capacity_mt) * 100, 1)
-                        : 0,
-                    'loadrite_override' => $wl->loadrite_override,
+                        ? round(((float) ($wl->loadrite_weight_mt ?? $wl->loaded_quantity_mt ?? 0) / (float) $wl->cc_capacity_mt) * 100, 1)
+                        : 0.0,
+                    'loadrite_override' => (bool) $wl->loadrite_override,
                 ])->values()
                 : [],
             'free_minutes' => $freeMinutes,
