@@ -28,6 +28,7 @@ final class IndentDataTable extends AbstractDataTable
         public ?string $siding,
         public ?string $indent_date,
         public ?string $expected_loading_date,
+        public ?string $rake_loading_date,
         public ?string $e_demand_reference_id,
         public ?string $fnr_number,
         public ?string $state,
@@ -63,6 +64,7 @@ final class IndentDataTable extends AbstractDataTable
             siding: $sidingLabel,
             indent_date: $model->indent_date?->toDateString(),
             expected_loading_date: $model->expected_loading_date?->toDateString(),
+            rake_loading_date: $rake?->loading_date?->toDateString(),
             e_demand_reference_id: $model->e_demand_reference_id,
             fnr_number: $model->fnr_number,
             state: $model->state,
@@ -171,7 +173,7 @@ final class IndentDataTable extends AbstractDataTable
 
         $query->with([
             'siding:id,name,code',
-            'rake:id,indent_id,rake_number,rake_serial_number',
+            'rake:id,indent_id,rake_number,rake_serial_number,loading_date',
             'rake.rakeWeighments' => fn ($q) => $q->select(['id', 'rake_id']),
         ]);
 

@@ -309,10 +309,12 @@ final class IndentsController extends Controller
         $validated = $request->validate(
             [
                 'rake_serial_number' => ['required', 'string', 'max:100'],
+                'loading_date' => ['sometimes', 'nullable', 'date'],
             ],
             [],
             [
                 'rake_serial_number' => 'Rake number',
+                'loading_date' => 'Loading date',
             ],
         );
 
@@ -328,6 +330,9 @@ final class IndentsController extends Controller
 
         $trimmedSerial = mb_trim((string) $validated['rake_serial_number']);
         $indent->rake->rake_serial_number = $trimmedSerial;
+        if (array_key_exists('loading_date', $validated)) {
+            $indent->rake->loading_date = $validated['loading_date'];
+        }
         $indent->rake->updated_by = $user->id;
         $indent->rake->save();
 
@@ -335,6 +340,7 @@ final class IndentsController extends Controller
             'message' => 'Rake number updated.',
             'data' => [
                 'rake_serial_number' => $indent->rake->rake_serial_number,
+                'loading_date' => $indent->rake->loading_date?->toDateString(),
             ],
         ]);
     }

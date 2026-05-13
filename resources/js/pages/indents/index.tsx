@@ -49,6 +49,7 @@ interface IndentRow {
     siding: string | null;
     indent_date: string | null;
     expected_loading_date: string | null;
+    rake_loading_date: string | null;
     e_demand_reference_id: string | null;
     state: string;
     fnr_number: string | null;
@@ -108,6 +109,7 @@ export default function IndentsIndex({
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedIndent, setSelectedIndent] = useState<IndentRow | null>(null);
     const [assignRakeSerialNumber, setAssignRakeSerialNumber] = useState('');
+    const [assignLoadingDate, setAssignLoadingDate] = useState('');
     const [assignFieldErrors, setAssignFieldErrors] = useState<
         Record<string, string>
     >({});
@@ -211,6 +213,7 @@ export default function IndentsIndex({
         setRowContextMenu(null);
         setSelectedIndent(row);
         setAssignRakeSerialNumber(row.rake_serial_number ?? '');
+        setAssignLoadingDate(row.rake_loading_date ?? '');
         setAssignFieldErrors({});
         setAssignErrorBanner(null);
         setAssignDialogOpen(true);
@@ -223,6 +226,7 @@ export default function IndentsIndex({
         setAssignDialogOpen(false);
         setSelectedIndent(null);
         setAssignRakeSerialNumber('');
+        setAssignLoadingDate('');
         setAssignFieldErrors({});
         setAssignErrorBanner(null);
     };
@@ -251,6 +255,10 @@ export default function IndentsIndex({
                     },
                     body: JSON.stringify({
                         rake_serial_number: assignRakeSerialNumber,
+                        loading_date:
+                            assignLoadingDate.trim() !== ''
+                                ? assignLoadingDate
+                                : null,
                     }),
                 },
             );
@@ -595,6 +603,23 @@ export default function IndentsIndex({
                             />
                             <InputError
                                 message={assignFieldErrors.rake_serial_number}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="assign_loading_date">
+                                Loading date
+                            </Label>
+                            <Input
+                                id="assign_loading_date"
+                                name="loading_date"
+                                type="date"
+                                value={assignLoadingDate}
+                                onChange={(event) =>
+                                    setAssignLoadingDate(event.target.value)
+                                }
+                            />
+                            <InputError
+                                message={assignFieldErrors.loading_date}
                             />
                         </div>
                         <div className="flex justify-end">
