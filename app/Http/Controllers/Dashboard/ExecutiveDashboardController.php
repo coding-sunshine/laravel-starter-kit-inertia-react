@@ -27,11 +27,13 @@ use App\Models\SidingOpeningBalance;
 use App\Models\SidingRiskScore;
 use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
+use App\Models\User;
 use App\Models\VehicleUnload;
 use App\Models\WagonLoading;
 use App\Services\CoalTransportReport\CoalTransportReportDataBuilder;
 use App\Services\Dashboard\LoaderOverloadMetricsService;
 use App\Support\Dashboard\DashboardFilterResolver;
+use App\Support\Dashboard\DashboardSectionPropCatalog;
 use App\Support\Dashboard\DashboardWidgetPermissions;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -44,6 +46,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use InvalidArgumentException;
 use Throwable;
 
 final class ExecutiveDashboardController extends Controller
@@ -67,6 +70,9 @@ final class ExecutiveDashboardController extends Controller
 
     public function __invoke(Request $request): Response
     {
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+
         $resolved = $this->filters->resolve($request);
         $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
         $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);
@@ -83,73 +89,83 @@ final class ExecutiveDashboardController extends Controller
             $resolved['to'],
         );
 
-        $user = $request->user();
-        $executiveYesterdayPayload = DashboardWidgetPermissions::userHasAnyExecutiveWidget($user)
-            ? $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges)
-            : null;
+        $sectionKeys = DashboardSectionPropCatalog::propKeysForSection($resolved['section']);
+        $builtDeferred = $this->buildDeferredDashboardProps(
+            $user,
+            $resolved['section'],
+            $resolved,
+            $executiveYesterdayDate,
+            $executiveCustomRanges,
+            $sectionKeys,
+        );
+        $deferredProps = array_merge(DashboardSectionPropCatalog::defaultDeferredProps(), $builtDeferred);
 
-        // dd($this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext));
-        return Inertia::render('dashboard', [
-            'sidings' => $allSidings,
-            'section' => $resolved['section'],
-            'filters' => [
-                'period' => $resolved['period'],
-                'from' => $resolved['from']->toDateString(),
-                'to' => $resolved['to']->toDateString(),
-                'siding_ids' => $resolved['filteredSidingIds'],
-                'power_plant' => $resolved['powerPlant'],
-                'rake_number' => $resolved['rakeNumber'],
-                'loader_id' => $resolved['loaderId'],
-                'loader_operator' => $resolved['loaderOperatorName'],
-                'underload_threshold' => $resolved['underloadThresholdPercent'],
-                'shift' => $resolved['shift'],
-                'penalty_type' => $resolved['penaltyTypeId'],
-                'rake_penalty_scope' => $resolved['rakePenaltyScope'],
-                'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
-                'coal_transport_date' => $resolved['coalTransportDate']->toDateString(),
+        return Inertia::render('dashboard', array_merge(
+            [
+                'sidings' => $allSidings,
+                'section' => $resolved['section'],
+                'filters' => [
+                    'period' => $resolved['period'],
+                    'from' => $resolved['from']->toDateString(),
+                    'to' => $resolved['to']->toDateString(),
+                    'siding_ids' => $resolved['filteredSidingIds'],
+                    'power_plant' => $resolved['powerPlant'],
+                    'rake_number' => $resolved['rakeNumber'],
+                    'loader_id' => $resolved['loaderId'],
+                    'loader_operator' => $resolved['loaderOperatorName'],
+                    'underload_threshold' => $resolved['underloadThresholdPercent'],
+                    'shift' => $resolved['shift'],
+                    'penalty_type' => $resolved['penaltyTypeId'],
+                    'rake_penalty_scope' => $resolved['rakePenaltyScope'],
+                    'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
+                    'coal_transport_date' => $resolved['coalTransportDate']->toDateString(),
+                ],
+                'filterOptions' => $filterOptions,
+                'kpis' => $this->buildKpis($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+                'notifications' => $this->buildDashboardNotifications($request),
+                'notificationsUnreadCount' => $this->buildDashboardUnreadNotificationCount($request),
+                'allowedDashboardWidgets' => DashboardWidgetPermissions::allowedNamesForUser($user),
+                'rakePerformance' => [],
+                'loaderOverloadTrends' => [
+                    'loaders' => [],
+                    'monthly' => [],
+                ],
             ],
-            'filterOptions' => $filterOptions,
-            'kpis' => $this->buildKpis($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'penaltyTrendDaily' => $this->buildPenaltyTrendDaily($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'penaltyByType' => $this->buildPenaltyByType($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'penaltyBySiding' => $this->buildPenaltyBySiding($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'notifications' => $this->buildDashboardNotifications($request),
-            'notificationsUnreadCount' => $this->buildDashboardUnreadNotificationCount($request),
-            'liveRakeStatus' => $this->buildLiveRakeStatus(
-                $resolved['filteredSidingIds'],
-                $resolved['filterContext'],
-                $resolved['from'],
-                $resolved['to'],
+            $deferredProps,
+        ));
+    }
+
+    public function dashboardSectionData(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+
+        $section = $request->query('section');
+        abort_unless(is_string($section) && $section !== '', 422);
+
+        abort_unless(in_array($section, DashboardSectionPropCatalog::allowedSectionIds(), true), 422);
+
+        abort_unless(DashboardWidgetPermissions::userCanSeeDashboardSection($user, $section), 403);
+
+        $resolved = $this->filters->resolve($request);
+        abort_unless($resolved['section'] === $section, 422);
+
+        $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
+        $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);
+
+        $keys = DashboardSectionPropCatalog::propKeysForSection($section);
+
+        return response()->json(
+            $this->buildDeferredDashboardProps(
+                $user,
+                $section,
+                $resolved,
+                $executiveYesterdayDate,
+                $executiveCustomRanges,
+                $keys,
             ),
-            'dailyRakeDetails' => $this->buildDailyRakeDetails($resolved['filteredSidingIds'], $resolved['dailyRakeDate']),
-            'coalTransportReport' => $this->coalTransportReportDataBuilder->buildCoalTransportReport($resolved['filteredSidingIds'], $resolved['coalTransportDate'], $resolved['filterContext']['shift'] ?? null),
-            'truckReceiptTrend' => $this->buildTruckReceiptTrend($resolved['filteredSidingIds'], $resolved['filterContext']),
-            'shiftWiseVehicleReceipt' => $this->buildShiftWiseVehicleReceipt($resolved['filteredSidingIds'], $resolved['filterContext']['shift'] ?? null),
-            // 'stockGauge' => $this->buildStockGauge($resolved['filteredSidingIds'], $resolved['to']), // hidden for now
-            'predictedVsActualPenalty' => $this->buildPredictedVsActualPenalty($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'yesterdayPredictedPenalties' => $this->buildYesterdayPredictedPenalties($resolved['allSidingIds']),
-            'sidingWiseMonthly' => $this->buildSidingWiseMonthly($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'sidingRadar' => $this->buildSidingRadar($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'sidingPerformance' => $this->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'penaltySummary' => $this->buildPenaltySummary($resolved['filteredSidingIds']),
-            'activeRakePipeline' => $this->buildActiveRakePipeline($resolved['filteredSidingIds']),
-            'riskScores' => $this->buildRiskScores($resolved['filteredSidingIds']),
-            'alerts' => $this->buildCommandCenterAlerts($resolved['filteredSidingIds']),
-            'penaltyPredictions' => $this->buildPenaltyPredictions($resolved['filteredSidingIds']),
-            'overloadPatterns' => $this->buildOverloadPatterns($resolved['filteredSidingIds']),
-            'operatorRake' => $this->buildOperatorRake($resolved['filteredSidingIds']),
-            'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
-            'rakePerformance' => [],
-            'loaderOverloadTrends' => [
-                'loaders' => [],
-                'monthly' => [],
-            ],
-            'powerPlantDispatch' => $this->buildPowerPlantDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'allowedDashboardWidgets' => DashboardWidgetPermissions::allowedNamesForUser($user),
-            // Executive Yesterday tab uses its own date picker and ignores main dashboard filters.
-            'executiveYesterday' => $executiveYesterdayPayload,
-        ]);
+        );
     }
 
     public function executiveYesterdayData(Request $request): JsonResponse
@@ -227,6 +243,22 @@ final class ExecutiveDashboardController extends Controller
         return response()->json([
             'rakes' => $rakes,
             'penalties' => $penalties,
+        ]);
+    }
+
+    /**
+     * Lazy JSON payload for road trip KPIs inside the dispatch summary card.
+     */
+    public function roadTripSummary(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+
+        $resolved = $this->filters->resolve($request);
+
+        return response()->json([
+            'roadTripSummaryByPeriod' => $this->buildRoadTripSummaryByPeriod($resolved['filteredSidingIds']),
         ]);
     }
 
@@ -711,18 +743,21 @@ final class ExecutiveDashboardController extends Controller
         $chartPeriodKeys = ['yesterday', 'today', 'month', 'fy'];
         $penaltyBySidingByPeriod = [];
         $powerPlantDispatchByPeriod = [];
+        $rrCoverageByPeriod = [];
         foreach ($chartPeriodKeys as $periodKey) {
             [$fromDateStr, $toDateStr] = $periods[$periodKey];
             $fromCarbon = Carbon::parse($fromDateStr, $tz)->startOfDay();
             $toCarbon = Carbon::parse($toDateStr, $tz)->endOfDay();
             $penaltyBySidingByPeriod[$periodKey] = $this->buildPenaltyBySiding($sidingIds, $fromCarbon, $toCarbon, []);
             $powerPlantDispatchByPeriod[$periodKey] = $this->buildPowerPlantDispatch($sidingIds, $fromCarbon, $toCarbon, []);
+            $rrCoverageByPeriod[$periodKey] = $this->buildPenaltyControlRrCoverage($sidingIds, $fromCarbon, $toCarbon);
         }
 
         $lastMonthStart = $anchor->copy()->startOfMonth()->subMonth();
         $lastMonthFrom = $lastMonthStart->copy()->startOfDay();
         $lastMonthTo = $lastMonthStart->copy()->endOfMonth()->endOfDay();
         $penaltyBySidingByPeriod['last_month'] = $this->buildPenaltyBySiding($sidingIds, $lastMonthFrom, $lastMonthTo, []);
+        $rrCoverageByPeriod['last_month'] = $this->buildPenaltyControlRrCoverage($sidingIds, $lastMonthFrom, $lastMonthTo);
 
         return [
             'anchorDate' => $anchor->toDateString(),
@@ -754,6 +789,7 @@ final class ExecutiveDashboardController extends Controller
             ],
             'penaltyBySidingByPeriod' => $penaltyBySidingByPeriod,
             'powerPlantDispatchByPeriod' => $powerPlantDispatchByPeriod,
+            'rrCoverageByPeriod' => $rrCoverageByPeriod,
         ];
     }
 
@@ -1291,7 +1327,7 @@ final class ExecutiveDashboardController extends Controller
      * last_receipt_at / last_dispatch_at = MAX(created_at) over the window for receipt vs dispatch rows.
      *
      * @param  array<int>  $sidingIds
-     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float, last_receipt_at: string|null, last_dispatch_at: string|null}>
+     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float, last_receipt_at: string|null, last_dispatch_at: string|null, e_demand_raised: int}>
      */
     public function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
@@ -1358,6 +1394,14 @@ final class ExecutiveDashboardController extends Controller
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id');
 
+        // E-demands raised: indents whose rake has no weighment yet (matches /indents row highlighting).
+        $eDemandRaisedBySiding = Indent::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereDoesntHave('rake', fn ($q) => $q->whereHas('rakeWeighments'))
+            ->selectRaw('siding_id, COUNT(*) as cnt')
+            ->groupBy('siding_id')
+            ->pluck('cnt', 'siding_id');
+
         $result = [];
 
         foreach ($sidingIds as $sid) {
@@ -1383,10 +1427,235 @@ final class ExecutiveDashboardController extends Controller
                 'dispatched_mt' => abs((float) ($dispatchedBySiding[$sid] ?? 0)), // important fix
                 'last_receipt_at' => $lastReceipt !== null ? Carbon::parse($lastReceipt)->toIso8601String() : null,
                 'last_dispatch_at' => $lastDispatch !== null ? Carbon::parse($lastDispatch)->toIso8601String() : null,
+                'e_demand_raised' => (int) ($eDemandRaisedBySiding[$sid] ?? 0),
             ];
         }
 
         return $result;
+    }
+
+    /**
+     * Road receipt + rail dispatch totals for the dispatch summary card (all preset periods precomputed).
+     * Received: completed daily vehicle entries with stock posted (entry_date).
+     * Dispatched: rakes with loading_date and weighment (weight from rake_weighments).
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{
+     *     periods: array<string, array{received_mt: float, dispatched_mt: float, from: string, to: string}>,
+     *     default_period: string
+     * }
+     */
+    public function buildDispatchSummaryByPeriod(array $sidingIds): array
+    {
+        $periodKeys = ['today', 'yesterday', 'month', 'last_month', 'fy'];
+        $periods = [];
+
+        foreach ($periodKeys as $periodKey) {
+            [$from, $to] = $this->filters->boundsForDispatchSummaryPeriod($periodKey);
+            $fromDate = $from->toDateString();
+            $toDate = $to->toDateString();
+
+            $receivedMt = 0.0;
+            $dispatchedMt = 0.0;
+
+            if ($sidingIds !== []) {
+                $receivedMt = (float) DailyVehicleEntry::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+                    ->where('status', 'completed')
+                    ->whereHas('stockLedger')
+                    ->whereBetween('entry_date', [$fromDate, $toDate])
+                    ->sum('net_wt');
+
+                $rakeIds = Rake::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                    ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
+                    ->pluck('id');
+
+                if ($rakeIds->isNotEmpty()) {
+                    $dispatchedMt = (float) RakeWeighment::query()
+                        ->whereIn('rake_id', $rakeIds->all())
+                        ->sum('total_net_weight_mt');
+
+                    if ($dispatchedMt === 0.0) {
+                        $dispatchedMt = (float) Rake::query()
+                            ->whereIn('id', $rakeIds->all())
+                            ->sum('loaded_weight_mt');
+                    }
+                }
+            }
+
+            $periods[$periodKey] = [
+                'received_mt' => round($receivedMt, 2),
+                'dispatched_mt' => round($dispatchedMt, 2),
+                'from' => $fromDate,
+                'to' => $toDate,
+            ];
+        }
+
+        return [
+            'periods' => $periods,
+            'default_period' => 'today',
+        ];
+    }
+
+    /**
+     * Road dispatch trip/qty summary by siding for the executive overview table (all preset periods precomputed).
+     * Stock added: completed daily vehicle entries with a stock ledger receipt.
+     * Pending trips: total minus stock added; pending qty uses gross_wt for non-stock-added rows.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{
+     *     default_period: string,
+     *     periods: array<string, array{
+     *         from: string,
+     *         to: string,
+     *         rows: list<array{
+     *             siding_id: int,
+     *             siding_name: string,
+     *             trips: array{total: int, stock_added: int, pending: int, dispatched: int},
+     *             qty: array{total_mt: float, stock_added_mt: float, pending_mt: float, dispatched_mt: float}
+     *         }>,
+     *         totals: array{
+     *             trips: array{total: int, stock_added: int, pending: int, dispatched: int},
+     *             qty: array{total_mt: float, stock_added_mt: float, pending_mt: float, dispatched_mt: float}
+     *         }
+     *     }>
+     * }
+     */
+    public function buildRoadTripSummaryByPeriod(array $sidingIds): array
+    {
+        $periodKeys = ['today', 'yesterday', 'month', 'last_month', 'fy'];
+        $periods = [];
+        $stockAddedSql = "status = 'completed' and exists (select 1 from stock_ledgers where stock_ledgers.daily_vehicle_entry_id = daily_vehicle_entries.id)";
+
+        $sidings = $sidingIds === []
+            ? collect()
+            : Siding::query()
+                ->whereIn('id', $sidingIds)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+        foreach ($periodKeys as $periodKey) {
+            [$from, $to] = $this->filters->boundsForDispatchSummaryPeriod($periodKey);
+            $fromDate = $from->toDateString();
+            $toDate = $to->toDateString();
+
+            $aggregatesBySiding = collect();
+
+            if ($sidingIds !== []) {
+                $aggregatesBySiding = DailyVehicleEntry::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+                    ->whereBetween('entry_date', [$fromDate, $toDate])
+                    ->groupBy('siding_id')
+                    ->selectRaw(
+                        'siding_id,
+                        count(*) as total_trips,
+                        sum(case when '.$stockAddedSql.' then 1 else 0 end) as stock_added_trips,
+                        sum(case when '.$stockAddedSql.' then coalesce(net_wt, 0) else 0 end) as stock_added_mt,
+                        sum(case when not ('.$stockAddedSql.') then coalesce(gross_wt, 0) else 0 end) as pending_mt',
+                    )
+                    ->get()
+                    ->keyBy('siding_id');
+
+                $dispatchedCountsBySiding = Rake::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                    ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
+                    ->groupBy('siding_id')
+                    ->selectRaw('siding_id, count(*) as dispatched_rakes')
+                    ->get()
+                    ->keyBy('siding_id');
+
+                $dispatchedMtBySiding = Rake::query()
+                    ->whereIn('rakes.siding_id', $sidingIds)
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                    ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
+                    ->join('rake_weighments', 'rake_weighments.rake_id', '=', 'rakes.id')
+                    ->groupBy('rakes.siding_id')
+                    ->selectRaw('rakes.siding_id, sum(rake_weighments.total_net_weight_mt) as dispatched_mt')
+                    ->get()
+                    ->keyBy('siding_id');
+            } else {
+                $dispatchedCountsBySiding = collect();
+                $dispatchedMtBySiding = collect();
+            }
+
+            $rows = [];
+            $totalsTrips = ['total' => 0, 'stock_added' => 0, 'pending' => 0, 'dispatched' => 0];
+            $totalsQty = ['total_mt' => 0.0, 'stock_added_mt' => 0.0, 'pending_mt' => 0.0, 'dispatched_mt' => 0.0];
+
+            foreach ($sidings as $siding) {
+                $agg = $aggregatesBySiding->get($siding->id);
+                $totalTrips = (int) ($agg->total_trips ?? 0);
+                $stockAddedTrips = (int) ($agg->stock_added_trips ?? 0);
+                $pendingTrips = $totalTrips - $stockAddedTrips;
+                $stockAddedMt = round((float) ($agg->stock_added_mt ?? 0), 2);
+                $pendingMt = round((float) ($agg->pending_mt ?? 0), 2);
+                $totalMt = round($stockAddedMt + $pendingMt, 2);
+                $dispatchedRakes = (int) ($dispatchedCountsBySiding->get($siding->id)?->dispatched_rakes ?? 0);
+                $dispatchedMt = round((float) ($dispatchedMtBySiding->get($siding->id)?->dispatched_mt ?? 0), 2);
+
+                if ($dispatchedMt === 0.0 && $dispatchedRakes > 0) {
+                    $dispatchedMt = round((float) Rake::query()
+                        ->where('siding_id', $siding->id)
+                        ->whereNotNull('loading_date')
+                        ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                        ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
+                        ->sum('loaded_weight_mt'), 2);
+                }
+
+                $rows[] = [
+                    'siding_id' => $siding->id,
+                    'siding_name' => $siding->name,
+                    'trips' => [
+                        'total' => $totalTrips,
+                        'stock_added' => $stockAddedTrips,
+                        'pending' => $pendingTrips,
+                        'dispatched' => $dispatchedRakes,
+                    ],
+                    'qty' => [
+                        'total_mt' => $totalMt,
+                        'stock_added_mt' => $stockAddedMt,
+                        'pending_mt' => $pendingMt,
+                        'dispatched_mt' => $dispatchedMt,
+                    ],
+                ];
+
+                $totalsTrips['total'] += $totalTrips;
+                $totalsTrips['stock_added'] += $stockAddedTrips;
+                $totalsTrips['pending'] += $pendingTrips;
+                $totalsTrips['dispatched'] += $dispatchedRakes;
+                $totalsQty['stock_added_mt'] += $stockAddedMt;
+                $totalsQty['pending_mt'] += $pendingMt;
+                $totalsQty['dispatched_mt'] += $dispatchedMt;
+            }
+
+            $totalsQty['total_mt'] = round($totalsQty['stock_added_mt'] + $totalsQty['pending_mt'], 2);
+            $totalsQty['stock_added_mt'] = round($totalsQty['stock_added_mt'], 2);
+            $totalsQty['pending_mt'] = round($totalsQty['pending_mt'], 2);
+            $totalsQty['dispatched_mt'] = round($totalsQty['dispatched_mt'], 2);
+
+            $periods[$periodKey] = [
+                'from' => $fromDate,
+                'to' => $toDate,
+                'rows' => $rows,
+                'totals' => [
+                    'trips' => $totalsTrips,
+                    'qty' => $totalsQty,
+                ],
+            ];
+        }
+
+        return [
+            'default_period' => 'today',
+            'periods' => $periods,
+        ];
     }
 
     /**
@@ -2121,6 +2390,76 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * Rake vs RR upload coverage for penalty control charts (same date window as penalty-by-type/siding: loading_date).
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{total_rakes: int, rakes_with_rr: int, rakes_without_rr: int, by_siding: list<array{siding_id: int, siding_name: string, total_rakes: int, rakes_with_rr: int, rakes_without_rr: int}>}
+     */
+    public function buildPenaltyControlRrCoverage(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
+    {
+        if ($sidingIds === []) {
+            return [
+                'total_rakes' => 0,
+                'rakes_with_rr' => 0,
+                'rakes_without_rr' => 0,
+                'by_siding' => [],
+            ];
+        }
+
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
+
+        $baseQuery = Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate]);
+
+        $totalRakes = (int) (clone $baseQuery)->count();
+        $rakesWithRr = (int) (clone $baseQuery)->whereHas('rrDocument')->count();
+
+        $sidingNames = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->pluck('name', 'id')
+            ->all();
+
+        $totalsPerSiding = (clone $baseQuery)
+            ->selectRaw('siding_id, count(*) as cnt')
+            ->groupBy('siding_id')
+            ->pluck('cnt', 'siding_id')
+            ->all();
+
+        $withRrPerSiding = (clone $baseQuery)
+            ->whereHas('rrDocument')
+            ->selectRaw('siding_id, count(*) as cnt')
+            ->groupBy('siding_id')
+            ->pluck('cnt', 'siding_id')
+            ->all();
+
+        $bySiding = [];
+        foreach ($sidingIds as $sid) {
+            $sid = (int) $sid;
+            $total = (int) ($totalsPerSiding[$sid] ?? 0);
+            $withRr = (int) ($withRrPerSiding[$sid] ?? 0);
+            $bySiding[] = [
+                'siding_id' => $sid,
+                'siding_name' => (string) ($sidingNames[$sid] ?? "Siding {$sid}"),
+                'total_rakes' => $total,
+                'rakes_with_rr' => $withRr,
+                'rakes_without_rr' => max(0, $total - $withRr),
+            ];
+        }
+
+        usort($bySiding, fn ($a, $b) => strcmp($a['siding_name'], $b['siding_name']));
+
+        return [
+            'total_rakes' => $totalRakes,
+            'rakes_with_rr' => $rakesWithRr,
+            'rakes_without_rr' => max(0, $totalRakes - $rakesWithRr),
+            'by_siding' => $bySiding,
+        ];
+    }
+
+    /**
      * Cost avoidance: rakes that stayed within free time vs those that incurred penalties.
      *
      * @param  array<int>  $sidingIds
@@ -2829,6 +3168,9 @@ final class ExecutiveDashboardController extends Controller
     /**
      * Power plant wise dispatch with siding breakdown.
      *
+     * Rakes without {@see Rake::$destination} / {@see Rake::$destination_code} are grouped as
+     * Unknown/Unmapped so the chart stays consistent with rail volume that may omit destinations.
+     *
      * @param  array<int>  $sidingIds
      * @param  array{power_plant?: string|null}|array<string, mixed>  $filterContext
      * @return array<int, array{name: string, rakes: int, weight_mt: float, sidings: array<string, array{rakes: int, weight_mt: float}>}>
@@ -2849,10 +3191,6 @@ final class ExecutiveDashboardController extends Controller
         // Rakes in the selected date range by loading_date (business date).
         $rows = Rake::query()
             ->whereIn('siding_id', $sidingIds)
-            ->where(function ($q): void {
-                $q->whereNotNull('destination')
-                    ->orWhereNotNull('destination_code');
-            })
             ->whereNotNull('loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
             ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
@@ -3108,6 +3446,85 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Builds Inertia/JSON props for {@see DashboardSectionPropCatalog} keys (one section bundle).
+     *
+     * @param  array<string, mixed>  $resolved
+     * @param  list<string>  $keys
+     * @return array<string, mixed>
+     */
+    private function buildDeferredDashboardProps(
+        User $user,
+        string $activeSectionId,
+        array $resolved,
+        CarbonInterface $executiveYesterdayDate,
+        array $executiveCustomRanges,
+        array $keys,
+    ): array {
+        $keys = array_values(array_unique($keys));
+        $filteredSidingIds = $resolved['filteredSidingIds'];
+        $allSidingIds = $resolved['allSidingIds'];
+        $filterContext = $resolved['filterContext'];
+        $from = $resolved['from'];
+        $to = $resolved['to'];
+
+        $shouldBuildExecutiveYesterday = in_array('executiveYesterday', $keys, true)
+            && (
+                DashboardWidgetPermissions::userHasAnyExecutiveWidget($user)
+                || $activeSectionId === 'penalty-control'
+            );
+
+        $built = [];
+        foreach ($keys as $key) {
+            if ($key === 'executiveYesterday' && ! $shouldBuildExecutiveYesterday) {
+                $built[$key] = null;
+
+                continue;
+            }
+
+            $built[$key] = match ($key) {
+                'penaltyTrendDaily' => $this->buildPenaltyTrendDaily($filteredSidingIds, $from, $to, $filterContext),
+                'penaltyByType' => $this->buildPenaltyByType($filteredSidingIds, $from, $to, $filterContext),
+                'penaltyBySiding' => $this->buildPenaltyBySiding($filteredSidingIds, $from, $to, $filterContext),
+                'penaltyControlRrCoverage' => $this->buildPenaltyControlRrCoverage($filteredSidingIds, $from, $to),
+                'liveRakeStatus' => $this->buildLiveRakeStatus(
+                    $filteredSidingIds,
+                    $filterContext,
+                    $from,
+                    $to,
+                ),
+                'dailyRakeDetails' => $this->buildDailyRakeDetails($filteredSidingIds, $resolved['dailyRakeDate']),
+                'coalTransportReport' => $this->coalTransportReportDataBuilder->buildCoalTransportReport(
+                    $filteredSidingIds,
+                    $resolved['coalTransportDate'],
+                    $filterContext['shift'] ?? null,
+                ),
+                'truckReceiptTrend' => $this->buildTruckReceiptTrend($filteredSidingIds, $filterContext),
+                'shiftWiseVehicleReceipt' => $this->buildShiftWiseVehicleReceipt($filteredSidingIds, $filterContext['shift'] ?? null),
+                'predictedVsActualPenalty' => $this->buildPredictedVsActualPenalty($filteredSidingIds, $from, $to, $filterContext),
+                'yesterdayPredictedPenalties' => $this->buildYesterdayPredictedPenalties($allSidingIds),
+                'sidingWiseMonthly' => $this->buildSidingWiseMonthly($filteredSidingIds, $from, $to),
+                'sidingRadar' => $this->buildSidingRadar($filteredSidingIds, $from, $to),
+                'sidingPerformance' => $this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext),
+                'sidingStocks' => $this->buildSidingStocks($filteredSidingIds, $from, $to),
+                'penaltySummary' => $this->buildPenaltySummary($filteredSidingIds),
+                'activeRakePipeline' => $this->buildActiveRakePipeline($filteredSidingIds),
+                'riskScores' => $this->buildRiskScores($filteredSidingIds),
+                'alerts' => $this->buildCommandCenterAlerts($filteredSidingIds),
+                'penaltyPredictions' => $this->buildPenaltyPredictions($filteredSidingIds),
+                'overloadPatterns' => $this->buildOverloadPatterns($filteredSidingIds),
+                'operatorRake' => $this->buildOperatorRake($filteredSidingIds),
+                'dateWiseDispatch' => $this->buildDateWiseDispatch($filteredSidingIds, $from, $to),
+                'dispatchSummaryByPeriod' => $this->buildDispatchSummaryByPeriod($filteredSidingIds),
+                'powerPlantDispatch' => $this->buildPowerPlantDispatch($filteredSidingIds, $from, $to, $filterContext),
+                'executiveYesterday' => $this->buildExecutiveYesterdayData($allSidingIds, $executiveYesterdayDate, $executiveCustomRanges),
+                default => throw new InvalidArgumentException('Unknown dashboard deferred prop key: '.$key),
+            };
+        }
+
+        return $built;
     }
 
     /**

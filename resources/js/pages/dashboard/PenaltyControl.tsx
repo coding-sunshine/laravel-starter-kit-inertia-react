@@ -1,11 +1,15 @@
 import {
     DashboardPenaltyBySidingChart,
-    formatCurrency,
     PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS,
-    SectionHeader,
     type PenaltyBySidingChartPeriodKey,
 } from '../dashboard';
-import type { PenaltyByTypePoint, PenaltyBySidingPoint } from './types';
+import { formatCurrency, SectionHeader } from './shared';
+import type {
+    PenaltyByTypePoint,
+    PenaltyBySidingPoint,
+    PenaltyControlRrCoverage,
+} from './types';
+import { formatPenaltyControlRrCoverageLabel } from './types';
 import { cn } from '@/lib/utils';
 import { AlertTriangle } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -26,12 +30,17 @@ interface ExecutiveYesterdayForPenalty {
         'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
         PenaltyBySidingPoint[]
     >;
+    rrCoverageByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
+        PenaltyControlRrCoverage
+    >;
 }
 
 interface Props {
     canWidget: (name: string) => boolean;
     penaltyByType: PenaltyByTypePoint[];
     penaltyBySiding: PenaltyBySidingPoint[];
+    penaltyControlRrCoverage?: PenaltyControlRrCoverage;
     executiveYesterday?: ExecutiveYesterdayForPenalty;
 }
 
@@ -48,7 +57,13 @@ const PENALTY_TYPE_FALLBACK_COLORS = [
     '#10B981',
 ];
 
-function PenaltiesAndChargesChart({ data }: { data: PenaltyByTypePoint[] }) {
+function PenaltiesAndChargesChart({
+    data,
+    rrCoverageLabel,
+}: {
+    data: PenaltyByTypePoint[];
+    rrCoverageLabel?: string;
+}) {
     const totalType = data.reduce((s, p) => s + p.value, 0);
     const barData = [...data].sort((a, b) => b.value - a.value);
     const chartHeight = Math.min(
@@ -58,6 +73,9 @@ function PenaltiesAndChargesChart({ data }: { data: PenaltyByTypePoint[] }) {
 
     return (
         <div className="mt-4 space-y-4">
+            {rrCoverageLabel ? (
+                <p className="text-xs text-muted-foreground">{rrCoverageLabel}</p>
+            ) : null}
             <p className="text-xs text-gray-600">
                 Total:{' '}
                 <span className="font-semibold tabular-nums text-gray-900">
@@ -152,10 +170,11 @@ export function PenaltyControl({
     canWidget,
     penaltyByType,
     penaltyBySiding,
+    penaltyControlRrCoverage,
     executiveYesterday,
 }: Props) {
     const [sidingOverviewPenaltyPeriod, setSidingOverviewPenaltyPeriod] =
-        useState<PenaltyBySidingChartPeriodKey>('yesterday');
+        useState<PenaltyBySidingChartPeriodKey>('month');
 
     const penaltyBySidingForSidingOverview = useMemo(() => {
         const slices = executiveYesterday?.penaltyBySidingByPeriod;
@@ -166,6 +185,34 @@ export function PenaltyControl({
     }, [
         executiveYesterday?.penaltyBySidingByPeriod,
         penaltyBySiding,
+        sidingOverviewPenaltyPeriod,
+    ]);
+
+    const typeChartRrCoverageLabel = useMemo(() => {
+        if (!penaltyControlRrCoverage) {
+            return undefined;
+        }
+
+        return formatPenaltyControlRrCoverageLabel(penaltyControlRrCoverage);
+    }, [penaltyControlRrCoverage]);
+
+    const sidingChartRrCoverageLabel = useMemo(() => {
+        const slices = executiveYesterday?.rrCoverageByPeriod;
+        if (slices) {
+            const coverage = slices[sidingOverviewPenaltyPeriod];
+            if (coverage) {
+                return formatPenaltyControlRrCoverageLabel(coverage);
+            }
+        }
+
+        if (penaltyControlRrCoverage) {
+            return formatPenaltyControlRrCoverageLabel(penaltyControlRrCoverage);
+        }
+
+        return undefined;
+    }, [
+        executiveYesterday?.rrCoverageByPeriod,
+        penaltyControlRrCoverage,
         sidingOverviewPenaltyPeriod,
     ]);
 
@@ -194,10 +241,20 @@ export function PenaltyControl({
                                 subtitle="Overloading, demurrage, wharfage, etc."
                             />
                             {penaltyByType.length > 0 ? (
-                                <PenaltiesAndChargesChart data={penaltyByType} />
+                                <PenaltiesAndChargesChart
+                                    data={penaltyByType}
+                                    rrCoverageLabel={typeChartRrCoverageLabel}
+                                />
                             ) : (
-                                <div className="mt-4 py-8 text-center text-sm text-gray-600">
-                                    No penalty type data.
+                                <div className="mt-4 space-y-4">
+                                    {typeChartRrCoverageLabel ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            {typeChartRrCoverageLabel}
+                                        </p>
+                                    ) : null}
+                                    <div className="py-8 text-center text-sm text-gray-600">
+                                        No penalty type data.
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -208,6 +265,7 @@ export function PenaltyControl({
                             <DashboardPenaltyBySidingChart
                                 className="h-full"
                                 data={penaltyBySidingForSidingOverview}
+                                rrCoverageLabel={sidingChartRrCoverageLabel}
                                 {...(executiveYesterday?.penaltyBySidingByPeriod
                                     ? {
                                           period: sidingOverviewPenaltyPeriod,

@@ -15,6 +15,26 @@ export interface SidingStock {
     dispatched_mt: number;
     last_receipt_at: string | null;
     last_dispatch_at: string | null;
+    e_demand_raised: number;
+}
+
+export type DispatchSummaryPeriodKey =
+    | 'today'
+    | 'yesterday'
+    | 'month'
+    | 'last_month'
+    | 'fy';
+
+export interface DispatchSummaryPeriodSlice {
+    received_mt: number;
+    dispatched_mt: number;
+    from: string;
+    to: string;
+}
+
+export interface DispatchSummaryByPeriod {
+    periods: Record<DispatchSummaryPeriodKey, DispatchSummaryPeriodSlice>;
+    default_period: DispatchSummaryPeriodKey;
 }
 
 export interface SidingPerformanceItem {
@@ -285,6 +305,40 @@ export interface PenaltyBySidingPoint {
     total: number;
 }
 
+export interface PenaltyControlRrCoverageSidingRow {
+    siding_id: number;
+    siding_name: string;
+    total_rakes: number;
+    rakes_with_rr: number;
+    rakes_without_rr: number;
+}
+
+export interface PenaltyControlRrCoverage {
+    total_rakes: number;
+    rakes_with_rr: number;
+    rakes_without_rr: number;
+    /** Present from API; omitted in older cached responses. */
+    by_siding?: PenaltyControlRrCoverageSidingRow[];
+}
+
+export function formatPenaltyControlRrCoverageLabel(
+    coverage: PenaltyControlRrCoverage,
+): string {
+    const rrLabel = coverage.rakes_with_rr === 1 ? 'RR' : 'RRs';
+    const rakeLabel = coverage.total_rakes === 1 ? 'rake' : 'rakes';
+
+    return `Penalties from ${coverage.rakes_with_rr} uploaded ${rrLabel} out of ${coverage.total_rakes} ${rakeLabel}`;
+}
+
+/** Siding overview: neutral summary line; chart shows per-siding bars. */
+export function formatSidingRrCoverageSubtitle(
+    coverage: PenaltyControlRrCoverage,
+): string {
+    const rakeLabel = coverage.total_rakes === 1 ? 'rake' : 'rakes';
+
+    return `${coverage.rakes_with_rr} with RR uploaded, ${coverage.rakes_without_rr} pending (${coverage.total_rakes} ${rakeLabel} total, loading date in range).`;
+}
+
 export interface YesterdayPenaltyRow {
     type_code: string;
     type_name: string;
@@ -442,6 +496,10 @@ export interface ExecutiveYesterdayData {
     powerPlantDispatchByPeriod?: Record<
         'yesterday' | 'today' | 'month' | 'fy',
         PowerPlantDispatchItem[]
+    >;
+    rrCoverageByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
+        PenaltyControlRrCoverage
     >;
 }
 

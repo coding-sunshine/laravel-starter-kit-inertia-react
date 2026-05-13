@@ -34,6 +34,7 @@ final class DashboardWidgetPermissions
             'dashboard.widgets.siding_overview_performance' => 'Siding overview — Performance',
             'dashboard.widgets.siding_overview_penalty_trend' => 'Siding overview — Penalty trend',
             'dashboard.widgets.siding_overview_power_plant_distribution' => 'Siding overview — Power plant distribution',
+            'dashboard.widgets.siding_overview_rr_rake_coverage' => 'Siding overview — RR upload coverage',
             'dashboard.widgets.operations_coal_transport' => 'Operations — Coal transport report',
             'dashboard.widgets.operations_daily_rake_details' => 'Operations — Daily rake details',
             'dashboard.widgets.operations_truck_receipt_trend' => 'Operations — Truck receipt trend',
@@ -205,6 +206,7 @@ final class DashboardWidgetPermissions
                 'names' => [
                     'dashboard.widgets.siding_overview_performance',
                     'dashboard.widgets.siding_overview_penalty_trend',
+                    'dashboard.widgets.siding_overview_rr_rake_coverage',
                     'dashboard.widgets.siding_overview_power_plant_distribution',
                 ],
             ],

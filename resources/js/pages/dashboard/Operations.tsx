@@ -1,4 +1,4 @@
-import { DEFAULT_LIVE_RAKE_WORKFLOW_STEPS, formatRakeSequenceBySiding, SectionHeader, SIDING_ACCENT } from '../dashboard';
+import { DEFAULT_LIVE_RAKE_WORKFLOW_STEPS, formatRakeSequenceBySiding, SectionHeader, SIDING_ACCENT } from './shared';
 import type {
     CoalTransportReportData,
     DailyRakeDetailsData,
