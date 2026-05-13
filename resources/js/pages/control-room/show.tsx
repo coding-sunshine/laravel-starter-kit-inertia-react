@@ -9,7 +9,7 @@ import {
     Tv,
     Weight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AlertsFeed } from '@/components/control-room/AlertsFeed';
 import { ControlRoomShell } from '@/components/control-room/ControlRoomShell';
@@ -55,6 +55,13 @@ export default function ControlRoomShow({
     subscribable_sidings,
 }: Props) {
     const [data, setData] = useState<RakeData>(rakeData);
+
+    // Sync state when Inertia partial reload returns fresh server props
+    // (triggered by useStaleIndicator's fallback poll every ~60s). Without this,
+    // useState freezes at first-mount value and KPIs stop reflecting server truth.
+    useEffect(() => {
+        setData(rakeData);
+    }, [rakeData]);
 
     const { lastEventAtAny } = useControlRoomBroadcast(subscribable_sidings, {
         onWagonLoadingUpdated: (_sidingId, payload) => {
