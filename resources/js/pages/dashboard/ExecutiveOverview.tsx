@@ -1,9 +1,12 @@
+import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import { OperatorRakeWidget } from '@/components/dashboard/operator-rake-widget';
 import { PenaltyPredictionsWidget } from '@/components/dashboard/penalty-predictions-widget';
 import { SlidingNumber } from '@/components/SlidingNumber';
 import type { ReactNode } from 'react';
 import type {
+    DispatchSummaryByPeriod,
     ExecutiveYesterdayData,
+    RoadTripSummaryByPeriod,
     SidingOption,
     SidingStock,
 } from './types';
@@ -42,6 +45,10 @@ interface Props {
     canWidget: (name: string) => boolean;
     executiveYesterday: ExecutiveYesterdayData | undefined;
     executiveYesterdaySection?: ReactNode;
+    dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
+    roadTripSummaryByPeriod?: RoadTripSummaryByPeriod | null;
+    roadTripSummaryLoading?: boolean;
+    roadTripSummaryError?: string | null;
 }
 
 export function ExecutiveOverview({
@@ -53,6 +60,10 @@ export function ExecutiveOverview({
     canWidget,
     executiveYesterday,
     executiveYesterdaySection,
+    dispatchSummaryByPeriod,
+    roadTripSummaryByPeriod,
+    roadTripSummaryLoading = false,
+    roadTripSummaryError = null,
 }: Props) {
     return (
         <div className="space-y-6">
@@ -175,6 +186,17 @@ export function ExecutiveOverview({
                 )}
 
             {/* ── Executive charts / tables ── */}
+            {!executiveYesterday &&
+                canWidget('dispatch_summary_command') && (
+                    <DispatchSummary
+                        data={dispatchSummaryByPeriod ?? undefined}
+                        roadTripData={roadTripSummaryByPeriod ?? undefined}
+                        roadTripLoading={roadTripSummaryLoading}
+                        roadTripError={roadTripSummaryError}
+                        loadRoadTrip
+                        sidings={filteredSidings}
+                    />
+                )}
             {executiveYesterday ? (
                 executiveYesterdaySection ?? (
                     <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">

@@ -3132,6 +3132,9 @@ final class ExecutiveDashboardController extends Controller
     /**
      * Power plant wise dispatch with siding breakdown.
      *
+     * Rakes without {@see Rake::$destination} / {@see Rake::$destination_code} are grouped as
+     * Unknown/Unmapped so the chart stays consistent with rail volume that may omit destinations.
+     *
      * @param  array<int>  $sidingIds
      * @param  array{power_plant?: string|null}|array<string, mixed>  $filterContext
      * @return array<int, array{name: string, rakes: int, weight_mt: float, sidings: array<string, array{rakes: int, weight_mt: float}>}>
@@ -3152,10 +3155,6 @@ final class ExecutiveDashboardController extends Controller
         // Rakes in the selected date range by loading_date (business date).
         $rows = Rake::query()
             ->whereIn('siding_id', $sidingIds)
-            ->where(function ($q): void {
-                $q->whereNotNull('destination')
-                    ->orWhereNotNull('destination_code');
-            })
             ->whereNotNull('loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
             ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
@@ -3482,6 +3481,7 @@ final class ExecutiveDashboardController extends Controller
                 'overloadPatterns' => $this->buildOverloadPatterns($filteredSidingIds),
                 'operatorRake' => $this->buildOperatorRake($filteredSidingIds),
                 'dateWiseDispatch' => $this->buildDateWiseDispatch($filteredSidingIds, $from, $to),
+                'dispatchSummaryByPeriod' => $this->buildDispatchSummaryByPeriod($filteredSidingIds),
                 'powerPlantDispatch' => $this->buildPowerPlantDispatch($filteredSidingIds, $from, $to, $filterContext),
                 'executiveYesterday' => $this->buildExecutiveYesterdayData($allSidingIds, $executiveYesterdayDate, $executiveCustomRanges),
                 default => throw new InvalidArgumentException('Unknown dashboard deferred prop key: '.$key),

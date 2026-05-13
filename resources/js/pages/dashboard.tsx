@@ -1,4 +1,4 @@
-import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
+import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/table';
 import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
 import { useDashboardSectionPayload } from '@/hooks/use-dashboard-section-payload';
+import { useLazyRoadTripSummary } from '@/hooks/use-lazy-road-trip-summary';
 import AppLayout from '@/layouts/app-layout';
 import { JsonFetchError, laravelJsonFetch } from '@/lib/laravel-json-fetch';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,7 @@ import {
 } from '@/pages/dashboard/shared';
 import type {
     DashboardFilters,
+    DispatchSummaryByPeriod,
     SidingPerformanceChartUiPeriod,
     SidingPerformanceMetricsPenaltyRow,
     SidingPerformanceMetricsRakeRow,
@@ -85,7 +87,7 @@ import {
     X,
     Zap,
 } from 'lucide-react';
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
     Bar,
     CartesianGrid,
@@ -306,11 +308,6 @@ interface SidingComparisonItem {
 
 interface SidingComparisonData {
     sidings: SidingComparisonItem[];
-}
-
-interface DateWiseDispatchData {
-    sidingNames: Record<number, string>;
-    dates: Record<string, unknown>[];
 }
 
 interface RakePerformanceItem {
@@ -995,7 +992,7 @@ type DashboardProps = SharedData & {
     sidingPerformance?: SidingPerformanceItem[];
     sidingWiseMonthly?: SidingWiseMonthlyPoint[];
     sidingRadar?: SidingComparisonData;
-    dateWiseDispatch?: DateWiseDispatchData;
+    dispatchSummaryByPeriod?: DispatchSummaryByPeriod;
     rakePerformance?: RakePerformanceItem[];
     loaderOverloadTrends?: LoaderOverloadTrends;
     powerPlantDispatch?: PowerPlantDispatchItem[];
@@ -1673,6 +1670,7 @@ export function ExecutiveYesterdaySection({
     sidingStocks = {},
     filteredSidings = [],
     canWidget,
+    dispatchSummaryAside,
 }: {
     data: ExecutiveYesterdayData;
     viewMode: 'table' | 'charts';
@@ -1683,6 +1681,8 @@ export function ExecutiveYesterdaySection({
     sidingStocks?: Record<number, SidingStock>;
     filteredSidings?: SidingOption[];
     canWidget: (permissionName: string) => boolean;
+    /** Rendered beside Powerplant Dispatch chart (e.g. dispatch summary card). */
+    dispatchSummaryAside?: ReactNode;
 }) {
     const [executiveData, setExecutiveData] =
         useState<ExecutiveYesterdayData>(data);
@@ -1986,6 +1986,59 @@ export function ExecutiveYesterdaySection({
             </Button>
         </>
     );
+
+    const dispatchPowerPlantBand = (() => {
+        const showPowerPlantChart = canWidget(
+            'dashboard.widgets.executive_chart_powerplant_dispatch',
+        );
+        const showDispatchAside =
+            dispatchSummaryAside !== null &&
+            dispatchSummaryAside !== undefined;
+
+        if (!showPowerPlantChart && !showDispatchAside) {
+            return null;
+        }
+
+        if (showDispatchAside && showPowerPlantChart) {
+            return (
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+                    <div className="min-w-0 flex flex-col">
+                        <RakesPerPowerPlantExecutiveChart
+                            data={powerPlantChartData}
+                            {...(hasPowerPlantPeriodSlices
+                                ? {
+                                      period: powerPlantChartPeriod,
+                                      onPeriodChange: setPowerPlantChartPeriod,
+                                      metric: powerPlantMetric,
+                                      onMetricChange: setPowerPlantMetric,
+                                  }
+                                : {})}
+                        />
+                    </div>
+                    <div className="min-w-0">{dispatchSummaryAside}</div>
+                </div>
+            );
+        }
+
+        return (
+            <>
+                {showPowerPlantChart ? (
+                    <RakesPerPowerPlantExecutiveChart
+                        data={powerPlantChartData}
+                        {...(hasPowerPlantPeriodSlices
+                            ? {
+                                  period: powerPlantChartPeriod,
+                                  onPeriodChange: setPowerPlantChartPeriod,
+                                  metric: powerPlantMetric,
+                                  onMetricChange: setPowerPlantMetric,
+                              }
+                            : {})}
+                    />
+                ) : null}
+                {showDispatchAside ? dispatchSummaryAside : null}
+            </>
+        );
+    })();
 
     const TableView = (
         <div className="space-y-6">
@@ -2727,6 +2780,7 @@ export function ExecutiveYesterdaySection({
                     </div>
                 </div>
             ) : null}
+            {dispatchPowerPlantBand}
         </div>
     );
 
@@ -2952,21 +3006,7 @@ export function ExecutiveYesterdaySection({
                 </div>
             ) : null}
 
-            {canWidget(
-                'dashboard.widgets.executive_chart_powerplant_dispatch',
-            ) ? (
-                <RakesPerPowerPlantExecutiveChart
-                    data={powerPlantChartData}
-                    {...(hasPowerPlantPeriodSlices
-                        ? {
-                              period: powerPlantChartPeriod,
-                              onPeriodChange: setPowerPlantChartPeriod,
-                              metric: powerPlantMetric,
-                              onMetricChange: setPowerPlantMetric,
-                          }
-                        : {})}
-                />
-            ) : null}
+            {dispatchPowerPlantBand}
 
             {canWidget('dashboard.widgets.executive_chart_fy') ? (
                 <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
@@ -3011,15 +3051,21 @@ export function ExecutiveYesterdaySection({
     const chartsAllowed = EXEC_CHART_WIDGETS.some((n) => canWidget(n));
     if (viewMode === 'table' && !tableAllowed) {
         return (
-            <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
-                No executive table widgets are enabled for your account.
+            <div className="space-y-4">
+                {dispatchPowerPlantBand}
+                <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
+                    No executive table widgets are enabled for your account.
+                </div>
             </div>
         );
     }
     if (viewMode === 'charts' && !chartsAllowed) {
         return (
-            <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
-                No executive chart widgets are enabled for your account.
+            <div className="space-y-4">
+                {dispatchPowerPlantBand}
+                <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
+                    No executive chart widgets are enabled for your account.
+                </div>
             </div>
         );
     }
@@ -3785,155 +3831,6 @@ export function SidingPerformanceSection({
                         ))}
                     </div>
                 </div>
-            </div>
-        </div>
-    );
-}
-
-const DISPATCH_COLORS = [
-    DASHBOARD_PALETTE.steelBlue,
-    DASHBOARD_PALETTE.successGreen,
-    DASHBOARD_PALETTE.safetyYellow,
-    DASHBOARD_PALETTE.steelBlueLight,
-    DASHBOARD_PALETTE.successGreenLight,
-];
-const PENALTY_COLORS = [
-    DASHBOARD_PALETTE.alertRed,
-    DASHBOARD_PALETTE.safetyYellow,
-    DASHBOARD_PALETTE.alertRedLight,
-    DASHBOARD_PALETTE.darkGrey,
-];
-
-function DateWiseDispatchSection({ data }: { data: DateWiseDispatchData }) {
-    const { sidingNames, dates } = data;
-    const sidingIds = useMemo(
-        () => Object.keys(sidingNames).map(Number),
-        [sidingNames],
-    );
-
-    const dispatchKeys = useMemo(
-        () => sidingIds.map((id) => `dispatched_${id}`),
-        [sidingIds],
-    );
-    const penaltyKeys = useMemo(
-        () => sidingIds.map((id) => `penalty_${id}`),
-        [sidingIds],
-    );
-
-    const dispatchLabels = useMemo(() => {
-        const labels: Record<string, string> = {};
-        for (const id of sidingIds) {
-            labels[`dispatched_${id}`] = sidingNames[id];
-        }
-        return labels;
-    }, [sidingIds, sidingNames]);
-
-    const penaltyLabels = useMemo(() => {
-        const labels: Record<string, string> = {};
-        for (const id of sidingIds) {
-            labels[`penalty_${id}`] = sidingNames[id];
-        }
-        return labels;
-    }, [sidingIds, sidingNames]);
-
-    const dispatchColors = useMemo(() => {
-        const c: Record<string, string> = {};
-        sidingIds.forEach((id, i) => {
-            c[`dispatched_${id}`] = DISPATCH_COLORS[i % DISPATCH_COLORS.length];
-        });
-        return c;
-    }, [sidingIds]);
-
-    const penaltyColors = useMemo(() => {
-        const c: Record<string, string> = {};
-        sidingIds.forEach((id, i) => {
-            c[`penalty_${id}`] = PENALTY_COLORS[i % PENALTY_COLORS.length];
-        });
-        return c;
-    }, [sidingIds]);
-
-    const totals = useMemo(() => {
-        let dispatched = 0;
-        let penalty = 0;
-        for (const row of dates) {
-            dispatched += (row.total_dispatched as number) ?? 0;
-            penalty += (row.total_penalty as number) ?? 0;
-        }
-        return { dispatched, penalty: Math.round(penalty) };
-    }, [dates]);
-
-    return (
-        <div className="rounded-xl border bg-card p-5">
-            <SectionHeader
-                icon={Train}
-                title="Date-wise rail dispatch & penalties"
-                subtitle="Siding-wise breakdown by date"
-            />
-
-            {/* Summary cards */}
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">
-                        Total rakes dispatched
-                    </p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums">
-                        {totals.dispatched}
-                    </p>
-                </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">
-                        Total penalty amount
-                    </p>
-                    <p className="mt-1 text-2xl font-bold text-red-600 tabular-nums dark:text-red-400">
-                        {formatCurrency(totals.penalty)}
-                    </p>
-                </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">
-                        Sidings
-                    </p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums">
-                        {sidingIds.length}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                        {Object.values(sidingNames).join(', ')}
-                    </p>
-                </div>
-            </div>
-
-            {/* Stacked bar: rakes dispatched per siding */}
-            <div className="mt-5">
-                <p className="mb-2 text-sm font-semibold">
-                    Rakes dispatched (siding-wise)
-                </p>
-                <StackedBarChart
-                    data={dates}
-                    xKey="date"
-                    stackKeys={dispatchKeys}
-                    stackLabels={dispatchLabels}
-                    stackColors={dispatchColors}
-                    yLabel="Rakes"
-                    height={300}
-                    allowDecimals={false}
-                    formatTooltip={(v) => `${v} rakes`}
-                />
-            </div>
-
-            {/* Stacked bar: penalty amounts per siding */}
-            <div className="mt-5">
-                <p className="mb-2 text-sm font-semibold">
-                    Penalty amount (siding-wise)
-                </p>
-                <StackedBarChart
-                    data={dates}
-                    xKey="date"
-                    stackKeys={penaltyKeys}
-                    stackLabels={penaltyLabels}
-                    stackColors={penaltyColors}
-                    yLabel="₹"
-                    height={300}
-                    formatTooltip={(v) => `₹${v.toLocaleString()}`}
-                />
             </div>
         </div>
     );
@@ -6634,6 +6531,40 @@ export default function Dashboard() {
         () => ({ ...props, ...(sectionDeferredPatch ?? {}) }),
         [props, sectionDeferredPatch],
     );
+
+    const roadTripDashboardQuery = useMemo(() => {
+        const params = buildDashboardGetParams({
+            overrides: {},
+            filters,
+            currentSection: 'executive-overview',
+            allSidingIds,
+            resolvedPeriod: filters.period,
+            resolvedFrom: filters.from,
+            resolvedTo: filters.to,
+        });
+        const u = new URLSearchParams();
+        for (const [k, v] of Object.entries(params)) {
+            if (v === undefined || v === null) {
+                continue;
+            }
+            u.set(k, String(v));
+        }
+
+        return u.toString();
+    }, [filters, allSidingIds]);
+
+    const showDispatchSummaryRoadTrip =
+        canWidget('dispatch_summary_command') &&
+        activeSection === 'executive-overview';
+
+    const {
+        data: roadTripSummaryByPeriod,
+        loading: roadTripSummaryLoading,
+        error: roadTripSummaryError,
+    } = useLazyRoadTripSummary({
+        enabled: showDispatchSummaryRoadTrip,
+        queryString: roadTripDashboardQuery,
+    });
     const periodLabel = useMemo(() => {
         switch (filters.period) {
             case 'yesterday':
@@ -6859,10 +6790,7 @@ export default function Dashboard() {
     const sidingPerformance = dataProps.sidingPerformance ?? [];
     const sidingWiseMonthly = dataProps.sidingWiseMonthly ?? [];
     const sidingRadar = dataProps.sidingRadar ?? { sidings: [] };
-    const dateWiseDispatch = dataProps.dateWiseDispatch ?? {
-        sidingNames: {},
-        dates: [],
-    };
+    const dispatchSummaryByPeriod = dataProps.dispatchSummaryByPeriod;
     const loaderOverloadFilterKey = useMemo(
         () =>
             JSON.stringify({
@@ -7281,6 +7209,18 @@ export default function Dashboard() {
                                                 }
                                                 sidingStocks={sidingStocks}
                                                 canWidget={canWidget}
+                                                dispatchSummaryByPeriod={
+                                                    dispatchSummaryByPeriod
+                                                }
+                                                roadTripSummaryByPeriod={
+                                                    roadTripSummaryByPeriod
+                                                }
+                                                roadTripSummaryLoading={
+                                                    roadTripSummaryLoading
+                                                }
+                                                roadTripSummaryError={
+                                                    roadTripSummaryError
+                                                }
                                                 executiveYesterday={
                                                     executiveYesterday
                                                 }
@@ -7313,6 +7253,32 @@ export default function Dashboard() {
                                                             }
                                                             canWidget={
                                                                 canWidget
+                                                            }
+                                                            dispatchSummaryAside={
+                                                                canWidget(
+                                                                    'dispatch_summary_command',
+                                                                ) ? (
+                                                                    <DispatchSummary
+                                                                        data={
+                                                                            dispatchSummaryByPeriod ??
+                                                                            undefined
+                                                                        }
+                                                                        roadTripData={
+                                                                            roadTripSummaryByPeriod ??
+                                                                            undefined
+                                                                        }
+                                                                        roadTripLoading={
+                                                                            roadTripSummaryLoading
+                                                                        }
+                                                                        roadTripError={
+                                                                            roadTripSummaryError
+                                                                        }
+                                                                        loadRoadTrip
+                                                                        sidings={
+                                                                            filteredSidings
+                                                                        }
+                                                                    />
+                                                                ) : null
                                                             }
                                                         />
                                                     ) : undefined

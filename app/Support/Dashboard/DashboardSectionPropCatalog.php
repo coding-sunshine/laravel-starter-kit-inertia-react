@@ -34,6 +34,7 @@ final class DashboardSectionPropCatalog
                 'yesterdayPredictedPenalties',
                 'overloadPatterns',
                 'dateWiseDispatch',
+                'dispatchSummaryByPeriod',
                 'sidingWiseMonthly',
                 'sidingRadar',
             ],
@@ -116,6 +117,16 @@ final class DashboardSectionPropCatalog
             'dateWiseDispatch' => [
                 'sidingNames' => new stdClass,
                 'dates' => [],
+            ],
+            'dispatchSummaryByPeriod' => [
+                'default_period' => 'today',
+                'periods' => [
+                    'today' => ['received_mt' => 0.0, 'dispatched_mt' => 0.0, 'from' => '', 'to' => ''],
+                    'yesterday' => ['received_mt' => 0.0, 'dispatched_mt' => 0.0, 'from' => '', 'to' => ''],
+                    'month' => ['received_mt' => 0.0, 'dispatched_mt' => 0.0, 'from' => '', 'to' => ''],
+                    'last_month' => ['received_mt' => 0.0, 'dispatched_mt' => 0.0, 'from' => '', 'to' => ''],
+                    'fy' => ['received_mt' => 0.0, 'dispatched_mt' => 0.0, 'from' => '', 'to' => ''],
+                ],
             ],
             'sidingRadar' => [
                 'sidings' => [],

@@ -99,7 +99,7 @@ export function DispatchSummary({
     const [period, setPeriod] = useState<DispatchSummaryPeriodKey>(
         summary.default_period ?? 'today',
     );
-    const [viewMode, setViewMode] = useState<ViewMode>('trips');
+    const [viewMode, setViewMode] = useState<ViewMode>('qty');
 
     const slice = summary.periods[period] ?? summary.periods.today;
     const roadSlice =
@@ -212,7 +212,7 @@ export function DispatchSummary({
                             <div className="space-y-2">
                                 {sidings.slice(0, 3).map((siding) => (
                                     <div
-                                        key={siding.value}
+                                        key={siding.id}
                                         className="animate-pulse rounded-lg border bg-card p-3"
                                     >
                                         <div className="mb-2 h-3 w-24 rounded bg-muted" />
