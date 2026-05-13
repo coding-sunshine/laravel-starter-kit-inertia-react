@@ -234,9 +234,14 @@ export default function ControlRoomShow({
 
                     {/* Summary tiles — full-width strip so labels never wrap awkwardly. */}
                     <div className="mt-4 rounded-xl border border-border bg-card p-4">
-                        <p className="mb-3 text-sm font-semibold text-foreground">
-                            Summary
-                        </p>
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-foreground">
+                                Summary
+                            </p>
+                            <SourceCountsStrip
+                                counts={data.source_counts}
+                            />
+                        </div>
                         <SummaryTiles
                             totalNetMt={data.kpis.total_loaded_mt}
                             avgNetMt={data.kpis.avg_net_mt}
@@ -328,4 +333,59 @@ function updateWagonInRake(
         ),
         last_event_at: patch.last_updated_at ?? rake.last_event_at,
     };
+}
+
+function SourceCountsStrip({
+    counts,
+}: {
+    counts: RakeData['source_counts'];
+}) {
+    if (!counts) return null;
+    const items: { label: string; n: number; cls: string }[] = [
+        {
+            label: 'Loadrite',
+            n: counts.loadrite ?? 0,
+            cls: 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300',
+        },
+        {
+            label: 'Manual',
+            n: counts.manual ?? 0,
+            cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
+        },
+        {
+            label: 'Weighbridge',
+            n: counts.weighbridge ?? 0,
+            cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+        },
+        {
+            label: 'No data',
+            n: counts.none ?? 0,
+            cls: 'bg-muted text-muted-foreground',
+        },
+    ];
+    return (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Source
+            </span>
+            {items.map((i) => (
+                <span
+                    key={i.label}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${i.cls}`}
+                >
+                    {i.label}
+                    <span className="tabular-nums">{i.n}</span>
+                </span>
+            ))}
+            {counts.override > 0 && (
+                <span
+                    className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 font-medium text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
+                    title="Wagons whose loadrite reading was overridden by an operator"
+                >
+                    Override
+                    <span className="tabular-nums">{counts.override}</span>
+                </span>
+            )}
+        </div>
+    );
 }

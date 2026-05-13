@@ -20,12 +20,19 @@ final class RakeWagonLoading extends Model
         'loaded_quantity_mt',
         'loading_time',
         'remarks',
+        'weight_source',
+        'loadrite_weight_mt',
+        'loadrite_last_synced_at',
+        'loadrite_override',
     ];
 
     protected $casts = [
         'cc_capacity_mt' => 'decimal:2',
         'loaded_quantity_mt' => 'decimal:2',
         'loading_time' => 'datetime',
+        'loadrite_weight_mt' => 'decimal:3',
+        'loadrite_last_synced_at' => 'datetime',
+        'loadrite_override' => 'boolean',
     ];
 
     /*
