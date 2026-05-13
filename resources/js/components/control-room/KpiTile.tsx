@@ -1,12 +1,4 @@
-import {
-    animate,
-    motion,
-    useMotionValue,
-    useReducedMotion,
-    useTransform,
-} from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 export type KpiAccentColor =
     | 'blue'
@@ -45,49 +37,6 @@ function defaultFormat(n: number, decimals: number): string {
     }).format(n);
 }
 
-interface AnimatedNumberProps {
-    target: number;
-    decimals: number;
-    formatNumber?: (n: number) => string;
-}
-
-function AnimatedNumber({
-    target,
-    decimals,
-    formatNumber,
-}: AnimatedNumberProps) {
-    const motionValue = useMotionValue(0);
-    const rounded = useTransform(motionValue, (latest) => {
-        const factor = Math.pow(10, decimals);
-        const r = Math.round(latest * factor) / factor;
-        return formatNumber ? formatNumber(r) : defaultFormat(r, decimals);
-    });
-    const [display, setDisplay] = useState<string>(() =>
-        formatNumber ? formatNumber(0) : defaultFormat(0, decimals),
-    );
-
-    // Subscribe once on mount; rounded is a new ref each render but the underlying
-    // MotionValue chain is stable, so a one-time subscription is correct.
-    useEffect(() => {
-        const unsubscribe = rounded.on('change', (v) => setDisplay(v));
-        return unsubscribe;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Animate only when target changes. Without splitting these effects, every
-    // parent re-render (e.g. from a broadcast) restarted the tween from the current
-    // motion-value position, making the displayed number oscillate.
-    useEffect(() => {
-        const controls = animate(motionValue, target, {
-            duration: 0.6,
-            ease: 'easeOut',
-        });
-        return () => controls.stop();
-    }, [target, motionValue]);
-
-    return <span>{display}</span>;
-}
-
 export function KpiTile({
     icon: Icon,
     label,
@@ -98,8 +47,6 @@ export function KpiTile({
     compact = false,
     decimals = 0,
 }: KpiTileProps) {
-    const reduceMotion = useReducedMotion();
-
     const accent = ACCENT_CLASSES[accentColor];
 
     const padding = compact ? 'p-3' : 'p-4';
@@ -129,10 +76,7 @@ export function KpiTile({
     }
 
     return (
-        <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
+        <div
             className={`flex items-center ${gap} rounded-xl border border-border bg-card ${padding} shadow-xs transition-colors`}
         >
             <div
@@ -160,7 +104,7 @@ export function KpiTile({
                     )}
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }
 
