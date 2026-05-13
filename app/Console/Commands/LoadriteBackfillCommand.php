@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Events\WagonWeightUpdated;
+use App\Actions\SyncLoadriteEvent;
 use App\Http\Integrations\Loadrite\Requests\GetLoadingEventsRequest;
 use App\Models\LoadriteSetting;
-use App\Models\Rake;
-use App\Models\WagonLoading;
 use App\Services\LoadriteTokenManager;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -25,11 +23,11 @@ final class LoadriteBackfillCommand extends Command
 
     protected $description = 'Backfill historical Loadrite weight events (up to 31 days) into wagon loadings.';
 
-    public function handle(LoadriteTokenManager $tokenManager): int
+    public function handle(LoadriteTokenManager $tokenManager, SyncLoadriteEvent $sync): int
     {
         $from = $this->option('from')
             ? Carbon::parse($this->option('from'))->startOfDay()
-            : now()->subMonths(2)->startOfDay();
+            : now()->subDays(7)->startOfDay();
 
         $to = $this->option('to')
             ? Carbon::parse($this->option('to'))->endOfDay()
@@ -112,7 +110,7 @@ final class LoadriteBackfillCommand extends Command
 
                         if (! $dryRun) {
                             foreach ($events as $event) {
-                                if ($this->syncEvent($event, $sidingId)) {
+                                if ($sync->handle($event, $sidingId)) {
                                     $totalSynced++;
                                 }
                             }
@@ -130,93 +128,12 @@ final class LoadriteBackfillCommand extends Command
         }
 
         $this->info(sprintf(
-            '%sDone. Fetched: %d | Synced: %d',
+            '%sDone. Fetched: %d | New events synced: %d',
             $dryRun ? '[DRY RUN] ' : '',
             $totalFetched,
             $dryRun ? 0 : $totalSynced,
         ));
 
         return self::SUCCESS;
-    }
-
-    private function syncEvent(array $event, int $sidingId): bool
-    {
-        if (! isset($event['Sequence'], $event['Weight'])) {
-            return false;
-        }
-
-        $eventTime = isset($event['Time']) ? Carbon::parse($event['Time']) : null;
-
-        $rake = Rake::query()
-            ->where('siding_id', $sidingId)
-            ->where('placement_time', '<=', $eventTime ?? now())
-            ->where(function ($q) use ($eventTime) {
-                $q->whereNull('loading_end_time')
-                    ->orWhere('loading_end_time', '>=', $eventTime ?? now());
-            })
-            ->has('wagonLoadings')
-            ->orderByDesc('placement_time')
-            ->first();
-
-        // Fallback: if no time-windowed rake found, use the most recent pending/active rake with wagons
-        if (! $rake) {
-            $rake = Rake::query()
-                ->where('siding_id', $sidingId)
-                ->whereIn('state', ['loading', 'placed', 'pending'])
-                ->has('wagonLoadings')
-                ->latest('id')
-                ->first();
-        }
-
-        if (! $rake) {
-            Log::debug('loadrite:backfill — no rake for timestamp', [
-                'siding_id' => $sidingId,
-                'timestamp' => $event['Time'] ?? null,
-                'sequence' => $event['Sequence'] ?? null,
-            ]);
-
-            return false;
-        }
-
-        $wagonLoading = WagonLoading::query()
-            ->where('rake_id', $rake->id)
-            ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', (int) $event['Sequence']))
-            ->first();
-
-        if (! $wagonLoading) {
-            return false;
-        }
-
-        if ($wagonLoading->weight_source === 'weighbridge') {
-            return false;
-        }
-
-        $updates = [
-            'loadrite_weight_mt' => $event['Weight'],
-            'loadrite_last_synced_at' => now(),
-        ];
-
-        if (! $wagonLoading->loadrite_override) {
-            $updates['weight_source'] = 'loadrite';
-            $updates['loaded_quantity_mt'] = $event['Weight'];
-        }
-
-        $wagonLoading->update($updates);
-
-        $refreshed = $wagonLoading->fresh();
-
-        WagonWeightUpdated::dispatch(
-            sidingId: $sidingId,
-            wagonId: $wagonLoading->wagon_id,
-            sequence: $event['Sequence'],
-            loadriteWeightMt: (float) $event['Weight'],
-            weightSource: $refreshed->weight_source,
-            percentage: $wagonLoading->cc_capacity_mt > 0
-                ? round(((float) $event['Weight'] / (float) $wagonLoading->cc_capacity_mt) * 100, 1)
-                : 0.0,
-            status: $refreshed->weight_source === 'weighbridge' ? 'loaded' : 'loading',
-        );
-
-        return true;
     }
 }

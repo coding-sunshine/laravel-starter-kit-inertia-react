@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Events\WagonWeightUpdated;
-use App\Models\Rake;
-use App\Models\WagonLoading;
+use App\Actions\SyncLoadriteEvent;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 final class SyncLoadriteWeightJob implements ShouldQueue
 {
@@ -24,83 +21,15 @@ final class SyncLoadriteWeightJob implements ShouldQueue
     public int $tries = 3;
 
     /**
-     * @param  array{Sequence: int|string, Weight: float|string, Time: string}  $event
+     * @param  array<string, mixed>  $event
      */
     public function __construct(
         private readonly array $event,
         private readonly int $sidingId,
     ) {}
 
-    public function handle(): void
+    public function handle(SyncLoadriteEvent $action): void
     {
-        if (! isset($this->event['Sequence'], $this->event['Weight'])) {
-            return;
-        }
-
-        $rake = Rake::query()
-            ->where('siding_id', $this->sidingId)
-            ->whereIn('state', ['loading', 'placed', 'pending'])
-            ->has('wagonLoadings')
-            ->latest('id')
-            ->first();
-
-        if (! $rake) {
-            Log::warning('Loadrite sync: no active rake at siding', [
-                'siding_id' => $this->sidingId,
-                'event' => $this->event,
-            ]);
-
-            return;
-        }
-
-        $wagonLoading = WagonLoading::query()
-            ->where('rake_id', $rake->id)
-            ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', (int) $this->event['Sequence']))
-            ->first();
-
-        if (! $wagonLoading) {
-            Log::warning('Loadrite sync: no matching WagonLoading for sequence', [
-                'rake_id' => $rake->id,
-                'sequence' => $this->event['Sequence'],
-            ]);
-
-            return;
-        }
-
-        if ($wagonLoading->weight_source === 'weighbridge') {
-            Log::debug('Loadrite sync: skipping weighbridge record', [
-                'wagon_loading_id' => $wagonLoading->id,
-            ]);
-
-            return;
-        }
-
-        $updates = [
-            'loadrite_weight_mt' => $this->event['Weight'],
-            'loadrite_last_synced_at' => now(),
-        ];
-
-        if (! $wagonLoading->loadrite_override) {
-            $updates['weight_source'] = 'loadrite';
-            // Mirror to loaded_quantity_mt so existing readers (Control Room, penalty
-            // analytics, loader overload service, executive dashboard) see live data.
-            $updates['loaded_quantity_mt'] = $this->event['Weight'];
-        }
-
-        $wagonLoading->update($updates);
-
-        $refreshed = $wagonLoading->fresh();
-
-        WagonWeightUpdated::dispatch(
-            sidingId: $this->sidingId,
-            wagonId: $wagonLoading->wagon_id,
-            sequence: $this->event['Sequence'],
-            loadriteWeightMt: (float) $this->event['Weight'],
-            weightSource: $refreshed->weight_source,
-            percentage: $wagonLoading->cc_capacity_mt > 0
-                ? round(($this->event['Weight'] / (float) $wagonLoading->cc_capacity_mt) * 100, 1)
-                : 0.0,
-            status: $refreshed->weight_source === 'weighbridge' ? 'loaded' : 'loading',
-        );
+        $action->handle($this->event, $this->sidingId);
     }
 }
