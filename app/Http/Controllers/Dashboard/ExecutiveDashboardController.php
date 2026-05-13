@@ -113,6 +113,7 @@ final class ExecutiveDashboardController extends Controller
             'penaltyTrendDaily' => $this->buildPenaltyTrendDaily($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'penaltyByType' => $this->buildPenaltyByType($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'penaltyBySiding' => $this->buildPenaltyBySiding($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'penaltyControlRrCoverage' => $this->buildPenaltyControlRrCoverage($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'notifications' => $this->buildDashboardNotifications($request),
             'notificationsUnreadCount' => $this->buildDashboardUnreadNotificationCount($request),
             'liveRakeStatus' => $this->buildLiveRakeStatus(
@@ -713,18 +714,21 @@ final class ExecutiveDashboardController extends Controller
         $chartPeriodKeys = ['yesterday', 'today', 'month', 'fy'];
         $penaltyBySidingByPeriod = [];
         $powerPlantDispatchByPeriod = [];
+        $rrCoverageByPeriod = [];
         foreach ($chartPeriodKeys as $periodKey) {
             [$fromDateStr, $toDateStr] = $periods[$periodKey];
             $fromCarbon = Carbon::parse($fromDateStr, $tz)->startOfDay();
             $toCarbon = Carbon::parse($toDateStr, $tz)->endOfDay();
             $penaltyBySidingByPeriod[$periodKey] = $this->buildPenaltyBySiding($sidingIds, $fromCarbon, $toCarbon, []);
             $powerPlantDispatchByPeriod[$periodKey] = $this->buildPowerPlantDispatch($sidingIds, $fromCarbon, $toCarbon, []);
+            $rrCoverageByPeriod[$periodKey] = $this->buildPenaltyControlRrCoverage($sidingIds, $fromCarbon, $toCarbon);
         }
 
         $lastMonthStart = $anchor->copy()->startOfMonth()->subMonth();
         $lastMonthFrom = $lastMonthStart->copy()->startOfDay();
         $lastMonthTo = $lastMonthStart->copy()->endOfMonth()->endOfDay();
         $penaltyBySidingByPeriod['last_month'] = $this->buildPenaltyBySiding($sidingIds, $lastMonthFrom, $lastMonthTo, []);
+        $rrCoverageByPeriod['last_month'] = $this->buildPenaltyControlRrCoverage($sidingIds, $lastMonthFrom, $lastMonthTo);
 
         return [
             'anchorDate' => $anchor->toDateString(),
@@ -756,6 +760,7 @@ final class ExecutiveDashboardController extends Controller
             ],
             'penaltyBySidingByPeriod' => $penaltyBySidingByPeriod,
             'powerPlantDispatchByPeriod' => $powerPlantDispatchByPeriod,
+            'rrCoverageByPeriod' => $rrCoverageByPeriod,
         ];
     }
 
@@ -2353,6 +2358,40 @@ final class ExecutiveDashboardController extends Controller
         usort($result, fn ($a, $b) => $b['total'] <=> $a['total']);
 
         return $result;
+    }
+
+    /**
+     * Rake vs RR upload coverage for penalty control charts (same date window as penalty-by-type/siding: loading_date).
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{total_rakes: int, rakes_with_rr: int, rakes_without_rr: int}
+     */
+    public function buildPenaltyControlRrCoverage(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
+    {
+        if ($sidingIds === []) {
+            return [
+                'total_rakes' => 0,
+                'rakes_with_rr' => 0,
+                'rakes_without_rr' => 0,
+            ];
+        }
+
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
+
+        $baseQuery = Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate]);
+
+        $totalRakes = (int) (clone $baseQuery)->count();
+        $rakesWithRr = (int) (clone $baseQuery)->whereHas('rrDocument')->count();
+
+        return [
+            'total_rakes' => $totalRakes,
+            'rakes_with_rr' => $rakesWithRr,
+            'rakes_without_rr' => max(0, $totalRakes - $rakesWithRr),
+        ];
     }
 
     /**

@@ -280,11 +280,11 @@ export function DispatchSummary({
                         />
                     </div>
                     {slice?.from && slice?.to && (
-                        <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                             {slice.from === slice.to
                                 ? slice.from
                                 : `${slice.from} – ${slice.to}`}
-                        </p>
+                    </p>
                     )}
                 </div>
             </CardContent>

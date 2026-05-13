@@ -343,6 +343,21 @@ export interface PenaltyBySidingPoint {
     total: number;
 }
 
+export interface PenaltyControlRrCoverage {
+    total_rakes: number;
+    rakes_with_rr: number;
+    rakes_without_rr: number;
+}
+
+export function formatPenaltyControlRrCoverageLabel(
+    coverage: PenaltyControlRrCoverage,
+): string {
+    const rrLabel = coverage.rakes_with_rr === 1 ? 'RR' : 'RRs';
+    const rakeLabel = coverage.total_rakes === 1 ? 'rake' : 'rakes';
+
+    return `Penalties from ${coverage.rakes_with_rr} uploaded ${rrLabel} out of ${coverage.total_rakes} ${rakeLabel}`;
+}
+
 export interface YesterdayPenaltyRow {
     type_code: string;
     type_name: string;
@@ -500,6 +515,10 @@ export interface ExecutiveYesterdayData {
     powerPlantDispatchByPeriod?: Record<
         'yesterday' | 'today' | 'month' | 'fy',
         PowerPlantDispatchItem[]
+    >;
+    rrCoverageByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
+        PenaltyControlRrCoverage
     >;
 }
 

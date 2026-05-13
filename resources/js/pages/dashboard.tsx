@@ -821,6 +821,14 @@ interface ExecutiveYesterdayData {
         'yesterday' | 'today' | 'month' | 'fy',
         PowerPlantDispatchItem[]
     >;
+    rrCoverageByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
+        {
+            total_rakes: number;
+            rakes_with_rr: number;
+            rakes_without_rr: number;
+        }
+    >;
 }
 
 interface DashboardAlert {
@@ -979,6 +987,11 @@ type DashboardProps = SharedData & {
     penaltyTrendDaily?: PenaltyTrendChartPayload;
     penaltyByType?: PenaltyByTypePoint[];
     penaltyBySiding?: PenaltyBySidingPoint[];
+    penaltyControlRrCoverage?: {
+        total_rakes: number;
+        rakes_with_rr: number;
+        rakes_without_rr: number;
+    };
     notifications?: Array<{
         id: string;
         type: string;
@@ -1495,12 +1508,14 @@ export function DashboardPenaltyBySidingChart({
     period,
     onPeriodChange,
     periodOptions,
+    rrCoverageLabel,
     className,
 }: {
     data: PenaltyBySidingPoint[];
     period?: PenaltyBySidingChartPeriodKey;
     onPeriodChange?: (p: PenaltyBySidingChartPeriodKey) => void;
     periodOptions?: { value: PenaltyBySidingChartPeriodKey; label: string }[];
+    rrCoverageLabel?: string;
     className?: string;
 }) {
     const sorted = useMemo(
@@ -1560,6 +1575,11 @@ export function DashboardPenaltyBySidingChart({
                     />
                 )}
             </div>
+            {rrCoverageLabel ? (
+                <p className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-2 text-xs text-muted-foreground">
+                    {rrCoverageLabel}
+                </p>
+            ) : null}
             <div className="bg-[#fbfbfc] p-4">
                 {sorted.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
@@ -6818,6 +6838,7 @@ export default function Dashboard() {
         points: [],
     };
     const penaltyByType = props.penaltyByType ?? [];
+    const penaltyControlRrCoverage = props.penaltyControlRrCoverage;
     const penaltyBySiding = props.penaltyBySiding ?? [];
     const liveRakeStatus = props.liveRakeStatus ?? [];
     const dailyRakeDetails = props.dailyRakeDetails;
@@ -7388,6 +7409,9 @@ export default function Dashboard() {
                                                 penaltyByType={penaltyByType}
                                                 penaltyBySiding={
                                                     penaltyBySiding
+                                                }
+                                                penaltyControlRrCoverage={
+                                                    penaltyControlRrCoverage
                                                 }
                                                 executiveYesterday={
                                                     executiveYesterday
