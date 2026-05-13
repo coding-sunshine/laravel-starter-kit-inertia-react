@@ -60,19 +60,15 @@ function SidingMonitorContent({ siding, free_minutes, loadrite_active }: PagePro
                     loadriteActive={loadrite_active}
                 />
 
-                <CountdownTimer
-                    placementTime={rake?.placementTime ?? null}
-                    freeMinutes={free_minutes}
-                />
-
-                <div className="grid gap-4 lg:grid-cols-[1fr_200px]">
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                        <h2 className="mb-3 text-sm font-medium text-slate-500">Wagon Train</h2>
-                        <WagonTrain wagons={wagons} />
-                    </div>
+                {/* Timer + active wagon ring side by side */}
+                <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+                    <CountdownTimer
+                        placementTime={rake?.placementTime ?? null}
+                        freeMinutes={free_minutes}
+                    />
 
                     {activeWagon && (
-                        <div className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                        <div className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-900/60 px-8 py-4">
                             <LoadingRing
                                 percentage={activeWagon.percentage}
                                 weightMt={activeWagon.loadriteWeightMt ?? 0}
@@ -83,10 +79,18 @@ function SidingMonitorContent({ siding, free_minutes, loadrite_active }: PagePro
                     )}
                 </div>
 
+                {/* Wagon train — full width, wrapping grid */}
                 <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                    <h2 className="mb-3 text-sm font-medium text-slate-500">Alerts</h2>
-                    <AlertsFeed alerts={alerts} />
+                    <h2 className="mb-3 text-sm font-medium text-slate-500">Wagon Train</h2>
+                    <WagonTrain wagons={wagons} />
                 </div>
+
+                {alerts.length > 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                        <h2 className="mb-3 text-sm font-medium text-slate-500">Alerts</h2>
+                        <AlertsFeed alerts={alerts} />
+                    </div>
+                )}
             </div>
         </div>
     );
