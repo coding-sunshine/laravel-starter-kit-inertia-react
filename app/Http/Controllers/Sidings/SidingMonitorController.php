@@ -17,11 +17,12 @@ final class SidingMonitorController extends Controller
     {
         $activeRake = Rake::query()
             ->where('siding_id', $siding->id)
-            ->whereIn('state', ['loading', 'placed'])
+            ->whereIn('state', ['loading', 'placed', 'pending'])
+            ->has('wagonLoadings')
             ->with([
                 'wagonLoadings' => fn ($q) => $q->with('wagon'),
             ])
-            ->latest('placement_time')
+            ->latest('id')
             ->first();
 
         $freeMinutes = SectionTimer::query()

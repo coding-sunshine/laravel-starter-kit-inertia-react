@@ -39,8 +39,8 @@ final class EvaluateOverloadAlertJob implements ShouldQueue
     {
         $wagonLoading = WagonLoading::query()
             ->with('wagon')
-            ->whereHas('wagon', fn ($q) => $q->where('wagon_number', $this->event['Sequence']))
-            ->whereHas('rake', fn ($q) => $q->where('siding_id', $this->sidingId)->whereIn('state', ['loading', 'placed']))
+            ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', (int) $this->event['Sequence']))
+            ->whereHas('rake', fn ($q) => $q->where('siding_id', $this->sidingId)->whereIn('state', ['loading', 'placed', 'pending'])->has('wagonLoadings'))
             ->first();
 
         if (! $wagonLoading || ! $wagonLoading->wagon) {

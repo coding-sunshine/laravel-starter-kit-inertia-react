@@ -24,7 +24,7 @@ final class SyncLoadriteWeightJob implements ShouldQueue
     public int $tries = 3;
 
     /**
-     * @param  array{Sequence: int, Weight: float, Timestamp: string}  $event
+     * @param  array{Sequence: int|string, Weight: float|string, Time: string}  $event
      */
     public function __construct(
         private readonly array $event,
@@ -33,10 +33,15 @@ final class SyncLoadriteWeightJob implements ShouldQueue
 
     public function handle(): void
     {
+        if (! isset($this->event['Sequence'], $this->event['Weight'])) {
+            return;
+        }
+
         $rake = Rake::query()
             ->where('siding_id', $this->sidingId)
-            ->whereIn('state', ['loading', 'placed'])
-            ->latest('placement_time')
+            ->whereIn('state', ['loading', 'placed', 'pending'])
+            ->has('wagonLoadings')
+            ->latest('id')
             ->first();
 
         if (! $rake) {
@@ -50,7 +55,7 @@ final class SyncLoadriteWeightJob implements ShouldQueue
 
         $wagonLoading = WagonLoading::query()
             ->where('rake_id', $rake->id)
-            ->whereHas('wagon', fn ($q) => $q->where('wagon_number', $this->event['Sequence']))
+            ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', (int) $this->event['Sequence']))
             ->first();
 
         if (! $wagonLoading) {

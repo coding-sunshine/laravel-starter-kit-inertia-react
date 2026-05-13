@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Events\WagonWeightUpdated;
-use App\Http\Integrations\Loadrite\Requests\GetNewWeightEventsRequest;
+use App\Http\Integrations\Loadrite\Requests\GetLoadingEventsRequest;
 use App\Models\LoadriteSetting;
 use App\Models\Rake;
 use App\Models\WagonLoading;
@@ -51,7 +51,7 @@ final class LoadritePollCommand extends Command
 
                 try {
                     $connector = $tokenManager->getConnector($sidingId);
-                    $response = $connector->send(new GetNewWeightEventsRequest($setting->site_name, $from, $to));
+                    $response = $connector->send(new GetLoadingEventsRequest($setting->site_name, $from, $to));
 
                     if (! $response->successful()) {
                         $this->warn("Siding {$sidingId}: HTTP {$response->status()}");
@@ -59,7 +59,8 @@ final class LoadritePollCommand extends Command
                         continue;
                     }
 
-                    $events = $response->json() ?? [];
+                    $body = $response->json() ?? [];
+                    $events = $body['data'] ?? [];
                     $synced = 0;
                     $lastTimestamp = $from;
 
@@ -68,8 +69,8 @@ final class LoadritePollCommand extends Command
                             $synced++;
                         }
 
-                        if (isset($event['Timestamp']) && $event['Timestamp'] > $lastTimestamp) {
-                            $lastTimestamp = $event['Timestamp'];
+                        if (isset($event['Time']) && $event['Time'] > $lastTimestamp) {
+                            $lastTimestamp = $event['Time'];
                         }
                     }
 
@@ -98,10 +99,15 @@ final class LoadritePollCommand extends Command
 
     private function syncEvent(array $event, int $sidingId): bool
     {
+        if (! isset($event['Sequence'], $event['Weight'])) {
+            return false;
+        }
+
         $rake = Rake::query()
             ->where('siding_id', $sidingId)
-            ->whereIn('state', ['loading', 'placed'])
-            ->latest('placement_time')
+            ->whereIn('state', ['loading', 'placed', 'pending'])
+            ->has('wagonLoadings')
+            ->latest('id')
             ->first();
 
         if (! $rake) {
@@ -112,7 +118,7 @@ final class LoadritePollCommand extends Command
 
         $wagonLoading = WagonLoading::query()
             ->where('rake_id', $rake->id)
-            ->whereHas('wagon', fn ($q) => $q->where('wagon_number', $event['Sequence']))
+            ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', (int) $event['Sequence']))
             ->first();
 
         if (! $wagonLoading) {

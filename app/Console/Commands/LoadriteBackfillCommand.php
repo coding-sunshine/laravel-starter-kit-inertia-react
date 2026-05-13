@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Events\WagonWeightUpdated;
-use App\Http\Integrations\Loadrite\Requests\GetNewWeightEventsRequest;
+use App\Http\Integrations\Loadrite\Requests\GetLoadingEventsRequest;
 use App\Models\LoadriteSetting;
 use App\Models\Rake;
 use App\Models\WagonLoading;
@@ -81,7 +81,7 @@ final class LoadriteBackfillCommand extends Command
                     $page = 1;
 
                     do {
-                        $response = $connector->send(new GetNewWeightEventsRequest(
+                        $response = $connector->send(new GetLoadingEventsRequest(
                             $setting->site_name,
                             $chunkFrom,
                             $chunkTo,
@@ -93,7 +93,9 @@ final class LoadriteBackfillCommand extends Command
                             break;
                         }
 
-                        $events = $response->json() ?? [];
+                        $body = $response->json() ?? [];
+                        $events = $body['data'] ?? [];
+                        $totalPages = $body['metaData']['numberOfPages'] ?? 1;
 
                         if (empty($events)) {
                             break;
@@ -101,9 +103,10 @@ final class LoadriteBackfillCommand extends Command
 
                         $totalFetched += count($events);
                         $this->line(sprintf(
-                            '    [%s p%d] %d event(s) fetched',
+                            '    [%s p%d/%d] %d event(s) fetched',
                             $cursor->toDateString(),
                             $page,
+                            $totalPages,
                             count($events),
                         ));
 
@@ -115,10 +118,10 @@ final class LoadriteBackfillCommand extends Command
                             }
                         }
 
-                        $page = count($events) < 150 ? 0 : $page + 1;
+                        $page = $page < $totalPages ? $page + 1 : 0;
                     } while ($page > 0);
 
-                    $cursor->addDay();
+                    $cursor = $cursor->addDay();
                 }
             } catch (Throwable $e) {
                 $this->error("  Siding {$sidingId}: {$e->getMessage()}");
@@ -138,7 +141,11 @@ final class LoadriteBackfillCommand extends Command
 
     private function syncEvent(array $event, int $sidingId): bool
     {
-        $eventTime = isset($event['Timestamp']) ? Carbon::parse($event['Timestamp']) : null;
+        if (! isset($event['Sequence'], $event['Weight'])) {
+            return false;
+        }
+
+        $eventTime = isset($event['Time']) ? Carbon::parse($event['Time']) : null;
 
         $rake = Rake::query()
             ->where('siding_id', $sidingId)
@@ -147,13 +154,24 @@ final class LoadriteBackfillCommand extends Command
                 $q->whereNull('loading_end_time')
                     ->orWhere('loading_end_time', '>=', $eventTime ?? now());
             })
+            ->has('wagonLoadings')
             ->orderByDesc('placement_time')
             ->first();
+
+        // Fallback: if no time-windowed rake found, use the most recent pending/active rake with wagons
+        if (! $rake) {
+            $rake = Rake::query()
+                ->where('siding_id', $sidingId)
+                ->whereIn('state', ['loading', 'placed', 'pending'])
+                ->has('wagonLoadings')
+                ->latest('id')
+                ->first();
+        }
 
         if (! $rake) {
             Log::debug('loadrite:backfill — no rake for timestamp', [
                 'siding_id' => $sidingId,
-                'timestamp' => $event['Timestamp'] ?? null,
+                'timestamp' => $event['Time'] ?? null,
                 'sequence' => $event['Sequence'] ?? null,
             ]);
 
@@ -162,7 +180,7 @@ final class LoadriteBackfillCommand extends Command
 
         $wagonLoading = WagonLoading::query()
             ->where('rake_id', $rake->id)
-            ->whereHas('wagon', fn ($q) => $q->where('wagon_number', $event['Sequence']))
+            ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', (int) $event['Sequence']))
             ->first();
 
         if (! $wagonLoading) {
