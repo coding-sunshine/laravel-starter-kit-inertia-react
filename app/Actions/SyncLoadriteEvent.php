@@ -111,44 +111,57 @@ final readonly class SyncLoadriteEvent
     /**
      * Locate the wagon_loading row that this event should attach to.
      *
-     * Strategy: prefer a rake whose loading window contains the event timestamp;
-     * fall back to the most recent active rake at the siding that has wagonLoadings.
+     * Strategy: match the rake whose virtual loading window contains the event
+     * timestamp. Virtual anchor = placement_time OR earliest wagon_loading.created_at
+     * for the rake (the field is often null on this dataset). Virtual end =
+     * loading_end_time OR open-ended. Last resort: most recent active rake.
      */
-    private function resolveWagonLoading(int $sidingId, int $sequence, array $event): ?WagonLoading
+    public function resolveRakeIdForEvent(int $sidingId, ?Carbon $eventTime): ?int
     {
-        $eventTime = isset($event['Time']) ? Carbon::parse($event['Time']) : null;
-
-        $rake = null;
-
         if ($eventTime !== null) {
             $rake = Rake::query()
                 ->where('siding_id', $sidingId)
-                ->where('placement_time', '<=', $eventTime)
+                ->has('wagonLoadings')
+                ->whereRaw(
+                    'COALESCE(placement_time, (SELECT MIN(created_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id)) <= ?',
+                    [$eventTime],
+                )
                 ->where(function ($q) use ($eventTime): void {
                     $q->whereNull('loading_end_time')
                         ->orWhere('loading_end_time', '>=', $eventTime);
                 })
-                ->has('wagonLoadings')
-                ->orderByDesc('placement_time')
-                ->first();
+                ->orderByRaw(
+                    'COALESCE(placement_time, (SELECT MIN(created_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id)) DESC',
+                )
+                ->first(['id']);
+
+            if ($rake) {
+                return (int) $rake->id;
+            }
         }
 
-        if (! $rake) {
-            $rake = Rake::query()
-                ->where('siding_id', $sidingId)
-                ->whereIn('state', ['loading', 'placed', 'pending'])
-                ->has('wagonLoadings')
-                ->latest('id')
-                ->first();
-        }
+        $fallback = Rake::query()
+            ->where('siding_id', $sidingId)
+            ->whereIn('state', ['loading', 'placed', 'pending'])
+            ->has('wagonLoadings')
+            ->latest('id')
+            ->first(['id']);
 
-        if (! $rake) {
+        return $fallback ? (int) $fallback->id : null;
+    }
+
+    private function resolveWagonLoading(int $sidingId, int $sequence, array $event): ?WagonLoading
+    {
+        $eventTime = isset($event['Time']) ? Carbon::parse($event['Time']) : null;
+        $rakeId = $this->resolveRakeIdForEvent($sidingId, $eventTime);
+
+        if ($rakeId === null) {
             return null;
         }
 
         return WagonLoading::query()
             ->with('wagon:id,wagon_sequence,wagon_number,pcc_weight_mt')
-            ->where('rake_id', $rake->id)
+            ->where('rake_id', $rakeId)
             ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', $sequence))
             ->first();
     }
