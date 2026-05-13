@@ -37,44 +37,6 @@ export interface DispatchSummaryByPeriod {
     default_period: DispatchSummaryPeriodKey;
 }
 
-export type RoadTripSummaryPeriodKey = DispatchSummaryPeriodKey;
-
-export interface RoadTripSummaryTrips {
-    total: number;
-    stock_added: number;
-    pending: number;
-    dispatched: number;
-}
-
-export interface RoadTripSummaryQty {
-    total_mt: number;
-    stock_added_mt: number;
-    pending_mt: number;
-    dispatched_mt: number;
-}
-
-export interface RoadTripSummarySidingRow {
-    siding_id: number;
-    siding_name: string;
-    trips: RoadTripSummaryTrips;
-    qty: RoadTripSummaryQty;
-}
-
-export interface RoadTripSummaryPeriodSlice {
-    from: string;
-    to: string;
-    rows: RoadTripSummarySidingRow[];
-    totals: {
-        trips: RoadTripSummaryTrips;
-        qty: RoadTripSummaryQty;
-    };
-}
-
-export interface RoadTripSummaryByPeriod {
-    default_period: RoadTripSummaryPeriodKey;
-    periods: Record<RoadTripSummaryPeriodKey, RoadTripSummaryPeriodSlice>;
-}
-
 export interface SidingPerformanceItem {
     name: string;
     rakes: number;
@@ -343,10 +305,20 @@ export interface PenaltyBySidingPoint {
     total: number;
 }
 
+export interface PenaltyControlRrCoverageSidingRow {
+    siding_id: number;
+    siding_name: string;
+    total_rakes: number;
+    rakes_with_rr: number;
+    rakes_without_rr: number;
+}
+
 export interface PenaltyControlRrCoverage {
     total_rakes: number;
     rakes_with_rr: number;
     rakes_without_rr: number;
+    /** Present from API; omitted in older cached responses. */
+    by_siding?: PenaltyControlRrCoverageSidingRow[];
 }
 
 export function formatPenaltyControlRrCoverageLabel(
@@ -356,6 +328,15 @@ export function formatPenaltyControlRrCoverageLabel(
     const rakeLabel = coverage.total_rakes === 1 ? 'rake' : 'rakes';
 
     return `Penalties from ${coverage.rakes_with_rr} uploaded ${rrLabel} out of ${coverage.total_rakes} ${rakeLabel}`;
+}
+
+/** Siding overview: neutral summary line; chart shows per-siding bars. */
+export function formatSidingRrCoverageSubtitle(
+    coverage: PenaltyControlRrCoverage,
+): string {
+    const rakeLabel = coverage.total_rakes === 1 ? 'rake' : 'rakes';
+
+    return `${coverage.rakes_with_rr} with RR uploaded, ${coverage.rakes_without_rr} pending (${coverage.total_rakes} ${rakeLabel} total, loading date in range).`;
 }
 
 export interface YesterdayPenaltyRow {

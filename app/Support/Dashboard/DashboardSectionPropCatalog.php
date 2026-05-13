@@ -41,6 +41,7 @@ final class DashboardSectionPropCatalog
             'siding-overview' => [
                 'sidingPerformance',
                 'penaltyTrendDaily',
+                'penaltyControlRrCoverage',
                 'powerPlantDispatch',
             ],
             'operations' => [
@@ -145,6 +146,7 @@ final class DashboardSectionPropCatalog
                 'total_rakes' => 0,
                 'rakes_with_rr' => 0,
                 'rakes_without_rr' => 0,
+                'by_siding' => [],
             ],
             'operatorRake', 'penaltySummary', 'activeRakePipeline' => null,
             'riskScores' => new stdClass,

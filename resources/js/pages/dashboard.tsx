@@ -33,7 +33,6 @@ import {
 } from '@/components/ui/table';
 import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
 import { useDashboardSectionPayload } from '@/hooks/use-dashboard-section-payload';
-import { useLazyRoadTripSummary } from '@/hooks/use-lazy-road-trip-summary';
 import AppLayout from '@/layouts/app-layout';
 import { JsonFetchError, laravelJsonFetch } from '@/lib/laravel-json-fetch';
 import { cn } from '@/lib/utils';
@@ -232,6 +231,9 @@ function dashboardSectionVisible(
                 canWidget('dashboard.widgets.siding_overview_penalty_trend') ||
                 canWidget(
                     'dashboard.widgets.siding_overview_power_plant_distribution',
+                ) ||
+                canWidget(
+                    'dashboard.widgets.siding_overview_rr_rake_coverage',
                 )
             );
         case 'operations':
@@ -968,6 +970,13 @@ type DashboardProps = SharedData & {
         total_rakes: number;
         rakes_with_rr: number;
         rakes_without_rr: number;
+        by_siding?: Array<{
+            siding_id: number;
+            siding_name: string;
+            total_rakes: number;
+            rakes_with_rr: number;
+            rakes_without_rr: number;
+        }>;
     };
     notifications?: Array<{
         id: string;
@@ -6532,39 +6541,6 @@ export default function Dashboard() {
         [props, sectionDeferredPatch],
     );
 
-    const roadTripDashboardQuery = useMemo(() => {
-        const params = buildDashboardGetParams({
-            overrides: {},
-            filters,
-            currentSection: 'executive-overview',
-            allSidingIds,
-            resolvedPeriod: filters.period,
-            resolvedFrom: filters.from,
-            resolvedTo: filters.to,
-        });
-        const u = new URLSearchParams();
-        for (const [k, v] of Object.entries(params)) {
-            if (v === undefined || v === null) {
-                continue;
-            }
-            u.set(k, String(v));
-        }
-
-        return u.toString();
-    }, [filters, allSidingIds]);
-
-    const showDispatchSummaryRoadTrip =
-        canWidget('dispatch_summary_command') &&
-        activeSection === 'executive-overview';
-
-    const {
-        data: roadTripSummaryByPeriod,
-        loading: roadTripSummaryLoading,
-        error: roadTripSummaryError,
-    } = useLazyRoadTripSummary({
-        enabled: showDispatchSummaryRoadTrip,
-        queryString: roadTripDashboardQuery,
-    });
     const periodLabel = useMemo(() => {
         switch (filters.period) {
             case 'yesterday':
@@ -7212,15 +7188,6 @@ export default function Dashboard() {
                                                 dispatchSummaryByPeriod={
                                                     dispatchSummaryByPeriod
                                                 }
-                                                roadTripSummaryByPeriod={
-                                                    roadTripSummaryByPeriod
-                                                }
-                                                roadTripSummaryLoading={
-                                                    roadTripSummaryLoading
-                                                }
-                                                roadTripSummaryError={
-                                                    roadTripSummaryError
-                                                }
                                                 executiveYesterday={
                                                     executiveYesterday
                                                 }
@@ -7263,20 +7230,6 @@ export default function Dashboard() {
                                                                             dispatchSummaryByPeriod ??
                                                                             undefined
                                                                         }
-                                                                        roadTripData={
-                                                                            roadTripSummaryByPeriod ??
-                                                                            undefined
-                                                                        }
-                                                                        roadTripLoading={
-                                                                            roadTripSummaryLoading
-                                                                        }
-                                                                        roadTripError={
-                                                                            roadTripSummaryError
-                                                                        }
-                                                                        loadRoadTrip
-                                                                        sidings={
-                                                                            filteredSidings
-                                                                        }
                                                                     />
                                                                 ) : null
                                                             }
@@ -7300,6 +7253,9 @@ export default function Dashboard() {
                                                 }
                                                 penaltyTrendDaily={
                                                     penaltyTrendDaily
+                                                }
+                                                penaltyControlRrCoverage={
+                                                    penaltyControlRrCoverage
                                                 }
                                                 powerPlantDispatch={
                                                     powerPlantDispatch

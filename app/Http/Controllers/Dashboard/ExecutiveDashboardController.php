@@ -2393,7 +2393,7 @@ final class ExecutiveDashboardController extends Controller
      * Rake vs RR upload coverage for penalty control charts (same date window as penalty-by-type/siding: loading_date).
      *
      * @param  array<int>  $sidingIds
-     * @return array{total_rakes: int, rakes_with_rr: int, rakes_without_rr: int}
+     * @return array{total_rakes: int, rakes_with_rr: int, rakes_without_rr: int, by_siding: list<array{siding_id: int, siding_name: string, total_rakes: int, rakes_with_rr: int, rakes_without_rr: int}>}
      */
     public function buildPenaltyControlRrCoverage(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
@@ -2402,6 +2402,7 @@ final class ExecutiveDashboardController extends Controller
                 'total_rakes' => 0,
                 'rakes_with_rr' => 0,
                 'rakes_without_rr' => 0,
+                'by_siding' => [],
             ];
         }
 
@@ -2416,10 +2417,45 @@ final class ExecutiveDashboardController extends Controller
         $totalRakes = (int) (clone $baseQuery)->count();
         $rakesWithRr = (int) (clone $baseQuery)->whereHas('rrDocument')->count();
 
+        $sidingNames = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->pluck('name', 'id')
+            ->all();
+
+        $totalsPerSiding = (clone $baseQuery)
+            ->selectRaw('siding_id, count(*) as cnt')
+            ->groupBy('siding_id')
+            ->pluck('cnt', 'siding_id')
+            ->all();
+
+        $withRrPerSiding = (clone $baseQuery)
+            ->whereHas('rrDocument')
+            ->selectRaw('siding_id, count(*) as cnt')
+            ->groupBy('siding_id')
+            ->pluck('cnt', 'siding_id')
+            ->all();
+
+        $bySiding = [];
+        foreach ($sidingIds as $sid) {
+            $sid = (int) $sid;
+            $total = (int) ($totalsPerSiding[$sid] ?? 0);
+            $withRr = (int) ($withRrPerSiding[$sid] ?? 0);
+            $bySiding[] = [
+                'siding_id' => $sid,
+                'siding_name' => (string) ($sidingNames[$sid] ?? "Siding {$sid}"),
+                'total_rakes' => $total,
+                'rakes_with_rr' => $withRr,
+                'rakes_without_rr' => max(0, $total - $withRr),
+            ];
+        }
+
+        usort($bySiding, fn ($a, $b) => strcmp($a['siding_name'], $b['siding_name']));
+
         return [
             'total_rakes' => $totalRakes,
             'rakes_with_rr' => $rakesWithRr,
             'rakes_without_rr' => max(0, $totalRakes - $rakesWithRr),
+            'by_siding' => $bySiding,
         ];
     }
 

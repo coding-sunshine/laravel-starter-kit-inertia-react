@@ -6,7 +6,6 @@ import type { ReactNode } from 'react';
 import type {
     DispatchSummaryByPeriod,
     ExecutiveYesterdayData,
-    RoadTripSummaryByPeriod,
     SidingOption,
     SidingStock,
 } from './types';
@@ -46,9 +45,6 @@ interface Props {
     executiveYesterday: ExecutiveYesterdayData | undefined;
     executiveYesterdaySection?: ReactNode;
     dispatchSummaryByPeriod?: DispatchSummaryByPeriod | null;
-    roadTripSummaryByPeriod?: RoadTripSummaryByPeriod | null;
-    roadTripSummaryLoading?: boolean;
-    roadTripSummaryError?: string | null;
 }
 
 export function ExecutiveOverview({
@@ -61,9 +57,6 @@ export function ExecutiveOverview({
     executiveYesterday,
     executiveYesterdaySection,
     dispatchSummaryByPeriod,
-    roadTripSummaryByPeriod,
-    roadTripSummaryLoading = false,
-    roadTripSummaryError = null,
 }: Props) {
     return (
         <div className="space-y-6">
@@ -190,11 +183,6 @@ export function ExecutiveOverview({
                 canWidget('dispatch_summary_command') && (
                     <DispatchSummary
                         data={dispatchSummaryByPeriod ?? undefined}
-                        roadTripData={roadTripSummaryByPeriod ?? undefined}
-                        roadTripLoading={roadTripSummaryLoading}
-                        roadTripError={roadTripSummaryError}
-                        loadRoadTrip
-                        sidings={filteredSidings}
                     />
                 )}
             {executiveYesterday ? (
