@@ -156,7 +156,7 @@ export function SidingOverviewCard({
             </Link>
 
             <a
-                href={`/sidings/${siding.siding_id}/monitor`}
+                href={`/sidings/${siding.siding_id}/monitor?tv=1`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Open TV monitor (new tab) — chrome-free siding view for displays"

@@ -115,7 +115,7 @@ export default function ControlRoomShow({
                     headerActions={
                         data.rake.siding?.id ? (
                             <a
-                                href={`/sidings/${data.rake.siding.id}/monitor`}
+                                href={`/sidings/${data.rake.siding.id}/monitor?tv=1`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="Open TV monitor (new tab) — chrome-free siding view for displays"
