@@ -141,6 +141,7 @@ final class LoadritePollCommand extends Command
 
         if (! $wagonLoading->loadrite_override) {
             $updates['weight_source'] = 'loadrite';
+            $updates['loaded_quantity_mt'] = $event['Weight'];
         }
 
         $wagonLoading->update($updates);

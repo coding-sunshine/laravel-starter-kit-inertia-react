@@ -6,6 +6,7 @@ import {
     CalendarClock,
     Clock,
     Train,
+    Tv,
     Weight,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -104,6 +105,20 @@ export default function ControlRoomShow({
                     subtitle={subtitle}
                     staleStatus={stale.status}
                     secondsSince={stale.secondsSince}
+                    headerActions={
+                        data.rake.siding?.id ? (
+                            <a
+                                href={`/sidings/${data.rake.siding.id}/monitor`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open TV monitor (new tab) — chrome-free siding view for displays"
+                                className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-2.5 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                            >
+                                <Tv className="size-4" aria-hidden="true" />
+                                TV Mode
+                            </a>
+                        ) : null
+                    }
                 >
                     {/* KPI strip */}
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">

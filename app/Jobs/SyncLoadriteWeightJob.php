@@ -82,6 +82,9 @@ final class SyncLoadriteWeightJob implements ShouldQueue
 
         if (! $wagonLoading->loadrite_override) {
             $updates['weight_source'] = 'loadrite';
+            // Mirror to loaded_quantity_mt so existing readers (Control Room, penalty
+            // analytics, loader overload service, executive dashboard) see live data.
+            $updates['loaded_quantity_mt'] = $this->event['Weight'];
         }
 
         $wagonLoading->update($updates);

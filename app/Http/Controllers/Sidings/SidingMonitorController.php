@@ -20,7 +20,7 @@ final class SidingMonitorController extends Controller
             ->whereIn('state', ['loading', 'placed', 'pending'])
             ->has('wagonLoadings')
             ->with([
-                'wagonLoadings' => fn ($q) => $q->with('wagon'),
+                'wagonLoadings' => fn ($q) => $q->with('wagon:id,wagon_sequence,wagon_number,pcc_weight_mt'),
             ])
             ->latest('id')
             ->first();
@@ -40,18 +40,26 @@ final class SidingMonitorController extends Controller
                 'wagons_loaded' => $activeRake->wagonLoadings->whereNotNull('loadrite_weight_mt')->count(),
             ] : null,
             'wagons' => $activeRake
-                ? $activeRake->wagonLoadings->map(fn ($wl) => [
-                    'id' => $wl->wagon_id,
-                    'sequence' => $wl->wagon?->wagon_sequence,
-                    'loadrite_weight_mt' => $wl->loadrite_weight_mt !== null ? (float) $wl->loadrite_weight_mt : null,
-                    'loaded_quantity_mt' => $wl->loaded_quantity_mt !== null ? (float) $wl->loaded_quantity_mt : null,
-                    'cc_capacity_mt' => (float) $wl->cc_capacity_mt,
-                    'weight_source' => $wl->weight_source,
-                    'percentage' => $wl->cc_capacity_mt > 0
-                        ? round(((float) ($wl->loadrite_weight_mt ?? $wl->loaded_quantity_mt ?? 0) / (float) $wl->cc_capacity_mt) * 100, 1)
-                        : 0.0,
-                    'loadrite_override' => (bool) $wl->loadrite_override,
-                ])->values()
+                ? $activeRake->wagonLoadings->map(function ($wl) {
+                    // Prefer wagons.pcc_weight_mt (legal capacity from wagon master)
+                    // over wagon_loading.cc_capacity_mt which is often 0/stale.
+                    $pccMt = $wl->wagon?->pcc_weight_mt !== null ? (float) $wl->wagon->pcc_weight_mt : 0.0;
+                    $effectiveCc = $pccMt > 0 ? $pccMt : (float) $wl->cc_capacity_mt;
+                    $displayWeight = (float) ($wl->loadrite_weight_mt ?? $wl->loaded_quantity_mt ?? 0);
+
+                    return [
+                        'id' => $wl->wagon_id,
+                        'sequence' => $wl->wagon?->wagon_sequence,
+                        'loadrite_weight_mt' => $wl->loadrite_weight_mt !== null ? (float) $wl->loadrite_weight_mt : null,
+                        'loaded_quantity_mt' => $wl->loaded_quantity_mt !== null ? (float) $wl->loaded_quantity_mt : null,
+                        'cc_capacity_mt' => $effectiveCc,
+                        'weight_source' => $wl->weight_source,
+                        'percentage' => $effectiveCc > 0
+                            ? round(($displayWeight / $effectiveCc) * 100, 1)
+                            : 0.0,
+                        'loadrite_override' => (bool) $wl->loadrite_override,
+                    ];
+                })->values()
                 : [],
             'free_minutes' => $freeMinutes,
             'loadrite_active' => true,
