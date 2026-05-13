@@ -37,7 +37,7 @@ final class SidingMonitorController extends Controller
                 'wagon_count' => $activeRake->wagon_count,
                 'placement_time' => $activeRake->placement_time?->toIso8601String(),
                 'loading_end_time' => $activeRake->loading_end_time?->toIso8601String(),
-                'wagons_loaded' => $activeRake->wagonLoadings->where('weight_source', 'weighbridge')->count(),
+                'wagons_loaded' => $activeRake->wagonLoadings->whereNotNull('loadrite_weight_mt')->count(),
             ] : null,
             'wagons' => $activeRake
                 ? $activeRake->wagonLoadings->map(fn ($wl) => [
