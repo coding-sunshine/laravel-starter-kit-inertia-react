@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { TimeStatus } from '@/components/control-room/types';
@@ -57,8 +56,6 @@ export function TimeStatusDonut({
     size = 160,
     strokeWidth = 16,
 }: TimeStatusDonutProps) {
-    const reduceMotion = useReducedMotion();
-
     const radius = (size - strokeWidth) / 2;
     const center = size / 2;
     const circumference = 2 * Math.PI * radius;
@@ -144,13 +141,10 @@ export function TimeStatusDonut({
         return `${mins} min remaining`;
     })();
 
-    const transition = reduceMotion
-        ? { duration: 0 }
-        : { duration: 0.8, ease: 'easeOut' as const };
-    const colorTransition = reduceMotion
-        ? { duration: 0 }
-        : { duration: 0.4, ease: 'easeOut' as const };
-
+    // No framer-motion: every 1s tick re-renders with a new primaryLength, and
+    // motion.circle would restart its 0.8s tween every second causing visible
+    // jitter. Just render the arc at its current offset; the per-second update
+    // is a smooth visual progression on its own.
     return (
         <div
             className="relative inline-flex shrink-0 items-center justify-center"
@@ -174,8 +168,8 @@ export function TimeStatusDonut({
                     strokeWidth={strokeWidth}
                     className="stroke-muted"
                 />
-                {/* Primary usage arc (0..100%) — animated via strokeDashoffset. */}
-                <motion.circle
+                {/* Primary usage arc (0..100%) */}
+                <circle
                     cx={center}
                     cy={center}
                     r={radius}
@@ -183,30 +177,12 @@ export function TimeStatusDonut({
                     strokeWidth={strokeWidth}
                     strokeLinecap={primaryLength > 0 ? 'round' : 'butt'}
                     strokeDasharray={circumference}
-                    initial={
-                        reduceMotion
-                            ? {
-                                  strokeDashoffset:
-                                      circumference * (1 - primaryLength),
-                                  stroke: arcColor,
-                              }
-                            : {
-                                  strokeDashoffset: circumference,
-                                  stroke: COLOR_SAFE,
-                              }
-                    }
-                    animate={{
-                        strokeDashoffset: circumference * (1 - primaryLength),
-                        stroke: arcColor,
-                    }}
-                    transition={{
-                        strokeDashoffset: transition,
-                        stroke: colorTransition,
-                    }}
+                    strokeDashoffset={circumference * (1 - primaryLength)}
+                    stroke={arcColor}
                 />
-                {/* Overflow arc (>100%) layered on top in red. */}
+                {/* Overflow arc (>100%) layered on top in red */}
                 {overflowLength > 0 && (
-                    <motion.circle
+                    <circle
                         cx={center}
                         cy={center}
                         r={radius}
@@ -215,19 +191,7 @@ export function TimeStatusDonut({
                         strokeLinecap="round"
                         stroke={COLOR_OVER}
                         strokeDasharray={circumference}
-                        initial={
-                            reduceMotion
-                                ? {
-                                      strokeDashoffset:
-                                          circumference * (1 - overflowLength),
-                                  }
-                                : { strokeDashoffset: circumference }
-                        }
-                        animate={{
-                            strokeDashoffset:
-                                circumference * (1 - overflowLength),
-                        }}
-                        transition={transition}
+                        strokeDashoffset={circumference * (1 - overflowLength)}
                     />
                 )}
             </svg>

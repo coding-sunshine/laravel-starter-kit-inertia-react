@@ -1,11 +1,4 @@
-import {
-    animate,
-    motion,
-    useMotionValue,
-    useReducedMotion,
-    useTransform,
-} from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 import type { LoadingProgress } from '@/components/control-room/types';
 
@@ -17,33 +10,6 @@ export interface LoadingProgressDonutProps {
 }
 
 const ARC_COLOR = '#10B981'; // emerald-500
-
-interface AnimatedPercentProps {
-    target: number;
-}
-
-function AnimatedPercent({ target }: AnimatedPercentProps) {
-    const motionValue = useMotionValue(0);
-    const rounded = useTransform(
-        motionValue,
-        (latest) => `${Math.round(latest)}`,
-    );
-    const [display, setDisplay] = useState<string>('0');
-
-    useEffect(() => {
-        const unsubscribe = rounded.on('change', (v) => setDisplay(v));
-        const controls = animate(motionValue, target, {
-            duration: 0.8,
-            ease: 'easeOut',
-        });
-        return () => {
-            controls.stop();
-            unsubscribe();
-        };
-    }, [target, motionValue, rounded]);
-
-    return <span>{display}</span>;
-}
 
 export function LoadingProgressDonut({
     progress,
@@ -117,13 +83,7 @@ export function LoadingProgressDonut({
             {showLabel && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                     <div className="text-3xl leading-none font-semibold text-foreground tabular-nums">
-                        {reduceMotion ? (
-                            <span>{Math.round(clampedPercent)}</span>
-                        ) : (
-                            <AnimatedPercent
-                                target={Math.round(clampedPercent)}
-                            />
-                        )}
+                        <span>{Math.round(clampedPercent)}</span>
                         <span className="text-xl">%</span>
                     </div>
                     <div className="mt-1.5 text-[11px] font-medium text-muted-foreground">

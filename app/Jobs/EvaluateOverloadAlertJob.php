@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Events\WagonOverloadCritical;
 use App\Events\WagonOverloadWarning;
+use App\Models\Alert;
 use App\Models\User;
 use App\Models\WagonLoading;
 use App\Notifications\LoadriteOverloadNotification;
@@ -39,8 +40,8 @@ final class EvaluateOverloadAlertJob implements ShouldQueue
     {
         $wagonLoading = WagonLoading::query()
             ->with('wagon')
-            ->whereHas('wagon', fn ($q) => $q->where('wagon_number', $this->event['Sequence']))
-            ->whereHas('rake', fn ($q) => $q->where('siding_id', $this->sidingId)->whereIn('state', ['loading', 'placed']))
+            ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', (int) $this->event['Sequence']))
+            ->whereHas('rake', fn ($q) => $q->where('siding_id', $this->sidingId)->whereIn('state', ['loading', 'placed', 'pending'])->has('wagonLoadings'))
             ->first();
 
         if (! $wagonLoading || ! $wagonLoading->wagon) {
@@ -51,27 +52,32 @@ final class EvaluateOverloadAlertJob implements ShouldQueue
             return;
         }
 
-        $ccMt = (float) ($wagonLoading->cc_capacity_mt ?? 0);
+        // PCC = Permissible Carrying Capacity, the legal limit from wagon master data.
+        // wagon_loading.cc_capacity_mt is often 0/stale; wagons.pcc_weight_mt is canonical.
+        $pccMt = (float) ($wagonLoading->wagon->pcc_weight_mt ?? 0);
 
-        if ($ccMt <= 0) {
-            Log::warning('Loadrite alert: zero CC for wagon', ['sequence' => $this->event['Sequence']]);
+        if ($pccMt <= 0) {
+            Log::warning('Loadrite alert: missing PCC for wagon', [
+                'wagon_id' => $wagonLoading->wagon_id,
+                'sequence' => $this->event['Sequence'],
+            ]);
 
             return;
         }
 
-        $percentage = ($this->event['Weight'] / $ccMt) * 100;
-        $wagonId = $wagonLoading->wagon->id;
-        $wagonNumber = (string) $this->event['Sequence'];
+        $percentage = ($this->event['Weight'] / $pccMt) * 100;
 
         if ($percentage >= 100) {
-            $this->fireAlert('critical', $wagonId, $wagonNumber, $ccMt, $percentage);
+            $this->fireAlert('critical', $wagonLoading, $pccMt, $percentage);
         } elseif ($percentage >= 90) {
-            $this->fireAlert('warning', $wagonId, $wagonNumber, $ccMt, $percentage);
+            $this->fireAlert('warning', $wagonLoading, $pccMt, $percentage);
         }
     }
 
-    private function fireAlert(string $level, int $wagonId, string $wagonNumber, float $ccMt, float $percentage): void
+    private function fireAlert(string $level, WagonLoading $wagonLoading, float $pccMt, float $percentage): void
     {
+        $wagonId = (int) $wagonLoading->wagon_id;
+        $wagonNumber = (string) ($wagonLoading->wagon->wagon_number ?? $this->event['Sequence']);
         $debounceKey = "loadrite:alert:{$wagonId}:{$level}";
 
         if (Cache::has($debounceKey)) {
@@ -82,13 +88,31 @@ final class EvaluateOverloadAlertJob implements ShouldQueue
 
         $weightMt = (float) $this->event['Weight'];
 
+        // Persist to the alerts table so /alerts page and Control Room alerts feed pick it up.
+        Alert::create([
+            'siding_id' => $this->sidingId,
+            'rake_id' => $wagonLoading->rake_id,
+            'type' => 'wagon.overload',
+            'severity' => $level,
+            'status' => 'active',
+            'title' => $level === 'critical'
+                ? "Wagon #{$wagonNumber} critical overload"
+                : "Wagon #{$wagonNumber} overload warning",
+            'body' => sprintf(
+                '%.2f MT loaded vs %.2f MT PCC (%.1f%%).',
+                $weightMt,
+                $pccMt,
+                $percentage,
+            ),
+        ]);
+
         if ($level === 'warning') {
-            WagonOverloadWarning::dispatch($this->sidingId, $wagonId, $wagonNumber, $weightMt, $ccMt, $percentage);
+            WagonOverloadWarning::dispatch($this->sidingId, $wagonId, $wagonNumber, $weightMt, $pccMt, $percentage);
         } else {
-            WagonOverloadCritical::dispatch($this->sidingId, $wagonId, $wagonNumber, $weightMt, $ccMt, $percentage);
+            WagonOverloadCritical::dispatch($this->sidingId, $wagonId, $wagonNumber, $weightMt, $pccMt, $percentage);
         }
 
-        $notification = new LoadriteOverloadNotification($level, $wagonId, $wagonNumber, $this->sidingId, $weightMt, $ccMt, $percentage);
+        $notification = new LoadriteOverloadNotification($level, $wagonId, $wagonNumber, $this->sidingId, $weightMt, $pccMt, $percentage);
         User::chunkById(100, fn ($users) => Notification::send($users, $notification));
     }
 }

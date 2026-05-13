@@ -11,6 +11,7 @@ interface ControlRoomShellProps {
     subtitle?: string;
     staleStatus: StaleStatus;
     secondsSince: number | null;
+    headerActions?: ReactNode;
     children: ReactNode;
 }
 
@@ -19,6 +20,7 @@ export function ControlRoomShell({
     subtitle,
     staleStatus,
     secondsSince,
+    headerActions,
     children,
 }: ControlRoomShellProps) {
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -60,6 +62,7 @@ export function ControlRoomShell({
                         status={staleStatus}
                         secondsSince={secondsSince}
                     />
+                    {headerActions}
                     <Button
                         type="button"
                         variant="outline"

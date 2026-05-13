@@ -38,8 +38,21 @@ export function CountdownTimer({ placementTime, freeMinutes }: Props) {
     const remainingSeconds = freeSeconds - elapsed;
     const isOverrun = remainingSeconds < 0;
 
+    if (!placementTime) {
+        return (
+            <div className="flex h-full items-center gap-6 rounded-xl border border-slate-800 bg-slate-900/60 px-6 py-4">
+                <Stat label="Elapsed" value="—" mono />
+                <div className="h-8 w-px bg-slate-700" />
+                <Stat label="Remaining" value="—" mono />
+                <div className="h-8 w-px bg-slate-700" />
+                <Stat label="Free window" value={formatHMS(freeSeconds)} mono />
+                <span className="ml-2 text-xs text-slate-600">Awaiting rake placement</span>
+            </div>
+        );
+    }
+
     return (
-        <div className="flex items-center gap-6 rounded-xl border border-slate-800 bg-slate-900/60 px-6 py-4">
+        <div className="flex h-full items-center gap-6 rounded-xl border border-slate-800 bg-slate-900/60 px-6 py-4">
             <Stat label="Elapsed" value={formatHMS(elapsed)} mono />
             <div className="h-8 w-px bg-slate-700" />
             <motion.div

@@ -47,12 +47,35 @@ function SidingMonitorContent({ siding, free_minutes, loadrite_active }: PagePro
     const alerts = useSidingStore((s) => s.alerts);
 
     const activeWagon = Object.values(wagons)
-        .filter((w) => w.weightSource === 'loadrite')
+        .filter((w) => w.loadriteWeightMt !== null)
         .sort((a, b) => b.sequence - a.sequence)[0] ?? null;
+
+    // Truly chrome-free mode for TV displays: ?tv=1 hides the breadcrumb.
+    // Plain navigations show it so the page is discoverable.
+    const isTvMode =
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('tv') === '1';
 
     return (
         <div className="min-h-screen bg-[#020617] p-4 text-slate-100 lg:p-6">
             <div className="mx-auto max-w-7xl space-y-4">
+                {/* Lightweight breadcrumb — keeps the kiosk discoverable as
+                    part of the system without compromising the TV-display
+                    layout. Append ?tv=1 to URL when mounted on a display
+                    to hide. */}
+                {!isTvMode && (
+                    <nav className="flex items-center gap-2 text-xs text-slate-500 print:hidden">
+                        <a
+                            href="/control-room"
+                            className="rounded px-2 py-1 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                        >
+                            ← Control Room
+                        </a>
+                        <span className="text-slate-700">/</span>
+                        <span className="text-slate-400">TV monitor · {siding.name}</span>
+                    </nav>
+                )}
+
                 <StatsBar
                     sidingName={siding.name}
                     wagonsLoaded={rake?.wagonsLoaded ?? 0}
@@ -60,19 +83,15 @@ function SidingMonitorContent({ siding, free_minutes, loadrite_active }: PagePro
                     loadriteActive={loadrite_active}
                 />
 
-                <CountdownTimer
-                    placementTime={rake?.placementTime ?? null}
-                    freeMinutes={free_minutes}
-                />
-
-                <div className="grid gap-4 lg:grid-cols-[1fr_200px]">
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                        <h2 className="mb-3 text-sm font-medium text-slate-500">Wagon Train</h2>
-                        <WagonTrain wagons={wagons} />
-                    </div>
+                {/* Timer + active wagon ring side by side */}
+                <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+                    <CountdownTimer
+                        placementTime={rake?.placementTime ?? null}
+                        freeMinutes={free_minutes}
+                    />
 
                     {activeWagon && (
-                        <div className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                        <div className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-900/60 px-8 py-4">
                             <LoadingRing
                                 percentage={activeWagon.percentage}
                                 weightMt={activeWagon.loadriteWeightMt ?? 0}
@@ -83,10 +102,18 @@ function SidingMonitorContent({ siding, free_minutes, loadrite_active }: PagePro
                     )}
                 </div>
 
+                {/* Wagon train — full width, wrapping grid */}
                 <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                    <h2 className="mb-3 text-sm font-medium text-slate-500">Alerts</h2>
-                    <AlertsFeed alerts={alerts} />
+                    <h2 className="mb-3 text-sm font-medium text-slate-500">Wagon Train</h2>
+                    <WagonTrain wagons={wagons} />
                 </div>
+
+                {alerts.length > 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                        <h2 className="mb-3 text-sm font-medium text-slate-500">Alerts</h2>
+                        <AlertsFeed alerts={alerts} />
+                    </div>
+                )}
             </div>
         </div>
     );

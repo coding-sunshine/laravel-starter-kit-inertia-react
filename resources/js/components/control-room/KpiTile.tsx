@@ -1,12 +1,4 @@
-import {
-    animate,
-    motion,
-    useMotionValue,
-    useReducedMotion,
-    useTransform,
-} from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 export type KpiAccentColor =
     | 'blue'
@@ -45,42 +37,6 @@ function defaultFormat(n: number, decimals: number): string {
     }).format(n);
 }
 
-interface AnimatedNumberProps {
-    target: number;
-    decimals: number;
-    formatNumber?: (n: number) => string;
-}
-
-function AnimatedNumber({
-    target,
-    decimals,
-    formatNumber,
-}: AnimatedNumberProps) {
-    const motionValue = useMotionValue(0);
-    const rounded = useTransform(motionValue, (latest) => {
-        const factor = Math.pow(10, decimals);
-        const r = Math.round(latest * factor) / factor;
-        return formatNumber ? formatNumber(r) : defaultFormat(r, decimals);
-    });
-    const [display, setDisplay] = useState<string>(() =>
-        formatNumber ? formatNumber(0) : defaultFormat(0, decimals),
-    );
-
-    useEffect(() => {
-        const unsubscribe = rounded.on('change', (v) => setDisplay(v));
-        const controls = animate(motionValue, target, {
-            duration: 0.6,
-            ease: 'easeOut',
-        });
-        return () => {
-            controls.stop();
-            unsubscribe();
-        };
-    }, [target, motionValue, rounded]);
-
-    return <span>{display}</span>;
-}
-
 export function KpiTile({
     icon: Icon,
     label,
@@ -91,8 +47,6 @@ export function KpiTile({
     compact = false,
     decimals = 0,
 }: KpiTileProps) {
-    const reduceMotion = useReducedMotion();
-
     const accent = ACCENT_CLASSES[accentColor];
 
     const padding = compact ? 'p-3' : 'p-4';
@@ -103,36 +57,26 @@ export function KpiTile({
     const unitSize = compact ? 'text-[11px]' : 'text-xs';
     const gap = compact ? 'gap-2.5' : 'gap-3';
 
+    // Always render the value directly. Number tweens on a constantly-updating
+    // monitoring dashboard read as "unstable" to operators — they want to trust
+    // the digit, not chase it. Animation was also racing during heavy ingestion.
     let valueNode: React.ReactNode;
     if (value === null) {
         valueNode = <span className="text-muted-foreground">—</span>;
     } else if (typeof value === 'string') {
         valueNode = <span>{value}</span>;
     } else {
-        if (reduceMotion) {
-            valueNode = (
-                <span>
-                    {formatNumber
-                        ? formatNumber(value)
-                        : defaultFormat(value, decimals)}
-                </span>
-            );
-        } else {
-            valueNode = (
-                <AnimatedNumber
-                    target={value}
-                    decimals={decimals}
-                    formatNumber={formatNumber}
-                />
-            );
-        }
+        valueNode = (
+            <span>
+                {formatNumber
+                    ? formatNumber(value)
+                    : defaultFormat(value, decimals)}
+            </span>
+        );
     }
 
     return (
-        <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
+        <div
             className={`flex items-center ${gap} rounded-xl border border-border bg-card ${padding} shadow-xs transition-colors`}
         >
             <div
@@ -160,7 +104,7 @@ export function KpiTile({
                     )}
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }
 

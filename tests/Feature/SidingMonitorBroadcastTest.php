@@ -16,7 +16,7 @@ it('WagonWeightUpdated is dispatched after SyncLoadriteWeightJob updates a wagon
 
     $siding = Siding::factory()->create();
     $rake = Rake::factory()->create(['siding_id' => $siding->id, 'state' => 'loading']);
-    $wagon = Wagon::factory()->create(['wagon_number' => 1, 'rake_id' => $rake->id]);
+    $wagon = Wagon::factory()->create(['wagon_sequence' => 1, 'rake_id' => $rake->id]);
     WagonLoading::factory()->create([
         'rake_id' => $rake->id,
         'wagon_id' => $wagon->id,
@@ -25,9 +25,17 @@ it('WagonWeightUpdated is dispatched after SyncLoadriteWeightJob updates a wagon
         'loadrite_override' => false,
     ]);
 
-    (new SyncLoadriteWeightJob(['Sequence' => 1, 'Weight' => 50.0, 'Timestamp' => now()->toIso8601String()], $siding->id))->handle();
+    $event = [
+        'Id' => 'broadcast-test-1',
+        'Sequence' => '1',
+        'Weight' => '50.0',
+        'Event' => 'Add',
+        'Time' => now()->format('Y-m-d H:i:s'),
+    ];
 
-    Event::assertDispatched(WagonWeightUpdated::class, fn ($e) => $e->sidingId === $siding->id && $e->loadriteWeightMt === 50.0);
+    dispatch_sync(new SyncLoadriteWeightJob($event, $siding->id));
+
+    Event::assertDispatched(WagonWeightUpdated::class, fn ($e) => $e->sidingId === $siding->id && (float) $e->loadriteWeightMt === 50.0);
 });
 
 it('authenticated user can subscribe to siding channel when siding exists', function (): void {

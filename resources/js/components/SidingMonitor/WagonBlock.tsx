@@ -55,15 +55,13 @@ export function WagonBlock({ wagon }: Props) {
                 variants={variants}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 className={`
-                    h-7 w-7 rounded border cursor-pointer
-                    sm:h-10 sm:w-10
-                    lg:h-12 lg:w-12
+                    w-full aspect-square rounded border cursor-pointer
                     ${bg} ${border}
                     flex items-center justify-center
                     transition-colors duration-200
                 `}
             >
-                <span className="hidden text-[10px] font-mono text-slate-400 sm:block lg:text-xs">
+                <span className="text-[9px] font-mono text-slate-400 leading-none sm:text-[10px]">
                     {wagon.sequence}
                 </span>
             </motion.div>

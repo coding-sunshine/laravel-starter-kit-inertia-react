@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Http\Integrations\Loadrite\Requests\GetNewWeightEventsRequest;
+use App\Http\Integrations\Loadrite\Requests\GetLoadingEventsRequest;
 use App\Models\LoadriteSetting;
 use App\Services\LoadriteTokenManager;
 use Illuminate\Bus\Queueable;
@@ -49,7 +49,7 @@ final class PollLoadriteJob implements ShouldQueue
             $toLocalTime = now()->format('Y-m-d H:i:s');
 
             $connector = $tokenManager->getConnector($this->sidingId);
-            $response = $connector->send(new GetNewWeightEventsRequest($site, $fromLocalTime, $toLocalTime));
+            $response = $connector->send(new GetLoadingEventsRequest($site, $fromLocalTime, $toLocalTime));
 
             if (! $response->successful()) {
                 Log::warning('Loadrite poll failed', [
@@ -60,15 +60,16 @@ final class PollLoadriteJob implements ShouldQueue
                 return;
             }
 
-            $events = $response->json() ?? [];
+            $body = $response->json() ?? [];
+            $events = $body['data'] ?? [];
             $lastTimestamp = $fromLocalTime;
 
             foreach ($events as $event) {
                 SyncLoadriteWeightJob::dispatch($event, $this->sidingId)->onQueue('loadrite-sync');
                 EvaluateOverloadAlertJob::dispatch($event, $this->sidingId)->onQueue('loadrite-alerts');
 
-                if (isset($event['Timestamp']) && $event['Timestamp'] > $lastTimestamp) {
-                    $lastTimestamp = $event['Timestamp'];
+                if (isset($event['Time']) && $event['Time'] > $lastTimestamp) {
+                    $lastTimestamp = $event['Time'];
                 }
             }
 

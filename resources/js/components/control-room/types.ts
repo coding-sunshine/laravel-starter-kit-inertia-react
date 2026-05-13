@@ -5,6 +5,8 @@ export type LiveWagonStatus =
     | 'overload'
     | 'unfit';
 
+export type WeightSource = 'loadrite' | 'manual' | 'weighbridge';
+
 export interface WagonCard {
     wagon_id: number;
     wagon_number: string | null;
@@ -18,6 +20,16 @@ export interface WagonCard {
     status_color: string;
     loader_id: number | null;
     last_updated_at: string | null;
+    weight_source: WeightSource | null;
+    loadrite_override: boolean;
+}
+
+export interface SourceCounts {
+    loadrite: number;
+    manual: number;
+    weighbridge: number;
+    none: number;
+    override: number;
 }
 
 export interface LoaderActivity {
@@ -85,6 +97,7 @@ export interface RakeData {
     rake: RakeIdentity;
     kpis: RakeKpis;
     status_counts: StatusCounts;
+    source_counts: SourceCounts;
     wagons: WagonCard[];
     loaders: LoaderActivity[];
     time_status: TimeStatus;

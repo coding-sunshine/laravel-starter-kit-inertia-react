@@ -131,6 +131,8 @@ final readonly class LiveMonitorDataBuilder
 
         $loadingProgress = $this->buildLoadingProgress($wagonCards, $rake);
 
+        $sourceCounts = $this->countBySource($wagonCards);
+
         $alerts = $this->recentAlerts(siding_id: $rake->siding_id, rake_id: $rake->id, limit: 8);
 
         $lastEventAt = $loadings->max('updated_at')?->toIso8601String();
@@ -160,6 +162,7 @@ final readonly class LiveMonitorDataBuilder
                 'loading_elapsed_minutes' => $timeStatus['elapsed_minutes'],
             ],
             'status_counts' => $statusCounts,
+            'source_counts' => $sourceCounts,
             'wagons' => $wagonCards,
             'loaders' => $loaderActivity,
             'time_status' => $timeStatus,
@@ -261,6 +264,7 @@ final readonly class LiveMonitorDataBuilder
             ],
             'wagons' => $wagonCards,
             'status_counts' => $statusCounts,
+            'source_counts' => $this->countBySource($wagonCards),
             'loaders' => $this->loaderActivity->resolveForRake($loaders, $loadings),
             'time_status' => $this->buildTimeStatus($rake, $loadings),
             'loading_progress' => $this->buildLoadingProgress($wagonCards, $rake),
@@ -307,6 +311,8 @@ final readonly class LiveMonitorDataBuilder
                 'status_color' => $status->color(),
                 'loader_id' => $loading?->loader_id !== null ? (int) $loading->loader_id : null,
                 'last_updated_at' => $loading?->updated_at?->toIso8601String(),
+                'weight_source' => $loading?->weight_source,
+                'loadrite_override' => (bool) ($loading?->loadrite_override ?? false),
             ];
         }
 
@@ -326,6 +332,32 @@ final readonly class LiveMonitorDataBuilder
 
         foreach ($wagonCards as $card) {
             $counts[$card['status']]++;
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $wagonCards
+     * @return array<string, int>
+     */
+    private function countBySource(array $wagonCards): array
+    {
+        $counts = ['loadrite' => 0, 'manual' => 0, 'weighbridge' => 0, 'none' => 0, 'override' => 0];
+        foreach ($wagonCards as $card) {
+            if ($card['loaded_mt'] === null || $card['loaded_mt'] === 0.0) {
+                $counts['none']++;
+
+                continue;
+            }
+            $src = $card['weight_source'] ?? 'manual';
+            if (! isset($counts[$src])) {
+                $counts[$src] = 0;
+            }
+            $counts[$src]++;
+            if (! empty($card['loadrite_override'])) {
+                $counts['override']++;
+            }
         }
 
         return $counts;

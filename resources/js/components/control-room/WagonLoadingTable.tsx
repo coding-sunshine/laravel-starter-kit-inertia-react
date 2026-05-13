@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { SourceBadge } from '@/components/control-room/SourceBadge';
 import type {
     LoaderActivity,
     WagonCard,
@@ -167,6 +168,7 @@ export function WagonLoadingTable({
                                 Net Weight (MT)
                             </th>
                             <th className="px-3 py-2.5">Status</th>
+                            <th className="px-3 py-2.5">Source</th>
                             <th className="px-3 py-2.5">Loader</th>
                             <th className="px-3 py-2.5">Last Updated</th>
                         </tr>
@@ -175,7 +177,7 @@ export function WagonLoadingTable({
                         {visibleWagons.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan={7}
+                                    colSpan={8}
                                     className="px-3 py-8 text-center text-sm text-muted-foreground"
                                 >
                                     No wagons to display.
@@ -238,6 +240,13 @@ export function WagonLoadingTable({
                                                     {wagon.status_label}
                                                 </span>
                                             </span>
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <SourceBadge
+                                                source={wagon.weight_source}
+                                                override={wagon.loadrite_override}
+                                                hasWeight={wagon.loaded_mt !== null && wagon.loaded_mt > 0}
+                                            />
                                         </td>
                                         <td className="px-3 py-2 text-foreground">
                                             {loaderName}

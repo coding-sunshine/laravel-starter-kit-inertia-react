@@ -6,9 +6,10 @@ import {
     CalendarClock,
     Clock,
     Train,
+    Tv,
     Weight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AlertsFeed } from '@/components/control-room/AlertsFeed';
 import { ControlRoomShell } from '@/components/control-room/ControlRoomShell';
@@ -54,6 +55,13 @@ export default function ControlRoomShow({
     subscribable_sidings,
 }: Props) {
     const [data, setData] = useState<RakeData>(rakeData);
+
+    // Sync state when Inertia partial reload returns fresh server props
+    // (triggered by useStaleIndicator's fallback poll every ~60s). Without this,
+    // useState freezes at first-mount value and KPIs stop reflecting server truth.
+    useEffect(() => {
+        setData(rakeData);
+    }, [rakeData]);
 
     const { lastEventAtAny } = useControlRoomBroadcast(subscribable_sidings, {
         onWagonLoadingUpdated: (_sidingId, payload) => {
@@ -104,6 +112,20 @@ export default function ControlRoomShow({
                     subtitle={subtitle}
                     staleStatus={stale.status}
                     secondsSince={stale.secondsSince}
+                    headerActions={
+                        data.rake.siding?.id ? (
+                            <a
+                                href={`/sidings/${data.rake.siding.id}/monitor?tv=1`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open TV monitor (new tab) — chrome-free siding view for displays"
+                                className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-2.5 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                            >
+                                <Tv className="size-4" aria-hidden="true" />
+                                TV Mode
+                            </a>
+                        ) : null
+                    }
                 >
                     {/* KPI strip */}
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -212,9 +234,14 @@ export default function ControlRoomShow({
 
                     {/* Summary tiles — full-width strip so labels never wrap awkwardly. */}
                     <div className="mt-4 rounded-xl border border-border bg-card p-4">
-                        <p className="mb-3 text-sm font-semibold text-foreground">
-                            Summary
-                        </p>
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-foreground">
+                                Summary
+                            </p>
+                            <SourceCountsStrip
+                                counts={data.source_counts}
+                            />
+                        </div>
                         <SummaryTiles
                             totalNetMt={data.kpis.total_loaded_mt}
                             avgNetMt={data.kpis.avg_net_mt}
@@ -306,4 +333,59 @@ function updateWagonInRake(
         ),
         last_event_at: patch.last_updated_at ?? rake.last_event_at,
     };
+}
+
+function SourceCountsStrip({
+    counts,
+}: {
+    counts: RakeData['source_counts'];
+}) {
+    if (!counts) return null;
+    const items: { label: string; n: number; cls: string }[] = [
+        {
+            label: 'Loadrite',
+            n: counts.loadrite ?? 0,
+            cls: 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300',
+        },
+        {
+            label: 'Manual',
+            n: counts.manual ?? 0,
+            cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
+        },
+        {
+            label: 'Weighbridge',
+            n: counts.weighbridge ?? 0,
+            cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+        },
+        {
+            label: 'No data',
+            n: counts.none ?? 0,
+            cls: 'bg-muted text-muted-foreground',
+        },
+    ];
+    return (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Source
+            </span>
+            {items.map((i) => (
+                <span
+                    key={i.label}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${i.cls}`}
+                >
+                    {i.label}
+                    <span className="tabular-nums">{i.n}</span>
+                </span>
+            ))}
+            {counts.override > 0 && (
+                <span
+                    className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 font-medium text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
+                    title="Wagons whose loadrite reading was overridden by an operator"
+                >
+                    Override
+                    <span className="tabular-nums">{counts.override}</span>
+                </span>
+            )}
+        </div>
+    );
 }

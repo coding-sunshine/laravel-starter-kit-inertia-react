@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowUpCircle, Bell, Weight } from 'lucide-react';
+import { ArrowUpCircle, Bell, Tv, Weight } from 'lucide-react';
 
 import { KpiTile } from '@/components/control-room/KpiTile';
 import { LoadingProgressDonut } from '@/components/control-room/LoadingProgressDonut';
@@ -154,6 +154,17 @@ export function SidingOverviewCard({
                     )}
                 </div>
             </Link>
+
+            <a
+                href={`/sidings/${siding.siding_id}/monitor?tv=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open TV monitor (new tab) — chrome-free siding view for displays"
+                className="absolute right-2 bottom-2 z-10 inline-flex items-center gap-1 rounded-md border border-border bg-background/90 px-2 py-1 text-[10px] font-medium text-muted-foreground shadow-sm transition-colors hover:bg-background hover:text-foreground"
+            >
+                <Tv className="h-3 w-3" aria-hidden="true" />
+                TV
+            </a>
         </motion.div>
     );
 }
