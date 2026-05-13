@@ -93,6 +93,8 @@ export function ExecutiveOverview({
                                 const rakesLoadable = Math.floor(
                                     stockMt / MT_PER_RAKE_LOAD,
                                 );
+                                const eDemandRaised =
+                                    stock?.e_demand_raised ?? 0;
                                 const accent =
                                     SIDING_ACCENT[s.name] ?? '#6B7280';
                                 return (
@@ -106,8 +108,8 @@ export function ExecutiveOverview({
                                         <div className="text-xs font-semibold text-muted-foreground">
                                             {s.name}
                                         </div>
-                                        <div className="mt-2 flex items-end justify-between gap-3">
-                                            <div>
+                                        <div className="mt-2 flex items-start justify-between gap-3">
+                                            <div className="shrink-0">
                                                 <p className="text-xl leading-none font-bold text-gray-900 tabular-nums">
                                                     <SlidingNumber
                                                         value={stockMt}
@@ -125,15 +127,28 @@ export function ExecutiveOverview({
                                                     MT available
                                                 </p>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="grid shrink-0 grid-cols-2 gap-x-5 gap-y-0.5 text-right">
                                                 <p
                                                     className="text-xl leading-none font-bold tabular-nums"
                                                     style={{ color: accent }}
                                                 >
-                                                    {rakesLoadable}
+                                                    <SlidingNumber
+                                                        value={eDemandRaised}
+                                                    />
                                                 </p>
-                                                <p className="mt-0.5 text-[11px] font-medium text-gray-500">
-                                                    rakes loadable
+                                                <p
+                                                    className="text-xl leading-none font-bold tabular-nums"
+                                                    style={{ color: accent }}
+                                                >
+                                                    <SlidingNumber
+                                                        value={rakesLoadable}
+                                                    />
+                                                </p>
+                                                <p className="text-[11px] leading-none font-medium whitespace-nowrap text-gray-500">
+                                                    E-Demand Raised
+                                                </p>
+                                                <p className="text-[11px] leading-none font-medium whitespace-nowrap text-gray-500">
+                                                    Rakes Loadable
                                                 </p>
                                             </div>
                                         </div>

@@ -15,6 +15,7 @@ export interface SidingStock {
     dispatched_mt: number;
     last_receipt_at: string | null;
     last_dispatch_at: string | null;
+    e_demand_raised: number;
 }
 
 export interface SidingPerformanceItem {

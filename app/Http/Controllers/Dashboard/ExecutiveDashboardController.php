@@ -1291,7 +1291,7 @@ final class ExecutiveDashboardController extends Controller
      * last_receipt_at / last_dispatch_at = MAX(created_at) over the window for receipt vs dispatch rows.
      *
      * @param  array<int>  $sidingIds
-     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float, last_receipt_at: string|null, last_dispatch_at: string|null}>
+     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float, last_receipt_at: string|null, last_dispatch_at: string|null, e_demand_raised: int}>
      */
     public function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
@@ -1358,6 +1358,14 @@ final class ExecutiveDashboardController extends Controller
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id');
 
+        // E-demands raised: indents whose rake has no weighment yet (matches /indents row highlighting).
+        $eDemandRaisedBySiding = Indent::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereDoesntHave('rake', fn ($q) => $q->whereHas('rakeWeighments'))
+            ->selectRaw('siding_id, COUNT(*) as cnt')
+            ->groupBy('siding_id')
+            ->pluck('cnt', 'siding_id');
+
         $result = [];
 
         foreach ($sidingIds as $sid) {
@@ -1383,6 +1391,7 @@ final class ExecutiveDashboardController extends Controller
                 'dispatched_mt' => abs((float) ($dispatchedBySiding[$sid] ?? 0)), // important fix
                 'last_receipt_at' => $lastReceipt !== null ? Carbon::parse($lastReceipt)->toIso8601String() : null,
                 'last_dispatch_at' => $lastDispatch !== null ? Carbon::parse($lastDispatch)->toIso8601String() : null,
+                'e_demand_raised' => (int) ($eDemandRaisedBySiding[$sid] ?? 0),
             ];
         }
 
