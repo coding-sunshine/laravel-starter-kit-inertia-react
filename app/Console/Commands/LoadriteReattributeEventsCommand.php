@@ -116,6 +116,7 @@ final class LoadriteReattributeEventsCommand extends Command
             $cumulative = (float) LoadriteEvent::query()
                 ->where('rake_id', $rakeId)
                 ->where('wagon_sequence', $wagonSequence)
+                ->whereIn('event_type', ['Add', 'Subtract'])
                 ->selectRaw("COALESCE(SUM(CASE WHEN event_type = 'Add' THEN weight_mt ELSE -weight_mt END), 0) as total")
                 ->value('total');
 

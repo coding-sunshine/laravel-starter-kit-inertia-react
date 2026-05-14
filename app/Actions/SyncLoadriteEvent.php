@@ -27,20 +27,26 @@ final readonly class SyncLoadriteEvent
     public function handle(array $event, int $sidingId): bool
     {
         $eventId = $this->stringField($event, 'Id');
-        $sequence = isset($event['Sequence']) ? (int) $event['Sequence'] : null;
+        $sequence = isset($event['Sequence']) ? (int) $event['Sequence'] : 0;
         $weightRaw = $event['Weight'] ?? null;
         $eventType = $this->stringField($event, 'Event');
 
-        if ($eventId === null || $sequence === null || $weightRaw === null || $eventType === null) {
-            return false;
-        }
-
-        // Tare/zero-check events use Sequence 0 — never map to a wagon.
-        if ($sequence <= 0) {
+        if ($eventId === null || $weightRaw === null || $eventType === null) {
             return false;
         }
 
         $weightMt = (float) $weightRaw;
+
+        // Events without a wagon sequence (Short Total, Total, Tare, etc.) get
+        // persisted for audit but skip recompute. Only Add/Subtract bucket
+        // events feed the cumulative weight per wagon.
+        $isBucketEvent = $sequence > 0 && in_array($eventType, ['Add', 'Subtract'], true);
+
+        if (! $isBucketEvent) {
+            $this->upsertEvent($event, $sidingId, null, null, $sequence, $eventType, $weightMt);
+
+            return false;
+        }
 
         // Locate the wagon_loading row (and thereby rake + wagon).
         $wagonLoading = $this->resolveWagonLoading($sidingId, $sequence, $event);
@@ -72,9 +78,12 @@ final readonly class SyncLoadriteEvent
         }
 
         // Recompute cumulative for this (rake, wagon_sequence) from the events table.
+        // Only Add/Subtract bucket events count; informational events (Short Total etc.)
+        // are persisted but excluded from the math.
         $cumulative = (float) LoadriteEvent::query()
             ->where('rake_id', $wagonLoading->rake_id)
             ->where('wagon_sequence', $sequence)
+            ->whereIn('event_type', ['Add', 'Subtract'])
             ->selectRaw("COALESCE(SUM(CASE WHEN event_type = 'Add' THEN weight_mt ELSE -weight_mt END), 0) as total")
             ->value('total');
 
