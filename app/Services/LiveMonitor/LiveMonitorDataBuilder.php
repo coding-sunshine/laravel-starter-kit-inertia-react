@@ -437,13 +437,14 @@ final readonly class LiveMonitorDataBuilder
     {
         $allowedMinutes = (int) ($rake->loading_free_minutes ?? 180);
 
-        // Anchor priority: explicit placement → loading_start → first loadrite
-        // event (most accurate when neither is set) → earliest wagon_loading row.
+        // "Loading time" means the actual span of loading activity at the wagons,
+        // NOT the time since placement. Placement_time is often set hours-to-weeks
+        // before actual loading begins, so anchoring elapsed on it produced absurd
+        // figures like "47,302 min" / "566 hours".
         //
-        // Without first-loadrite-event preference, anchor would default to when
-        // wagon_loading rows were created (often days/weeks before actual loading
-        // started), making the loading-time KPI display absurd numbers like
-        // "47,302 min" for completed rakes.
+        // Anchor = first observed activity for this rake (loadrite event OR
+        // wagon_loading row update). End = last observed activity, capped at
+        // loading_end_time when an explicit end is recorded.
         $firstLoadriteEventAt = DB::table('loadrite_events')
             ->where('rake_id', $rake->id)
             ->min('event_time');
@@ -451,16 +452,30 @@ final readonly class LiveMonitorDataBuilder
             ->where('rake_id', $rake->id)
             ->max('event_time');
 
-        $anchorAt = $rake->placement_time
-            ?? $rake->loading_start_time
-            ?? $firstLoadriteEventAt
-            ?? $loadings->min('created_at');
+        $firstWagonLoadingAt = $loadings
+            ->filter(fn ($l) => $l->loaded_quantity_mt !== null)
+            ->min('updated_at');
+        $lastWagonLoadingAt = $loadings
+            ->filter(fn ($l) => $l->loaded_quantity_mt !== null)
+            ->max('updated_at');
+
+        $candidates = array_filter([
+            $firstLoadriteEventAt ? CarbonImmutable::parse($firstLoadriteEventAt) : null,
+            $firstWagonLoadingAt ? CarbonImmutable::parse($firstWagonLoadingAt) : null,
+        ]);
+
+        // Fall back to placement_time / loading_start_time only when we have no
+        // activity timestamps at all (otherwise activity always wins — that's
+        // the actual loading window).
+        $anchorAt = ! empty($candidates)
+            ? collect($candidates)->min()
+            : ($rake->loading_start_time ?? $rake->placement_time ?? null);
 
         $anchorLabel = match (true) {
-            $rake->placement_time !== null => 'placement',
+            ! empty($candidates) && $firstLoadriteEventAt !== null && (! $firstWagonLoadingAt || $firstLoadriteEventAt <= $firstWagonLoadingAt) => 'first_loadrite_event',
+            ! empty($candidates) => 'first_wagon_loading',
             $rake->loading_start_time !== null => 'loading_start',
-            $firstLoadriteEventAt !== null => 'first_loadrite_event',
-            $anchorAt !== null => 'first_wagon_loading',
+            $rake->placement_time !== null => 'placement',
             default => 'unknown',
         };
 
@@ -475,13 +490,16 @@ final readonly class LiveMonitorDataBuilder
             ];
         }
 
-        // End of the loading window: explicit loading_end_time when set,
-        // otherwise the most recent loadrite event (so the timer freezes at
-        // last activity instead of growing forever for completed/idle rakes).
-        $end = $rake->loading_end_time
-            ?? $lastLoadriteEventAt
-            ?? $loadings->max('updated_at')
-            ?? CarbonImmutable::now();
+        $endCandidates = array_filter([
+            $rake->loading_end_time ? CarbonImmutable::parse($rake->loading_end_time) : null,
+            $lastLoadriteEventAt ? CarbonImmutable::parse($lastLoadriteEventAt) : null,
+            $lastWagonLoadingAt ? CarbonImmutable::parse($lastWagonLoadingAt) : null,
+        ]);
+
+        $end = ! empty($endCandidates)
+            ? collect($endCandidates)->max()
+            : CarbonImmutable::now();
+
         $elapsed = (int) CarbonImmutable::parse($anchorAt)->diffInMinutes(CarbonImmutable::parse($end), true);
 
         $remaining = $rake->loading_end_time !== null
