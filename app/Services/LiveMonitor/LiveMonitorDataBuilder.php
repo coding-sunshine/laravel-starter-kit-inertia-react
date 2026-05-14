@@ -469,11 +469,16 @@ final readonly class LiveMonitorDataBuilder
             $withWeight = $loadings->filter(
                 fn ($l) => $l->loaded_quantity_mt !== null && (float) $l->loaded_quantity_mt > 0,
             );
-            $firstManualAt = $withWeight->min('created_at');
-            $lastManualAt = $withWeight->max('created_at');
-            if ($firstManualAt && $lastManualAt) {
-                $firstAt = CarbonImmutable::parse($firstManualAt);
-                $lastAt = CarbonImmutable::parse($lastManualAt);
+            // Prefer the explicit loading_time field on wagon_loading; it's the
+            // timestamp the operator recorded for that wagon's load. Falls back
+            // to updated_at if loading_time isn't set.
+            $manualTimes = $withWeight
+                ->map(fn ($l) => $l->loading_time ?? $l->updated_at)
+                ->filter()
+                ->map(fn ($t) => CarbonImmutable::parse($t));
+            if ($manualTimes->isNotEmpty()) {
+                $firstAt = $manualTimes->min();
+                $lastAt = $manualTimes->max();
                 $anchorLabel = 'first_wagon_loading';
             } elseif ($rake->loading_start_time) {
                 $firstAt = CarbonImmutable::parse($rake->loading_start_time);
