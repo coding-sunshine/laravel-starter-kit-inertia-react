@@ -181,14 +181,13 @@ export function LoaderTrucks({
                         `#${idx + 1}`;
 
                     return (
-                        <motion.div
+                        <div
                             key={loader.loader_id}
-                            layout
-                            initial={false}
-                            animate={{ x: truckX }}
-                            transition={trackTransition}
-                            className="absolute top-0 left-0 flex flex-col items-center"
-                            style={{ width: TRUCK_WIDTH }}
+                            className="absolute top-0 left-0 flex flex-col items-center transition-transform duration-500 ease-out"
+                            style={{
+                                width: TRUCK_WIDTH,
+                                transform: `translateX(${truckX}px)`,
+                            }}
                         >
                             {/* triangle pointer up at the wagon */}
                             <div
@@ -205,7 +204,7 @@ export function LoaderTrucks({
                             <div className="mt-0.5 max-w-[72px] truncate text-center text-[10px] font-medium text-slate-600 dark:text-slate-400">
                                 {loader.loader_name}
                             </div>
-                        </motion.div>
+                        </div>
                     );
                 })}
             </div>

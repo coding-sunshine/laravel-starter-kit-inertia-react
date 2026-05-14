@@ -431,15 +431,30 @@ final readonly class LiveMonitorDataBuilder
     {
         $allowedMinutes = (int) ($rake->loading_free_minutes ?? 180);
 
-        // Prefer placement_time → loading_start_time → earliest wagon_loading.created_at as anchor.
+        // Anchor priority: explicit placement → loading_start → first loadrite
+        // event (most accurate when neither is set) → earliest wagon_loading row.
+        //
+        // Without first-loadrite-event preference, anchor would default to when
+        // wagon_loading rows were created (often days/weeks before actual loading
+        // started), making the loading-time KPI display absurd numbers like
+        // "47,302 min" for completed rakes.
+        $firstLoadriteEventAt = DB::table('loadrite_events')
+            ->where('rake_id', $rake->id)
+            ->min('event_time');
+        $lastLoadriteEventAt = DB::table('loadrite_events')
+            ->where('rake_id', $rake->id)
+            ->max('event_time');
+
         $anchorAt = $rake->placement_time
             ?? $rake->loading_start_time
+            ?? $firstLoadriteEventAt
             ?? $loadings->min('created_at');
 
         $anchorLabel = match (true) {
             $rake->placement_time !== null => 'placement',
             $rake->loading_start_time !== null => 'loading_start',
-            $anchorAt !== null => 'first_loading_event',
+            $firstLoadriteEventAt !== null => 'first_loadrite_event',
+            $anchorAt !== null => 'first_wagon_loading',
             default => 'unknown',
         };
 
@@ -454,8 +469,14 @@ final readonly class LiveMonitorDataBuilder
             ];
         }
 
-        $end = $rake->loading_end_time ?? CarbonImmutable::now();
-        $elapsed = (int) CarbonImmutable::parse($anchorAt)->diffInMinutes($end, true);
+        // End of the loading window: explicit loading_end_time when set,
+        // otherwise the most recent loadrite event (so the timer freezes at
+        // last activity instead of growing forever for completed/idle rakes).
+        $end = $rake->loading_end_time
+            ?? $lastLoadriteEventAt
+            ?? $loadings->max('updated_at')
+            ?? CarbonImmutable::now();
+        $elapsed = (int) CarbonImmutable::parse($anchorAt)->diffInMinutes(CarbonImmutable::parse($end), true);
 
         $remaining = $rake->loading_end_time !== null
             ? null

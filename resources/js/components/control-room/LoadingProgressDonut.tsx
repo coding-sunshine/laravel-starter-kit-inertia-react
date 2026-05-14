@@ -1,5 +1,3 @@
-import { motion, useReducedMotion } from 'framer-motion';
-
 import type { LoadingProgress } from '@/components/control-room/types';
 
 export interface LoadingProgressDonutProps {
@@ -17,8 +15,6 @@ export function LoadingProgressDonut({
     strokeWidth = 16,
     showLabel = true,
 }: LoadingProgressDonutProps) {
-    const reduceMotion = useReducedMotion();
-
     const clampedPercent = Math.max(0, Math.min(100, progress.percent ?? 0));
     const targetLength = clampedPercent / 100;
 
@@ -49,10 +45,10 @@ export function LoadingProgressDonut({
                     strokeWidth={strokeWidth}
                     className="stroke-muted"
                 />
-                {/* Foreground arc — animated via strokeDashoffset
-                    (avoids conflicting pathLength + strokeDasharray attrs that
-                    caused the arc to render full-ring at 0%). */}
-                <motion.circle
+                {/* Foreground arc — static. Animation was retriggering every
+                    parent re-render and causing visible flicker on every
+                    second-tick. */}
+                <circle
                     cx={center}
                     cy={center}
                     r={radius}
@@ -61,22 +57,7 @@ export function LoadingProgressDonut({
                     strokeLinecap={targetLength > 0 ? 'round' : 'butt'}
                     stroke={ARC_COLOR}
                     strokeDasharray={circumference}
-                    initial={
-                        reduceMotion
-                            ? {
-                                  strokeDashoffset:
-                                      circumference * (1 - targetLength),
-                              }
-                            : { strokeDashoffset: circumference }
-                    }
-                    animate={{
-                        strokeDashoffset: circumference * (1 - targetLength),
-                    }}
-                    transition={
-                        reduceMotion
-                            ? { duration: 0 }
-                            : { duration: 0.9, ease: 'easeOut' }
-                    }
+                    strokeDashoffset={circumference * (1 - targetLength)}
                 />
             </svg>
 
