@@ -426,12 +426,14 @@ final readonly class RrParserService
     }
 
     /**
+     * Tokenize numeric cells after wagon number. Layout extraction may omit a leading zero (e.g. {@code .85}); order alternatives so {@code digits.digits} is one token.
+     *
      * @return array{cc?: float, tare?: float, gross?: float, actual?: float, permissible?: float, overload?: float, chargeable?: float}
      */
     private function extractNumbersFromWagonRest(string $rest): array
     {
         $nums = [];
-        if (preg_match_all('/(\d+\.?\d*)/', $rest, $matches)) {
+        if (preg_match_all('/(\d+\.\d+|\.\d+|\d+)/', $rest, $matches)) {
             foreach ($matches[1] as $v) {
                 $nums[] = (float) $v;
             }
