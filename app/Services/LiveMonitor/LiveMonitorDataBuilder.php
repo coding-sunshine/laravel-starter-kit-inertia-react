@@ -437,49 +437,56 @@ final readonly class LiveMonitorDataBuilder
     {
         $allowedMinutes = (int) ($rake->loading_free_minutes ?? 180);
 
-        // "Loading time" means the actual span of loading activity at the wagons,
-        // NOT the time since placement. Placement_time is often set hours-to-weeks
-        // before actual loading begins, so anchoring elapsed on it produced absurd
-        // figures like "47,302 min" / "566 hours".
+        // "Loading time" = duration of actual loading activity.
         //
-        // Anchor = first observed activity for this rake (loadrite event OR
-        // wagon_loading row update). End = last observed activity, capped at
-        // loading_end_time when an explicit end is recorded.
-        $firstLoadriteEventAt = DB::table('loadrite_events')
+        // Priority for the [anchor, end] window:
+        //   1) Loadrite events: span between first and last bucket reading.
+        //      Most accurate when Loadrite is active.
+        //   2) Manual loading: span between first and last weight entry on
+        //      wagon_loading rows that have a recorded quantity. Uses created_at
+        //      (when the row was first written with a weight) — NOT updated_at,
+        //      which can shift on data backfills/reattributions weeks later.
+        //   3) Fallback: loading_start_time / placement_time. Only useful when
+        //      a rake is placed but loading hasn't started yet.
+        //
+        // Mixing sources (e.g. min(loadrite, wagon_loading.updated_at)) produced
+        // garbage windows like "566 hours" on rakes that actually loaded in
+        // under a day, because reattribution touched updated_at long after.
+        $loadriteRange = DB::table('loadrite_events')
             ->where('rake_id', $rake->id)
-            ->min('event_time');
-        $lastLoadriteEventAt = DB::table('loadrite_events')
-            ->where('rake_id', $rake->id)
-            ->max('event_time');
+            ->selectRaw('MIN(event_time) as first_at, MAX(event_time) as last_at')
+            ->first();
 
-        $firstWagonLoadingAt = $loadings
-            ->filter(fn ($l) => $l->loaded_quantity_mt !== null)
-            ->min('updated_at');
-        $lastWagonLoadingAt = $loadings
-            ->filter(fn ($l) => $l->loaded_quantity_mt !== null)
-            ->max('updated_at');
+        $firstAt = null;
+        $lastAt = null;
+        $anchorLabel = 'unknown';
 
-        $candidates = array_filter([
-            $firstLoadriteEventAt ? CarbonImmutable::parse($firstLoadriteEventAt) : null,
-            $firstWagonLoadingAt ? CarbonImmutable::parse($firstWagonLoadingAt) : null,
-        ]);
+        if ($loadriteRange && $loadriteRange->first_at) {
+            $firstAt = CarbonImmutable::parse($loadriteRange->first_at);
+            $lastAt = CarbonImmutable::parse($loadriteRange->last_at);
+            $anchorLabel = 'first_loadrite_event';
+        } else {
+            $withWeight = $loadings->filter(
+                fn ($l) => $l->loaded_quantity_mt !== null && (float) $l->loaded_quantity_mt > 0,
+            );
+            $firstManualAt = $withWeight->min('created_at');
+            $lastManualAt = $withWeight->max('created_at');
+            if ($firstManualAt && $lastManualAt) {
+                $firstAt = CarbonImmutable::parse($firstManualAt);
+                $lastAt = CarbonImmutable::parse($lastManualAt);
+                $anchorLabel = 'first_wagon_loading';
+            } elseif ($rake->loading_start_time) {
+                $firstAt = CarbonImmutable::parse($rake->loading_start_time);
+                $lastAt = CarbonImmutable::now();
+                $anchorLabel = 'loading_start';
+            } elseif ($rake->placement_time) {
+                $firstAt = CarbonImmutable::parse($rake->placement_time);
+                $lastAt = CarbonImmutable::now();
+                $anchorLabel = 'placement';
+            }
+        }
 
-        // Fall back to placement_time / loading_start_time only when we have no
-        // activity timestamps at all (otherwise activity always wins — that's
-        // the actual loading window).
-        $anchorAt = ! empty($candidates)
-            ? collect($candidates)->min()
-            : ($rake->loading_start_time ?? $rake->placement_time ?? null);
-
-        $anchorLabel = match (true) {
-            ! empty($candidates) && $firstLoadriteEventAt !== null && (! $firstWagonLoadingAt || $firstLoadriteEventAt <= $firstWagonLoadingAt) => 'first_loadrite_event',
-            ! empty($candidates) => 'first_wagon_loading',
-            $rake->loading_start_time !== null => 'loading_start',
-            $rake->placement_time !== null => 'placement',
-            default => 'unknown',
-        };
-
-        if ($anchorAt === null) {
+        if ($firstAt === null) {
             return [
                 'anchor' => $anchorLabel,
                 'anchor_at' => null,
@@ -490,17 +497,12 @@ final readonly class LiveMonitorDataBuilder
             ];
         }
 
-        $endCandidates = array_filter([
-            $rake->loading_end_time ? CarbonImmutable::parse($rake->loading_end_time) : null,
-            $lastLoadriteEventAt ? CarbonImmutable::parse($lastLoadriteEventAt) : null,
-            $lastWagonLoadingAt ? CarbonImmutable::parse($lastWagonLoadingAt) : null,
-        ]);
+        // Explicit loading_end_time, if set, takes precedence over last activity.
+        if ($rake->loading_end_time) {
+            $lastAt = CarbonImmutable::parse($rake->loading_end_time);
+        }
 
-        $end = ! empty($endCandidates)
-            ? collect($endCandidates)->max()
-            : CarbonImmutable::now();
-
-        $elapsed = (int) CarbonImmutable::parse($anchorAt)->diffInMinutes(CarbonImmutable::parse($end), true);
+        $elapsed = (int) $firstAt->diffInMinutes($lastAt, true);
 
         $remaining = $rake->loading_end_time !== null
             ? null
@@ -512,7 +514,7 @@ final readonly class LiveMonitorDataBuilder
 
         return [
             'anchor' => $anchorLabel,
-            'anchor_at' => CarbonImmutable::parse($anchorAt)->toIso8601String(),
+            'anchor_at' => $firstAt->toIso8601String(),
             'elapsed_minutes' => $elapsed,
             'allowed_minutes' => $allowedMinutes,
             'remaining_minutes' => $remaining,
