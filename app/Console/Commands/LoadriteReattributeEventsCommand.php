@@ -57,14 +57,31 @@ final class LoadriteReattributeEventsCommand extends Command
             $this->info("Cleared {$cleared} wagon_loading rows of Loadrite weight.");
         }
 
+        // Filter out operator-error Short Totals before processing:
+        //  - weight < 30 MT = aborted / test / misfire (typical wagon ~65 MT)
+        //  - duplicates per (scale, user_data2, user_data3) within 30 min
+        //    = operator pressed button twice; keep only earliest
         $events = LoadriteEvent::query()
             ->where('event_type', 'Short Total')
+            ->whereRaw('weight_mt::numeric >= ?', [SyncLoadriteEvent::MIN_VALID_SHORT_TOTAL_MT])
+            ->whereNotIn('id', function ($q) use ($sidingFilter) {
+                // Sub-select: duplicates beyond the first per session window
+                $q->select('id')
+                    ->fromSub(function ($s) use ($sidingFilter) {
+                        $s->from('loadrite_events')
+                            ->selectRaw('id, ROW_NUMBER() OVER (PARTITION BY siding_id, scale_id, user_data2, user_data3 ORDER BY event_time, id) AS rn')
+                            ->where('event_type', 'Short Total')
+                            ->whereRaw('weight_mt::numeric >= ?', [SyncLoadriteEvent::MIN_VALID_SHORT_TOTAL_MT])
+                            ->when($sidingFilter, fn ($x) => $x->where('siding_id', $sidingFilter));
+                    }, 'r')
+                    ->where('rn', '>', 1);
+            })
             ->when($sidingFilter, fn ($q) => $q->where('siding_id', $sidingFilter))
             ->orderBy('event_time')
             ->orderBy('id');
 
         $total = $events->clone()->count();
-        $this->info(sprintf('Processing %d Short Total events...', $total));
+        $this->info(sprintf('Processing %d valid Short Total events (after filtering low-weight + duplicates)...', $total));
         $bar = $this->output->createProgressBar($total);
         $bar->start();
 

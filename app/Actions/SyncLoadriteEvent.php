@@ -23,6 +23,10 @@ final readonly class SyncLoadriteEvent
      * @param  array<string, mixed>  $event  Raw Loadrite API event
      * @return bool True if the event was newly inserted (recompute performed).
      */
+    /** Minimum Short Total weight that counts as a real wagon completion (MT).
+     *  Below this, treat as operator misfire / aborted load / test. */
+    public const MIN_VALID_SHORT_TOTAL_MT = 30.0;
+
     public function handle(array $event, int $sidingId): bool
     {
         $eventId = $this->stringField($event, 'Id');
@@ -37,10 +41,6 @@ final readonly class SyncLoadriteEvent
         $weightMt = (float) $weightRaw;
 
         // Resolve which rake at this siding owns this event's loading window.
-        // The Add/Subtract Sequence is a BUCKET SLOT (1-10) that resets per
-        // wagon, NOT a stable wagon identifier. The proper per-wagon weight
-        // comes from "Short Total" events — one per wagon — emitted when
-        // each wagon's loading completes.
         $rakeId = $this->resolveRakeIdForEvent(
             $sidingId,
             isset($event['Time']) ? Carbon::parse($event['Time']) : null,
@@ -53,8 +53,28 @@ final readonly class SyncLoadriteEvent
         }
 
         // Each "Short Total" event = one wagon's final weight at completion.
-        // Attribute it to the next unfilled wagon slot in the active rake.
+        // Filter operator-error events (too light = aborted/test) and skip
+        // duplicates from operators pressing the Short Total button twice.
         if ($eventType === 'Short Total' && $rakeId !== null) {
+            if ($weightMt < self::MIN_VALID_SHORT_TOTAL_MT) {
+                Log::info('loadrite: skipping low-weight Short Total (likely operator misfire)', [
+                    'event_id' => $eventId,
+                    'weight_mt' => $weightMt,
+                    'siding_id' => $sidingId,
+                ]);
+
+                return true;
+            }
+
+            if ($this->isDuplicateShortTotal($event, $sidingId, $eventId)) {
+                Log::info('loadrite: skipping duplicate Short Total for same session', [
+                    'event_id' => $eventId,
+                    'siding_id' => $sidingId,
+                ]);
+
+                return true;
+            }
+
             $this->attributeShortTotal($rakeId, $weightMt, $eventId);
         }
 
@@ -101,6 +121,34 @@ final readonly class SyncLoadriteEvent
             ->first(['id']);
 
         return $fallback ? (int) $fallback->id : null;
+    }
+
+    /**
+     * Detect an operator pressing "Short Total" twice on the same wagon.
+     * Same scale + user_data2 + user_data3 within a 30-minute window = dupe.
+     */
+    private function isDuplicateShortTotal(array $event, int $sidingId, string $eventId): bool
+    {
+        $scaleId = $this->stringField($event, 'Scale ID');
+        $ud2 = $this->stringField($event, 'UserData2');
+        $ud3 = $this->stringField($event, 'UserData3');
+
+        if ($scaleId === null) {
+            return false;
+        }
+
+        $eventTime = isset($event['Time']) ? Carbon::parse($event['Time']) : now();
+
+        return DB::table('loadrite_events')
+            ->where('event_type', 'Short Total')
+            ->where('siding_id', $sidingId)
+            ->where('scale_id', $scaleId)
+            ->where('user_data2', $ud2)
+            ->where('user_data3', $ud3)
+            ->where('event_id', '!=', $eventId)
+            ->where('event_time', '>=', $eventTime->copy()->subMinutes(30))
+            ->where('event_time', '<=', $eventTime)
+            ->exists();
     }
 
     /**
