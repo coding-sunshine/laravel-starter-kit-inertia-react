@@ -65,8 +65,12 @@ final class PollLoadriteJob implements ShouldQueue
             $lastTimestamp = $fromLocalTime;
 
             foreach ($events as $event) {
-                SyncLoadriteWeightJob::dispatch($event, $this->sidingId)->onQueue('loadrite-sync');
-                EvaluateOverloadAlertJob::dispatch($event, $this->sidingId)->onQueue('loadrite-alerts');
+                SyncLoadriteWeightJob::dispatch($event, $this->sidingId)
+                    ->onConnection('redis')
+                    ->onQueue('loadrite-sync');
+                EvaluateOverloadAlertJob::dispatch($event, $this->sidingId)
+                    ->onConnection('redis')
+                    ->onQueue('loadrite-alerts');
 
                 if (isset($event['Time']) && $event['Time'] > $lastTimestamp) {
                     $lastTimestamp = $event['Time'];
@@ -79,6 +83,7 @@ final class PollLoadriteJob implements ShouldQueue
         }
 
         self::dispatch($this->sidingId)
+            ->onConnection('redis')
             ->onQueue('loadrite-poll')
             ->delay(now()->addSeconds(30));
     }

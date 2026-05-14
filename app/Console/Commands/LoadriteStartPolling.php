@@ -40,7 +40,9 @@ final class LoadriteStartPolling extends Command
                 continue;
             }
 
-            PollLoadriteJob::dispatch($setting->siding_id)->onQueue('loadrite-poll');
+            PollLoadriteJob::dispatch($setting->siding_id)
+                ->onConnection('redis')
+                ->onQueue('loadrite-poll');
             $this->info("Siding {$setting->siding_id}: dispatched PollLoadriteJob.");
         }
 
