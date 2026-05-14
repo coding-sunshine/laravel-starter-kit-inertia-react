@@ -104,8 +104,15 @@ export function TimeStatusDonut({
     const isIdle =
         lastEventMs !== null && now - lastEventMs > IDLE_THRESHOLD_MS;
 
-    // Compute live elapsed seconds from anchor_at, falling back to elapsed_minutes.
+    // Compute elapsed seconds:
+    //   - Idle rakes: trust the server's elapsed_minutes (computed as
+    //     last_loadrite_event − first_loadrite_event), which is the actual
+    //     loading session duration. Don't tick live — rake is done.
+    //   - Active rakes: tick live from anchor_at.
     const elapsedSeconds = useMemo(() => {
+        if (isIdle && timeStatus.elapsed_minutes !== null) {
+            return Math.max(0, Math.floor(timeStatus.elapsed_minutes * 60));
+        }
         if (anchorMs !== null) {
             return Math.max(0, Math.floor((effectiveNow - anchorMs) / 1000));
         }
@@ -113,7 +120,7 @@ export function TimeStatusDonut({
             return Math.max(0, Math.floor(timeStatus.elapsed_minutes * 60));
         }
         return null;
-    }, [anchorMs, effectiveNow, timeStatus.elapsed_minutes]);
+    }, [isIdle, anchorMs, effectiveNow, timeStatus.elapsed_minutes]);
 
     const allowedMinutes = Math.max(0, timeStatus.allowed_minutes);
     const allowedSeconds = allowedMinutes * 60;

@@ -136,7 +136,13 @@ final readonly class LiveMonitorDataBuilder
 
         $alerts = $this->recentAlerts(siding_id: $rake->siding_id, rake_id: $rake->id, limit: 8);
 
-        $lastEventAt = $loadings->max('updated_at')?->toIso8601String();
+        // Prefer the last LOADRITE event time so the stale indicator and idle
+        // detection use the true last loading activity, not a reattribution
+        // timestamp on wagon_loading.updated_at.
+        $lastLoadriteAt = DB::table('loadrite_events')
+            ->where('rake_id', $rake->id)
+            ->max('event_time');
+        $lastEventAt = ($lastLoadriteAt ? CarbonImmutable::parse($lastLoadriteAt) : ($loadings->max('updated_at') ?? null))?->toIso8601String();
 
         return [
             'rake' => [
