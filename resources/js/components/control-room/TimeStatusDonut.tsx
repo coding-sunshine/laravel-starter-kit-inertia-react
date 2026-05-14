@@ -4,9 +4,16 @@ import type { TimeStatus } from '@/components/control-room/types';
 
 export interface TimeStatusDonutProps {
     timeStatus: TimeStatus;
+    /** ISO string of the most recent loading event; used to freeze the timer
+     * when activity has clearly stopped (so the dial doesn't keep growing into
+     * "60 hours" for a rake that was loaded yesterday). */
+    lastEventAt?: string | null;
     size?: number;
     strokeWidth?: number;
 }
+
+/** If no event for this long, treat the rake as idle and freeze the timer. */
+const IDLE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
 
 const COLOR_SAFE = '#10B981'; // emerald-500
 const COLOR_WARN = '#F59E0B'; // amber-500
@@ -53,6 +60,7 @@ function formatOverrun(minutes: number): string {
 
 export function TimeStatusDonut({
     timeStatus,
+    lastEventAt,
     size = 160,
     strokeWidth = 16,
 }: TimeStatusDonutProps) {
@@ -78,16 +86,34 @@ export function TimeStatusDonut({
         return () => window.clearInterval(id);
     }, [anchorMs]);
 
+    const lastEventMs = useMemo(
+        () => (lastEventAt ? new Date(lastEventAt).getTime() : null),
+        [lastEventAt],
+    );
+
+    // If the rake is idle (no event for IDLE_THRESHOLD_MS), freeze the displayed
+    // elapsed at the last event's timestamp. Otherwise the timer would grow
+    // forever for old rakes — embarrassing in front of clients.
+    const effectiveNow = useMemo(() => {
+        if (lastEventMs !== null && now - lastEventMs > IDLE_THRESHOLD_MS) {
+            return lastEventMs;
+        }
+        return now;
+    }, [lastEventMs, now]);
+
+    const isIdle =
+        lastEventMs !== null && now - lastEventMs > IDLE_THRESHOLD_MS;
+
     // Compute live elapsed seconds from anchor_at, falling back to elapsed_minutes.
     const elapsedSeconds = useMemo(() => {
         if (anchorMs !== null) {
-            return Math.max(0, Math.floor((now - anchorMs) / 1000));
+            return Math.max(0, Math.floor((effectiveNow - anchorMs) / 1000));
         }
         if (timeStatus.elapsed_minutes !== null) {
             return Math.max(0, Math.floor(timeStatus.elapsed_minutes * 60));
         }
         return null;
-    }, [anchorMs, now, timeStatus.elapsed_minutes]);
+    }, [anchorMs, effectiveNow, timeStatus.elapsed_minutes]);
 
     const allowedMinutes = Math.max(0, timeStatus.allowed_minutes);
     const allowedSeconds = allowedMinutes * 60;
@@ -124,6 +150,14 @@ export function TimeStatusDonut({
     const subRemaining = (() => {
         if (noAnchor) {
             return 'Awaiting placement';
+        }
+        if (isIdle) {
+            const hoursIdle = Math.floor((now - (lastEventMs ?? now)) / 3_600_000);
+            if (hoursIdle >= 24) {
+                const days = Math.floor(hoursIdle / 24);
+                return `Idle · last loaded ${days}d ago`;
+            }
+            return `Idle · last loaded ${hoursIdle}h ago`;
         }
         if (isOverrun) {
             const overrunMin =

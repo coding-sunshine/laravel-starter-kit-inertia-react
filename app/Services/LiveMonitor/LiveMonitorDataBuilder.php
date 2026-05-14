@@ -191,20 +191,23 @@ final readonly class LiveMonitorDataBuilder
 
     private function activeRakeForSiding(Siding $siding): ?Rake
     {
-        $today = CarbonImmutable::today();
-
+        // Pick the rake with the MOST RECENT loading activity at this siding
+        // (latest wagon_loading.updated_at). Falls back to placement_time,
+        // loading_date, then id — but the activity sort surfaces the rake
+        // operators actually care about, not just the newest row in the table.
         return Rake::query()
             ->where('siding_id', $siding->id)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('dispatch_time')
-                    ->orWhereDate('dispatch_time', $today);
-            })
             ->where(function ($q) {
-                $q->whereNull('state')->orWhereNotIn('state', ['cancelled']);
+                $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched', 'completed']);
             })
-            ->orderByDesc('placement_time')
-            ->orderByDesc('loading_date')
-            ->orderByDesc('id')
+            ->orderByRaw(
+                'COALESCE(
+                    (SELECT MAX(updated_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id),
+                    placement_time,
+                    loading_date::timestamp,
+                    created_at
+                ) DESC',
+            )
             ->first();
     }
 

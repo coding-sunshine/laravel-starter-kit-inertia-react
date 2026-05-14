@@ -225,7 +225,10 @@ export default function ControlRoomShow({
                             <p className="mb-3 self-start text-sm font-semibold text-foreground">
                                 Time status
                             </p>
-                            <TimeStatusDonut timeStatus={data.time_status} />
+                            <TimeStatusDonut
+                                timeStatus={data.time_status}
+                                lastEventAt={data.last_event_at}
+                            />
                         </div>
                         <div className="rounded-xl border border-border bg-card p-4">
                             <AlertsFeed alerts={data.alerts} />

@@ -29,15 +29,23 @@ const STATUS_STYLES: Record<StaleStatus, StatusStyle> = {
 
 function formatSecondsSince(seconds: number | null): string {
     if (seconds === null) {
-        return 'Last update — ago';
+        return 'No activity yet';
     }
     const safe = Math.max(0, Math.floor(seconds));
-    if (safe > 60) {
-        const m = Math.floor(safe / 60);
-        const s = safe % 60;
-        return `Last update ${m}m ${s}s ago`;
+    if (safe < 60) {
+        return `${safe}s ago`;
     }
-    return `Last update ${safe}s ago`;
+    const totalMinutes = Math.floor(safe / 60);
+    if (totalMinutes < 60) {
+        return `${totalMinutes}m ${safe % 60}s ago`;
+    }
+    const totalHours = Math.floor(totalMinutes / 60);
+    if (totalHours < 24) {
+        return `${totalHours}h ${totalMinutes % 60}m ago`;
+    }
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    return hours > 0 ? `${days}d ${hours}h ago` : `${days}d ago`;
 }
 
 export function StaleIndicator({ status, secondsSince }: StaleIndicatorProps) {
