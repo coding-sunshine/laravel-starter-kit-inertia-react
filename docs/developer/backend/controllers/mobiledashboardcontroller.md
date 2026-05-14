@@ -8,6 +8,13 @@ JSON endpoints for the **mobile** management dashboard (`/api/v1/dashboard/*`). 
 
 `app/Http/Controllers/Api/Dashboard/MobileDashboardController.php`
 
+## `rrUploadCoverage`
+
+- **Route**: `api.v1.dashboard.rr-upload-coverage` — `GET /api/v1/dashboard/rr-upload-coverage`
+- **Full documentation**: [Mobile dashboard RR upload coverage (API)](../../api-reference/mobile-dashboard-rr-upload-coverage-api.md) — success and error responses, every filter parameter, and semantics of `penaltyControlRrCoverage`.
+- **Summary**: Same RR rake coverage aggregate as web siding overview deferred prop `penaltyControlRrCoverage`, from `ExecutiveDashboardController::buildPenaltyControlRrCoverage()` over `filteredSidingIds` and dashboard `from` / `to`.
+- **Authorization**: `sections.dashboard.view` and `dashboard.widgets.siding_overview_rr_rake_coverage`, or `bypass-permissions`.
+
 ## `sidingPerformanceMetrics`
 
 - **Route**: `api.v1.dashboard.siding-performance-metrics` — `GET /api/v1/dashboard/siding-performance-metrics`

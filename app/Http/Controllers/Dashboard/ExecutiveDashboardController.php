@@ -1325,6 +1325,8 @@ final class ExecutiveDashboardController extends Controller
      * received_mt / dispatched_mt = sum within the requested [$from, $to] window — matches the
      * "Today's dispatch" / period-anchored card on the dashboard.
      * last_receipt_at / last_dispatch_at = MAX(created_at) over the window for receipt vs dispatch rows.
+     * e_demand_raised = indents in current FY (1 Apr → today, app timezone) with non-null indent_date whose
+     * linked rake has no weighment yet (indents before FY start or missing indent_date are excluded).
      *
      * @param  array<int>  $sidingIds
      * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float, last_receipt_at: string|null, last_dispatch_at: string|null, e_demand_raised: int}>
@@ -1394,9 +1396,20 @@ final class ExecutiveDashboardController extends Controller
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id');
 
-        // E-demands raised: indents whose rake has no weighment yet (matches /indents row highlighting).
+        // E-demands raised: current Indian FY (1 Apr → today), indent_date only (no created_at fallback).
+        $tz = config('app.timezone', 'UTC');
+        $today = Carbon::now($tz)->startOfDay();
+        $fyStart = $today->month >= 4
+            ? $today->copy()->setDate($today->year, 4, 1)->startOfDay()
+            : $today->copy()->setDate($today->year - 1, 4, 1)->startOfDay();
+        $fyStartDate = $fyStart->toDateString();
+        $todayDate = $today->toDateString();
+
         $eDemandRaisedBySiding = Indent::query()
             ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('indent_date')
+            ->whereDate('indent_date', '>=', $fyStartDate)
+            ->whereDate('indent_date', '<=', $todayDate)
             ->whereDoesntHave('rake', fn ($q) => $q->whereHas('rakeWeighments'))
             ->selectRaw('siding_id, COUNT(*) as cnt')
             ->groupBy('siding_id')
