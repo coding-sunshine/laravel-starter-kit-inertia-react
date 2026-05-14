@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\Wagon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Builds the JSON payload consumed by the Control Room (Live Monitor) Inertia pages.
@@ -191,23 +192,40 @@ final readonly class LiveMonitorDataBuilder
 
     private function activeRakeForSiding(Siding $siding): ?Rake
     {
-        // Pick the rake with the MOST RECENT loading activity at this siding
-        // (latest wagon_loading.updated_at). Falls back to placement_time,
-        // loading_date, then id — but the activity sort surfaces the rake
-        // operators actually care about, not just the newest row in the table.
+        // Two-pass selection:
+        //   1) Rake with the most recent wagon_loading activity at this siding
+        //      (an actually-loaded rake operators care about).
+        //   2) Fallback: a newly placed rake with no loadings yet, so operators
+        //      still see it before the first weight arrives.
+        $withActivity = Rake::query()
+            ->where('siding_id', $siding->id)
+            ->where(function ($q) {
+                $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched', 'completed']);
+            })
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('wagon_loading')
+                    ->whereColumn('wagon_loading.rake_id', 'rakes.id')
+                    ->whereNotNull('wagon_loading.loaded_quantity_mt')
+                    ->whereRaw('wagon_loading.loaded_quantity_mt::numeric > 0');
+            })
+            ->orderByRaw(
+                '(SELECT MAX(updated_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id) DESC',
+            )
+            ->first();
+
+        if ($withActivity) {
+            return $withActivity;
+        }
+
         return Rake::query()
             ->where('siding_id', $siding->id)
             ->where(function ($q) {
                 $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched', 'completed']);
             })
-            ->orderByRaw(
-                'COALESCE(
-                    (SELECT MAX(updated_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id),
-                    placement_time,
-                    loading_date::timestamp,
-                    created_at
-                ) DESC',
-            )
+            ->orderByDesc('placement_time')
+            ->orderByDesc('loading_date')
+            ->orderByDesc('id')
             ->first();
     }
 
