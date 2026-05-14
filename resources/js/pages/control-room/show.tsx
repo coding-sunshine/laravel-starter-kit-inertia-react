@@ -38,6 +38,19 @@ interface Props {
 const WAGON_WIDTH = 56;
 const WAGON_GAP = 4;
 
+function formatLoadingTime(totalMinutes: number | null): string | null {
+    if (totalMinutes === null || totalMinutes === undefined) return null;
+    if (totalMinutes < 60) return `${totalMinutes} min`;
+    const totalHours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (totalHours < 24) {
+        return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`;
+    }
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+}
+
 function formatTime(value: string | null): string {
     if (!value) {
         return '—';
@@ -168,11 +181,9 @@ export default function ControlRoomShow({
                         <KpiTile
                             icon={Clock}
                             label="Loading time"
-                            value={
-                                data.kpis.loading_elapsed_minutes !== null
-                                    ? `${data.kpis.loading_elapsed_minutes} min`
-                                    : null
-                            }
+                            value={formatLoadingTime(
+                                data.kpis.loading_elapsed_minutes,
+                            )}
                             accentColor="cyan"
                         />
                     </div>
