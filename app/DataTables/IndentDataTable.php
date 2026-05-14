@@ -99,6 +99,7 @@ final class IndentDataTable extends AbstractDataTable
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: false),
             new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: false, filterable: false),
+            new Column(id: 'rake_loading_date', label: 'Rake loading date', type: 'date', sortable: false, filterable: false),
             new Column(id: 'indent_number', label: 'E-Demand number', type: 'text', sortable: true, filterable: false),
             new Column(id: 'indent_date', label: 'Indent date', type: 'date', sortable: true, filterable: true),
             new Column(id: 'fnr_number', label: 'FNR', type: 'text', sortable: true, filterable: true),

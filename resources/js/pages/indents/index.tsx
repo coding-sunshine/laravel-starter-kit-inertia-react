@@ -456,6 +456,14 @@ export default function IndentsIndex({
                                     return '—';
                                 }
 
+                                if (columnId === 'rake_loading_date') {
+                                    return row.rake_loading_date
+                                        ? new Date(
+                                              row.rake_loading_date,
+                                          ).toLocaleDateString()
+                                        : '—';
+                                }
+
                                 if (columnId === 'rake_number') {
                                     if (!row.rake_number) {
                                         return '—';
