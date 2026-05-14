@@ -51,7 +51,7 @@ final class LoadriteReattributeEventsCommand extends Command
                 ->update([
                     'loadrite_weight_mt' => 0,
                     'loaded_quantity_mt' => 0,
-                    'weight_source' => null,
+                    'weight_source' => 'manual',
                     'updated_at' => now(),
                 ]);
             $this->info("Cleared {$cleared} wagon_loading rows of Loadrite weight.");
