@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\DataTables\RakeDataTable;
 use App\Enums\RakeLifecycleStage;
+use App\Exports\ExecutiveOverviewTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\AppliedPenalty;
@@ -47,6 +48,8 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 final class ExecutiveDashboardController extends Controller
@@ -212,6 +215,30 @@ final class ExecutiveDashboardController extends Controller
         return response()->json(
             $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges),
         );
+    }
+
+    /** Styled .xlsx for executive overview tables (three periods + Till Date block). */
+    public function exportExecutiveOverview(Request $request): BinaryFileResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->hasRole('super-admin') || $user->hasRole('super_admin'), 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(DashboardWidgetPermissions::userHasAnyExecutiveWidget($user), 403);
+
+        $resolved = $this->filters->resolve($request);
+        $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
+        $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);
+
+        $data = $this->buildExecutiveYesterdayData(
+            $resolved['allSidingIds'],
+            $executiveYesterdayDate,
+            $executiveCustomRanges,
+        );
+
+        $filename = 'Executive_Overview_'.$data['anchorDate'].'.xlsx';
+
+        return Excel::download(new ExecutiveOverviewTableExport($data), $filename);
     }
 
     /**

@@ -53,6 +53,7 @@ This document lists all available routes in the application.
 | GET | `help/{helpArticle:slug}` | help.show | web |
 | POST | `help/{helpArticle:slug}/rate` | help.rate | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
+| GET | `dashboard/executive-overview/export` | dashboard.executive-overview.export | web, auth, verified |
 | GET | `dashboard/siding-performance-metrics` | dashboard.siding-performance-metrics | web, auth, verified |
 | GET | `profile/export-pdf` | profile.export-pdf | web, auth, verified |
 | GET, POST, PUT, PATCH, DELETE | `settings` | settings | web, auth |
