@@ -187,8 +187,8 @@ final readonly class FetchRakeWeighmentFromRailwayReceipt
 
                     $ccMt = null;
 
-                    if ($snapshot->pcc_weight_mt !== null && $snapshot->pcc_weight_mt !== '' && is_numeric($snapshot->pcc_weight_mt)) {
-                        $ccMt = round((float) $snapshot->pcc_weight_mt, 2);
+                    if ($snapshot->permissible_weight_mt !== null && $snapshot->permissible_weight_mt !== '' && is_numeric($snapshot->permissible_weight_mt)) {
+                        $ccMt = round((float) $snapshot->permissible_weight_mt, 2);
                     }
 
                     $printedTareMt = null;
@@ -344,8 +344,8 @@ final readonly class FetchRakeWeighmentFromRailwayReceipt
 
             $pccMt = null;
 
-            if ($snapshot->pcc_weight_mt !== null && $snapshot->pcc_weight_mt !== '' && is_numeric($snapshot->pcc_weight_mt)) {
-                $pccMt = round((float) $snapshot->pcc_weight_mt, 2);
+            if ($snapshot->permissible_weight_mt !== null && $snapshot->permissible_weight_mt !== '' && is_numeric($snapshot->permissible_weight_mt)) {
+                $pccMt = round((float) $snapshot->permissible_weight_mt, 2);
             }
 
             $wagonType = $snapshot->wagon_type;

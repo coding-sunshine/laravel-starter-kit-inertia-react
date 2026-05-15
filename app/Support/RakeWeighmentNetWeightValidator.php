@@ -95,7 +95,7 @@ final class RakeWeighmentNetWeightValidator
             $wagonRows[] = [
                 'wagon_number' => $snapshot->wagon_number,
                 'net_weight_mt' => self::numericOrNull($snapshot->loaded_weight_mt),
-                'cc_capacity_mt' => self::numericOrNull($snapshot->pcc_weight_mt),
+                'cc_capacity_mt' => self::numericOrNull($snapshot->permissible_weight_mt),
                 'actual_gross_mt' => self::numericOrNull($snapshot->gross_weight_mt),
                 'tare_weight_mt' => $tareMt,
                 'printed_tare_mt' => $tareMt,
