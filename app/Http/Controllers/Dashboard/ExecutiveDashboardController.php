@@ -3784,6 +3784,9 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * Latest-weighment wagon rows for rake-performance detail.
+     * Payload keys stay stable (over_load_mt, under_load_mt, cc_capacity_mt, net_weight_mt, loader fields, wagon_number).
+     *
      * @param  array<int>  $rakeIds
      * @return array<int, array<int, array<string, mixed>>>
      */
@@ -3849,13 +3852,16 @@ final class ExecutiveDashboardController extends Controller
             $loaderName = $wlMeta['loader_name'] ?? null;
             $loaderOperatorName = $wlMeta['loader_operator_name'] ?? null;
 
-            $ccMt = $row->cc_capacity_mt !== null ? round((float) $row->cc_capacity_mt, 2) : null;
+            $netMtRaw = $row->net_weight_mt !== null ? (float) $row->net_weight_mt : null;
+            $ccMtRaw = $row->cc_capacity_mt !== null ? (float) $row->cc_capacity_mt : null;
+            $storedOverLoadRaw = $row->over_load_mt !== null ? (float) $row->over_load_mt : null;
+            $ccMt = $ccMtRaw !== null ? round($ccMtRaw, 2) : null;
             $wagonOverloadsByRakeId[$rakeId][] = [
                 'wagon_number' => $row->wagon?->wagon_number ?? (string) $row->wagon_id,
-                'over_load_mt' => round((float) ($row->over_load_mt ?? 0), 2),
+                'over_load_mt' => $this->rakeWagonOverloadMtFromNetCcOrStored($netMtRaw, $ccMtRaw, $storedOverLoadRaw),
                 'under_load_mt' => $row->under_load_mt !== null ? round((float) $row->under_load_mt, 2) : null,
                 'cc_capacity_mt' => $ccMt,
-                'net_weight_mt' => $row->net_weight_mt !== null ? round((float) $row->net_weight_mt, 2) : null,
+                'net_weight_mt' => $netMtRaw !== null ? round($netMtRaw, 2) : null,
                 'loader_id' => $loaderId,
                 'loader_name' => $loaderName,
                 'loader_operator_name' => $loaderOperatorName,
@@ -3866,6 +3872,8 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * Rake row for rake-performance JSON. Keys over_load, under_load, net_weight, wagon_overloads, loading_minutes, etc. stay stable.
+     *
      * @param  Collection<int|string, \Illuminate\Database\Eloquent\Model>  $weighmentTotals
      * @param  Collection<int|string, \Illuminate\Database\Eloquent\Model>  $predictedPenaltyTotals
      * @param  Collection<int|string, \Illuminate\Database\Eloquent\Model>  $actualPenaltyTotals
@@ -3905,6 +3913,18 @@ final class ExecutiveDashboardController extends Controller
             return $row;
         }
 
+        $sumOverMt = 0.0;
+        $sumUnderMt = 0.0;
+        foreach ($wagonOverloads as $wag) {
+            $sumOverMt += (float) ($wag['over_load_mt'] ?? 0.0);
+            $ul = $wag['under_load_mt'] ?? null;
+            if ($ul !== null && $ul > 0) {
+                $sumUnderMt += (float) $ul;
+            }
+        }
+        $row['over_load'] = round($sumOverMt, 2);
+        $row['under_load'] = $sumUnderMt > 0 ? round($sumUnderMt, 2) : null;
+
         $loadingMinutes = null;
         if ($rake->loading_start_time && $rake->loading_end_time) {
             $loadingMinutes = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
@@ -3914,6 +3934,22 @@ final class ExecutiveDashboardController extends Controller
         $row['wagon_overloads'] = $wagonOverloads;
 
         return $row;
+    }
+
+    /**
+     * Rake performance wagon row: overload MT from net vs CC when both set; else clamped stored over_load_mt.
+     */
+    private function rakeWagonOverloadMtFromNetCcOrStored(?float $netMt, ?float $ccMt, ?float $storedOverLoadMt): float
+    {
+        if ($netMt !== null && $ccMt !== null) {
+            return round(max(0.0, $netMt - $ccMt), 2);
+        }
+
+        if ($storedOverLoadMt !== null) {
+            return round(max(0.0, $storedOverLoadMt), 2);
+        }
+
+        return 0.0;
     }
 
     /**
