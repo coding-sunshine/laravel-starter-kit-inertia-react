@@ -10,6 +10,7 @@ use App\Models\RakeWagonWeighment;
 use App\Models\Siding;
 use App\Models\Wagon;
 use App\Models\Weighment;
+use App\Support\RakeWeighmentNetWeightValidator;
 use Carbon\CarbonInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -232,6 +233,8 @@ final readonly class WeighmentPdfImporter
         }
 
         $this->ensureRakeNumberIsUnique($header['rake_number']);
+
+        RakeWeighmentNetWeightValidator::assertNonNegative($totals, $wagonRows);
 
         return [
             'header' => $header,
