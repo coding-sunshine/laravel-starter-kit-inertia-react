@@ -79,4 +79,17 @@ return [
         'BMGK' => 'KRW',
         'WBPC' => 'PKR',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Railway Receipt PDF parsing (FOIS printed vs eT-RR)
+    |--------------------------------------------------------------------------
+    */
+    'rr_parse' => [
+        /*
+        | When FOIS header ACTL WGHT differs from the sum of wagon loaded (ACTL)
+        | column by more than this (MT), upload is rejected.
+        */
+        'tolerance_actual_weight_mt' => (float) env('RRMCS_RR_ACTUAL_WEIGHT_TOLERANCE_MT', 0.5),
+    ],
 ];

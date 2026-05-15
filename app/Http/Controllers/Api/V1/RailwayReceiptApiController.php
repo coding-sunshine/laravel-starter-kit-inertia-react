@@ -56,6 +56,7 @@ final class RailwayReceiptApiController extends Controller
                 'rr_number' => $dto->rr_number,
                 'rr_received_date' => $dto->rr_received_date,
                 'rr_weight_mt' => $dto->rr_weight_mt,
+                'actual_weight_mt' => $dto->actual_weight_mt,
                 'document_status' => $dto->document_status,
                 'has_discrepancy' => $dto->has_discrepancy,
                 'discrepancy_details' => $dto->discrepancy_details,

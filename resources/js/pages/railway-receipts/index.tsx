@@ -51,6 +51,7 @@ export interface RailwayReceiptsRakeRow {
     rr_number: string | null;
     rr_received_date: string | null;
     rr_weight_mt: string | null;
+    actual_weight_mt: string | null;
     document_status: string | null;
     has_discrepancy: boolean | null;
     discrepancy_details: string | null;
@@ -72,6 +73,7 @@ export interface RailwayReceiptsStandaloneRow {
     rr_number: string;
     rr_received_date: string;
     rr_weight_mt: string | null;
+    actual_weight_mt: string | null;
 }
 
 interface RrHubPayload {
@@ -285,8 +287,12 @@ function PrimaryRrHubSummary({ hubRow, primaryDoc }: { hubRow: RailwayReceiptsRa
                         </dd>
                     </div>
                     <div>
-                        <dt className="text-muted-foreground font-medium">Weight (MT)</dt>
+                        <dt className="text-muted-foreground font-medium">Chargeable weight (MT)</dt>
                         <dd className="mt-0.5">{primaryDoc.rr_weight_mt ?? '—'}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground font-medium">Actual weight (MT)</dt>
+                        <dd className="mt-0.5">{primaryDoc.actual_weight_mt ?? '—'}</dd>
                     </div>
                     <div>
                         <dt className="text-muted-foreground font-medium">Document status</dt>
@@ -803,6 +809,9 @@ export default function RailwayReceiptsIndex({
                                         if (columnId === 'rr_weight_mt') {
                                             return row.rr_weight_mt ?? '—';
                                         }
+                                        if (columnId === 'actual_weight_mt') {
+                                            return row.actual_weight_mt ?? '—';
+                                        }
                                         return undefined;
                                     }}
                                     options={{
@@ -848,6 +857,9 @@ export default function RailwayReceiptsIndex({
                                     }
                                     if (columnId === 'rr_weight_mt') {
                                         return row.rr_weight_mt ?? '—';
+                                    }
+                                    if (columnId === 'actual_weight_mt') {
+                                        return row.actual_weight_mt ?? '—';
                                     }
                                     return undefined;
                                 }}

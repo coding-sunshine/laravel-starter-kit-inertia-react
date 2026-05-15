@@ -15,7 +15,7 @@ final class RakeRrHubPayload
      */
     public static function fromRake(Rake $rake): array
     {
-        $rake->loadMissing(['rrDocuments', 'diverrtDestinations']);
+        $rake->loadMissing(['rrDocuments.wagonSnapshots', 'diverrtDestinations']);
 
         return [
             'is_diverted' => (bool) $rake->is_diverted,
@@ -26,6 +26,7 @@ final class RakeRrHubPayload
                         'rr_number' => $doc->rr_number,
                         'rr_received_date' => $doc->rr_received_date?->toIso8601String() ?? '',
                         'rr_weight_mt' => $doc->rr_weight_mt !== null ? (string) $doc->rr_weight_mt : null,
+                        'actual_weight_mt' => $doc->actualWeightMtForListing(),
                         'document_status' => $doc->document_status,
                         'diverrt_destination_id' => $doc->diverrt_destination_id,
                     ];

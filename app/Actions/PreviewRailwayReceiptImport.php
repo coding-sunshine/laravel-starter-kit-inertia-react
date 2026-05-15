@@ -34,6 +34,9 @@ final readonly class PreviewRailwayReceiptImport
      *     rake_id: int,
      *     rake_number: string|null,
      *     rake_serial_number: string|null,
+     *     rr_format: 'et_rr'|'fois_printed',
+     *     actual_weight_mt: float|null,
+     *     chargeable_weight_mt: float,
      * }
      *
      * @throws InvalidArgumentException When FNR resolution fails (same messages as {@see ResolveRakeForRrImportPreview})
@@ -73,6 +76,11 @@ final readonly class PreviewRailwayReceiptImport
             'rake_id' => $rake->id,
             'rake_number' => $rake->rake_number,
             'rake_serial_number' => $rake->rake_serial_number,
+            'rr_format' => $parsed['rr_format'] ?? RrParserService::RR_FORMAT_ET_RR,
+            'actual_weight_mt' => isset($parsed['actual_weight_mt']) && is_numeric($parsed['actual_weight_mt'])
+                ? round((float) $parsed['actual_weight_mt'], 4)
+                : null,
+            'chargeable_weight_mt' => round((float) ($parsed['total_weight'] ?? $parsed['rr_weight_mt'] ?? 0), 4),
         ];
     }
 }

@@ -19,6 +19,7 @@ final class RailwayReceiptsStandaloneRrDataTable extends AbstractDataTable
         public string $rr_number,
         public string $rr_received_date,
         public ?string $rr_weight_mt,
+        public ?string $actual_weight_mt,
     ) {}
 
     public static function fromModel(RrDocument $model): self
@@ -28,6 +29,7 @@ final class RailwayReceiptsStandaloneRrDataTable extends AbstractDataTable
             rr_number: $model->rr_number,
             rr_received_date: $model->rr_received_date?->format('Y-m-d') ?? '',
             rr_weight_mt: $model->rr_weight_mt !== null ? (string) $model->rr_weight_mt : null,
+            actual_weight_mt: $model->actualWeightMtForListing(),
         );
     }
 
@@ -36,7 +38,8 @@ final class RailwayReceiptsStandaloneRrDataTable extends AbstractDataTable
         return [
             new Column(id: 'rr_number', label: 'RR number', type: 'text', sortable: true, filterable: true),
             new Column(id: 'rr_received_date', label: 'Received date', type: 'date', sortable: true, filterable: true),
-            new Column(id: 'rr_weight_mt', label: 'Weight (MT)', type: 'number', sortable: true, filterable: true),
+            new Column(id: 'rr_weight_mt', label: 'Chargeable (MT)', type: 'number', sortable: true, filterable: true),
+            new Column(id: 'actual_weight_mt', label: 'Actual (MT)', type: 'number', sortable: false, filterable: false),
         ];
     }
 
@@ -52,6 +55,7 @@ final class RailwayReceiptsStandaloneRrDataTable extends AbstractDataTable
         $user = request()->user();
 
         return RrDocument::query()
+            ->with(['wagonSnapshots:id,rr_document_id,loaded_weight_mt'])
             ->whereNull('rake_id')
             ->when(
                 $user && ! $user->isSuperAdmin(),

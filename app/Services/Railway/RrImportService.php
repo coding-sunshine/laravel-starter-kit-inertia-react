@@ -77,6 +77,7 @@ final readonly class RrImportService
             }
 
             $this->validateNoDuplicates($parsed);
+            $this->assertParsedRrInternalConsistency($parsed);
 
             $rrDate = $this->parseDate($parsed['rr_date'] ?? $parsed['rr_received_date'] ?? null);
 
@@ -163,6 +164,54 @@ final readonly class RrImportService
             throw new InvalidArgumentException("Railway Receipt number '{$rrNumber}' already exists.");
         }
 
+    }
+
+    /**
+     * FOIS-only and cross-check rules on parsed PDF data (before persistence).
+     *
+     * @param  array<string, mixed>  $parsed
+     */
+    private function assertParsedRrInternalConsistency(array $parsed): void
+    {
+        $format = $parsed['rr_format'] ?? RrParserService::RR_FORMAT_ET_RR;
+        $wagons = $parsed['wagons'] ?? [];
+        if (! is_array($wagons)) {
+            $wagons = [];
+        }
+
+        if ($format === RrParserService::RR_FORMAT_FOIS_PRINTED) {
+            $headerWagonCount = (int) ($parsed['wagon_count'] ?? 0);
+            if ($headerWagonCount > 0 && $wagons !== [] && count($wagons) !== $headerWagonCount) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'Wagon row count (%d) does not match header wagon count (%d) on this Railway Receipt.',
+                        count($wagons),
+                        $headerWagonCount,
+                    )
+                );
+            }
+
+            $actualHeader = $parsed['actual_weight_mt'] ?? null;
+            if (is_numeric($actualHeader) && $wagons !== []) {
+                $actualHeaderF = round((float) $actualHeader, 2);
+                $sumLoaded = round((float) array_sum(array_map(
+                    static fn (array $w): float => (float) ($w['loaded_weight'] ?? $w['loaded_weight_mt'] ?? 0),
+                    $wagons,
+                )), 2);
+
+                $tolerance = (float) config('rrmcs.rr_parse.tolerance_actual_weight_mt', 0.5);
+                if (abs($sumLoaded - $actualHeaderF) > $tolerance) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'Wagon loaded weight total (%.2f MT) does not match header ACTL WGHT (%.2f MT) within %.2f MT.',
+                            $sumLoaded,
+                            $actualHeaderF,
+                            $tolerance,
+                        )
+                    );
+                }
+            }
+        }
     }
 
     /**
@@ -280,7 +329,11 @@ final readonly class RrImportService
                 'raw_text' => $parsed['raw_text'] ?? null,
                 'wagon_count_rr' => $parsed['wagon_count'] ?? null,
                 'total_weight_rr' => $parsed['total_weight'] ?? null,
-            ]),
+                'rr_format' => $parsed['rr_format'] ?? RrParserService::RR_FORMAT_ET_RR,
+                'actual_weight_mt' => isset($parsed['actual_weight_mt']) && is_numeric($parsed['actual_weight_mt'])
+                    ? round((float) $parsed['actual_weight_mt'], 4)
+                    : null,
+            ], static fn (mixed $v): bool => $v !== null && $v !== ''),
             'created_by' => $userId,
         ]);
     }
@@ -449,7 +502,13 @@ final readonly class RrImportService
             'rr_details' => array_filter([
                 'power_plant_id' => $validated['power_plant_id'] ?? null,
                 'raw_text' => $parsed['raw_text'] ?? null,
-            ]),
+                'wagon_count_rr' => $parsed['wagon_count'] ?? null,
+                'total_weight_rr' => $parsed['total_weight'] ?? null,
+                'rr_format' => $parsed['rr_format'] ?? RrParserService::RR_FORMAT_ET_RR,
+                'actual_weight_mt' => isset($parsed['actual_weight_mt']) && is_numeric($parsed['actual_weight_mt'])
+                    ? round((float) $parsed['actual_weight_mt'], 4)
+                    : null,
+            ], static fn (mixed $v): bool => $v !== null && $v !== ''),
             'created_by' => $userId,
         ]);
     }
