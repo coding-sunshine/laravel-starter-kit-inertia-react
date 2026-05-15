@@ -1,11 +1,13 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { PersistentHeader } from '@/components/control-panel-v2/PersistentHeader';
 import { SidingCardV2 } from '@/components/control-panel-v2/SidingCardV2';
 import type { OverviewPayload } from '@/components/control-room/types';
 import { useControlRoomBroadcast } from '@/hooks/use-control-room-broadcast';
+
+const POLL_INTERVAL_MS = 10_000;
 
 interface Props {
     overview: OverviewPayload;
@@ -19,8 +21,20 @@ export default function ControlPanelV2Index({
 }: Props) {
     const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
     const [view, setView] = useState<'card' | 'table'>('card');
+    const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
     const [pulseBySiding, setPulseBySiding] = useState<Record<number, string | null>>({});
+
+    useEffect(() => {
+        if (!autoRefresh) return;
+        const id = window.setInterval(() => {
+            router.reload({
+                only: ['overview', 'server_time'],
+                onSuccess: () => setLastSyncedAt(new Date().toISOString()),
+            });
+        }, POLL_INTERVAL_MS);
+        return () => window.clearInterval(id);
+    }, [autoRefresh]);
 
     const { lastEventAtAny } = useControlRoomBroadcast(subscribable_sidings, {
         onLoadriteEvent: (sidingId, payload) => {
@@ -63,7 +77,7 @@ export default function ControlPanelV2Index({
                 activeAlerts={overview.totals.alerts_active}
                 autoRefresh={autoRefresh}
                 onToggleAutoRefresh={() => setAutoRefresh((v) => !v)}
-                lastUpdatedAt={lastEventAtAny ?? overview.last_event_at}
+                lastUpdatedAt={lastSyncedAt ?? lastEventAtAny ?? overview.last_event_at}
                 view={view}
                 onChangeView={setView}
                 subtitle="Multi-Siding Monitoring Dashboard"

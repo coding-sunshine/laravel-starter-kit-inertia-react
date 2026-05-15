@@ -57,6 +57,7 @@ export default function ControlPanelV2Siding({
     const [tickerEvents, setTickerEvents] = useState<TickerEvent[]>([]);
     const [toasts, setToasts] = useState<ToastItem[]>([]);
     const [confettiKey, setConfettiKey] = useState<string | null>(null);
+    const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
     const [sparklinePoints, setSparklinePoints] = useState<
         { ts: number; cumulativeMt: number }[]
     >([]);
@@ -94,8 +95,11 @@ export default function ControlPanelV2Siding({
     useEffect(() => {
         if (!autoRefresh || replay.isActive) return;
         const id = window.setInterval(() => {
-            router.reload({ only: ['rakeData', 'server_time'] });
-        }, 30_000);
+            router.reload({
+                only: ['rakeData', 'server_time'],
+                onSuccess: () => setLastSyncedAt(new Date().toISOString()),
+            });
+        }, 10_000);
         return () => window.clearInterval(id);
     }, [autoRefresh, replay.isActive]);
 
@@ -163,7 +167,7 @@ export default function ControlPanelV2Siding({
         alerts: rakeData?.alerts.length ?? 0,
     };
 
-    const lastEventAt = rakeData?.last_event_at ?? null;
+    const lastEventAt = lastSyncedAt ?? rakeData?.last_event_at ?? null;
 
     return (
         <AppLayout>
