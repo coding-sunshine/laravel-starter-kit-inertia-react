@@ -7,6 +7,7 @@ use App\Features\AppearanceSettingsFeature;
 use App\Features\BlogFeature;
 use App\Features\ChangelogFeature;
 use App\Features\ContactFeature;
+use App\Features\ControlPanelV2Feature;
 use App\Features\CookieConsentFeature;
 use App\Features\GamificationFeature;
 use App\Features\HelpFeature;
@@ -48,6 +49,7 @@ return [
         'scramble_api_docs' => ScrambleApiDocsFeature::class,
         'appearance_settings' => AppearanceSettingsFeature::class,
         'gamification' => GamificationFeature::class,
+        'control_panel_v2' => ControlPanelV2Feature::class,
     ],
 
     /*

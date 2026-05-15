@@ -196,6 +196,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('control-room/{rake}', [App\Http\Controllers\LiveMonitorController::class, 'show'])->name('control-room.show');
 
     Route::get('control-panel-2', [App\Http\Controllers\ControlPanelV2Controller::class, 'index'])->name('control-panel-v2.index');
+    Route::get('control-panel-2/wagons/{wagon}/loadrite-events', [App\Http\Controllers\ControlPanelV2Controller::class, 'wagonTimeline'])->name('control-panel-v2.wagon-timeline');
     Route::get('control-panel-2/{siding}', [App\Http\Controllers\ControlPanelV2Controller::class, 'show'])->name('control-panel-v2.show');
     Route::get('dashboard/executive-yesterday-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'executiveYesterdayData'])
         ->name('dashboard.executive-yesterday-data');

@@ -20,7 +20,18 @@ export default function ControlPanelV2Index({
     const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
     const [view, setView] = useState<'card' | 'table'>('card');
 
+    const [pulseBySiding, setPulseBySiding] = useState<Record<number, string | null>>({});
+
     const { lastEventAtAny } = useControlRoomBroadcast(subscribable_sidings, {
+        onLoadriteEvent: (sidingId, payload) => {
+            setPulseBySiding((prev) => ({ ...prev, [sidingId]: payload.event_id }));
+            window.setTimeout(() => {
+                setPulseBySiding((prev) => ({ ...prev, [sidingId]: null }));
+            }, 700);
+            if (autoRefresh && payload.event_type === 'Short Total') {
+                router.reload({ only: ['overview', 'server_time'] });
+            }
+        },
         onWagonWeightUpdated: () => {
             if (autoRefresh) {
                 router.reload({ only: ['overview', 'server_time'] });
@@ -79,6 +90,7 @@ export default function ControlPanelV2Index({
                                 key={s.siding_id}
                                 siding={s}
                                 index={idx}
+                                pulseEventId={pulseBySiding[s.siding_id] ?? null}
                                 onOpen={goToSiding}
                             />
                         ))}

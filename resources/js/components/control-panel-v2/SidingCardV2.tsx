@@ -14,15 +14,17 @@ import { useMemo } from 'react';
 import type { OverviewSiding } from '@/components/control-room/types';
 import { LoadingProgressDonut } from '@/components/control-room/LoadingProgressDonut';
 
+import { CountUpNumber } from './CountUpNumber';
 import { WagonTrainV2 } from './WagonTrainV2';
 
 interface Props {
     siding: OverviewSiding;
     onOpen?: (sidingId: number) => void;
     index?: number;
+    pulseEventId?: string | null;
 }
 
-export function SidingCardV2({ siding, onOpen, index = 0 }: Props) {
+export function SidingCardV2({ siding, onOpen, index = 0, pulseEventId = null }: Props) {
     const counts = useMemo(() => {
         const s = siding.status_counts as Record<string, number> | [];
         if (Array.isArray(s)) {
@@ -126,6 +128,7 @@ export function SidingCardV2({ siding, onOpen, index = 0 }: Props) {
                         <WagonTrainV2
                             wagons={siding.wagons}
                             bulldozerWagonId={bulldozerWagonId}
+                            pulseEventId={pulseEventId}
                             size="mini"
                         />
                     </div>
@@ -140,27 +143,56 @@ export function SidingCardV2({ siding, onOpen, index = 0 }: Props) {
                 <KpiCell
                     icon={<Package className="h-4 w-4 text-emerald-600" />}
                     label="Total Net Weight"
-                    value={kpis ? `${kpis.total_loaded_mt.toFixed(2)} MT` : '—'}
+                    valueNode={
+                        kpis ? (
+                            <>
+                                <CountUpNumber value={kpis.total_loaded_mt} decimals={2} />
+                                <span className="ml-1 text-xs opacity-70">MT</span>
+                            </>
+                        ) : (
+                            '—'
+                        )
+                    }
                 />
                 <KpiCell
                     icon={<AlertTriangle className="h-4 w-4 text-rose-600" />}
                     label="Over Load"
-                    value={kpis ? `${kpis.total_overload_mt.toFixed(1)} MT` : '—'}
+                    valueNode={
+                        kpis ? (
+                            <>
+                                <CountUpNumber value={kpis.total_overload_mt} decimals={1} />
+                                <span className="ml-1 text-xs opacity-70">MT</span>
+                            </>
+                        ) : (
+                            '—'
+                        )
+                    }
                 />
                 <KpiCell
                     icon={<AlertTriangle className="h-4 w-4 text-amber-600" />}
                     label="Under Load"
-                    value={kpis ? `${kpis.total_underload_mt.toFixed(0)} MT` : '—'}
+                    valueNode={
+                        kpis ? (
+                            <>
+                                <CountUpNumber value={kpis.total_underload_mt} decimals={0} />
+                                <span className="ml-1 text-xs opacity-70">MT</span>
+                            </>
+                        ) : (
+                            '—'
+                        )
+                    }
                 />
                 <KpiCell
                     icon={<Clock className="h-4 w-4 text-sky-600" />}
                     label="Rake Loading Time"
-                    value={loadingMinutes != null ? formatMinutes(loadingMinutes) : '—'}
+                    valueNode={
+                        loadingMinutes != null ? formatMinutes(loadingMinutes) : '—'
+                    }
                 />
                 <KpiCell
                     icon={<Clock className="h-4 w-4 text-slate-600" />}
                     label="Rake Placement"
-                    value={placementTime}
+                    valueNode={placementTime}
                 />
             </div>
         </motion.section>
@@ -245,11 +277,11 @@ function Chip({
 function KpiCell({
     icon,
     label,
-    value,
+    valueNode,
 }: {
     icon: React.ReactNode;
     label: string;
-    value: string;
+    valueNode: React.ReactNode;
 }) {
     return (
         <div className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
@@ -261,7 +293,7 @@ function KpiCell({
                     {label}
                 </div>
                 <div className="truncate text-sm font-semibold tabular-nums text-slate-900">
-                    {value}
+                    {valueNode}
                 </div>
             </div>
         </div>

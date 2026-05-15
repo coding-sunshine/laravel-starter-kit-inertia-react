@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Events\LoadriteEventBroadcast;
 use App\Events\WagonWeightUpdated;
 use App\Models\Rake;
 use App\Models\WagonLoading;
@@ -51,6 +52,21 @@ final readonly class SyncLoadriteEvent
         if (! $inserted) {
             return false; // Already processed.
         }
+
+        // Broadcast for /control-panel-2 per-event animations (bucket dump,
+        // bulldozer slide). Legacy /control-room ignores this channel.
+        LoadriteEventBroadcast::dispatch(
+            sidingId: $sidingId,
+            rakeId: $rakeId,
+            wagonId: null,
+            wagonSequence: $sequence,
+            eventId: $eventId,
+            eventType: $eventType,
+            weightMt: $weightMt,
+            eventTime: isset($event['Time']) ? Carbon::parse($event['Time'])->toIso8601String() : null,
+            operator: $this->stringField($event, 'Operator'),
+            scaleId: $this->stringField($event, 'Scale ID'),
+        );
 
         // Each "Short Total" event = one wagon's final weight at completion.
         // Filter operator-error events (too light = aborted/test) and skip

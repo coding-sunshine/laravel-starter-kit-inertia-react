@@ -20,8 +20,15 @@ import type {
     RakeData,
     WagonCard,
 } from '@/components/control-room/types';
+import { AlertToast, type ToastItem } from '@/components/control-panel-v2/AlertToast';
+import {
+    EventTickerMarquee,
+    type TickerEvent,
+} from '@/components/control-panel-v2/EventTickerMarquee';
 import { PersistentHeader } from '@/components/control-panel-v2/PersistentHeader';
+import { WagonDrawer } from '@/components/control-panel-v2/WagonDrawer';
 import { WagonTrainV2 } from '@/components/control-panel-v2/WagonTrainV2';
+import { useControlRoomBroadcast } from '@/hooks/use-control-room-broadcast';
 
 interface Props {
     siding: { id: number; name: string; code: string | null };
@@ -38,6 +45,11 @@ export default function ControlPanelV2Siding({
 }: Props) {
     const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
     const [selectedWagon, setSelectedWagon] = useState<WagonCard | null>(null);
+    const [pulseEventId, setPulseEventId] = useState<string | null>(null);
+    const [tickerEvents, setTickerEvents] = useState<TickerEvent[]>([]);
+    const [toasts, setToasts] = useState<ToastItem[]>([]);
+    const dismissToast = (id: string) =>
+        setToasts((prev) => prev.filter((t) => t.id !== id));
 
     useEffect(() => {
         if (!autoRefresh) return;
@@ -46,6 +58,48 @@ export default function ControlPanelV2Siding({
         }, 30_000);
         return () => window.clearInterval(id);
     }, [autoRefresh]);
+
+    useControlRoomBroadcast(subscribable_sidings, {
+        onLoadriteEvent: (_sidingId, payload) => {
+            setPulseEventId(payload.event_id);
+            window.setTimeout(() => setPulseEventId(null), 700);
+
+            const tone: TickerEvent['tone'] =
+                payload.event_type === 'Add'
+                    ? 'add'
+                    : payload.event_type === 'Subtract'
+                      ? 'subtract'
+                      : payload.event_type === 'Short Total'
+                        ? 'shortTotal'
+                        : 'info';
+            const operator = payload.operator ? `${payload.operator} · ` : '';
+            const scale = payload.scale_id ? ` on ${payload.scale_id}` : '';
+            const label = `${operator}${payload.event_type} ${payload.weight_mt.toFixed(2)} MT${scale}`;
+            setTickerEvents((prev) =>
+                [{ id: payload.event_id, label, tone }, ...prev].slice(0, 30),
+            );
+
+            if (autoRefresh && payload.event_type === 'Short Total') {
+                router.reload({ only: ['rakeData', 'server_time'] });
+            }
+        },
+        onWagonWeightUpdated: (_sidingId, payload) => {
+            if (payload.status === 'overload') {
+                setToasts((prev) => [
+                    {
+                        id: `overload-${payload.wagon_id}-${Date.now()}`,
+                        title: `Overload on wagon ${payload.sequence}`,
+                        body: `${payload.loadrite_weight_mt.toFixed(2)} MT (${payload.percentage.toFixed(0)}%)`,
+                        severity: 'critical',
+                    },
+                    ...prev.slice(0, 4),
+                ]);
+            }
+            if (autoRefresh) {
+                router.reload({ only: ['rakeData', 'server_time'] });
+            }
+        },
+    });
 
     const totalsForHeader = {
         sidings: 1,
@@ -133,6 +187,7 @@ export default function ControlPanelV2Siding({
                             <WagonTrainV2
                                 wagons={rakeData.wagons}
                                 bulldozerWagonId={bulldozerWagonId}
+                                pulseEventId={pulseEventId}
                                 size="full"
                                 onWagonClick={setSelectedWagon}
                             />
@@ -203,17 +258,25 @@ export default function ControlPanelV2Siding({
                                     <AlertsFeed alerts={rakeData.alerts} />
                                 </div>
 
-                                {selectedWagon && (
-                                    <WagonDetailCard
-                                        wagon={selectedWagon}
-                                        onClose={() => setSelectedWagon(null)}
-                                    />
-                                )}
                             </aside>
+                        </section>
+
+                        <section className="mt-4">
+                            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Live Loadrite Activity
+                            </h2>
+                            <EventTickerMarquee events={tickerEvents} />
                         </section>
                     </>
                 )}
             </main>
+
+            <AlertToast toasts={toasts} onDismiss={dismissToast} />
+
+            <WagonDrawer
+                wagon={selectedWagon}
+                onClose={() => setSelectedWagon(null)}
+            />
         </AppLayout>
     );
 }
@@ -243,72 +306,3 @@ function LegendDot({ color, label }: { color: string; label: string }) {
     );
 }
 
-function WagonDetailCard({
-    wagon,
-    onClose,
-}: {
-    wagon: WagonCard;
-    onClose: () => void;
-}) {
-    return (
-        <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm">
-            <div className="flex items-start justify-between">
-                <div>
-                    <div className="text-xs font-medium uppercase tracking-wide text-sky-700">
-                        Wagon {wagon.wagon_sequence}
-                    </div>
-                    <div className="text-lg font-semibold text-slate-900">
-                        {wagon.wagon_number ?? '—'}
-                    </div>
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="rounded-md p-1 text-slate-500 hover:bg-white"
-                    aria-label="Close"
-                >
-                    ✕
-                </button>
-            </div>
-            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <DetailRow label="Type" value={wagon.wagon_type ?? '—'} />
-                <DetailRow
-                    label="CC"
-                    value={wagon.cc_mt != null ? `${wagon.cc_mt} MT` : '—'}
-                />
-                <DetailRow
-                    label="Net Wt"
-                    value={
-                        wagon.loaded_mt != null
-                            ? `${wagon.loaded_mt.toFixed(2)} MT`
-                            : '—'
-                    }
-                />
-                <DetailRow
-                    label="Overload"
-                    value={
-                        wagon.overload_mt != null
-                            ? `${wagon.overload_mt.toFixed(2)} MT`
-                            : '—'
-                    }
-                />
-                <DetailRow label="Status" value={wagon.status_label} />
-                <DetailRow label="Source" value={wagon.weight_source ?? '—'} />
-            </dl>
-            <div className="mt-3 text-[11px] text-slate-500">
-                Event timeline arrives in next iteration.
-            </div>
-        </div>
-    );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div>
-            <dt className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-                {label}
-            </dt>
-            <dd className="text-sm font-semibold text-slate-900">{value}</dd>
-        </div>
-    );
-}

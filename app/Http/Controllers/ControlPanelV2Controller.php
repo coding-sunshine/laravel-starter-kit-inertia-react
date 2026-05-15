@@ -6,7 +6,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Rake;
 use App\Models\Siding;
+use App\Models\Wagon;
 use App\Services\LiveMonitor\LiveMonitorDataBuilder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -64,6 +66,47 @@ final class ControlPanelV2Controller extends Controller
             'rakeData' => $rakeData,
             'subscribable_sidings' => [(int) $siding->id],
             'server_time' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Return the chronological Loadrite event timeline for a single wagon.
+     * Powers the wagon-click drawer on /control-panel-2/{siding}.
+     */
+    public function wagonTimeline(Request $request, Wagon $wagon): JsonResponse
+    {
+        $wagon->loadMissing('rake:id,siding_id');
+        $sidingId = $wagon->rake?->siding_id;
+
+        if ($sidingId === null || ! $this->userCanSeeSiding($request->user(), (int) $sidingId)) {
+            throw new AccessDeniedHttpException('You do not have access to this wagon.');
+        }
+
+        $events = DB::table('loadrite_events')
+            ->where('wagon_id', $wagon->id)
+            ->orderByDesc('event_time')
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get([
+                'event_id',
+                'event_type',
+                'weight_mt',
+                'event_time',
+                'operator',
+                'scale_id',
+                'product',
+                'wagon_sequence',
+            ]);
+
+        return response()->json([
+            'wagon' => [
+                'id' => (int) $wagon->id,
+                'wagon_number' => $wagon->wagon_number,
+                'wagon_sequence' => $wagon->wagon_sequence,
+                'wagon_type' => $wagon->wagon_type,
+                'pcc_weight_mt' => $wagon->pcc_weight_mt,
+            ],
+            'events' => $events,
         ]);
     }
 
