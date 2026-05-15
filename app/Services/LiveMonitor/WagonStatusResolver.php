@@ -15,7 +15,7 @@ use App\Models\Wagon;
  * Source-of-truth precedence (priority order):
  *  1. wagon.is_unfit  → Unfit
  *  2. loaded_qty > pcc_weight  → Overload
- *  3. loaded_qty >= pcc_weight (within tolerance)  → Loaded
+ *  3. loaded_qty >= LOADED_THRESHOLD_RATIO × pcc_weight  → Loaded
  *  4. loaded_qty > 0  → Loading
  *  5. otherwise  → Empty
  *
@@ -25,6 +25,15 @@ use App\Models\Wagon;
  */
 final class WagonStatusResolver
 {
+    /**
+     * A wagon counts as fully loaded once it reaches this fraction of its
+     * permissible carrying capacity. Real Loadrite-completed wagons land at
+     * 89–99% of pcc and never reach 100%; a near-100% threshold left every
+     * wagon stuck on "loading" forever. 85% captures the real completion band
+     * while still leaving clearly part-filled wagons as "loading".
+     */
+    private const float LOADED_THRESHOLD_RATIO = 0.85;
+
     /**
      * @param  Wagon  $wagon  must have pcc_weight_mt and is_unfit available
      * @param  RakeWagonLoading|null  $loading  the per-wagon loading row, if any
@@ -46,8 +55,7 @@ final class WagonStatusResolver
             return LiveWagonStatus::Overload;
         }
 
-        // 0.5 MT tolerance: a wagon at 99% of pcc is "loaded" for ops display purposes.
-        if ($pcc > 0 && $loaded >= ($pcc - 0.5)) {
+        if ($pcc > 0 && $loaded >= ($pcc * self::LOADED_THRESHOLD_RATIO)) {
             return LiveWagonStatus::Loaded;
         }
 
