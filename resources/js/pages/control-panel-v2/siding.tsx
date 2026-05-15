@@ -7,7 +7,7 @@ import {
     Package,
     Train as TrainIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AlertsFeed } from '@/components/control-room/AlertsFeed';
 import { LoaderTrucks } from '@/components/control-room/LoaderTrucks';
@@ -23,11 +23,17 @@ import type {
 import { AlertToast, type ToastItem } from '@/components/control-panel-v2/AlertToast';
 import { ConfettiBurst } from '@/components/control-panel-v2/ConfettiBurst';
 import {
+    deriveReplayWagons,
+    nextUnfilledWagonId,
+} from '@/components/control-panel-v2/deriveReplayWagons';
+import {
     EventTickerMarquee,
     type TickerEvent,
 } from '@/components/control-panel-v2/EventTickerMarquee';
 import { PersistentHeader } from '@/components/control-panel-v2/PersistentHeader';
+import { ReplayControls } from '@/components/control-panel-v2/ReplayControls';
 import { ThroughputSparkline } from '@/components/control-panel-v2/ThroughputSparkline';
+import { useReplayState } from '@/components/control-panel-v2/useReplayState';
 import { WagonDrawer } from '@/components/control-panel-v2/WagonDrawer';
 import { WagonTrainV2 } from '@/components/control-panel-v2/WagonTrainV2';
 import { useControlRoomBroadcast } from '@/hooks/use-control-room-broadcast';
@@ -54,8 +60,26 @@ export default function ControlPanelV2Siding({
     const [sparklinePoints, setSparklinePoints] = useState<
         { ts: number; cumulativeMt: number }[]
     >([]);
+    const replay = useReplayState();
     const dismissToast = (id: string) =>
         setToasts((prev) => prev.filter((t) => t.id !== id));
+
+    const displayWagons = useMemo(() => {
+        if (!rakeData) return [];
+        if (!replay.isActive || replay.events.length === 0) {
+            return rakeData.wagons;
+        }
+        return deriveReplayWagons(
+            rakeData.wagons,
+            replay.events,
+            replay.virtualTimeMs,
+        );
+    }, [rakeData, replay.isActive, replay.events, replay.virtualTimeMs]);
+
+    const displayBulldozerWagonId = useMemo(() => {
+        if (!rakeData) return null;
+        return nextUnfilledWagonId(displayWagons);
+    }, [rakeData, displayWagons]);
 
     const percent = rakeData?.loading_progress.percent ?? 0;
     useEffect(() => {
@@ -68,12 +92,12 @@ export default function ControlPanelV2Siding({
     }, [percent, rakeData]);
 
     useEffect(() => {
-        if (!autoRefresh) return;
+        if (!autoRefresh || replay.isActive) return;
         const id = window.setInterval(() => {
             router.reload({ only: ['rakeData', 'server_time'] });
         }, 30_000);
         return () => window.clearInterval(id);
-    }, [autoRefresh]);
+    }, [autoRefresh, replay.isActive]);
 
     useControlRoomBroadcast(subscribable_sidings, {
         onLoadriteEvent: (_sidingId, payload) => {
@@ -107,7 +131,11 @@ export default function ControlPanelV2Siding({
                 });
             }
 
-            if (autoRefresh && payload.event_type === 'Short Total') {
+            if (
+                autoRefresh &&
+                !replay.isActive &&
+                payload.event_type === 'Short Total'
+            ) {
                 router.reload({ only: ['rakeData', 'server_time'] });
             }
         },
@@ -123,7 +151,7 @@ export default function ControlPanelV2Siding({
                     ...prev.slice(0, 4),
                 ]);
             }
-            if (autoRefresh) {
+            if (autoRefresh && !replay.isActive) {
                 router.reload({ only: ['rakeData', 'server_time'] });
             }
         },
@@ -136,17 +164,6 @@ export default function ControlPanelV2Siding({
     };
 
     const lastEventAt = rakeData?.last_event_at ?? null;
-
-    const bulldozerWagonId = (() => {
-        if (!rakeData) return null;
-        const sorted = [...rakeData.wagons].sort(
-            (a, b) => a.wagon_sequence - b.wagon_sequence,
-        );
-        const next = sorted.find(
-            (w) => (w.loaded_mt ?? 0) === 0 && w.status !== 'unfit',
-        );
-        return next?.wagon_id ?? null;
-    })();
 
     return (
         <AppLayout>
@@ -213,14 +230,21 @@ export default function ControlPanelV2Siding({
                                 <LegendBar />
                             </div>
                             <WagonTrainV2
-                                wagons={rakeData.wagons}
-                                bulldozerWagonId={bulldozerWagonId}
+                                wagons={displayWagons}
+                                bulldozerWagonId={displayBulldozerWagonId}
                                 pulseEventId={pulseEventId}
                                 entryKey={rakeData.rake.id}
                                 showHeatTrail
                                 size="full"
                                 onWagonClick={setSelectedWagon}
                             />
+
+                            <div className="mt-3">
+                                <ReplayControls
+                                    replay={replay}
+                                    onLoad={() => replay.load(rakeData.rake.id)}
+                                />
+                            </div>
                         </section>
 
                         <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">

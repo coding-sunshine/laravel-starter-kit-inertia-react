@@ -70,6 +70,42 @@ final class ControlPanelV2Controller extends Controller
     }
 
     /**
+     * Return every Loadrite event for a rake ordered chronologically.
+     * Powers the time-scrubber replay on /control-panel-2/{siding}.
+     */
+    public function rakeReplay(Request $request, Rake $rake): JsonResponse
+    {
+        $rake->loadMissing('siding:id');
+
+        if ($rake->siding_id === null || ! $this->userCanSeeSiding($request->user(), (int) $rake->siding_id)) {
+            throw new AccessDeniedHttpException('You do not have access to this rake.');
+        }
+
+        $events = DB::table('loadrite_events')
+            ->where('rake_id', $rake->id)
+            ->orderBy('event_time')
+            ->orderBy('id')
+            ->get([
+                'event_id',
+                'event_type',
+                'weight_mt',
+                'event_time',
+                'wagon_id',
+                'wagon_sequence',
+                'operator',
+                'scale_id',
+            ]);
+
+        return response()->json([
+            'rake_id' => (int) $rake->id,
+            'wagon_count' => (int) ($rake->wagon_count ?? 0),
+            'first_event_at' => $events->first()->event_time ?? null,
+            'last_event_at' => $events->last()->event_time ?? null,
+            'events' => $events,
+        ]);
+    }
+
+    /**
      * Return the chronological Loadrite event timeline for a single wagon.
      * Powers the wagon-click drawer on /control-panel-2/{siding}.
      */
