@@ -129,6 +129,8 @@ export function SidingCardV2({ siding, onOpen, index = 0, pulseEventId = null }:
                             wagons={siding.wagons}
                             bulldozerWagonId={bulldozerWagonId}
                             pulseEventId={pulseEventId}
+                            entryKey={siding.rake?.id ?? null}
+                            showHeatTrail
                             size="mini"
                         />
                     </div>

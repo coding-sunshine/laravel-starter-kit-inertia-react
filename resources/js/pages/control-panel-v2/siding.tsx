@@ -21,11 +21,13 @@ import type {
     WagonCard,
 } from '@/components/control-room/types';
 import { AlertToast, type ToastItem } from '@/components/control-panel-v2/AlertToast';
+import { ConfettiBurst } from '@/components/control-panel-v2/ConfettiBurst';
 import {
     EventTickerMarquee,
     type TickerEvent,
 } from '@/components/control-panel-v2/EventTickerMarquee';
 import { PersistentHeader } from '@/components/control-panel-v2/PersistentHeader';
+import { ThroughputSparkline } from '@/components/control-panel-v2/ThroughputSparkline';
 import { WagonDrawer } from '@/components/control-panel-v2/WagonDrawer';
 import { WagonTrainV2 } from '@/components/control-panel-v2/WagonTrainV2';
 import { useControlRoomBroadcast } from '@/hooks/use-control-room-broadcast';
@@ -48,8 +50,22 @@ export default function ControlPanelV2Siding({
     const [pulseEventId, setPulseEventId] = useState<string | null>(null);
     const [tickerEvents, setTickerEvents] = useState<TickerEvent[]>([]);
     const [toasts, setToasts] = useState<ToastItem[]>([]);
+    const [confettiKey, setConfettiKey] = useState<string | null>(null);
+    const [sparklinePoints, setSparklinePoints] = useState<
+        { ts: number; cumulativeMt: number }[]
+    >([]);
     const dismissToast = (id: string) =>
         setToasts((prev) => prev.filter((t) => t.id !== id));
+
+    const percent = rakeData?.loading_progress.percent ?? 0;
+    useEffect(() => {
+        if (!rakeData) return;
+        if (percent >= 100) {
+            setConfettiKey(`complete-${rakeData.rake.id}`);
+            const t = window.setTimeout(() => setConfettiKey(null), 3000);
+            return () => window.clearTimeout(t);
+        }
+    }, [percent, rakeData]);
 
     useEffect(() => {
         if (!autoRefresh) return;
@@ -78,6 +94,18 @@ export default function ControlPanelV2Siding({
             setTickerEvents((prev) =>
                 [{ id: payload.event_id, label, tone }, ...prev].slice(0, 30),
             );
+
+            if (payload.event_type === 'Short Total') {
+                setSparklinePoints((prev) => {
+                    const last = prev[prev.length - 1]?.cumulativeMt ?? 0;
+                    const next = [
+                        ...prev,
+                        { ts: Date.now(), cumulativeMt: last + payload.weight_mt },
+                    ];
+                    const cutoff = Date.now() - 60 * 60 * 1000;
+                    return next.filter((p) => p.ts >= cutoff);
+                });
+            }
 
             if (autoRefresh && payload.event_type === 'Short Total') {
                 router.reload({ only: ['rakeData', 'server_time'] });
@@ -188,6 +216,8 @@ export default function ControlPanelV2Siding({
                                 wagons={rakeData.wagons}
                                 bulldozerWagonId={bulldozerWagonId}
                                 pulseEventId={pulseEventId}
+                                entryKey={rakeData.rake.id}
+                                showHeatTrail
                                 size="full"
                                 onWagonClick={setSelectedWagon}
                             />
@@ -261,11 +291,19 @@ export default function ControlPanelV2Siding({
                             </aside>
                         </section>
 
-                        <section className="mt-4">
-                            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Live Loadrite Activity
-                            </h2>
-                            <EventTickerMarquee events={tickerEvents} />
+                        <section className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[2fr_1fr]">
+                            <div>
+                                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Live Loadrite Activity
+                                </h2>
+                                <EventTickerMarquee events={tickerEvents} />
+                            </div>
+                            <div>
+                                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Throughput (last 60 min)
+                                </h2>
+                                <ThroughputSparkline points={sparklinePoints} />
+                            </div>
                         </section>
                     </>
                 )}
@@ -277,6 +315,8 @@ export default function ControlPanelV2Siding({
                 wagon={selectedWagon}
                 onClose={() => setSelectedWagon(null)}
             />
+
+            <ConfettiBurst triggerKey={confettiKey} />
         </AppLayout>
     );
 }

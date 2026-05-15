@@ -10,6 +10,10 @@ export interface WagonTrainV2Props {
     pulseEventId?: string | null;
     onWagonClick?: (wagon: WagonCard) => void;
     size?: 'mini' | 'full';
+    /** When this key changes the locomotive replays its entry animation. */
+    entryKey?: string | number | null;
+    /** Draws a heat-trail under the wagon strip indicating MT per wagon. */
+    showHeatTrail?: boolean;
 }
 
 interface TrainDimensions {
@@ -43,6 +47,8 @@ export function WagonTrainV2({
     pulseEventId = null,
     onWagonClick,
     size = 'mini',
+    entryKey = null,
+    showHeatTrail = false,
 }: WagonTrainV2Props) {
     const reducedMotion = useReducedMotion() ?? false;
     const dim = DIM[size];
@@ -81,7 +87,25 @@ export function WagonTrainV2({
             >
                 <Rails y={dim.wagon.h + 2} width={totalWidth} />
 
-                <Locomotive x={0} height={dim.wagon.h} width={dim.loco} size={size} />
+                {showHeatTrail && (
+                    <HeatTrail
+                        wagons={sortedWagons}
+                        startX={trainStartX}
+                        wagonWidth={dim.wagon.w}
+                        wagonGap={dim.wagon.gap}
+                        baselineY={dim.wagon.h + 8}
+                        size={size}
+                    />
+                )}
+
+                <Locomotive
+                    x={0}
+                    height={dim.wagon.h}
+                    width={dim.loco}
+                    size={size}
+                    entryKey={entryKey}
+                    reducedMotion={reducedMotion}
+                />
 
                 {sortedWagons.map((wagon, idx) => {
                     const x = trainStartX + idx * (dim.wagon.w + dim.wagon.gap);
@@ -134,11 +158,15 @@ function Locomotive({
     height,
     width,
     size,
+    entryKey,
+    reducedMotion,
 }: {
     x: number;
     height: number;
     width: number;
     size: 'mini' | 'full';
+    entryKey: string | number | null;
+    reducedMotion: boolean;
 }) {
     const compact = size === 'mini';
     const bodyY = compact ? 4 : 8;
@@ -149,8 +177,46 @@ function Locomotive({
     const stackW = compact ? 5 : 10;
     const stackH = compact ? 4 : 10;
 
+    const slideTransition = reducedMotion
+        ? { duration: 0 }
+        : { type: 'spring' as const, stiffness: 90, damping: 18 };
+
     return (
-        <g transform={`translate(${x}, 0)`} aria-hidden>
+        <motion.g
+            key={entryKey ?? 'static-loco'}
+            transform={`translate(${x}, 0)`}
+            initial={reducedMotion ? false : { x: -width - 40, opacity: 0 }}
+            animate={{ x, opacity: 1 }}
+            transition={slideTransition}
+            aria-hidden
+        >
+            <AnimatePresence>
+                {!reducedMotion &&
+                    entryKey != null &&
+                    [0, 1, 2].map((i) => (
+                        <motion.circle
+                            key={`puff-${entryKey}-${i}`}
+                            cx={stackW + 4 + stackW / 2}
+                            cy={bodyY - stackH - 2}
+                            r={2 + i}
+                            className="fill-slate-400"
+                            initial={{ opacity: 0.7, y: 0, x: 0, scale: 0.4 }}
+                            animate={{
+                                opacity: 0,
+                                y: -18 - i * 6,
+                                x: -4 - i * 3,
+                                scale: 1 + i * 0.4,
+                            }}
+                            exit={{ opacity: 0 }}
+                            transition={{
+                                duration: 1.2 + i * 0.2,
+                                delay: i * 0.2,
+                                ease: 'easeOut',
+                            }}
+                        />
+                    ))}
+            </AnimatePresence>
+
             <rect
                 x={stackW + 2}
                 y={bodyY - stackH}
@@ -191,6 +257,61 @@ function Locomotive({
             )}
             <circle cx={wheelR + 4} cy={wheelY} r={wheelR} className="fill-slate-900" />
             <circle cx={width - noseW - wheelR - 2} cy={wheelY} r={wheelR} className="fill-slate-900" />
+        </motion.g>
+    );
+}
+
+function HeatTrail({
+    wagons,
+    startX,
+    wagonWidth,
+    wagonGap,
+    baselineY,
+    size,
+}: {
+    wagons: WagonCard[];
+    startX: number;
+    wagonWidth: number;
+    wagonGap: number;
+    baselineY: number;
+    size: 'mini' | 'full';
+}) {
+    const bandHeight = size === 'mini' ? 4 : 8;
+    const maxCc = wagons.reduce((acc, w) => Math.max(acc, w.cc_mt ?? 0), 0) || 1;
+
+    return (
+        <g aria-hidden>
+            {wagons.map((w, idx) => {
+                const loaded = w.loaded_mt ?? 0;
+                const pct = Math.max(0, Math.min(1, loaded / maxCc));
+                const color =
+                    pct === 0
+                        ? '#E2E8F0'
+                        : pct > 1.02
+                          ? '#EF4444'
+                          : pct >= 0.95
+                            ? '#10B981'
+                            : pct >= 0.6
+                              ? '#34D399'
+                              : pct >= 0.3
+                                ? '#FCD34D'
+                                : '#F59E0B';
+                const x = startX + idx * (wagonWidth + wagonGap);
+                return (
+                    <motion.rect
+                        key={w.wagon_id}
+                        x={x}
+                        y={baselineY}
+                        width={wagonWidth}
+                        height={bandHeight}
+                        rx={1}
+                        fill={color}
+                        initial={false}
+                        animate={{ fill: color, opacity: 0.3 + 0.7 * pct }}
+                        transition={{ duration: 0.4 }}
+                    />
+                );
+            })}
         </g>
     );
 }
