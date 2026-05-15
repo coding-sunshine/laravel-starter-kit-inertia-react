@@ -229,6 +229,34 @@ final class MobileDashboardController extends Controller
     }
 
     /**
+     * RR upload coverage (rakes with vs without RR), same payload as web siding overview deferred prop `penaltyControlRrCoverage`.
+     * Date window matches dashboard filters (`period` / `from` / `to`, siding scope): {@see ExecutiveDashboardController::buildPenaltyControlRrCoverage}.
+     */
+    public function rrUploadCoverage(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(
+            $user->can('bypass-permissions') || $user->hasPermissionTo('dashboard.widgets.siding_overview_rr_rake_coverage'),
+            403,
+        );
+
+        $resolved = $this->filters->resolve($request);
+
+        return response()->json([
+            'filters' => $this->serializeFilters($resolved),
+            'data' => [
+                'penaltyControlRrCoverage' => $this->dashboard->buildPenaltyControlRrCoverage(
+                    $resolved['filteredSidingIds'],
+                    $resolved['from'],
+                    $resolved['to'],
+                ),
+            ],
+        ]);
+    }
+
+    /**
      * Split siding performance series (rakes vs penalty) with optional `sp_rakes_*` / `sp_penalty_*` overrides.
      * Same query contract and JSON body as web `GET /dashboard/siding-performance-metrics`.
      */

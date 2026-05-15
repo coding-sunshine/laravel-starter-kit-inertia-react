@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-05-11 (mobile dashboard rake-wise performance list/detail API)
+**Last Updated**: 2026-05-14 (mobile dashboard RR upload coverage API)
 
 ## Closure
 
@@ -53,6 +53,7 @@ This document lists all available routes in the application.
 | GET | `help/{helpArticle:slug}` | help.show | web |
 | POST | `help/{helpArticle:slug}/rate` | help.rate | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
+| GET | `dashboard/executive-overview/export` | dashboard.executive-overview.export | web, auth, verified |
 | GET | `dashboard/siding-performance-metrics` | dashboard.siding-performance-metrics | web, auth, verified |
 | GET | `profile/export-pdf` | profile.export-pdf | web, auth, verified |
 | GET, POST, PUT, PATCH, DELETE | `settings` | settings | web, auth |
@@ -663,11 +664,12 @@ Parses multipart `pdf`; returns rake/e-demand preview JSON (same shape as web `r
 
 **Controller**: `App\Http\Controllers\Api\Dashboard\MobileDashboardController`
 
-Management dashboard JSON for native clients (`/api/v1/dashboard/*`). See [Dashboard rake performance (API)](./dashboard-rake-performance.md), [Mobile rake performance rakes API](./mobile-rake-performance-rakes-api.md) (list + detail only), [Mobile loader overload API](./mobile-loader-overload-api.md), and [ExecutiveDashboardController](../backend/controllers/executivedashboardcontroller.md).
+Management dashboard JSON for native clients (`/api/v1/dashboard/*`). See [Dashboard rake performance (API)](./dashboard-rake-performance.md), [Mobile rake performance rakes API](./mobile-rake-performance-rakes-api.md) (list + detail only), [Mobile loader overload API](./mobile-loader-overload-api.md), [Mobile dashboard RR upload coverage](./mobile-dashboard-rr-upload-coverage-api.md), and [ExecutiveDashboardController](../backend/controllers/executivedashboardcontroller.md).
 
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
 | GET | `api/v1/dashboard/siding-performance-metrics` | api.v1.dashboard.siding-performance-metrics | api, throttle:60,1, auth:sanctum, feature:api_access |
+| GET | `api/v1/dashboard/rr-upload-coverage` | api.v1.dashboard.rr-upload-coverage | api, throttle:60,1, auth:sanctum, feature:api_access |
 | GET | `api/v1/dashboard/rake-performance/rakes` | api.v1.dashboard.rake-performance.rakes.index | api, throttle:60,1, auth:sanctum, feature:api_access |
 | GET | `api/v1/dashboard/rake-performance/rakes/{rake}` | api.v1.dashboard.rake-performance.rakes.show | api, throttle:60,1, auth:sanctum, feature:api_access |
 | GET | `api/v1/dashboard/rake-performance` | api.v1.dashboard.rake-performance | api, throttle:60,1, auth:sanctum, feature:api_access |
@@ -677,7 +679,7 @@ Management dashboard JSON for native clients (`/api/v1/dashboard/*`). See [Dashb
 | GET | `api/v1/dashboard/loader-overload/operators/show` | api.v1.dashboard.loader-overload.operators.show | api, throttle:60,1, auth:sanctum, feature:api_access |
 | GET | `api/v1/dashboard/loader-overload` | api.v1.dashboard.loader-overload | api, throttle:60,1, auth:sanctum, feature:api_access |
 
-`siding-performance-metrics` delegates to web `ExecutiveDashboardController::sidingPerformanceMetrics` (same contract as `dashboard.siding-performance-metrics`). `rake-performance/rakes` delegates to `rakePerformanceList` (same as web list). `rake-performance/rakes/{rake}` uses `rakePerformanceDetailForApi` (same **`data`** shape as web detail; not date/filter-scoped like web `rakePerformanceDetail`). Legacy `rake-performance` returns the full `buildRakePerformance()` array (deprecated for large scopes). **`loader-overload/loaders`** and related routes use `LoaderOverloadMetricsService` with the same JSON as web `LoaderOverloadWebController`; legacy **`loader-overload`** returns `loaderOverloadTrends` only (deprecated for UI parity).
+`siding-performance-metrics` delegates to web `ExecutiveDashboardController::sidingPerformanceMetrics` (same contract as `dashboard.siding-performance-metrics`). **`rr-upload-coverage`** returns `data.penaltyControlRrCoverage` from `ExecutiveDashboardController::buildPenaltyControlRrCoverage()` (dashboard date range + siding filters), authorized with `dashboard.widgets.siding_overview_rr_rake_coverage` (same widget as web siding overview RR chart). Full filters, response, and errors: [mobile-dashboard-rr-upload-coverage-api.md](./mobile-dashboard-rr-upload-coverage-api.md). `rake-performance/rakes` delegates to `rakePerformanceList` (same as web list). `rake-performance/rakes/{rake}` uses `rakePerformanceDetailForApi` (same **`data`** shape as web detail; not date/filter-scoped like web `rakePerformanceDetail`). Legacy `rake-performance` returns the full `buildRakePerformance()` array (deprecated for large scopes). **`loader-overload/loaders`** and related routes use `LoaderOverloadMetricsService` with the same JSON as web `LoaderOverloadWebController`; legacy **`loader-overload`** returns `loaderOverloadTrends` only (deprecated for UI parity).
 
 ## Impersonation (filament-impersonate)
 

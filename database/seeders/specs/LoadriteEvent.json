@@ -1,0 +1,122 @@
+{
+    "model": "LoadriteEvent",
+    "table": "loadrite_events",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "event_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_sequence": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "event_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "event_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "operator": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "scale_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "product": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "gps_lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "gps_lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "user_data1": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "user_data2": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "user_data3": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "raw_payload": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "wagon": {
+            "type": "belongsTo",
+            "model": "Wagon"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

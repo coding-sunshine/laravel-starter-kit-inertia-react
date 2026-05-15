@@ -138,7 +138,7 @@ export function ExecutiveOverview({
                                                     />
                                                 </p>
                                                 <p className="text-[11px] leading-none font-medium whitespace-nowrap text-gray-500">
-                                                    E-Demand Raised
+                                                    E-Demand Available
                                                 </p>
                                                 <p className="text-[11px] leading-none font-medium whitespace-nowrap text-gray-500">
                                                     Rakes Loadable

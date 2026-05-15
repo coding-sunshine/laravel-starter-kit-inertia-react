@@ -6,6 +6,7 @@ import type {
     PenaltyRow,
     WagonRow,
 } from '@/components/RR/types';
+import { wagonRowOverloadDisplay } from '@/lib/rr-wagon-display';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -212,33 +213,49 @@ function buildWagonsData(doc: RrDocument): WagonRow[] {
             | Wagon[]
             | undefined;
     if (snapshotWagons && snapshotWagons.length > 0) {
-        return snapshotWagons.map((w, index) => ({
-            sequence: w.wagon_sequence ?? index + 1,
-            wagonNumber: w.wagon_number ?? '-',
-            wagonType: w.wagon_type ?? '-',
-            pccWeight: String(w.pcc_weight_mt ?? '-'),
-            loadedWeight: String(w.loaded_weight_mt ?? '-'),
-            permissibleWeight: String(w.permissible_weight_mt ?? '-'),
-            overloadWeight: String(w.overload_weight_mt ?? '0'),
-            status:
-                Number(w.overload_weight_mt) > 0 ? 'Overload' : 'Loaded',
-        }));
+        return snapshotWagons.map((w, index) => {
+            const { overloadWeight, status } = wagonRowOverloadDisplay({
+                pccRaw: w.pcc_weight_mt,
+                loadedRaw: w.loaded_weight_mt,
+                permissibleRaw: w.permissible_weight_mt,
+                storedOverloadRaw: w.overload_weight_mt,
+            });
+
+            return {
+                sequence: w.wagon_sequence ?? index + 1,
+                wagonNumber: w.wagon_number ?? '-',
+                wagonType: w.wagon_type ?? '-',
+                pccWeight: String(w.pcc_weight_mt ?? '-'),
+                loadedWeight: String(w.loaded_weight_mt ?? '-'),
+                permissibleWeight: String(w.permissible_weight_mt ?? '-'),
+                overloadWeight,
+                status,
+            };
+        });
     }
 
     // 2) Fallback: rake wagons (operational view)
     const rakeWagons = doc.rake?.wagons ?? [];
     if (rakeWagons.length > 0) {
-        return rakeWagons.map((w) => ({
-            sequence: w.wagon_sequence,
-            wagonNumber: w.wagon_number ?? '-',
-            wagonType: w.wagon_type ?? '-',
-            pccWeight: String(w.pcc_weight_mt ?? '-'),
-            loadedWeight: String(w.loaded_weight_mt ?? '-'),
-            permissibleWeight: String(w.permissible_weight_mt ?? '-'),
-            overloadWeight: String(w.overload_weight_mt ?? '0'),
-            status:
-                Number(w.overload_weight_mt) > 0 ? 'Overload' : 'Loaded',
-        }));
+        return rakeWagons.map((w) => {
+            const { overloadWeight, status } = wagonRowOverloadDisplay({
+                pccRaw: w.pcc_weight_mt,
+                loadedRaw: w.loaded_weight_mt,
+                permissibleRaw: w.permissible_weight_mt,
+                storedOverloadRaw: w.overload_weight_mt,
+            });
+
+            return {
+                sequence: w.wagon_sequence,
+                wagonNumber: w.wagon_number ?? '-',
+                wagonType: w.wagon_type ?? '-',
+                pccWeight: String(w.pcc_weight_mt ?? '-'),
+                loadedWeight: String(w.loaded_weight_mt ?? '-'),
+                permissibleWeight: String(w.permissible_weight_mt ?? '-'),
+                overloadWeight,
+                status,
+            };
+        });
     }
 
     // 3) Legacy: wagons embedded in rr_details
@@ -246,16 +263,30 @@ function buildWagonsData(doc: RrDocument): WagonRow[] {
     const legacyWagons =
         (rrDetails?.wagons as Record<string, unknown>[] | null) ?? [];
 
-    return legacyWagons.map((w, i) => ({
-        sequence: i + 1,
-        wagonNumber: (w.wagon_number ?? w.wagonNumber ?? '-') as string,
-        wagonType: (w.wagon_type ?? w.wagonType ?? '-') as string,
-        pccWeight: String(w.cc_mt ?? w.chargeable_mt ?? '-'),
-        loadedWeight: String(w.actual_mt ?? w.gross_mt ?? '-'),
-        permissibleWeight: String(w.permissible_mt ?? '-'),
-        overloadWeight: String(w.over_weight_mt ?? '-'),
-        status: (w.over_weight_mt as number) > 0 ? 'Overload' : 'Loaded',
-    }));
+    return legacyWagons.map((w, i) => {
+        const cc =
+            w.cc_mt ??
+            w.ccMt ??
+            w.chargeable_mt ??
+            (w.chargeableMt as unknown);
+        const { overloadWeight, status } = wagonRowOverloadDisplay({
+            pccRaw: cc,
+            loadedRaw: w.actual_mt ?? w.actualMt ?? w.gross_mt ?? w.grossMt,
+            permissibleRaw: w.permissible_mt ?? w.permissibleMt,
+            storedOverloadRaw: w.over_weight_mt ?? w.overWeightMt,
+        });
+
+        return {
+            sequence: i + 1,
+            wagonNumber: (w.wagon_number ?? w.wagonNumber ?? '-') as string,
+            wagonType: (w.wagon_type ?? w.wagonType ?? '-') as string,
+            pccWeight: String(w.cc_mt ?? w.chargeable_mt ?? '-'),
+            loadedWeight: String(w.actual_mt ?? w.gross_mt ?? '-'),
+            permissibleWeight: String(w.permissible_mt ?? '-'),
+            overloadWeight,
+            status,
+        };
+    });
 }
 
 /** Charges stored on this RR document only (`rr_charges` + parsed PDF legacy), not rake ledger rows. */

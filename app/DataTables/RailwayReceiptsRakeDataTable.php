@@ -176,7 +176,9 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
     public static function tableAllowedFilters(): array
     {
         return [
-            AllowedFilter::custom('rake_number', new OperatorFilter('text')),
+            AllowedFilter::callback('rake_number', function (Builder $query, mixed $value): void {
+                (new OperatorFilter('text'))($query, $value, 'rake_serial_number');
+            }),
             AllowedFilter::custom('loading_date', new OperatorFilter('date')),
             AllowedFilter::callback('siding_code', function (Builder $query, mixed $value): void {
                 self::applySidingIdFilter($query, $value);

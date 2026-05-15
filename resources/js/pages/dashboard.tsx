@@ -76,6 +76,7 @@ import {
     CheckCircle,
     ChevronDown,
     ChevronUp,
+    Download,
     Factory,
     Filter,
     Flame,
@@ -1674,6 +1675,7 @@ export function ExecutiveYesterdaySection({
     viewMode,
     onViewModeChange,
     showViewToggle = false,
+    exportReportHref = null,
     penaltyBySiding = [],
     powerPlantDispatch = [],
     sidingStocks = {},
@@ -1685,6 +1687,8 @@ export function ExecutiveYesterdaySection({
     viewMode: 'table' | 'charts';
     onViewModeChange?: (mode: 'table' | 'charts') => void;
     showViewToggle?: boolean;
+    /** Same-origin GET URL including query string; opens in a new tab to download `.xlsx`. */
+    exportReportHref?: string | null;
     penaltyBySiding?: PenaltyBySidingPoint[];
     powerPlantDispatch?: PowerPlantDispatchItem[];
     sidingStocks?: Record<number, SidingStock>;
@@ -2789,7 +2793,6 @@ export function ExecutiveYesterdaySection({
                     </div>
                 </div>
             ) : null}
-            {dispatchPowerPlantBand}
         </div>
     );
 
@@ -3061,7 +3064,6 @@ export function ExecutiveYesterdaySection({
     if (viewMode === 'table' && !tableAllowed) {
         return (
             <div className="space-y-4">
-                {dispatchPowerPlantBand}
                 <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
                     No executive table widgets are enabled for your account.
                 </div>
@@ -3117,8 +3119,26 @@ export function ExecutiveYesterdaySection({
 
     return (
         <div className="space-y-4">
-            {viewToggle && (
-                <div className="flex items-center justify-end px-1">
+            {(viewToggle ||
+                (viewMode === 'table' && exportReportHref)) && (
+                <div className="flex flex-wrap items-center justify-end gap-2 px-1">
+                    {viewMode === 'table' && exportReportHref ? (
+                        <Button variant="outline" size="sm" asChild>
+                            <a
+                                href={exportReportHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <Download
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                                <span className="ml-1.5">
+                                    Export report
+                                </span>
+                            </a>
+                        </Button>
+                    ) : null}
                     {viewToggle}
                 </div>
             )}
@@ -6843,6 +6863,60 @@ export default function Dashboard() {
     const powerPlantDispatch = dataProps.powerPlantDispatch ?? [];
     const executiveYesterday = dataProps.executiveYesterday;
 
+    const executiveOverviewExportHref = useMemo((): string | null => {
+        const roles = props.auth?.roles ?? [];
+        const isSuperAdmin =
+            roles.includes('super-admin') || roles.includes('super_admin');
+        if (
+            !isSuperAdmin ||
+            !executiveYesterday ||
+            !executiveYesterdayTableAllowed
+        ) {
+            return null;
+        }
+        const cr = executiveYesterday.customRanges;
+        const params = buildDashboardGetParams({
+            overrides: {
+                section: 'executive-overview',
+                executive_yesterday_date: executiveYesterday.anchorDate,
+                executive_road_from: cr.roadDispatch.from,
+                executive_road_to: cr.roadDispatch.to,
+                executive_rail_from: cr.railDispatch.from,
+                executive_rail_to: cr.railDispatch.to,
+                executive_ob_from: cr.obProduction.from,
+                executive_ob_to: cr.obProduction.to,
+                executive_coal_from: cr.coalProduction.from,
+                executive_coal_to: cr.coalProduction.to,
+            },
+            filters,
+            currentSection: 'executive-overview',
+            allSidingIds,
+            resolvedPeriod: filters.period,
+            resolvedFrom: filters.from,
+            resolvedTo: filters.to,
+        });
+
+        const qs = new URLSearchParams();
+        for (const [key, value] of Object.entries(params)) {
+            if (value === undefined || value === null) {
+                continue;
+            }
+            qs.set(key, String(value));
+        }
+
+        const dashPath =
+            dashboard().url.split('?')[0] || dashboard().url;
+        const base = `${dashPath.replace(/\/$/, '')}/executive-overview/export`;
+
+        return `${base}?${qs.toString()}`;
+    }, [
+        props.auth?.roles,
+        executiveYesterday,
+        executiveYesterdayTableAllowed,
+        filters,
+        allSidingIds,
+    ]);
+
     const filteredSidings = useMemo(() => {
         if (
             filters.siding_ids.length === 0 ||
@@ -7220,6 +7294,9 @@ export default function Dashboard() {
                                                             }
                                                             canWidget={
                                                                 canWidget
+                                                            }
+                                                            exportReportHref={
+                                                                executiveOverviewExportHref
                                                             }
                                                             dispatchSummaryAside={
                                                                 canWidget(

@@ -211,7 +211,9 @@ final class RakeDataTable extends AbstractDataTable
     public static function tableAllowedFilters(): array
     {
         return [
-            AllowedFilter::custom('rake_number', new OperatorFilter('text')),
+            AllowedFilter::callback('rake_number', function (Builder $query, mixed $value): void {
+                (new OperatorFilter('text'))($query, $value, 'rake_serial_number');
+            }),
             AllowedFilter::custom('loading_date', new OperatorFilter('date')),
             // Legacy bookmarked URLs may still send filter[state]; column/filter UI removed.
             AllowedFilter::callback('state', function (Builder $_query, mixed $_value): void {
