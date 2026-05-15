@@ -10,5 +10,11 @@ final class ControlPanelV2Feature
 {
     use WithFeatureResolver;
 
-    public bool $defaultValue = false;
+    /**
+     * On by default. The "Control Panel v2" nav item is additionally gated by
+     * the sections.live_monitor.view permission, so this exposes v2 to exactly
+     * the same audience as the legacy Control Room. Restrict further via a
+     * Feature Segment in the Filament Feature Flags UI if needed.
+     */
+    public bool $defaultValue = true;
 }
