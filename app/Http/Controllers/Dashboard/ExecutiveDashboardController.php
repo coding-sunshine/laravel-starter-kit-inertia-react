@@ -1569,7 +1569,12 @@ final class ExecutiveDashboardController extends Controller
     {
         $periodKeys = ['today', 'yesterday', 'month', 'last_month', 'fy'];
         $periods = [];
-        $stockAddedSql = "status = 'completed' and exists (select 1 from stock_ledgers where stock_ledgers.daily_vehicle_entry_id = daily_vehicle_entries.id)";
+        // A trip counts as "stock added" once it is completed AND has at least
+        // one stock_ledgers row. Resolved via a LEFT JOIN against the distinct
+        // set of stock-ledger entry ids (sl.daily_vehicle_entry_id IS NOT NULL)
+        // instead of a per-row correlated EXISTS, which sequentially scanned
+        // stock_ledgers for every daily_vehicle_entries row.
+        $stockAddedSql = "daily_vehicle_entries.status = 'completed' and sl.daily_vehicle_entry_id is not null";
 
         $sidings = $sidingIds === []
             ? collect()
@@ -1586,17 +1591,29 @@ final class ExecutiveDashboardController extends Controller
             $aggregatesBySiding = collect();
 
             if ($sidingIds !== []) {
+                $stockLedgerEntryIds = DB::table('stock_ledgers')
+                    ->select('daily_vehicle_entry_id')
+                    ->whereNotNull('daily_vehicle_entry_id')
+                    ->distinct();
+
                 $aggregatesBySiding = DailyVehicleEntry::query()
-                    ->whereIn('siding_id', $sidingIds)
-                    ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
-                    ->whereBetween('entry_date', [$fromDate, $toDate])
-                    ->groupBy('siding_id')
+                    ->whereIn('daily_vehicle_entries.siding_id', $sidingIds)
+                    ->where('daily_vehicle_entries.entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+                    ->whereBetween('daily_vehicle_entries.entry_date', [$fromDate, $toDate])
+                    ->leftJoinSub(
+                        $stockLedgerEntryIds,
+                        'sl',
+                        'sl.daily_vehicle_entry_id',
+                        '=',
+                        'daily_vehicle_entries.id',
+                    )
+                    ->groupBy('daily_vehicle_entries.siding_id')
                     ->selectRaw(
-                        'siding_id,
+                        'daily_vehicle_entries.siding_id as siding_id,
                         count(*) as total_trips,
                         sum(case when '.$stockAddedSql.' then 1 else 0 end) as stock_added_trips,
-                        sum(case when '.$stockAddedSql.' then coalesce(net_wt, 0) else 0 end) as stock_added_mt,
-                        sum(case when not ('.$stockAddedSql.') then coalesce(gross_wt, 0) else 0 end) as pending_mt',
+                        sum(case when '.$stockAddedSql.' then coalesce(daily_vehicle_entries.net_wt, 0) else 0 end) as stock_added_mt,
+                        sum(case when not ('.$stockAddedSql.') then coalesce(daily_vehicle_entries.gross_wt, 0) else 0 end) as pending_mt',
                     )
                     ->get()
                     ->keyBy('siding_id');
