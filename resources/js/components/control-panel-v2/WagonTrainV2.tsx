@@ -353,9 +353,11 @@ function WagonNode({ wagon, x, dim, size, reducedMotion, onClick }: WagonNodePro
         }
     };
 
+    // Tween, not spring: a spring undershoots below 0 mid-animation and SVG
+    // rejects a negative <rect height>. Tween stays strictly within [0, target].
     const fillTransition = reducedMotion
         ? { duration: 0 }
-        : { type: 'spring' as const, stiffness: 140, damping: 18 };
+        : { type: 'tween' as const, duration: 0.45, ease: 'easeOut' as const };
 
     return (
         <g

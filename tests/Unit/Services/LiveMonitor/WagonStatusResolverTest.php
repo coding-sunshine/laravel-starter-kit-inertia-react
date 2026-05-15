@@ -70,6 +70,23 @@ test('load within tolerance of pcc resolves to Loaded', function (): void {
         ->toBe(LiveWagonStatus::Loaded);
 });
 
+test('load at the realistic completion band (>=85% of pcc) resolves to Loaded', function (): void {
+    // Real Loadrite-completed wagons land 89-99% of pcc, never 100%.
+    $wagon = makeWagon(['pcc_weight_mt' => 70]);
+    $loading = makeLoading($wagon, 62.0); // 88.6%
+
+    expect((new WagonStatusResolver)->resolve($wagon, $loading))
+        ->toBe(LiveWagonStatus::Loaded);
+});
+
+test('load below 85% of pcc still resolves to Loading', function (): void {
+    $wagon = makeWagon(['pcc_weight_mt' => 70]);
+    $loading = makeLoading($wagon, 57.0); // 81.4%
+
+    expect((new WagonStatusResolver)->resolve($wagon, $loading))
+        ->toBe(LiveWagonStatus::Loading);
+});
+
 test('load exceeding pcc resolves to Overload', function (): void {
     $wagon = makeWagon(['pcc_weight_mt' => 65]);
     $loading = makeLoading($wagon, 67.5);
