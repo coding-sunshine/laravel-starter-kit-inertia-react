@@ -10,7 +10,7 @@ import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/s
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
-import { Filter, Pencil, Truck, CarFront } from 'lucide-react';
+import { Filter, Pencil, Trash2, Truck, CarFront } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { type BreadcrumbItem } from '@/types';
 
@@ -65,26 +65,20 @@ interface PaginatedWorkorders {
     links: { url: string | null; label: string; active: boolean }[];
 }
 
-interface TransporterWorkorderRow {
-    siding_id: number;
-    siding_name: string | null;
-    transport_name: string | null;
-    wo_no: string | null;
-    wo_no_2: string | null;
+interface TransportRegistrationRow {
+    id: number;
+    siding_id: number | null;
+    work_order_no_1: string | null;
+    work_order_no_2: string | null;
     work_order_date: string | null;
-    issued_date: string | null;
-    proprietor_name: string | null;
-    address: string | null;
-    mobile_no_1: string | null;
-    mobile_no_2: string | null;
-    owner_type: string | null;
-    pan_no: string | null;
-    gst_no: string | null;
-    vehicle_count: number;
+    transporter_name: string | null;
+    /** Omitted or true = active when older payloads omit the flag. */
+    is_active?: boolean | null;
+    siding?: Siding | null;
 }
 
-interface PaginatedTransporterWorkorders {
-    data: TransporterWorkorderRow[];
+interface PaginatedTransportRegistrations {
+    data: TransportRegistrationRow[];
     current_page: number;
     last_page: number;
     per_page: number;
@@ -92,8 +86,16 @@ interface PaginatedTransporterWorkorders {
     links: { url: string | null; label: string; active: boolean }[];
 }
 
+interface TransportRegistrationPermissions {
+    canCreate: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
+}
+
 interface Filters {
     view?: 'vehicles' | 'transporters';
+    /** Pagination (not sent when applying fresh filters unless > 1). */
+    page?: string | number;
     /** May be string or number from the server query string / PHP. */
     siding_id?: string | number;
     vehicle_no?: string;
@@ -122,7 +124,8 @@ interface Filters {
 interface Props {
     view: 'vehicles' | 'transporters';
     vehicleWorkorders: PaginatedWorkorders | null;
-    transporterWorkorders: PaginatedTransporterWorkorders | null;
+    transportWorkOrderRegistrations: PaginatedTransportRegistrations | null;
+    transportRegistrationPermissions: TransportRegistrationPermissions;
     sidings: Siding[];
     /** Distinct transporter names for dropdown; omitted only if page props are stale. */
     transportNames?: string[];
@@ -178,7 +181,7 @@ function appendVehicleFilterParams(params: URLSearchParams, f: Filters): void {
     }
 }
 
-/** Transporter tab / grouped transporter XLSX export. */
+/** Transporter tab list + export URL query; scoped to transport_work_order_registrations only. */
 function appendTransporterFilterParams(params: URLSearchParams, f: Filters): void {
     if (f.siding_id !== undefined && f.siding_id !== '') {
         params.set('siding_id', String(f.siding_id));
@@ -195,12 +198,6 @@ function appendTransporterFilterParams(params: URLSearchParams, f: Filters): voi
     if (f.work_order_date) {
         params.set('work_order_date', f.work_order_date);
     }
-    if (f.issued_date) {
-        params.set('issued_date', f.issued_date);
-    }
-    if (f.proprietor_name?.trim()) {
-        params.set('proprietor_name', f.proprietor_name.trim());
-    }
     if (f.address?.trim()) {
         params.set('address', f.address.trim());
     }
@@ -210,20 +207,15 @@ function appendTransporterFilterParams(params: URLSearchParams, f: Filters): voi
     if (f.mobile_no_2?.trim()) {
         params.set('mobile_no_2', f.mobile_no_2.trim());
     }
-    if (f.owner_type?.trim()) {
-        params.set('owner_type', f.owner_type.trim());
-    }
     if (f.pan_no?.trim()) {
         params.set('pan_no', f.pan_no.trim());
     }
     if (f.gst_no?.trim()) {
         params.set('gst_no', f.gst_no.trim());
     }
-    if (f.min_vehicles !== undefined && f.min_vehicles !== '') {
-        params.set('min_vehicles', String(f.min_vehicles));
-    }
-    if (f.max_vehicles !== undefined && f.max_vehicles !== '') {
-        params.set('max_vehicles', String(f.max_vehicles));
+    const pageNum = f.page !== undefined && f.page !== '' ? Number(f.page) : 1;
+    if (Number.isFinite(pageNum) && pageNum > 1) {
+        params.set('page', String(pageNum));
     }
 }
 
@@ -243,18 +235,6 @@ function filtersToRouterParams(view: 'vehicles' | 'transporters', f: Filters): R
     return params;
 }
 
-function transporterRowKey(row: TransporterWorkorderRow, index: number): string {
-    return [
-        row.siding_id,
-        row.transport_name ?? '',
-        row.wo_no ?? '',
-        row.wo_no_2 ?? '',
-        row.work_order_date ?? '',
-        row.issued_date ?? '',
-        index,
-    ].join(':');
-}
-
 const TRANSPORT_NAME_ALL = '__all__';
 
 const PROPRIETOR_NAME_ALL = '__all_proprietor__';
@@ -262,7 +242,12 @@ const PROPRIETOR_NAME_ALL = '__all_proprietor__';
 export default function VehicleWorkordersIndex({
     view,
     vehicleWorkorders,
-    transporterWorkorders,
+    transportWorkOrderRegistrations,
+    transportRegistrationPermissions = {
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+    },
     sidings,
     transportNames = [],
     proprietorNames = [],
@@ -316,6 +301,17 @@ export default function VehicleWorkordersIndex({
         ];
     }, [proprietorNameSelectOptions]);
 
+    function deleteTransportRegistration(id: number): void {
+        if (
+            !window.confirm(
+                'Delete this transporter registration? Attached documents will be removed. This cannot be undone.',
+            )
+        ) {
+            return;
+        }
+        router.delete(`/vehicle-workorders/transport-registrations/${id}`, { preserveScroll: true });
+    }
+
     const vehicleExportHref = useMemo(() => {
         const params = new URLSearchParams();
         appendVehicleFilterParams(params, filters);
@@ -335,7 +331,9 @@ export default function VehicleWorkordersIndex({
     }, [filters]);
 
     const applyFilters = () => {
-        router.get('/vehicle-workorders', filtersToRouterParams(view, localFilters), { preserveState: true });
+        const payload = { ...localFilters };
+        delete payload.page;
+        router.get('/vehicle-workorders', filtersToRouterParams(view, payload), { preserveState: true });
     };
 
     const clearFilters = () => {
@@ -362,9 +360,19 @@ export default function VehicleWorkordersIndex({
                         description="Manage vehicle work order records from workload data"
                     />
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                        <Link href="/vehicle-workorders/create">
-                            <Button>Add Work Order</Button>
-                        </Link>
+                        {view === 'transporters' ? (
+                            transportRegistrationPermissions.canCreate ? (
+                                <Link href="/vehicle-workorders/transport-registrations/create">
+                                    <Button data-pan="vehicle-workorders-transport-registrations-create-header">
+                                        New transporter
+                                    </Button>
+                                </Link>
+                            ) : null
+                        ) : (
+                            <Link href="/vehicle-workorders/create">
+                                <Button>Add Work Order</Button>
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -626,7 +634,7 @@ export default function VehicleWorkordersIndex({
                                 </div>
                                 <div className="space-y-1">
                                     <Label htmlFor="wo_no_tr" className="text-xs">
-                                        WO no
+                                        WO no (1)
                                     </Label>
                                     <Input
                                         id="wo_no_tr"
@@ -671,43 +679,6 @@ export default function VehicleWorkordersIndex({
                                                 work_order_date: e.target.value || undefined,
                                             }))
                                         }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="issued_date_tr" className="text-xs">
-                                        Issue date
-                                    </Label>
-                                    <Input
-                                        id="issued_date_tr"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.issued_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                issued_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div
-                                    className="space-y-1"
-                                    data-pan="vehicle-workorders-filter-proprietor-name-search"
-                                >
-                                    <Label className="text-xs">Proprietor name</Label>
-                                    <SearchableSelect
-                                        options={proprietorNameSearchOptions}
-                                        value={proprietorNameSelectValue}
-                                        onValueChange={(v) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                proprietor_name: v === PROPRIETOR_NAME_ALL ? undefined : v,
-                                            }))
-                                        }
-                                        placeholder="All proprietors"
-                                        searchPlaceholder="Search proprietors..."
-                                        emptyMessage="No proprietors match your search."
-                                        className="h-9 min-h-9"
                                     />
                                 </div>
                                 <div className="space-y-1 sm:col-span-2">
@@ -759,22 +730,6 @@ export default function VehicleWorkordersIndex({
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="owner_type_tr" className="text-xs">
-                                        Owner type
-                                    </Label>
-                                    <Input
-                                        id="owner_type_tr"
-                                        className="h-9"
-                                        value={localFilters.owner_type ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                owner_type: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
                                     <Label htmlFor="pan_no_tr" className="text-xs">
                                         PAN no
                                     </Label>
@@ -806,50 +761,6 @@ export default function VehicleWorkordersIndex({
                                         }
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="min_vehicles_tr" className="text-xs">
-                                        Total vehicles (min)
-                                    </Label>
-                                    <Input
-                                        id="min_vehicles_tr"
-                                        type="number"
-                                        min={0}
-                                        className="h-9"
-                                        value={
-                                            localFilters.min_vehicles === undefined || localFilters.min_vehicles === ''
-                                                ? ''
-                                                : String(localFilters.min_vehicles)
-                                        }
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                min_vehicles: e.target.value === '' ? undefined : e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="max_vehicles_tr" className="text-xs">
-                                        Total vehicles (max)
-                                    </Label>
-                                    <Input
-                                        id="max_vehicles_tr"
-                                        type="number"
-                                        min={0}
-                                        className="h-9"
-                                        value={
-                                            localFilters.max_vehicles === undefined || localFilters.max_vehicles === ''
-                                                ? ''
-                                                : String(localFilters.max_vehicles)
-                                        }
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                max_vehicles: e.target.value === '' ? undefined : e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
                             </div>
                         )}
                         <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -874,7 +785,7 @@ export default function VehicleWorkordersIndex({
                                     className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
                                     data-pan="vehicle-workorders-export-transporters-xlsx"
                                 >
-                                    Export transporters XLSX
+                                    Export registrations XLSX
                                 </a>
                             )}
                         </div>
@@ -1029,94 +940,103 @@ export default function VehicleWorkordersIndex({
                 </Card>
                     )}
 
-                    {view === 'transporters' && transporterWorkorders && (
-                        <Card data-pan="vehicle-workorders-transporters-table">
+                    {view === 'transporters' && transportWorkOrderRegistrations && (
+                        <Card data-pan="vehicle-workorders-transport-registrations-table">
                             <CardHeader>
                                 <CardTitle>Transporters</CardTitle>
                                 <CardDescription>
-                                    {transporterWorkorders.total} transporter work order
-                                    {transporterWorkorders.total !== 1 ? 's' : ''} found
+                                    {transportWorkOrderRegistrations.total}{' '}
+                                    {transportWorkOrderRegistrations.total !== 1 ? 'records' : 'record'} from
+                                    transporter registrations
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {transporterWorkorders.data.length > 0 ? (
+                                {transportWorkOrderRegistrations.data.length > 0 ? (
                                     <div className="overflow-x-auto">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Siding name</TableHead>
-                                                    <TableHead>Transport name</TableHead>
-                                                    <TableHead>WO no</TableHead>
+                                                    <TableHead>Siding</TableHead>
+                                                    <TableHead>WO no 1</TableHead>
                                                     <TableHead>WO no 2</TableHead>
                                                     <TableHead>Work order date</TableHead>
-                                                    <TableHead>Issue date</TableHead>
-                                                    <TableHead>Proprietor name</TableHead>
-                                                    <TableHead>Address</TableHead>
-                                                    <TableHead>Mobile</TableHead>
-                                                    <TableHead>Mobile 2</TableHead>
-                                                    <TableHead>Owner type</TableHead>
-                                                    <TableHead>PAN no</TableHead>
-                                                    <TableHead>GST no</TableHead>
-                                                    <TableHead>No. of vehicles</TableHead>
+                                                    <TableHead>Transporter</TableHead>
+                                                    <TableHead className="whitespace-nowrap">Active</TableHead>
+                                                    <TableHead className="w-[88px] text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {transporterWorkorders.data.map((row, index) => (
-                                                    <TableRow key={transporterRowKey(row, index)}>
+                                                {transportWorkOrderRegistrations.data.map((row) => (
+                                                    <TableRow key={row.id}>
                                                         <TableCell className="whitespace-nowrap">
-                                                            {row.siding_name ?? '-'}
+                                                            {row.siding
+                                                                ? `${row.siding.name} (${row.siding.code})`
+                                                                : '-'}
                                                         </TableCell>
                                                         <TableCell className="whitespace-nowrap">
-                                                            {row.transport_name ?? '-'}
+                                                            {row.work_order_no_1 ?? '-'}
                                                         </TableCell>
                                                         <TableCell className="whitespace-nowrap">
-                                                            {row.wo_no ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.wo_no_2 ?? '-'}
+                                                            {row.work_order_no_2 ?? '-'}
                                                         </TableCell>
                                                         <TableCell className="whitespace-nowrap">
                                                             {formatDate(row.work_order_date)}
                                                         </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {formatDate(row.issued_date)}
+                                                        <TableCell className="max-w-[220px] truncate">
+                                                            {row.transporter_name ?? '-'}
                                                         </TableCell>
                                                         <TableCell className="whitespace-nowrap">
-                                                            {row.proprietor_name ?? '-'}
+                                                            {row.is_active === false ? (
+                                                                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                                                    Inactive
+                                                                </span>
+                                                            ) : (
+                                                                <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">
+                                                                    Active
+                                                                </span>
+                                                            )}
                                                         </TableCell>
-                                                        <TableCell
-                                                            className="max-w-[200px] truncate"
-                                                            title={row.address ?? undefined}
-                                                        >
-                                                            {row.address ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.mobile_no_1 ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.mobile_no_2 ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.owner_type ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.pan_no ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.gst_no ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap font-medium tabular-nums">
-                                                            {row.vehicle_count}
+                                                        <TableCell className="text-right whitespace-nowrap">
+                                                            <div className="flex flex-wrap justify-end gap-1">
+                                                                {transportRegistrationPermissions.canUpdate ? (
+                                                                    <Button variant="outline" size="icon-sm" asChild>
+                                                                        <Link
+                                                                            href={`/vehicle-workorders/transport-registrations/${row.id}/edit`}
+                                                                            aria-label="Edit transporter registration"
+                                                                            title="Edit"
+                                                                            data-pan="vehicle-workorders-transport-registrations-edit"
+                                                                        >
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </Link>
+                                                                    </Button>
+                                                                ) : null}
+                                                                {transportRegistrationPermissions.canDelete ? (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="icon-sm"
+                                                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                        data-pan="vehicle-workorders-transport-registrations-delete"
+                                                                        type="button"
+                                                                        aria-label="Delete transporter registration"
+                                                                        title="Delete"
+                                                                        onClick={() =>
+                                                                            deleteTransportRegistration(row.id)
+                                                                        }
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                ) : null}
+                                                            </div>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
                                         </Table>
-                                        {transporterWorkorders.last_page > 1 && (
+                                        {transportWorkOrderRegistrations.last_page > 1 ? (
                                             <div className="mt-4 flex flex-wrap gap-2">
-                                                {transporterWorkorders.links.map((link, index) => (
-                                                    <Link
-                                                        key={`${link.url ?? 'null'}-${link.label}-${index}`}
+                                        {transportWorkOrderRegistrations.links.map((link, index) => (
+                                            <Link
+                                                key={`${link.url ?? 'null'}-${link.label}-tr-${index}`}
                                                         href={link.url ?? '#'}
                                                         className={
                                                             link.active
@@ -1128,12 +1048,18 @@ export default function VehicleWorkordersIndex({
                                                     </Link>
                                                 ))}
                                             </div>
-                                        )}
+                                        ) : null}
                                     </div>
                                 ) : (
                                     <div className="rounded-lg border border-dashed p-8 text-center">
                                         <p className="text-sm text-muted-foreground">
-                                            No transporter work orders found. Try adjusting your filters.
+                                            No transporter registrations yet.{` `}
+                                            {transportRegistrationPermissions.canCreate ? (
+                                                <>
+                                                    Use <span className="font-medium">New transporter</span> to add
+                                                    one.
+                                                </>
+                                            ) : null}
                                         </p>
                                     </div>
                                 )}

@@ -42,6 +42,7 @@ final class IndexVehicleWorkorderRequest extends FormRequest
             'permit_validity_date' => ['nullable', 'date'],
             'tax_validity_date' => ['nullable', 'date'],
             'insurance_validity_date' => ['nullable', 'date'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 
@@ -71,6 +72,7 @@ final class IndexVehicleWorkorderRequest extends FormRequest
             'permit_validity_date',
             'tax_validity_date',
             'insurance_validity_date',
+            'page',
         ];
 
         $data = $this->all();

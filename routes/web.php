@@ -77,6 +77,7 @@ use App\Http\Controllers\SidingsController;
 use App\Http\Controllers\SidingSwitchController;
 use App\Http\Controllers\StockLedgerController;
 use App\Http\Controllers\TermsAcceptController;
+use App\Http\Controllers\TransportWorkOrderRegistrationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
@@ -444,6 +445,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('vehicle-workorders', [VehicleWorkorderController::class, 'index'])->name('vehicle-workorders.index');
     Route::get('vehicle-workorders/export', [VehicleWorkorderController::class, 'export'])->name('vehicle-workorders.export');
     Route::get('vehicle-workorders/export-transporters', [VehicleWorkorderController::class, 'exportTransporters'])->name('vehicle-workorders.export-transporters');
+
+    // Transport registrations (transporter master sheet; UI lives under Transporters tab)
+    Route::get('vehicle-workorders/transport-registrations/create', [TransportWorkOrderRegistrationController::class, 'create'])->name('vehicle-workorders.transport-registrations.create');
+    Route::post('vehicle-workorders/transport-registrations', [TransportWorkOrderRegistrationController::class, 'store'])->name('vehicle-workorders.transport-registrations.store');
+    Route::get('vehicle-workorders/transport-registrations/{tw_registration}/edit', [TransportWorkOrderRegistrationController::class, 'edit'])->name('vehicle-workorders.transport-registrations.edit');
+    Route::put('vehicle-workorders/transport-registrations/{tw_registration}', [TransportWorkOrderRegistrationController::class, 'update'])->name('vehicle-workorders.transport-registrations.update');
+    Route::delete('vehicle-workorders/transport-registrations/{tw_registration}/media/{media}', [TransportWorkOrderRegistrationController::class, 'destroyMedia'])->name('vehicle-workorders.transport-registrations.destroy-media')->whereNumber('media');
+    Route::delete('vehicle-workorders/transport-registrations/{tw_registration}', [TransportWorkOrderRegistrationController::class, 'destroy'])->name('vehicle-workorders.transport-registrations.destroy');
+
     Route::get('vehicle-workorders/create', [VehicleWorkorderController::class, 'create'])->name('vehicle-workorders.create');
     Route::get('vehicle-workorders/{vehicle_workorder}/edit', [VehicleWorkorderController::class, 'edit'])->name('vehicle-workorders.edit');
     Route::post('vehicle-workorders', [VehicleWorkorderController::class, 'store'])->name('vehicle-workorders.store');
