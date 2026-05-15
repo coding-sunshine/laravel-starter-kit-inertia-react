@@ -194,6 +194,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::get('control-room', [App\Http\Controllers\LiveMonitorController::class, 'index'])->name('control-room.index');
     Route::get('control-room/{rake}', [App\Http\Controllers\LiveMonitorController::class, 'show'])->name('control-room.show');
+
+    Route::get('control-panel-2', [App\Http\Controllers\ControlPanelV2Controller::class, 'index'])->name('control-panel-v2.index');
+    Route::get('control-panel-2/{siding}', [App\Http\Controllers\ControlPanelV2Controller::class, 'show'])->name('control-panel-v2.show');
     Route::get('dashboard/executive-yesterday-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'executiveYesterdayData'])
         ->name('dashboard.executive-yesterday-data');
     Route::get('dashboard/siding-performance-metrics', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'sidingPerformanceMetrics'])
