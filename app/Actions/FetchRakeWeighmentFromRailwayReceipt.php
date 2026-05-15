@@ -12,6 +12,7 @@ use App\Models\RrWagonSnapshot;
 use App\Models\Wagon;
 use App\Services\RakeWeighmentPdfImporter;
 use App\Support\DuplicateRrPdfToWeighmentStorage;
+use App\Support\RakeWeighmentNetWeightValidator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -69,11 +70,9 @@ final readonly class FetchRakeWeighmentFromRailwayReceipt
 
         $totalNetMt = round($numericSum, 2);
 
-        if ($totalNetMt <= 0.0) {
-            throw new InvalidArgumentException(
-                'RR wagon loaded weights must sum to a positive total net weight.',
-            );
-        }
+        $payload = RakeWeighmentNetWeightValidator::payloadFromRrSnapshots($snapshots, $totalNetMt);
+        RakeWeighmentNetWeightValidator::assertNonNegative($payload['totals'], $payload['wagon_rows']);
+        RakeWeighmentNetWeightValidator::assertMinimumTotalNetWeight($payload['totals']);
 
         $storedPath = '';
 

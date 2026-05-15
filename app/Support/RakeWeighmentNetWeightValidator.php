@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Models\RrWagonSnapshot;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 final class RakeWeighmentNetWeightValidator
@@ -53,6 +55,68 @@ final class RakeWeighmentNetWeightValidator
                 null,
             );
         }
+    }
+
+    /**
+     * @param  array<string, float|null>  $totals
+     */
+    public static function assertMinimumTotalNetWeight(array $totals, float $minimumMt = 1.0): void
+    {
+        $total = $totals['total_net_weight_mt'] ?? null;
+
+        if ($total === null || ! is_numeric($total)) {
+            throw new InvalidArgumentException(
+                'Total net weight is required for railway receipt weighment.',
+            );
+        }
+
+        if ((float) $total < $minimumMt) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'Total net weight must be at least %.2f MT (got %s MT).',
+                    $minimumMt,
+                    $total,
+                ),
+            );
+        }
+    }
+
+    /**
+     * @param  Collection<int, RrWagonSnapshot>  $snapshots
+     * @return array{totals: array<string, float|null>, wagon_rows: array<int, array<string, mixed>>}
+     */
+    public static function payloadFromRrSnapshots(Collection $snapshots, float $totalNetMt): array
+    {
+        $wagonRows = [];
+
+        foreach ($snapshots as $snapshot) {
+            $tareMt = self::numericOrNull($snapshot->tare_weight_mt);
+
+            $wagonRows[] = [
+                'wagon_number' => $snapshot->wagon_number,
+                'net_weight_mt' => self::numericOrNull($snapshot->loaded_weight_mt),
+                'cc_capacity_mt' => self::numericOrNull($snapshot->pcc_weight_mt),
+                'actual_gross_mt' => self::numericOrNull($snapshot->gross_weight_mt),
+                'tare_weight_mt' => $tareMt,
+                'printed_tare_mt' => $tareMt,
+            ];
+        }
+
+        return [
+            'totals' => [
+                'total_net_weight_mt' => $totalNetMt,
+            ],
+            'wagon_rows' => $wagonRows,
+        ];
+    }
+
+    private static function numericOrNull(mixed $value): ?float
+    {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
+            return null;
+        }
+
+        return (float) $value;
     }
 
     private static function assertFieldNonNegative(mixed $value, string $label, ?string $wagonNumber): void
