@@ -78,7 +78,9 @@ final class Weighment extends Model implements HasMedia
 
     public function rakeWagonWeighments(): HasMany
     {
-        return $this->hasMany(RakeWagonWeighment::class, 'rake_weighment_id');
+        return $this->hasMany(RakeWagonWeighment::class, 'rake_weighment_id')
+            ->orderBy('wagon_sequence')
+            ->orderBy('id');
     }
 
     public function createdBy(): BelongsTo

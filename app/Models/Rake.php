@@ -140,7 +140,9 @@ final class Rake extends Model
      */
     public function rakeWagonWeighments(): HasManyThrough
     {
-        return $this->hasManyThrough(RakeWagonWeighment::class, RakeWeighment::class);
+        return $this->hasManyThrough(RakeWagonWeighment::class, RakeWeighment::class)
+            ->orderBy('rake_wagon_weighments.wagon_sequence')
+            ->orderBy('rake_wagon_weighments.id');
     }
 
     public function txr(): HasOne

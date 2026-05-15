@@ -482,6 +482,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Weighments (historical rake weighment imports)
     Route::get('weighments', [WeighmentsController::class, 'index'])->name('weighments.index');
     Route::get('weighments/{weighment}', [WeighmentsController::class, 'show'])->whereNumber('weighment')->name('weighments.show');
+    Route::post('weighments/{weighment}/recalculate-overload', [WeighmentsController::class, 'recalculateOverload'])->whereNumber('weighment')->name('weighments.recalculate-overload');
     Route::get('weighments/{weighment}/download', [WeighmentsController::class, 'download'])->whereNumber('weighment')->name('weighments.download');
     Route::delete('weighments/{weighment}', [WeighmentsController::class, 'destroy'])->whereNumber('weighment')->name('weighments.destroy');
     Route::post('weighments/import', [WeighmentsController::class, 'store'])->name('weighments.import');

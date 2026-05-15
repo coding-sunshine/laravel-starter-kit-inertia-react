@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { Download, Trash2 } from 'lucide-react';
 
 function formatDateTime(iso: string | null | undefined): string {
@@ -122,7 +122,17 @@ export default function WeighmentShow({
     weighment,
     can_delete_weighment = false,
 }: Props) {
-    const { flash } = usePage<{ flash?: { success?: string } }>().props;
+    const page = usePage<{
+        flash?: { success?: string };
+        auth?: { roles?: string[] };
+    }>().props;
+    const { flash, auth } = page;
+
+    const roles = auth?.roles ?? [];
+    const isSuperAdmin =
+        roles.includes('super-admin') || roles.includes('super_admin');
+
+    const recalculateOverloadForm = useForm({});
 
     const canDeleteRakeWeighment = useCan([
         'sections.rakes.update',
@@ -307,8 +317,32 @@ export default function WeighmentShow({
                 </div>
 
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
                         <CardTitle>Rake wagon weighments</CardTitle>
+                        {isSuperAdmin ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                                disabled={recalculateOverloadForm.processing}
+                                data-pan="weighments-show-recalculate-overload"
+                                onClick={() => {
+                                    if (
+                                        !window.confirm(
+                                            'Recalculate wagon overload from net weight minus carrying capacity (CC)? Rows missing net or CC will get overload 0. Under-load values will not change.',
+                                        )
+                                    ) {
+                                        return;
+                                    }
+                                    recalculateOverloadForm.post(
+                                        `/weighments/${weighment.id}/recalculate-overload`,
+                                        { preserveScroll: true },
+                                    );
+                                }}
+                            >
+                                Recalculate overload
+                            </Button>
+                        ) : null}
                     </CardHeader>
                     <CardContent>
                         {rows.length === 0 ? (

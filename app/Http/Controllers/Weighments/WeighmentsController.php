@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Weighments;
 
 use App\Actions\DeleteStandaloneHistoricalWeighmentAction;
 use App\Actions\FetchRakeWeighmentFromRailwayReceipt;
+use App\Actions\RecalculateRakeWeighmentOverload;
 use App\Actions\RecordManualRakeWeighment;
 use App\DataTables\WeighmentsRakeDataTable;
 use App\Http\Controllers\Controller;
@@ -59,6 +60,24 @@ final class WeighmentsController extends Controller
             'weighment' => $weighment,
             'can_delete_weighment' => $canDeleteWeighment,
         ]);
+    }
+
+    public function recalculateOverload(
+        Request $request,
+        Weighment $weighment,
+        RecalculateRakeWeighmentOverload $recalculate,
+    ): RedirectResponse {
+        abort_unless($request->user()?->isSuperAdmin(), 403);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $this->assertUserCanAccessWeighmentRakeSiding($user, $weighment);
+
+        $recalculate->handle($weighment);
+
+        return to_route('weighments.show', $weighment)
+            ->with('success', 'Overload values recalculated from net weight and carrying capacity.');
     }
 
     public function store(

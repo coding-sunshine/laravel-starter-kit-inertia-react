@@ -64,6 +64,8 @@ final class RakeWeighment extends Model
 
     public function rakeWagonWeighments(): HasMany
     {
-        return $this->hasMany(RakeWagonWeighment::class);
+        return $this->hasMany(RakeWagonWeighment::class)
+            ->orderBy('wagon_sequence')
+            ->orderBy('id');
     }
 }
