@@ -37,7 +37,7 @@ final class IndentController extends Controller
         $query->with([
             'siding:id,name,code',
             'rake' => static fn ($q) => $q
-                ->select(['id', 'indent_id', 'rake_number', 'rake_serial_number'])
+                ->select(['id', 'indent_id', 'rake_number', 'rake_serial_number', 'loading_date'])
                 ->with(['rakeWeighments:id,rake_id']),
         ]);
 
@@ -89,6 +89,7 @@ final class IndentController extends Controller
                 'id' => $row->id,
                 'rake_number' => $row->rake_number,
                 'rake_serial_number' => $row->rake_serial_number,
+                'loading_date' => $row->rake_loading_date,
                 'siding_code' => $row->siding_code,
                 'indent_number' => $row->indent_number,
                 'siding' => $row->siding,

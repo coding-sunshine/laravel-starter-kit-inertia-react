@@ -11,6 +11,7 @@ use App\Models\Rake;
 use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
 use App\Models\Wagon;
+use App\Support\RakeWeighmentNetWeightValidator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -196,6 +197,8 @@ final readonly class RakeWeighmentPdfImporter
         int $userId,
         ?RakeWeighment $mergeInto = null,
     ): RakeWeighment {
+        RakeWeighmentNetWeightValidator::assertNonNegative($totals, $wagonRows);
+
         $attemptNo = 1;
         $isMerge = $mergeInto !== null;
 

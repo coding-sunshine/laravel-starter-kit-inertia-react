@@ -12,6 +12,7 @@ use App\Models\RrWagonSnapshot;
 use App\Models\Wagon;
 use App\Services\RakeWeighmentPdfImporter;
 use App\Support\DuplicateRrPdfToWeighmentStorage;
+use App\Support\RakeWeighmentNetWeightValidator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -69,11 +70,9 @@ final readonly class FetchRakeWeighmentFromRailwayReceipt
 
         $totalNetMt = round($numericSum, 2);
 
-        if ($totalNetMt <= 0.0) {
-            throw new InvalidArgumentException(
-                'RR wagon loaded weights must sum to a positive total net weight.',
-            );
-        }
+        $payload = RakeWeighmentNetWeightValidator::payloadFromRrSnapshots($snapshots, $totalNetMt);
+        RakeWeighmentNetWeightValidator::assertNonNegative($payload['totals'], $payload['wagon_rows']);
+        RakeWeighmentNetWeightValidator::assertMinimumTotalNetWeight($payload['totals']);
 
         $storedPath = '';
 
@@ -188,8 +187,8 @@ final readonly class FetchRakeWeighmentFromRailwayReceipt
 
                     $ccMt = null;
 
-                    if ($snapshot->pcc_weight_mt !== null && $snapshot->pcc_weight_mt !== '' && is_numeric($snapshot->pcc_weight_mt)) {
-                        $ccMt = round((float) $snapshot->pcc_weight_mt, 2);
+                    if ($snapshot->permissible_weight_mt !== null && $snapshot->permissible_weight_mt !== '' && is_numeric($snapshot->permissible_weight_mt)) {
+                        $ccMt = round((float) $snapshot->permissible_weight_mt, 2);
                     }
 
                     $printedTareMt = null;
@@ -345,8 +344,8 @@ final readonly class FetchRakeWeighmentFromRailwayReceipt
 
             $pccMt = null;
 
-            if ($snapshot->pcc_weight_mt !== null && $snapshot->pcc_weight_mt !== '' && is_numeric($snapshot->pcc_weight_mt)) {
-                $pccMt = round((float) $snapshot->pcc_weight_mt, 2);
+            if ($snapshot->permissible_weight_mt !== null && $snapshot->permissible_weight_mt !== '' && is_numeric($snapshot->permissible_weight_mt)) {
+                $pccMt = round((float) $snapshot->permissible_weight_mt, 2);
             }
 
             $wagonType = $snapshot->wagon_type;
