@@ -24,7 +24,7 @@ final class PollLoadriteJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 25;
+    public int $timeout = 120;
 
     public function __construct(private readonly int $sidingId) {}
 
@@ -49,29 +49,50 @@ final class PollLoadriteJob implements ShouldQueue
             $toLocalTime = now()->format('Y-m-d H:i:s');
 
             $connector = $tokenManager->getConnector($this->sidingId);
-            $response = $connector->send(new GetLoadingEventsRequest($site, $fromLocalTime, $toLocalTime));
 
-            if (! $response->successful()) {
-                Log::warning('Loadrite poll failed', [
-                    'siding_id' => $this->sidingId,
-                    'status' => $response->status(),
-                ]);
-
-                return;
-            }
-
-            $body = $response->json() ?? [];
-            $events = $body['data'] ?? [];
+            // Walk all pages in the time window. Without pagination the cursor
+            // got stuck whenever > 150 events accrued (API page size) and the
+            // poll would replay page 1 forever.
             $lastTimestamp = $fromLocalTime;
+            $page = 1;
+            $maxPages = 50;
 
-            foreach ($events as $event) {
-                SyncLoadriteWeightJob::dispatch($event, $this->sidingId)->onQueue('loadrite-sync');
-                EvaluateOverloadAlertJob::dispatch($event, $this->sidingId)->onQueue('loadrite-alerts');
+            do {
+                $response = $connector->send(new GetLoadingEventsRequest($site, $fromLocalTime, $toLocalTime, $page));
 
-                if (isset($event['Time']) && $event['Time'] > $lastTimestamp) {
-                    $lastTimestamp = $event['Time'];
+                if (! $response->successful()) {
+                    Log::warning('Loadrite poll failed', [
+                        'siding_id' => $this->sidingId,
+                        'page' => $page,
+                        'status' => $response->status(),
+                    ]);
+
+                    return;
                 }
-            }
+
+                $body = $response->json() ?? [];
+                $events = $body['data'] ?? [];
+                $totalPages = (int) ($body['metaData']['numberOfPages'] ?? 1);
+
+                if (empty($events)) {
+                    break;
+                }
+
+                foreach ($events as $event) {
+                    SyncLoadriteWeightJob::dispatch($event, $this->sidingId)
+                        ->onConnection('redis')
+                        ->onQueue('loadrite-sync');
+                    EvaluateOverloadAlertJob::dispatch($event, $this->sidingId)
+                        ->onConnection('redis')
+                        ->onQueue('loadrite-alerts');
+
+                    if (isset($event['Time']) && $event['Time'] > $lastTimestamp) {
+                        $lastTimestamp = $event['Time'];
+                    }
+                }
+
+                $page++;
+            } while ($page <= $totalPages && $page <= $maxPages);
 
             Cache::put($cursorKey, $lastTimestamp, now()->addHours(24));
         } finally {
@@ -79,6 +100,7 @@ final class PollLoadriteJob implements ShouldQueue
         }
 
         self::dispatch($this->sidingId)
+            ->onConnection('redis')
             ->onQueue('loadrite-poll')
             ->delay(now()->addSeconds(30));
     }

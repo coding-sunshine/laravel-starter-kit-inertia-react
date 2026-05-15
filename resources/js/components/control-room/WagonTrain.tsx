@@ -139,23 +139,13 @@ function WagonNode({
         }
     };
 
-    const pulseAnimation =
-        isOverload && !reducedMotion ? { scale: [1, 1.04, 1] } : { scale: 1 };
-
-    const pulseTransition =
-        isOverload && !reducedMotion
-            ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' as const }
-            : { duration: 0 };
-
+    // Removed motion.g pulse + motion.rect fill animation. Both inline-animate
+    // objects re-fired every parent re-render (TimeStatusDonut ticks the parent
+    // every 1s) — wagons sat mid-tween at 45% opacity and flickered. Static
+    // SVG renders the correct colour every render.
     return (
-        <motion.g
+        <g
             transform={`translate(${x}, 0)`}
-            animate={pulseAnimation}
-            transition={pulseTransition}
-            style={{
-                transformOrigin: `${x + width / 2}px ${height / 2}px`,
-                cursor: isClickable ? 'pointer' : 'default',
-            }}
             tabIndex={isClickable ? 0 : -1}
             role={isClickable ? 'button' : undefined}
             aria-label={
@@ -165,6 +155,7 @@ function WagonNode({
             }
             onKeyDown={handleKeyDown}
             onClick={isClickable ? () => onClick?.(wagon) : undefined}
+            style={{ cursor: isClickable ? 'pointer' : 'default' }}
             className="outline-none focus-visible:[&>rect]:stroke-sky-500"
         >
             {/* coal pile (full mode only) */}
@@ -179,19 +170,14 @@ function WagonNode({
                 />
             )}
 
-            {/* wagon body — color tween via motion */}
-            <motion.rect
+            {/* wagon body */}
+            <rect
                 x={0}
                 y={bodyY}
                 width={width}
                 height={bodyHeight}
                 rx={3}
-                animate={{ fill: wagon.status_color }}
-                transition={
-                    reducedMotion
-                        ? { duration: 0 }
-                        : { duration: 0.35, ease: 'easeOut' }
-                }
+                fill={wagon.status_color}
                 stroke={isActiveLoader ? '#0f172a' : 'transparent'}
                 strokeWidth={isActiveLoader ? 1.5 : 0}
                 className="dark:[stroke:theme(colors.slate.100)]"
@@ -243,7 +229,7 @@ function WagonNode({
                 r={wheelR}
                 className="fill-slate-900 dark:fill-slate-200"
             />
-        </motion.g>
+        </g>
     );
 }
 

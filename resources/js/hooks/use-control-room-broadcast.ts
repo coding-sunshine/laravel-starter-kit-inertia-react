@@ -26,6 +26,18 @@ interface RakeStatusUpdatedPayload {
     state: string;
 }
 
+export interface LoadriteEventPayload {
+    rake_id: number | null;
+    wagon_id: number | null;
+    wagon_sequence: number | null;
+    event_id: string;
+    event_type: string;
+    weight_mt: number;
+    event_time: string | null;
+    operator: string | null;
+    scale_id: string | null;
+}
+
 export interface ControlRoomEvents {
     onWagonLoadingUpdated?: (
         sidingId: number,
@@ -38,6 +50,10 @@ export interface ControlRoomEvents {
     onRakeStatusUpdated?: (
         sidingId: number,
         payload: RakeStatusUpdatedPayload,
+    ) => void;
+    onLoadriteEvent?: (
+        sidingId: number,
+        payload: LoadriteEventPayload,
     ) => void;
 }
 
@@ -112,6 +128,13 @@ export function useControlRoomBroadcast(
                     );
                 },
             );
+            channel.listen(
+                '.loadrite.event',
+                (payload: LoadriteEventPayload) => {
+                    stamp(sidingId);
+                    handlersRef.current.onLoadriteEvent?.(sidingId, payload);
+                },
+            );
 
             channels.push({ id: sidingId, channel });
         }
@@ -121,6 +144,7 @@ export function useControlRoomBroadcast(
                 channel.stopListening('.wagon-loading.updated');
                 channel.stopListening('.wagon.weight.updated');
                 channel.stopListening('.rake-status.updated');
+                channel.stopListening('.loadrite.event');
                 window.Echo?.leaveChannel(`siding.${id}`);
             }
         };

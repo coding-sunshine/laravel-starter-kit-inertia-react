@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\Wagon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Builds the JSON payload consumed by the Control Room (Live Monitor) Inertia pages.
@@ -135,7 +136,13 @@ final readonly class LiveMonitorDataBuilder
 
         $alerts = $this->recentAlerts(siding_id: $rake->siding_id, rake_id: $rake->id, limit: 8);
 
-        $lastEventAt = $loadings->max('updated_at')?->toIso8601String();
+        // Prefer the last LOADRITE event time so the stale indicator and idle
+        // detection use the true last loading activity, not a reattribution
+        // timestamp on wagon_loading.updated_at.
+        $lastLoadriteAt = DB::table('loadrite_events')
+            ->where('rake_id', $rake->id)
+            ->max('event_time');
+        $lastEventAt = ($lastLoadriteAt ? CarbonImmutable::parse($lastLoadriteAt) : ($loadings->max('updated_at') ?? null))?->toIso8601String();
 
         return [
             'rake' => [
@@ -191,16 +198,36 @@ final readonly class LiveMonitorDataBuilder
 
     private function activeRakeForSiding(Siding $siding): ?Rake
     {
-        $today = CarbonImmutable::today();
+        // Two-pass selection:
+        //   1) Rake with the most recent wagon_loading activity at this siding
+        //      (an actually-loaded rake operators care about).
+        //   2) Fallback: a newly placed rake with no loadings yet, so operators
+        //      still see it before the first weight arrives.
+        $withActivity = Rake::query()
+            ->where('siding_id', $siding->id)
+            ->where(function ($q) {
+                $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched', 'completed']);
+            })
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('wagon_loading')
+                    ->whereColumn('wagon_loading.rake_id', 'rakes.id')
+                    ->whereNotNull('wagon_loading.loaded_quantity_mt')
+                    ->whereRaw('wagon_loading.loaded_quantity_mt::numeric > 0');
+            })
+            ->orderByRaw(
+                '(SELECT MAX(updated_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id) DESC',
+            )
+            ->first();
+
+        if ($withActivity) {
+            return $withActivity;
+        }
 
         return Rake::query()
             ->where('siding_id', $siding->id)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('dispatch_time')
-                    ->orWhereDate('dispatch_time', $today);
-            })
             ->where(function ($q) {
-                $q->whereNull('state')->orWhereNotIn('state', ['cancelled']);
+                $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched', 'completed']);
             })
             ->orderByDesc('placement_time')
             ->orderByDesc('loading_date')
@@ -410,19 +437,61 @@ final readonly class LiveMonitorDataBuilder
     {
         $allowedMinutes = (int) ($rake->loading_free_minutes ?? 180);
 
-        // Prefer placement_time → loading_start_time → earliest wagon_loading.created_at as anchor.
-        $anchorAt = $rake->placement_time
-            ?? $rake->loading_start_time
-            ?? $loadings->min('created_at');
+        // "Loading time" = duration of actual loading activity.
+        //
+        // Priority for the [anchor, end] window:
+        //   1) Loadrite events: span between first and last bucket reading.
+        //      Most accurate when Loadrite is active.
+        //   2) Manual loading: span between first and last weight entry on
+        //      wagon_loading rows that have a recorded quantity. Uses created_at
+        //      (when the row was first written with a weight) — NOT updated_at,
+        //      which can shift on data backfills/reattributions weeks later.
+        //   3) Fallback: loading_start_time / placement_time. Only useful when
+        //      a rake is placed but loading hasn't started yet.
+        //
+        // Mixing sources (e.g. min(loadrite, wagon_loading.updated_at)) produced
+        // garbage windows like "566 hours" on rakes that actually loaded in
+        // under a day, because reattribution touched updated_at long after.
+        $loadriteRange = DB::table('loadrite_events')
+            ->where('rake_id', $rake->id)
+            ->selectRaw('MIN(event_time) as first_at, MAX(event_time) as last_at')
+            ->first();
 
-        $anchorLabel = match (true) {
-            $rake->placement_time !== null => 'placement',
-            $rake->loading_start_time !== null => 'loading_start',
-            $anchorAt !== null => 'first_loading_event',
-            default => 'unknown',
-        };
+        $firstAt = null;
+        $lastAt = null;
+        $anchorLabel = 'unknown';
 
-        if ($anchorAt === null) {
+        if ($loadriteRange && $loadriteRange->first_at) {
+            $firstAt = CarbonImmutable::parse($loadriteRange->first_at);
+            $lastAt = CarbonImmutable::parse($loadriteRange->last_at);
+            $anchorLabel = 'first_loadrite_event';
+        } else {
+            $withWeight = $loadings->filter(
+                fn ($l) => $l->loaded_quantity_mt !== null && (float) $l->loaded_quantity_mt > 0,
+            );
+            // Prefer the explicit loading_time field on wagon_loading; it's the
+            // timestamp the operator recorded for that wagon's load. Falls back
+            // to updated_at if loading_time isn't set.
+            $manualTimes = $withWeight
+                ->map(fn ($l) => $l->loading_time ?? $l->updated_at)
+                ->filter()
+                ->map(fn ($t) => CarbonImmutable::parse($t));
+            if ($manualTimes->isNotEmpty()) {
+                $firstAt = $manualTimes->min();
+                $lastAt = $manualTimes->max();
+                $anchorLabel = 'first_wagon_loading';
+            } elseif ($rake->loading_start_time) {
+                $firstAt = CarbonImmutable::parse($rake->loading_start_time);
+                $lastAt = CarbonImmutable::now();
+                $anchorLabel = 'loading_start';
+            } elseif ($rake->placement_time) {
+                $firstAt = CarbonImmutable::parse($rake->placement_time);
+                $lastAt = CarbonImmutable::now();
+                $anchorLabel = 'placement';
+            }
+        }
+
+        if ($firstAt === null) {
             return [
                 'anchor' => $anchorLabel,
                 'anchor_at' => null,
@@ -433,8 +502,12 @@ final readonly class LiveMonitorDataBuilder
             ];
         }
 
-        $end = $rake->loading_end_time ?? CarbonImmutable::now();
-        $elapsed = (int) CarbonImmutable::parse($anchorAt)->diffInMinutes($end, true);
+        // Explicit loading_end_time, if set, takes precedence over last activity.
+        if ($rake->loading_end_time) {
+            $lastAt = CarbonImmutable::parse($rake->loading_end_time);
+        }
+
+        $elapsed = (int) $firstAt->diffInMinutes($lastAt, true);
 
         $remaining = $rake->loading_end_time !== null
             ? null
@@ -446,7 +519,7 @@ final readonly class LiveMonitorDataBuilder
 
         return [
             'anchor' => $anchorLabel,
-            'anchor_at' => CarbonImmutable::parse($anchorAt)->toIso8601String(),
+            'anchor_at' => $firstAt->toIso8601String(),
             'elapsed_minutes' => $elapsed,
             'allowed_minutes' => $allowedMinutes,
             'remaining_minutes' => $remaining,

@@ -1,5 +1,4 @@
 import { Link } from '@inertiajs/react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowUpCircle, Bell, Tv, Weight } from 'lucide-react';
 
 import { KpiTile } from '@/components/control-room/KpiTile';
@@ -51,7 +50,6 @@ export function SidingOverviewCard({
     href,
     isFocused = false,
 }: SidingOverviewCardProps) {
-    const prefersReducedMotion = useReducedMotion();
     const loaded = siding.kpis?.total_loaded_mt ?? 0;
     const overload = siding.kpis?.total_overload_mt ?? 0;
     const alertsCount = siding.alerts_count ?? 0;
@@ -59,16 +57,12 @@ export function SidingOverviewCard({
         siding.loading_progress !== null &&
         siding.loading_progress !== undefined;
 
-    const animateScale = !prefersReducedMotion && isFocused ? 1.01 : 1;
-
     return (
-        <motion.div
-            animate={{ scale: animateScale }}
-            transition={{
-                duration: prefersReducedMotion ? 0 : 0.25,
-                ease: 'easeOut',
-            }}
-            className="relative"
+        <div
+            className={cn(
+                'relative transition-transform duration-200',
+                isFocused && 'scale-[1.01]',
+            )}
         >
             <Link
                 href={href}
@@ -165,7 +159,7 @@ export function SidingOverviewCard({
                 <Tv className="h-3 w-3" aria-hidden="true" />
                 TV
             </a>
-        </motion.div>
+        </div>
     );
 }
 

@@ -104,25 +104,14 @@ export function AlertsFeed({
                     </p>
                 ) : (
                     <ul className="flex flex-col">
-                        <AnimatePresence initial={false}>
-                            {visible.map((alert) => {
+                        {visible.map((alert) => {
                                 const { Icon, iconClass, bgClass } =
                                     getSeverityStyle(alert.severity);
                                 const timeLabel = formatTime(alert.created_at);
 
                                 return (
-                                    <motion.li
+                                    <li
                                         key={alert.id}
-                                        layout={!prefersReducedMotion}
-                                        initial={initial}
-                                        animate={animate}
-                                        exit={exit}
-                                        transition={{
-                                            duration: prefersReducedMotion
-                                                ? 0
-                                                : 0.25,
-                                            ease: 'easeOut',
-                                        }}
                                         className="overflow-hidden"
                                     >
                                         <div className="flex items-start gap-3 rounded-md px-3 py-2.5 hover:bg-muted/50">
@@ -157,10 +146,9 @@ export function AlertsFeed({
                                                 </span>
                                             ) : null}
                                         </div>
-                                    </motion.li>
+                                    </li>
                                 );
                             })}
-                        </AnimatePresence>
                     </ul>
                 )}
             </div>

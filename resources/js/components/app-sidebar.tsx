@@ -59,6 +59,14 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-control-room',
     },
     {
+        title: 'Control Panel v2',
+        href: '/control-panel-2',
+        icon: Radio,
+        permission: 'sections.live_monitor.view',
+        feature: 'control_panel_v2',
+        dataPan: 'nav-control-panel-v2',
+    },
+    {
         title: 'Settings',
         href: '#',
         icon: Settings,
@@ -405,9 +413,11 @@ export function AppSidebar() {
 
         // --- Group 1: Overview ---
         const overviewItems: NavItem[] = visible(
-            [byTitle('Dashboard'), byTitle('Control Room')].filter(
-                Boolean,
-            ) as NavItem[],
+            [
+                byTitle('Dashboard'),
+                byTitle('Control Room'),
+                byTitle('Control Panel v2'),
+            ].filter(Boolean) as NavItem[],
         );
 
         // --- Group 2: Loading Operations ---

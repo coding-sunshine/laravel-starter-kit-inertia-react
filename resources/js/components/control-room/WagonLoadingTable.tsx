@@ -196,22 +196,12 @@ export function WagonLoadingTable({
                                     freshIds.has(wagon.wagon_id);
 
                                 return (
-                                    <motion.tr
+                                    <tr
                                         key={wagon.wagon_id}
-                                        layout={!prefersReducedMotion}
-                                        initial={false}
-                                        animate={{
-                                            backgroundColor: isFresh
-                                                ? 'rgba(120, 113, 108, 0.18)'
-                                                : 'rgba(120, 113, 108, 0)',
-                                        }}
-                                        transition={{
-                                            duration: isFresh ? 1.5 : 0.3,
-                                            ease: 'easeOut',
-                                        }}
                                         className={cn(
                                             'border-t border-border align-middle',
                                             'hover:bg-muted/30',
+                                            isFresh && 'bg-stone-500/15',
                                         )}
                                     >
                                         <td className="px-3 py-2 font-mono text-xs">
@@ -256,7 +246,7 @@ export function WagonLoadingTable({
                                                 wagon.last_updated_at,
                                             )}
                                         </td>
-                                    </motion.tr>
+                                    </tr>
                                 );
                             })
                         )}

@@ -6,85 +6,143 @@ namespace App\Console\Commands;
 
 use App\Actions\SyncLoadriteEvent;
 use App\Models\LoadriteEvent;
-use App\Models\Wagon;
-use App\Models\WagonLoading;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 /**
- * One-time fix for events that were attributed to the wrong rake when
- * placement_time was null. Re-runs the virtual-anchor routing per event
- * and recomputes wagon_loading.loaded_quantity_mt for every affected rake/wagon.
+ * Rebuild wagon_loading.loadrite_weight_mt from Short Total events.
+ *
+ * Loadrite emits one "Short Total" event per wagon completion with that
+ * wagon's final weight (~65 MT typical). Add/Subtract events are bucket
+ * dumps and their Sequence field is a 1-10 BUCKET SLOT, not a wagon
+ * identifier (it resets per wagon). Summing Add-Subtract by wagon_sequence
+ * mixed many wagons into one slot — wrong.
+ *
+ * This command:
+ *  1. Zeros every wagon_loading.loadrite_weight_mt sourced from Loadrite
+ *     (skipping weighbridge and operator-override rows).
+ *  2. Walks Short Total events in chronological order. For each event,
+ *     resolves the active rake at that siding/time, then assigns the
+ *     event's weight to the next unfilled wagon in that rake.
+ *  3. wagon_loading.loaded_quantity_mt mirrors loadrite_weight_mt unless
+ *     an override or weighbridge value already exists.
  */
 final class LoadriteReattributeEventsCommand extends Command
 {
     protected $signature = 'loadrite:reattribute
                             {--siding= : Limit to one siding}
-                            {--dry-run : Show what would change without writing}';
+                            {--dry-run : Show counts without writing}';
 
-    protected $description = 'Re-route historical loadrite_events to the correct rake using virtual anchor and recompute wagon_loading totals.';
+    protected $description = 'Rebuild wagon_loading.loadrite_weight_mt from Short Total events.';
 
     public function handle(SyncLoadriteEvent $sync): int
     {
         $sidingFilter = $this->option('siding') ? (int) $this->option('siding') : null;
         $dryRun = (bool) $this->option('dry-run');
 
-        $touched = [];
-        $reattributed = 0;
-        $unchanged = 0;
-        $orphan = 0;
+        if (! $dryRun) {
+            $cleared = DB::table('wagon_loading')
+                ->where('weight_source', 'loadrite')
+                ->where('loadrite_override', false)
+                ->when($sidingFilter, fn ($q) => $q->whereIn('rake_id', function ($sub) use ($sidingFilter) {
+                    $sub->select('id')->from('rakes')->where('siding_id', $sidingFilter);
+                }))
+                ->update([
+                    'loadrite_weight_mt' => 0,
+                    'loaded_quantity_mt' => 0,
+                    'weight_source' => 'manual',
+                    'updated_at' => now(),
+                ]);
+            $this->info("Cleared {$cleared} wagon_loading rows of Loadrite weight.");
+        }
 
-        $query = LoadriteEvent::query()
+        // Filter out operator-error Short Totals before processing:
+        //  - weight < 30 MT = aborted / test / misfire (typical wagon ~65 MT)
+        //  - duplicates per (scale, user_data2, user_data3) within 30 min
+        //    = operator pressed button twice; keep only earliest
+        $events = LoadriteEvent::query()
+            ->where('event_type', 'Short Total')
+            ->whereRaw('weight_mt::numeric >= ?', [SyncLoadriteEvent::MIN_VALID_SHORT_TOTAL_MT])
+            ->whereNotIn('id', function ($q) use ($sidingFilter) {
+                // Sub-select: duplicates beyond the first per session window
+                $q->select('id')
+                    ->fromSub(function ($s) use ($sidingFilter) {
+                        $s->from('loadrite_events')
+                            ->selectRaw('id, ROW_NUMBER() OVER (PARTITION BY siding_id, scale_id, user_data2, user_data3 ORDER BY event_time, id) AS rn')
+                            ->where('event_type', 'Short Total')
+                            ->whereRaw('weight_mt::numeric >= ?', [SyncLoadriteEvent::MIN_VALID_SHORT_TOTAL_MT])
+                            ->when($sidingFilter, fn ($x) => $x->where('siding_id', $sidingFilter));
+                    }, 'r')
+                    ->where('rn', '>', 1);
+            })
             ->when($sidingFilter, fn ($q) => $q->where('siding_id', $sidingFilter))
+            ->orderBy('event_time')
             ->orderBy('id');
 
-        $total = $query->clone()->count();
-        $this->info(sprintf('%sScanning %d event(s)%s...', $dryRun ? '[DRY RUN] ' : '', $total, $sidingFilter ? " for siding {$sidingFilter}" : ''));
-
+        $total = $events->clone()->count();
+        $this->info(sprintf('Processing %d valid Short Total events (after filtering low-weight + duplicates)...', $total));
         $bar = $this->output->createProgressBar($total);
         $bar->start();
 
-        $query->chunkById(1000, function ($events) use ($sync, &$touched, &$reattributed, &$unchanged, &$orphan, $dryRun, $bar): void {
-            foreach ($events as $event) {
-                $eventTime = $event->event_time ? Carbon::parse($event->event_time) : null;
-                $correctRakeId = $sync->resolveRakeIdForEvent((int) $event->siding_id, $eventTime);
+        $attributed = 0;
+        $skipped = 0;
 
-                if ($correctRakeId === null) {
-                    $orphan++;
+        $events->chunkById(500, function ($chunk) use ($sync, $dryRun, &$attributed, &$skipped, $bar): void {
+            foreach ($chunk as $e) {
+                $eventTime = $e->event_time ? Carbon::parse($e->event_time) : null;
+                $rakeId = $sync->resolveRakeIdForEvent((int) $e->siding_id, $eventTime);
+
+                if ($rakeId === null) {
+                    $skipped++;
                     $bar->advance();
 
                     continue;
                 }
 
-                $changes = [];
-                if ($event->rake_id !== $correctRakeId) {
-                    $changes['rake_id'] = $correctRakeId;
+                if (! $dryRun) {
+                    $row = DB::table('wagon_loading')
+                        ->join('wagons', 'wagons.id', '=', 'wagon_loading.wagon_id')
+                        ->where('wagon_loading.rake_id', $rakeId)
+                        ->where(function ($q) {
+                            $q->whereNull('wagon_loading.loadrite_weight_mt')
+                                ->orWhereRaw('wagon_loading.loadrite_weight_mt::numeric = 0');
+                        })
+                        ->where('wagon_loading.loadrite_override', false)
+                        ->where(function ($q) {
+                            $q->whereNull('wagon_loading.weight_source')
+                                ->orWhere('wagon_loading.weight_source', '!=', 'weighbridge');
+                        })
+                        ->orderBy('wagons.wagon_sequence')
+                        ->select('wagon_loading.id as wl_id', 'wagons.id as wagon_id', 'wagons.wagon_sequence', 'wagons.pcc_weight_mt', 'wagon_loading.cc_capacity_mt', 'wagon_loading.remarks')
+                        ->first();
 
-                    $wagonId = Wagon::query()
-                        ->where('rake_id', $correctRakeId)
-                        ->where('wagon_sequence', $event->wagon_sequence)
-                        ->value('id');
+                    if ($row) {
+                        $weight = (float) $e->weight_mt;
+                        DB::table('wagon_loading')
+                            ->where('id', $row->wl_id)
+                            ->update([
+                                'loadrite_weight_mt' => $weight,
+                                'loaded_quantity_mt' => $weight,
+                                'weight_source' => 'loadrite',
+                                'loadrite_last_synced_at' => now(),
+                                'remarks' => mb_trim(($row->remarks ? $row->remarks.' ' : '').'[loadrite:'.$e->event_id.']'),
+                                'updated_at' => now(),
+                            ]);
 
-                    if ($wagonId !== null) {
-                        $changes['wagon_id'] = $wagonId;
-                    }
-                }
+                        // Update the event row with rake_id / wagon_id for audit
+                        DB::table('loadrite_events')->where('id', $e->id)->update([
+                            'rake_id' => $rakeId,
+                            'wagon_id' => $row->wagon_id,
+                            'wagon_sequence' => $row->wagon_sequence,
+                        ]);
 
-                if ($changes !== []) {
-                    $reattributed++;
-                    // Capture OLD rake_id BEFORE update so its wagon_loading
-                    // total also gets recomputed (drops to 0 if it no longer
-                    // owns any events for this wagon_sequence).
-                    $oldRakeId = $event->rake_id;
-                    if (! $dryRun) {
-                        $event->update($changes);
+                        $attributed++;
+                    } else {
+                        $skipped++;
                     }
-                    if ($oldRakeId !== null) {
-                        $touched[$oldRakeId.'|'.$event->wagon_sequence] = true;
-                    }
-                    $touched[$correctRakeId.'|'.$event->wagon_sequence] = true;
                 } else {
-                    $unchanged++;
+                    $attributed++;
                 }
 
                 $bar->advance();
@@ -93,58 +151,7 @@ final class LoadriteReattributeEventsCommand extends Command
 
         $bar->finish();
         $this->newLine();
-
-        $this->info(sprintf('Re-attribution: changed=%d unchanged=%d orphan=%d', $reattributed, $unchanged, $orphan));
-
-        if ($dryRun) {
-            $this->warn('Dry run — no writes performed; recompute skipped.');
-
-            return self::SUCCESS;
-        }
-
-        $this->info(sprintf('Recomputing wagon_loading totals for %d (rake, wagon_sequence) pair(s)...', count($touched)));
-
-        $recomputed = 0;
-        $bar = $this->output->createProgressBar(count($touched));
-        $bar->start();
-
-        foreach (array_keys($touched) as $key) {
-            [$rakeId, $wagonSequence] = explode('|', $key);
-            $rakeId = (int) $rakeId;
-            $wagonSequence = (int) $wagonSequence;
-
-            $cumulative = (float) LoadriteEvent::query()
-                ->where('rake_id', $rakeId)
-                ->where('wagon_sequence', $wagonSequence)
-                ->selectRaw("COALESCE(SUM(CASE WHEN event_type = 'Add' THEN weight_mt ELSE -weight_mt END), 0) as total")
-                ->value('total');
-
-            $wagonLoading = WagonLoading::query()
-                ->where('rake_id', $rakeId)
-                ->whereHas('wagon', fn ($q) => $q->where('wagon_sequence', $wagonSequence))
-                ->first();
-
-            if (! $wagonLoading) {
-                $bar->advance();
-
-                continue;
-            }
-
-            $updates = ['loadrite_weight_mt' => $cumulative, 'loadrite_last_synced_at' => now()];
-
-            if (! $wagonLoading->loadrite_override && $wagonLoading->weight_source !== 'weighbridge') {
-                $updates['weight_source'] = 'loadrite';
-                $updates['loaded_quantity_mt'] = $cumulative;
-            }
-
-            $wagonLoading->update($updates);
-            $recomputed++;
-            $bar->advance();
-        }
-
-        $bar->finish();
-        $this->newLine();
-        $this->info('Recomputed: '.$recomputed);
+        $this->info(sprintf('Attributed=%d skipped=%d', $attributed, $skipped));
 
         return self::SUCCESS;
     }
