@@ -143,6 +143,54 @@ final readonly class SyncLoadriteEvent
     }
 
     /**
+     * Insert a placeholder wagon_loading row for every wagon in the rake that
+     * doesn't already have one. Idempotent — safe to call before any
+     * attribution. Returns the number of new rows inserted.
+     *
+     * Public so that reattribution / one-off scripts can call it without
+     * driving a full Short Total flow.
+     */
+    public function ensureWagonLoadingRowsExist(int $rakeId): int
+    {
+        $existing = DB::table('wagon_loading')
+            ->where('rake_id', $rakeId)
+            ->pluck('wagon_id')
+            ->all();
+
+        $missing = DB::table('wagons')
+            ->where('rake_id', $rakeId)
+            ->when($existing !== [], fn ($q) => $q->whereNotIn('id', $existing))
+            ->pluck('id')
+            ->all();
+
+        if ($missing === []) {
+            return 0;
+        }
+
+        $now = now();
+        $rows = [];
+        foreach ($missing as $wagonId) {
+            $rows[] = [
+                'rake_id' => $rakeId,
+                'wagon_id' => (int) $wagonId,
+                'loaded_quantity_mt' => 0,
+                'loadrite_override' => false,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        // Chunk to keep statement size sane on big rakes.
+        $inserted = 0;
+        foreach (array_chunk($rows, 200) as $chunk) {
+            DB::table('wagon_loading')->insert($chunk);
+            $inserted += count($chunk);
+        }
+
+        return $inserted;
+    }
+
+    /**
      * Step 1 — a rake counts as "active" if it has wagon_loading activity in
      * the recent window AT the event time and its loading window is open.
      */
@@ -278,51 +326,6 @@ final readonly class SyncLoadriteEvent
             percentage: $pcc > 0 ? round(($weightMt / $pcc) * 100, 1) : 0.0,
             status: $weightMt >= $pcc && $pcc > 0 ? 'overload' : 'loaded',
         );
-    }
-
-    /**
-     * Insert a placeholder wagon_loading row for every wagon in the rake that
-     * doesn't already have one. Idempotent — safe to call before any
-     * attribution. Returns the number of new rows inserted.
-     */
-    private function ensureWagonLoadingRowsExist(int $rakeId): int
-    {
-        $existing = DB::table('wagon_loading')
-            ->where('rake_id', $rakeId)
-            ->pluck('wagon_id')
-            ->all();
-
-        $missing = DB::table('wagons')
-            ->where('rake_id', $rakeId)
-            ->when($existing !== [], fn ($q) => $q->whereNotIn('id', $existing))
-            ->pluck('id')
-            ->all();
-
-        if ($missing === []) {
-            return 0;
-        }
-
-        $now = now();
-        $rows = [];
-        foreach ($missing as $wagonId) {
-            $rows[] = [
-                'rake_id' => $rakeId,
-                'wagon_id' => (int) $wagonId,
-                'loaded_quantity_mt' => 0,
-                'loadrite_override' => false,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-
-        // Chunk to keep statement size sane on big rakes.
-        $inserted = 0;
-        foreach (array_chunk($rows, 200) as $chunk) {
-            DB::table('wagon_loading')->insert($chunk);
-            $inserted += count($chunk);
-        }
-
-        return $inserted;
     }
 
     private function resolveWagonLoading(int $sidingId, int $sequence, array $event): ?WagonLoading
