@@ -135,14 +135,17 @@ final class LoadriteReattributeEventsCommand extends Command
                         break;
                     }
 
-                    // Rake is full → close it at this event's timestamp so
-                    // the next resolveRakeIdForEvent picks a newer rake.
+                    // Rake is full → close it 1 second BEFORE this event so
+                    // the next resolveRakeIdForEvent skips it. Closing at the
+                    // exact event_time fails the resolver's `>= eventTime`
+                    // check and keeps returning the same full rake.
                     if (! in_array($rakeId, $closedDuringRetry, true)) {
+                        $closeAt = $eventTime !== null ? $eventTime->copy()->subSeconds(1) : now();
                         DB::table('rakes')
                             ->where('id', $rakeId)
                             ->whereNull('loading_end_time')
                             ->update([
-                                'loading_end_time' => $eventTime,
+                                'loading_end_time' => $closeAt,
                                 'updated_at' => now(),
                             ]);
                         $closedDuringRetry[] = $rakeId;
