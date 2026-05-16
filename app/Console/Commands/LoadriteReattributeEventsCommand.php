@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Actions\SyncLoadriteEvent;
 use App\Models\LoadriteEvent;
+use App\Services\Loadrite\LoadriteUserDataParser;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,7 @@ final class LoadriteReattributeEventsCommand extends Command
 
     protected $description = 'Rebuild wagon_loading.loadrite_weight_mt from Short Total events.';
 
-    public function handle(SyncLoadriteEvent $sync): int
+    public function handle(SyncLoadriteEvent $sync, LoadriteUserDataParser $parser): int
     {
         $sidingFilter = $this->option('siding') ? (int) $this->option('siding') : null;
         $dryRun = (bool) $this->option('dry-run');
@@ -88,9 +89,17 @@ final class LoadriteReattributeEventsCommand extends Command
         $attributed = 0;
         $skipped = 0;
 
-        $events->chunkById(500, function ($chunk) use ($sync, $dryRun, &$attributed, &$skipped, $bar): void {
+        $events->chunkById(500, function ($chunk) use ($sync, $parser, $dryRun, &$attributed, &$skipped, $bar): void {
             foreach ($chunk as $e) {
                 $eventTime = $e->event_time ? Carbon::parse($e->event_time) : null;
+
+                // The operator-keyed rake number (UserData) is the definitive
+                // signal for which rake an event belongs to — parse it and let
+                // resolveRakeIdForEvent match it to rake_serial_number.
+                $payload = is_array($e->raw_payload)
+                    ? $e->raw_payload
+                    : (json_decode((string) $e->raw_payload, true) ?: []);
+                $rakeNumber = $parser->parse($payload)['rake_number'];
 
                 // When attribution fails because the resolved rake is already
                 // full, close that rake (stamp loading_end_time = event_time)
@@ -100,7 +109,7 @@ final class LoadriteReattributeEventsCommand extends Command
                 $row = null;
                 $closedDuringRetry = [];
                 for ($attempt = 0; $attempt < 30; $attempt++) {
-                    $rakeId = $sync->resolveRakeIdForEvent((int) $e->siding_id, $eventTime);
+                    $rakeId = $sync->resolveRakeIdForEvent((int) $e->siding_id, $eventTime, $rakeNumber);
                     if ($rakeId === null) {
                         break;
                     }
