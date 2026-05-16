@@ -8,6 +8,8 @@ use App\Events\LoadriteEventBroadcast;
 use App\Events\WagonWeightUpdated;
 use App\Models\Rake;
 use App\Models\WagonLoading;
+use App\Services\Loadrite\LoadriteUserDataParser;
+use App\Services\Loadrite\WagonCapacityResolver;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -33,6 +35,11 @@ final readonly class SyncLoadriteEvent
      *  rake is treated as abandoned and the resolver looks for a newer one. */
     public const ACTIVE_WINDOW_HOURS = 6;
 
+    public function __construct(
+        private LoadriteUserDataParser $userData,
+        private WagonCapacityResolver $capacity,
+    ) {}
+
     public function handle(array $event, int $sidingId): bool
     {
         $eventId = $this->stringField($event, 'Id');
@@ -46,10 +53,18 @@ final readonly class SyncLoadriteEvent
 
         $weightMt = (float) $weightRaw;
 
-        // Resolve which rake at this siding owns this event's loading window.
+        // Operators key the rake number, wagon number and wagon type into the
+        // event's UserData fields. Parse them up front — they drive both rake
+        // attribution and wagon identity.
+        $parsed = $this->userData->parse($event);
+
+        // Resolve which rake at this siding owns this event. The operator-keyed
+        // rake number (UserData) is the most reliable signal; the time window
+        // is the fallback.
         $rakeId = $this->resolveRakeIdForEvent(
             $sidingId,
             isset($event['Time']) ? Carbon::parse($event['Time']) : null,
+            $parsed['rake_number'],
         );
 
         $inserted = $this->upsertEvent($event, $sidingId, $rakeId, null, $sequence, $eventType, $weightMt);
@@ -96,7 +111,13 @@ final readonly class SyncLoadriteEvent
                 return true;
             }
 
-            $this->attributeShortTotal($rakeId, $weightMt, $eventId);
+            $this->attributeShortTotal(
+                $rakeId,
+                $weightMt,
+                $eventId,
+                $parsed['wagon_number'],
+                $parsed['wagon_type'],
+            );
         }
 
         return true;
@@ -106,19 +127,25 @@ final readonly class SyncLoadriteEvent
      * Locate the rake this event should attach to.
      *
      * Strategy (in order):
+     *  0. Operator-keyed rake number — if the event's UserData carries a rake
+     *     number, match it directly against rakes.rake_serial_number at this
+     *     siding. This is the operator telling us exactly which rake it is.
      *  1. Active rake — any rake at this siding with wagon_loading activity
      *     within ACTIVE_WINDOW_HOURS of the event AND an open loading window
-     *     at event_time. This is the normal in-progress case.
-     *  2. Newest pending rake — when no rake is "active" (e.g. operators just
-     *     created a fresh rake but no weights have landed yet), pick the most
-     *     recent pending/placed rake at the siding by id. The rake does NOT
-     *     need wagon_loading rows yet — attributeShortTotal creates them on
-     *     the fly.
-     *  3. Safety fallback — newest non-completed rake at the siding, even if
-     *     stale. Prevents an event being dropped if nothing else matches.
+     *     at event_time.
+     *  2. Newest pending rake — when no rake is "active", pick the most recent
+     *     pending/placed rake at the siding by id.
+     *  3. Safety fallback — newest non-completed rake at the siding.
      */
-    public function resolveRakeIdForEvent(int $sidingId, ?Carbon $eventTime): ?int
+    public function resolveRakeIdForEvent(int $sidingId, ?Carbon $eventTime, ?string $rakeNumber = null): ?int
     {
+        if ($rakeNumber !== null && $rakeNumber !== '') {
+            $bySerial = $this->findRakeBySerialNumber($sidingId, $rakeNumber);
+            if ($bySerial !== null) {
+                return $bySerial;
+            }
+        }
+
         if ($eventTime !== null) {
             $activeId = $this->findActiveRakeId($sidingId, $eventTime);
             if ($activeId !== null) {
@@ -191,6 +218,26 @@ final readonly class SyncLoadriteEvent
         }
 
         return $inserted;
+    }
+
+    /**
+     * Step 0 — match the operator-keyed rake number against
+     * rakes.rake_serial_number. rake_serial_number is the railway's rake
+     * number (what the Weighments page calls "Rake Number"). It can repeat
+     * across years, so prefer a non-completed rake at this siding, newest id.
+     */
+    private function findRakeBySerialNumber(int $sidingId, string $rakeNumber): ?int
+    {
+        $rake = Rake::query()
+            ->where('siding_id', $sidingId)
+            ->where('rake_serial_number', $rakeNumber)
+            ->where(function ($q): void {
+                $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched']);
+            })
+            ->orderByDesc('id')
+            ->first(['id']);
+
+        return $rake ? (int) $rake->id : null;
     }
 
     /**
@@ -276,9 +323,18 @@ final readonly class SyncLoadriteEvent
      * Bind a Short Total event (one completed wagon's final weight) to the next
      * unfilled wagon in the rake (lowest wagon_sequence with no loadrite weight
      * yet, no manual override, not a weighbridge entry).
+     *
+     * If the event carried a wagon number / type in its UserData, the wagon's
+     * real identity (number, type, carrying capacity) is stamped onto the
+     * wagon row, replacing the W1..W59 placeholders.
      */
-    private function attributeShortTotal(int $rakeId, float $weightMt, string $shortTotalEventId): void
-    {
+    private function attributeShortTotal(
+        int $rakeId,
+        float $weightMt,
+        string $shortTotalEventId,
+        ?string $wagonNumber = null,
+        ?string $typeAbbr = null,
+    ): void {
         // Brand-new rakes (operator created the rake + wagons but never
         // "placed" it, so no per-wagon loading rows exist yet) need their
         // wagon_loading scaffolding before we can attribute anything.
@@ -299,12 +355,15 @@ final readonly class SyncLoadriteEvent
                     ->orWhere('wagon_loading.weight_source', '!=', 'weighbridge');
             })
             ->orderBy('wagons.wagon_sequence')
-            ->select('wagon_loading.id as wl_id', 'wagons.id as wagon_id', 'wagons.wagon_sequence', 'wagons.pcc_weight_mt', 'wagon_loading.cc_capacity_mt', 'wagon_loading.remarks', 'wagon_loading.rake_id')
+            ->select('wagon_loading.id as wl_id', 'wagons.id as wagon_id', 'wagons.wagon_sequence', 'wagons.wagon_number', 'wagons.wagon_type', 'wagons.pcc_weight_mt', 'wagon_loading.cc_capacity_mt', 'wagon_loading.remarks', 'wagon_loading.rake_id')
             ->first();
 
         if (! $row) {
             return;
         }
+
+        // Stamp the wagon's real identity from the Loadrite UserData.
+        $pcc = $this->stampWagonIdentity($row, $wagonNumber, $typeAbbr);
 
         DB::table('wagon_loading')
             ->where('id', $row->wl_id)
@@ -317,7 +376,6 @@ final readonly class SyncLoadriteEvent
                 'updated_at' => now(),
             ]);
 
-        $pcc = (float) ($row->pcc_weight_mt ?? $row->cc_capacity_mt ?? 0);
         $sidingId = (int) DB::table('rakes')->where('id', $row->rake_id)->value('siding_id');
 
         WagonWeightUpdated::dispatch(
@@ -329,6 +387,53 @@ final readonly class SyncLoadriteEvent
             percentage: $pcc > 0 ? round(($weightMt / $pcc) * 100, 1) : 0.0,
             status: $weightMt >= $pcc && $pcc > 0 ? 'overload' : 'loaded',
         );
+    }
+
+    /**
+     * Write the wagon's real identity — number, type, carrying capacity — onto
+     * the wagons row from the Loadrite-keyed values, replacing W1..W59
+     * placeholders. Returns the effective carrying capacity (MT).
+     *
+     * @param  object{wagon_id: int, wagon_number: ?string, wagon_type: ?string, pcc_weight_mt: mixed}  $row
+     */
+    private function stampWagonIdentity(object $row, ?string $wagonNumber, ?string $typeAbbr): float
+    {
+        $existingPcc = (float) ($row->pcc_weight_mt ?? 0);
+
+        if ($wagonNumber === null && $typeAbbr === null) {
+            return $existingPcc;
+        }
+
+        $cap = $this->capacity->resolve($wagonNumber, $typeAbbr);
+        $update = [];
+
+        // Replace placeholder wagon numbers (W1, W12, …) or empty values; never
+        // overwrite a real number an operator may have entered manually.
+        $isPlaceholder = $row->wagon_number === null
+            || preg_match('/^W\d+$/i', (string) $row->wagon_number) === 1;
+        if ($wagonNumber !== null && $isPlaceholder) {
+            $update['wagon_number'] = $wagonNumber;
+        }
+
+        // Fill in the wagon type when we resolved one and the row has none.
+        if (($row->wagon_type === null || $row->wagon_type === '') && $cap['type'] !== null) {
+            $update['wagon_type'] = $cap['type'];
+        }
+
+        // CC from the fleet (wagon-match or type-modal) supersedes the backfill
+        // estimate — it is traceable to a real registered wagon.
+        $effectivePcc = $existingPcc;
+        if ($cap['cc'] !== null && $cap['cc'] > 0) {
+            $update['pcc_weight_mt'] = $cap['cc'];
+            $effectivePcc = $cap['cc'];
+        }
+
+        if ($update !== []) {
+            $update['updated_at'] = now();
+            DB::table('wagons')->where('id', $row->wagon_id)->update($update);
+        }
+
+        return $effectivePcc;
     }
 
     private function resolveWagonLoading(int $sidingId, int $sequence, array $event): ?WagonLoading

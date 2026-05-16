@@ -82,6 +82,52 @@ it('still attributes to an old pending rake if it is the only candidate', functi
     expect($picked)->toBe($only->id);
 });
 
+it('matches the operator-keyed rake number to rake_serial_number', function (): void {
+    $siding = Siding::factory()->create();
+    // A newer pending rake exists, but the operator keyed rake "80" — the
+    // resolver must honour the explicit serial number over recency.
+    Rake::factory()->create([
+        'siding_id' => $siding->id,
+        'state' => 'pending',
+        'rake_serial_number' => '79',
+        'loading_date' => now()->toDateString(),
+    ]);
+    $target = Rake::factory()->create([
+        'siding_id' => $siding->id,
+        'state' => 'pending',
+        'rake_serial_number' => '80',
+        'loading_date' => now()->subDays(2),
+    ]);
+    Rake::factory()->create([
+        'siding_id' => $siding->id,
+        'state' => 'pending',
+        'rake_serial_number' => '81',
+        'loading_date' => now()->toDateString(),
+    ]);
+
+    $picked = app(SyncLoadriteEvent::class)
+        ->resolveRakeIdForEvent($siding->id, Carbon::now(), '80');
+
+    expect($picked)->toBe($target->id);
+});
+
+it('falls back to time-based resolution when the keyed rake number has no match', function (): void {
+    $siding = Siding::factory()->create();
+    $only = Rake::factory()->create([
+        'siding_id' => $siding->id,
+        'state' => 'pending',
+        'rake_serial_number' => '12',
+        'loading_date' => now()->toDateString(),
+    ]);
+
+    // Keyed rake "999" matches nothing → resolver falls through to the
+    // newest pending rake.
+    $picked = app(SyncLoadriteEvent::class)
+        ->resolveRakeIdForEvent($siding->id, Carbon::now(), '999');
+
+    expect($picked)->toBe($only->id);
+});
+
 it('honors loading_end_time and ignores closed rakes', function (): void {
     $siding = Siding::factory()->create();
     $closed = Rake::factory()->create([
