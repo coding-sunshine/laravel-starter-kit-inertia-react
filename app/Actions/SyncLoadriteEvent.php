@@ -136,6 +136,9 @@ final readonly class SyncLoadriteEvent
             ->where(function ($q): void {
                 $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched', 'completed']);
             })
+            ->when($eventTime !== null, fn ($q) => $q->where(function ($q2) use ($eventTime): void {
+                $q2->whereNull('loading_end_time')->orWhere('loading_end_time', '>=', $eventTime);
+            }))
             ->latest('id')
             ->first(['id']);
 

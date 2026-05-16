@@ -99,7 +99,7 @@ final class LoadriteReattributeEventsCommand extends Command
                 $rakeId = null;
                 $row = null;
                 $closedDuringRetry = [];
-                for ($attempt = 0; $attempt < 5; $attempt++) {
+                for ($attempt = 0; $attempt < 30; $attempt++) {
                     $rakeId = $sync->resolveRakeIdForEvent((int) $e->siding_id, $eventTime);
                     if ($rakeId === null) {
                         break;
