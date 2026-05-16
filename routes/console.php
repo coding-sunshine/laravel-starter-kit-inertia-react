@@ -41,6 +41,15 @@ Schedule::command('loadrite:close-stale-rakes')
     ->onOneServer()
     ->name('loadrite-close-stale-rakes');
 
+// Backfill pcc_weight_mt on any wagons added since the last run so newly-placed
+// rakes get their carrying-capacity from existing fleet data, which the wagon
+// status resolver needs to compute Loaded / Overload / Underload.
+Schedule::command('wagons:backfill-pcc')
+    ->hourly()
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->name('wagons-backfill-pcc');
+
 // Loadrite: nightly reconciliation — sum of wagon_loading.loaded_quantity_mt
 // vs sum of loadrite_events Short Total weights per rake. Logs mismatches.
 Schedule::command('loadrite:verify-totals --log')
