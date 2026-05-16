@@ -148,6 +148,7 @@ final readonly class LiveMonitorDataBuilder
             'rake' => [
                 'id' => (int) $rake->id,
                 'rake_number' => $rake->rake_number,
+                'rake_serial_number' => $rake->rake_serial_number,
                 'rake_type' => $rake->rake_type,
                 'wagon_count' => (int) ($rake->wagon_count ?? $wagons->count()),
                 'state' => $rake->state,
@@ -281,6 +282,7 @@ final readonly class LiveMonitorDataBuilder
             'rake' => [
                 'id' => (int) $rake->id,
                 'rake_number' => $rake->rake_number,
+                'rake_serial_number' => $rake->rake_serial_number,
                 'wagon_count' => (int) ($rake->wagon_count ?? $wagons->count()),
                 'state' => $rake->state,
             ],

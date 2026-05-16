@@ -84,6 +84,7 @@ export interface RakeKpis {
 export interface RakeIdentity {
     id: number;
     rake_number: string | null;
+    rake_serial_number: string | null;
     rake_type: string | null;
     wagon_count: number;
     state: string | null;
@@ -114,6 +115,7 @@ export interface OverviewSiding {
     rake: {
         id: number;
         rake_number: string | null;
+        rake_serial_number: string | null;
         wagon_count: number;
         state: string | null;
     } | null;
