@@ -50,7 +50,7 @@ final class WagonCapacityResolver
             }
         }
 
-        if ($typeAbbr !== null && $typeAbbr !== '') {
+        if ($this->isUsableTypeAbbreviation($typeAbbr)) {
             $byType = $this->byTypeAbbreviation($typeAbbr);
             if ($byType['cc'] !== null) {
                 return [
@@ -63,6 +63,22 @@ final class WagonCapacityResolver
         }
 
         return ['cc' => null, 'type' => null, 'full_number' => null, 'source' => 'unresolved'];
+    }
+
+    /**
+     * A type abbreviation is only usable for a suffix match if it contains a
+     * letter and is at least two characters. Bare numbers ("2", "11342") and
+     * single characters are operator mis-keys — using them would false-match
+     * any wagon_type ending in that character. Such events still resolve CC
+     * from the wagon number (tier 1).
+     */
+    private function isUsableTypeAbbreviation(?string $abbr): bool
+    {
+        if ($abbr === null || mb_strlen($abbr) < 2) {
+            return false;
+        }
+
+        return preg_match('/[A-Za-z]/', $abbr) === 1;
     }
 
     /**
