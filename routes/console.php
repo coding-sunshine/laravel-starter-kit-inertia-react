@@ -33,6 +33,22 @@ Schedule::command('model:prune', [
 // Loadrite: ensure polling jobs are dispatched for all configured sidings.
 Schedule::command('loadrite:start-polling')->everyFiveMinutes();
 
+// Loadrite: stamp loading_end_time on rakes that have been silent for 6+ hours so
+// incoming events don't keep gluing to a stale "open" rake.
+Schedule::command('loadrite:close-stale-rakes')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->name('loadrite-close-stale-rakes');
+
+// Loadrite: nightly reconciliation — sum of wagon_loading.loaded_quantity_mt
+// vs sum of loadrite_events Short Total weights per rake. Logs mismatches.
+Schedule::command('loadrite:verify-totals --log')
+    ->dailyAt('02:50')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->name('loadrite-verify-totals');
+
 // RRMCS: check loading rakes for demurrage threshold crossings.
 Schedule::command('rrmcs:check-demurrage')->everyFiveMinutes();
 

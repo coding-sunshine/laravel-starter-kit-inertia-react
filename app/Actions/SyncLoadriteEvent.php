@@ -28,6 +28,11 @@ final readonly class SyncLoadriteEvent
      *  Below this, treat as operator misfire / aborted load / test. */
     public const MIN_VALID_SHORT_TOTAL_MT = 30.0;
 
+    /** A rake is considered "actively loading" only if it has wagon_loading
+     *  activity within this many hours of the incoming event. Past that, the
+     *  rake is treated as abandoned and the resolver looks for a newer one. */
+    public const ACTIVE_WINDOW_HOURS = 6;
+
     public function handle(array $event, int $sidingId): bool
     {
         $eventId = $this->stringField($event, 'Id');
@@ -98,45 +103,94 @@ final readonly class SyncLoadriteEvent
     }
 
     /**
-     * Locate the wagon_loading row that this event should attach to.
+     * Locate the rake this event should attach to.
      *
-     * Strategy: match the rake whose virtual loading window contains the event
-     * timestamp. Virtual anchor = placement_time OR earliest wagon_loading.created_at
-     * for the rake (the field is often null on this dataset). Virtual end =
-     * loading_end_time OR open-ended. Last resort: most recent active rake.
+     * Strategy (in order):
+     *  1. Active rake — any rake at this siding with wagon_loading activity
+     *     within ACTIVE_WINDOW_HOURS of the event AND an open loading window
+     *     at event_time. This is the normal in-progress case.
+     *  2. Newest pending rake — when no rake is "active" (e.g. operators just
+     *     created a fresh rake but no weights have landed yet), pick the most
+     *     recent pending/placed rake at the siding by id. The rake does NOT
+     *     need wagon_loading rows yet — attributeShortTotal creates them on
+     *     the fly.
+     *  3. Safety fallback — newest non-completed rake at the siding, even if
+     *     stale. Prevents an event being dropped if nothing else matches.
      */
     public function resolveRakeIdForEvent(int $sidingId, ?Carbon $eventTime): ?int
     {
         if ($eventTime !== null) {
-            $rake = Rake::query()
-                ->where('siding_id', $sidingId)
-                ->has('wagonLoadings')
-                ->whereRaw(
-                    'COALESCE(placement_time, (SELECT MIN(created_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id)) <= ?',
-                    [$eventTime],
-                )
-                ->where(function ($q) use ($eventTime): void {
-                    $q->whereNull('loading_end_time')
-                        ->orWhere('loading_end_time', '>=', $eventTime);
-                })
-                ->orderByRaw(
-                    'COALESCE(placement_time, (SELECT MIN(created_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id)) DESC',
-                )
-                ->first(['id']);
+            $activeId = $this->findActiveRakeId($sidingId, $eventTime);
+            if ($activeId !== null) {
+                return $activeId;
+            }
 
-            if ($rake) {
-                return (int) $rake->id;
+            $newestId = $this->findNewestPendingRakeId($sidingId, $eventTime);
+            if ($newestId !== null) {
+                return $newestId;
             }
         }
 
         $fallback = Rake::query()
             ->where('siding_id', $sidingId)
-            ->whereIn('state', ['loading', 'placed', 'pending'])
-            ->has('wagonLoadings')
+            ->where(function ($q): void {
+                $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched', 'completed']);
+            })
             ->latest('id')
             ->first(['id']);
 
         return $fallback ? (int) $fallback->id : null;
+    }
+
+    /**
+     * Step 1 — a rake counts as "active" if it has wagon_loading activity in
+     * the recent window AT the event time and its loading window is open.
+     */
+    private function findActiveRakeId(int $sidingId, Carbon $eventTime): ?int
+    {
+        $cutoff = $eventTime->copy()->subHours(self::ACTIVE_WINDOW_HOURS);
+
+        $rake = Rake::query()
+            ->where('siding_id', $sidingId)
+            ->where(function ($q) use ($eventTime): void {
+                $q->whereNull('loading_end_time')
+                    ->orWhere('loading_end_time', '>=', $eventTime);
+            })
+            ->whereExists(function ($q) use ($cutoff): void {
+                $q->select(DB::raw(1))
+                    ->from('wagon_loading')
+                    ->whereColumn('wagon_loading.rake_id', 'rakes.id')
+                    ->where('wagon_loading.updated_at', '>=', $cutoff);
+            })
+            ->orderByRaw(
+                '(SELECT MAX(updated_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id) DESC',
+            )
+            ->first(['id']);
+
+        return $rake ? (int) $rake->id : null;
+    }
+
+    /**
+     * Step 2 — newest pending/placed rake at the siding. Does NOT require
+     * wagon_loading rows (key difference from the legacy fallback); rows are
+     * created lazily during attribution. Newest-by-id is the operator's most
+     * recent rake at the siding.
+     */
+    private function findNewestPendingRakeId(int $sidingId, Carbon $eventTime): ?int
+    {
+        $rake = Rake::query()
+            ->where('siding_id', $sidingId)
+            ->where(function ($q): void {
+                $q->whereNull('state')->orWhereNotIn('state', ['cancelled', 'dispatched', 'completed']);
+            })
+            ->where(function ($q) use ($eventTime): void {
+                $q->whereNull('loading_end_time')
+                    ->orWhere('loading_end_time', '>=', $eventTime);
+            })
+            ->orderByDesc('id')
+            ->first(['id']);
+
+        return $rake ? (int) $rake->id : null;
     }
 
     /**
@@ -174,6 +228,11 @@ final readonly class SyncLoadriteEvent
      */
     private function attributeShortTotal(int $rakeId, float $weightMt, string $shortTotalEventId): void
     {
+        // Brand-new rakes (operator created the rake + wagons but never
+        // "placed" it, so no per-wagon loading rows exist yet) need their
+        // wagon_loading scaffolding before we can attribute anything.
+        $this->ensureWagonLoadingRowsExist($rakeId);
+
         // Find the next unfilled wagon in this rake (lowest sequence with no
         // Loadrite weight yet, not overridden, not from weighbridge).
         $row = DB::table('wagon_loading')
@@ -219,6 +278,51 @@ final readonly class SyncLoadriteEvent
             percentage: $pcc > 0 ? round(($weightMt / $pcc) * 100, 1) : 0.0,
             status: $weightMt >= $pcc && $pcc > 0 ? 'overload' : 'loaded',
         );
+    }
+
+    /**
+     * Insert a placeholder wagon_loading row for every wagon in the rake that
+     * doesn't already have one. Idempotent — safe to call before any
+     * attribution. Returns the number of new rows inserted.
+     */
+    private function ensureWagonLoadingRowsExist(int $rakeId): int
+    {
+        $existing = DB::table('wagon_loading')
+            ->where('rake_id', $rakeId)
+            ->pluck('wagon_id')
+            ->all();
+
+        $missing = DB::table('wagons')
+            ->where('rake_id', $rakeId)
+            ->when($existing !== [], fn ($q) => $q->whereNotIn('id', $existing))
+            ->pluck('id')
+            ->all();
+
+        if ($missing === []) {
+            return 0;
+        }
+
+        $now = now();
+        $rows = [];
+        foreach ($missing as $wagonId) {
+            $rows[] = [
+                'rake_id' => $rakeId,
+                'wagon_id' => (int) $wagonId,
+                'loaded_quantity_mt' => 0,
+                'loadrite_override' => false,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        // Chunk to keep statement size sane on big rakes.
+        $inserted = 0;
+        foreach (array_chunk($rows, 200) as $chunk) {
+            DB::table('wagon_loading')->insert($chunk);
+            $inserted += count($chunk);
+        }
+
+        return $inserted;
     }
 
     private function resolveWagonLoading(int $sidingId, int $sequence, array $event): ?WagonLoading
