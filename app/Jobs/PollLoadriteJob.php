@@ -22,6 +22,18 @@ final class PollLoadriteJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    /**
+     * Lookback buffer subtracted from the cursor when computing FromLocalTime.
+     *
+     * Loadrite's cloud API can take minutes-to-hours to expose an event after
+     * the scale records it. A pure time-cursor (cursor = max(event_time) seen)
+     * misses any event whose Time is < cursor but only became API-visible
+     * after the last poll — those events fall outside the FromLocalTime window
+     * forever. Re-fetching this much overlap each poll covers the publish lag
+     * and `insertOrIgnore` on event_id dedupes the overlap cheaply.
+     */
+    public const POLL_LOOKBACK_HOURS = 6;
+
     public int $tries = 3;
 
     public int $timeout = 120;
@@ -45,7 +57,14 @@ final class PollLoadriteJob implements ShouldQueue
                 ->firstOrFail();
 
             $site = $setting->site_name;
-            $fromLocalTime = Cache::get($cursorKey, now()->subHour()->format('Y-m-d H:i:s'));
+            $cursor = Cache::get($cursorKey);
+            // Cursor minus the lookback buffer (see POLL_LOOKBACK_HOURS). On
+            // first run, fall back to 1h before now so we don't drain weeks.
+            $fromLocalTime = $cursor !== null
+                ? \Carbon\CarbonImmutable::parse($cursor)
+                    ->subHours(self::POLL_LOOKBACK_HOURS)
+                    ->format('Y-m-d H:i:s')
+                : now()->subHour()->format('Y-m-d H:i:s');
             $toLocalTime = now()->format('Y-m-d H:i:s');
 
             $connector = $tokenManager->getConnector($this->sidingId);
