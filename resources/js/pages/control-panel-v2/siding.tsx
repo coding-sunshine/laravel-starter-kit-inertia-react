@@ -171,7 +171,7 @@ export default function ControlPanelV2Siding({
 
     return (
         <AppLayout>
-            <Head title={`Control Panel — ${siding.name}`} />
+            <Head title={`Control Room — ${siding.name}`} />
 
             <PersistentHeader
                 totalSidings={totalsForHeader.sidings}
