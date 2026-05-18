@@ -40,7 +40,7 @@ final class VehicleWorkorderController extends Controller
 
         if ($view === 'transporters') {
             $transportWorkOrderRegistrations = $this->transportWorkOrderRegistrationsBaseQuery($sidingIds, $filters)
-                ->paginate(15)
+                ->paginate(50)
                 ->withQueryString();
         } else {
             $vehicleWorkorders = $this->vehicleWorkordersBaseQuery($user, $filters)

@@ -22,10 +22,28 @@ final readonly class TransportWorkOrderRegistrationSidingResolver
         'K' => 'KURWA',
     ];
 
+    public function __construct(
+        private WoNoSidingLetterExtractor $letterExtractor = new WoNoSidingLetterExtractor,
+    ) {}
+
     public function resolveSidingId(?string $workOrderNo1, ?string $workOrderNo2): ?int
     {
-        $letter = $this->extractSidingLetter($workOrderNo1, $workOrderNo2);
+        return $this->sidingIdFromLetter(
+            $this->letterExtractor->extractFromTwoFields($workOrderNo1, $workOrderNo2),
+        );
+    }
 
+    /**
+     * Resolve siding from a single WO NO cell (vehicles spreadsheet): same D/P/K regex rules as
+     * {@see resolveSidingId()} with both args, plus first-character D/P/K fallback after trim.
+     */
+    public function resolveSidingIdFromWoNo(?string $woNo): ?int
+    {
+        return $this->sidingIdFromLetter($this->letterExtractor->extractFromWoNo($woNo));
+    }
+
+    private function sidingIdFromLetter(?string $letter): ?int
+    {
         if ($letter === null) {
             return null;
         }
@@ -38,25 +56,5 @@ final readonly class TransportWorkOrderRegistrationSidingResolver
 
         /** @var int|null */
         return Siding::query()->where('code', $code)->value('id');
-    }
-
-    private function extractSidingLetter(?string $workOrderNo1, ?string $workOrderNo2): ?string
-    {
-        $wo1 = $workOrderNo1 !== null ? mb_trim($workOrderNo1) : '';
-        if ($wo1 !== '' && preg_match('/^([DPK])\d+$/i', $wo1, $m) === 1) {
-            return mb_strtoupper($m[1]);
-        }
-
-        $wo2 = $workOrderNo2 !== null ? mb_trim($workOrderNo2) : '';
-        if ($wo2 !== '') {
-            if (preg_match('/WO-([DPK])\d+$/i', $wo2, $m) === 1) {
-                return mb_strtoupper($m[1]);
-            }
-            if (preg_match('/^([DPK])\d+$/i', $wo2, $m) === 1) {
-                return mb_strtoupper($m[1]);
-            }
-        }
-
-        return null;
     }
 }
