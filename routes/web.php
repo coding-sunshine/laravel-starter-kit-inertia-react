@@ -448,6 +448,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Transport registrations (transporter master sheet; UI lives under Transporters tab)
     Route::get('vehicle-workorders/transport-registrations/create', [TransportWorkOrderRegistrationController::class, 'create'])->name('vehicle-workorders.transport-registrations.create');
+    Route::get('vehicle-workorders/transport-registrations/search', [VehicleWorkorderController::class, 'searchTransportRegistrationsForVehicleWorkorder'])->name('vehicle-workorders.transport-registrations.search');
     Route::post('vehicle-workorders/transport-registrations', [TransportWorkOrderRegistrationController::class, 'store'])->name('vehicle-workorders.transport-registrations.store');
     Route::get('vehicle-workorders/transport-registrations/{tw_registration}/edit', [TransportWorkOrderRegistrationController::class, 'edit'])->name('vehicle-workorders.transport-registrations.edit');
     Route::put('vehicle-workorders/transport-registrations/{tw_registration}', [TransportWorkOrderRegistrationController::class, 'update'])->name('vehicle-workorders.transport-registrations.update');
@@ -456,6 +457,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::get('vehicle-workorders/create', [VehicleWorkorderController::class, 'create'])->name('vehicle-workorders.create');
     Route::get('vehicle-workorders/{vehicle_workorder}/edit', [VehicleWorkorderController::class, 'edit'])->name('vehicle-workorders.edit');
+    Route::delete('vehicle-workorders/{vehicle_workorder}/media/{media}', [VehicleWorkorderController::class, 'destroyMedia'])->name('vehicle-workorders.destroy-media')->whereNumber('media');
     Route::post('vehicle-workorders', [VehicleWorkorderController::class, 'store'])->name('vehicle-workorders.store');
     Route::put('vehicle-workorders/{vehicle_workorder}', [VehicleWorkorderController::class, 'update'])->name('vehicle-workorders.update');
 

@@ -94,31 +94,11 @@ interface TransportRegistrationPermissions {
 
 interface Filters {
     view?: 'vehicles' | 'transporters';
-    /** Pagination (not sent when applying fresh filters unless > 1). */
     page?: string | number;
-    /** May be string or number from the server query string / PHP. */
     siding_id?: string | number;
-    vehicle_no?: string;
-    wo_no?: string;
-    wo_no_2?: string;
     transport_name?: string;
-    mobile?: string;
-    mobile_no_1?: string;
-    mobile_no_2?: string;
-    model?: string;
-    work_order_date?: string;
-    issued_date?: string;
-    proprietor_name?: string;
-    address?: string;
-    owner_type?: string;
-    pan_no?: string;
-    gst_no?: string;
-    min_vehicles?: string | number;
-    max_vehicles?: string | number;
+    vehicle_no?: string;
     regd_date?: string;
-    permit_validity_date?: string;
-    tax_validity_date?: string;
-    insurance_validity_date?: string;
 }
 
 interface Props {
@@ -127,10 +107,8 @@ interface Props {
     transportWorkOrderRegistrations: PaginatedTransportRegistrations | null;
     transportRegistrationPermissions: TransportRegistrationPermissions;
     sidings: Siding[];
-    /** Distinct transporter names for dropdown; omitted only if page props are stale. */
+    /** Distinct transporter names for transport name filter. */
     transportNames?: string[];
-    /** Distinct proprietor names for dropdown (transporters tab). */
-    proprietorNames?: string[];
     filters: Filters;
 }
 
@@ -147,7 +125,15 @@ function formatDate(dateStr: string | null): string {
     }
 }
 
-/** Vehicle tab / vehicle XLSX export: siding, vehicle identity, transport, proprietor, vehicle document dates. */
+/** Append pagination when preserving page > 1. */
+function appendPageParam(params: URLSearchParams, f: Filters): void {
+    const pageNum = f.page !== undefined && f.page !== '' ? Number(f.page) : 1;
+    if (Number.isFinite(pageNum) && pageNum > 1) {
+        params.set('page', String(pageNum));
+    }
+}
+
+/** Vehicles tab list + XLSX export query. */
 function appendVehicleFilterParams(params: URLSearchParams, f: Filters): void {
     if (f.siding_id !== undefined && f.siding_id !== '') {
         params.set('siding_id', String(f.siding_id));
@@ -158,30 +144,13 @@ function appendVehicleFilterParams(params: URLSearchParams, f: Filters): void {
     if (f.vehicle_no?.trim()) {
         params.set('vehicle_no', f.vehicle_no.trim());
     }
-    if (f.mobile?.trim()) {
-        params.set('mobile', f.mobile.trim());
-    }
-    if (f.model?.trim()) {
-        params.set('model', f.model.trim());
-    }
-    if (f.proprietor_name?.trim()) {
-        params.set('proprietor_name', f.proprietor_name.trim());
-    }
     if (f.regd_date) {
         params.set('regd_date', f.regd_date);
     }
-    if (f.permit_validity_date) {
-        params.set('permit_validity_date', f.permit_validity_date);
-    }
-    if (f.tax_validity_date) {
-        params.set('tax_validity_date', f.tax_validity_date);
-    }
-    if (f.insurance_validity_date) {
-        params.set('insurance_validity_date', f.insurance_validity_date);
-    }
+    appendPageParam(params, f);
 }
 
-/** Transporter tab list + export URL query; scoped to transport_work_order_registrations only. */
+/** Transporters tab list + export query. */
 function appendTransporterFilterParams(params: URLSearchParams, f: Filters): void {
     if (f.siding_id !== undefined && f.siding_id !== '') {
         params.set('siding_id', String(f.siding_id));
@@ -189,34 +158,7 @@ function appendTransporterFilterParams(params: URLSearchParams, f: Filters): voi
     if (f.transport_name?.trim()) {
         params.set('transport_name', f.transport_name.trim());
     }
-    if (f.wo_no?.trim()) {
-        params.set('wo_no', f.wo_no.trim());
-    }
-    if (f.wo_no_2?.trim()) {
-        params.set('wo_no_2', f.wo_no_2.trim());
-    }
-    if (f.work_order_date) {
-        params.set('work_order_date', f.work_order_date);
-    }
-    if (f.address?.trim()) {
-        params.set('address', f.address.trim());
-    }
-    if (f.mobile_no_1?.trim()) {
-        params.set('mobile_no_1', f.mobile_no_1.trim());
-    }
-    if (f.mobile_no_2?.trim()) {
-        params.set('mobile_no_2', f.mobile_no_2.trim());
-    }
-    if (f.pan_no?.trim()) {
-        params.set('pan_no', f.pan_no.trim());
-    }
-    if (f.gst_no?.trim()) {
-        params.set('gst_no', f.gst_no.trim());
-    }
-    const pageNum = f.page !== undefined && f.page !== '' ? Number(f.page) : 1;
-    if (Number.isFinite(pageNum) && pageNum > 1) {
-        params.set('page', String(pageNum));
-    }
+    appendPageParam(params, f);
 }
 
 function filtersToRouterParams(view: 'vehicles' | 'transporters', f: Filters): Record<string, string> {
@@ -237,8 +179,6 @@ function filtersToRouterParams(view: 'vehicles' | 'transporters', f: Filters): R
 
 const TRANSPORT_NAME_ALL = '__all__';
 
-const PROPRIETOR_NAME_ALL = '__all_proprietor__';
-
 export default function VehicleWorkordersIndex({
     view,
     vehicleWorkorders,
@@ -250,7 +190,6 @@ export default function VehicleWorkordersIndex({
     },
     sidings,
     transportNames = [],
-    proprietorNames = [],
     filters,
 }: Props) {
     const { flash } = usePage<Props & { flash?: { success?: string } }>().props;
@@ -279,27 +218,6 @@ export default function VehicleWorkordersIndex({
             ...transporterNameSelectOptions.map((name) => ({ value: name, label: name })),
         ];
     }, [transporterNameSelectOptions]);
-
-    const proprietorNameSelectOptions = useMemo(() => {
-        const names = [...proprietorNames];
-        const cur = localFilters.proprietor_name?.trim();
-        if (cur && !names.includes(cur)) {
-            names.push(cur);
-            names.sort((a, b) => a.localeCompare(b));
-        }
-        return names;
-    }, [proprietorNames, localFilters.proprietor_name]);
-
-    const proprietorNameSelectValue = localFilters.proprietor_name?.trim()
-        ? localFilters.proprietor_name
-        : PROPRIETOR_NAME_ALL;
-
-    const proprietorNameSearchOptions = useMemo((): SearchableSelectOption[] => {
-        return [
-            { value: PROPRIETOR_NAME_ALL, label: 'All proprietors' },
-            ...proprietorNameSelectOptions.map((name) => ({ value: name, label: name })),
-        ];
-    }, [proprietorNameSelectOptions]);
 
     function deleteTransportRegistration(id: number): void {
         if (
@@ -392,7 +310,7 @@ export default function VehicleWorkordersIndex({
                     <CardContent className="space-y-3 pt-0">
                         {view === 'vehicles' ? (
                             <div
-                                className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+                                className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4"
                                 data-pan="vehicle-workorders-filters-vehicles"
                             >
                                 <div className="space-y-1">
@@ -443,7 +361,7 @@ export default function VehicleWorkordersIndex({
                                 </div>
                                 <div className="space-y-1">
                                     <Label htmlFor="vehicle_no" className="text-xs">
-                                        Vehicle No
+                                        Vehicle no.
                                     </Label>
                                     <Input
                                         id="vehicle_no"
@@ -454,60 +372,6 @@ export default function VehicleWorkordersIndex({
                                             setLocalFilters((f) => ({
                                                 ...f,
                                                 vehicle_no: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div
-                                    className="space-y-1"
-                                    data-pan="vehicle-workorders-filter-proprietor-name-search-vehicles"
-                                >
-                                    <Label className="text-xs">Proprietor name</Label>
-                                    <SearchableSelect
-                                        options={proprietorNameSearchOptions}
-                                        value={proprietorNameSelectValue}
-                                        onValueChange={(v) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                proprietor_name: v === PROPRIETOR_NAME_ALL ? undefined : v,
-                                            }))
-                                        }
-                                        placeholder="All proprietors"
-                                        searchPlaceholder="Search proprietors..."
-                                        emptyMessage="No proprietors match your search."
-                                        className="h-9 min-h-9"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="mobile" className="text-xs">
-                                        Mobile (1 or 2)
-                                    </Label>
-                                    <Input
-                                        id="mobile"
-                                        className="h-9"
-                                        placeholder="Search mobile"
-                                        value={localFilters.mobile ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                mobile: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="model" className="text-xs">
-                                        Model
-                                    </Label>
-                                    <Input
-                                        id="model"
-                                        className="h-9"
-                                        placeholder="Model"
-                                        value={localFilters.model ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                model: e.target.value,
                                             }))
                                         }
                                     />
@@ -529,66 +393,15 @@ export default function VehicleWorkordersIndex({
                                         }
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="permit_validity_date" className="text-xs">
-                                        Permit validity
-                                    </Label>
-                                    <Input
-                                        id="permit_validity_date"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.permit_validity_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                permit_validity_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="tax_validity_date" className="text-xs">
-                                        Tax validity
-                                    </Label>
-                                    <Input
-                                        id="tax_validity_date"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.tax_validity_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                tax_validity_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="insurance_validity_date" className="text-xs">
-                                        Insurance validity
-                                    </Label>
-                                    <Input
-                                        id="insurance_validity_date"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.insurance_validity_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                insurance_validity_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
                             </div>
                         ) : (
                             <div
-                                className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+                                className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-2"
                                 data-pan="vehicle-workorders-filters-transporters"
                             >
                                 <div className="space-y-1">
                                     <Label htmlFor="siding_id_tr" className="text-xs">
-                                        Siding name
+                                        Siding
                                     </Label>
                                     <Select
                                         value={
@@ -630,135 +443,6 @@ export default function VehicleWorkordersIndex({
                                         searchPlaceholder="Search transporters..."
                                         emptyMessage="No transporters match your search."
                                         className="h-9 min-h-9"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="wo_no_tr" className="text-xs">
-                                        WO no (1)
-                                    </Label>
-                                    <Input
-                                        id="wo_no_tr"
-                                        className="h-9"
-                                        value={localFilters.wo_no ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                wo_no: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="wo_no_2_tr" className="text-xs">
-                                        WO no 2
-                                    </Label>
-                                    <Input
-                                        id="wo_no_2_tr"
-                                        className="h-9"
-                                        value={localFilters.wo_no_2 ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                wo_no_2: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="work_order_date_tr" className="text-xs">
-                                        Work order date
-                                    </Label>
-                                    <Input
-                                        id="work_order_date_tr"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.work_order_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                work_order_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1 sm:col-span-2">
-                                    <Label htmlFor="address_tr" className="text-xs">
-                                        Address
-                                    </Label>
-                                    <Input
-                                        id="address_tr"
-                                        className="h-9"
-                                        value={localFilters.address ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                address: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="mobile_no_1_tr" className="text-xs">
-                                        Mobile
-                                    </Label>
-                                    <Input
-                                        id="mobile_no_1_tr"
-                                        className="h-9"
-                                        value={localFilters.mobile_no_1 ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                mobile_no_1: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="mobile_no_2_tr" className="text-xs">
-                                        Mobile 2
-                                    </Label>
-                                    <Input
-                                        id="mobile_no_2_tr"
-                                        className="h-9"
-                                        value={localFilters.mobile_no_2 ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                mobile_no_2: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="pan_no_tr" className="text-xs">
-                                        PAN no
-                                    </Label>
-                                    <Input
-                                        id="pan_no_tr"
-                                        className="h-9"
-                                        value={localFilters.pan_no ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                pan_no: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="gst_no_tr" className="text-xs">
-                                        GST no
-                                    </Label>
-                                    <Input
-                                        id="gst_no_tr"
-                                        className="h-9"
-                                        value={localFilters.gst_no ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                gst_no: e.target.value,
-                                            }))
-                                        }
                                     />
                                 </div>
                             </div>

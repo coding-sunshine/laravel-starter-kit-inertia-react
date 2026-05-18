@@ -12,11 +12,21 @@ final class DestroyTransportRegistrationMediaRequest extends FormRequest
     public function authorize(): bool
     {
         $user = $this->user();
-        if ($user === null || ! $user->hasPermissionTo('sections.transport.update')) {
+        if ($user === null) {
             return false;
         }
 
-        return $this->route('tw_registration') instanceof TransportWorkOrderRegistration;
+        $registration = $this->route('tw_registration');
+        if (! $registration instanceof TransportWorkOrderRegistration) {
+            return false;
+        }
+
+        $sidingId = $registration->siding_id;
+        if ($sidingId === null) {
+            return true;
+        }
+
+        return $user->canAccessSiding((int) $sidingId);
     }
 
     /**

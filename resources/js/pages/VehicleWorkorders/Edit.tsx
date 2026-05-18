@@ -1,10 +1,14 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useMemo, type ReactNode } from 'react';
+import { Trash2 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TransporterRegistrationCombobox } from '@/components/vehicle-workorders/transporter-registration-combobox';
 import { type BreadcrumbItem } from '@/types';
 
 interface Siding {
@@ -49,22 +53,55 @@ interface VehicleWorkorder {
     siding?: Siding;
 }
 
+interface MediaItem {
+    id: number;
+    name: string;
+    file_name: string;
+    url: string;
+}
+
+interface VehicleDocumentMedia {
+    vehicle_rc: MediaItem[];
+    vehicle_insurance: MediaItem[];
+    vehicle_other_documents: MediaItem[];
+}
+
 interface Props {
     vehicleWorkorder: VehicleWorkorder;
+    sidings: Siding[];
+    matchedTransportRegistration?: { id: number; label: string } | null;
+    vehicleDocumentMedia?: VehicleDocumentMedia;
 }
 
 function toDateInput(dateStr: string | null): string {
-    if (!dateStr) return '';
+    if (!dateStr) {
+        return '';
+    }
     try {
         const d = new Date(dateStr);
+
         return d.toISOString().slice(0, 10);
     } catch {
         return '';
     }
 }
 
-export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
+const DOCUMENT_ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx';
+
+export default function VehicleWorkordersEdit({
+    vehicleWorkorder,
+    sidings,
+    matchedTransportRegistration = null,
+    vehicleDocumentMedia = {
+        vehicle_rc: [],
+        vehicle_insurance: [],
+        vehicle_other_documents: [],
+    },
+}: Props) {
+    const defaultSidingIdForClear = String(vehicleWorkorder.siding_id);
+
     const { data, setData, put, processing, errors } = useForm({
+        siding_id: defaultSidingIdForClear,
         vehicle_no: vehicleWorkorder.vehicle_no ?? '',
         rcd_pin_no: vehicleWorkorder.rcd_pin_no ?? '',
         transport_name: vehicleWorkorder.transport_name ?? '',
@@ -95,12 +132,38 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
         local_or_non_local: vehicleWorkorder.local_or_non_local ?? '',
         pan_no: vehicleWorkorder.pan_no ?? '',
         gst_no: vehicleWorkorder.gst_no ?? '',
+        vehicle_rc_certificate: null as File | null,
+        vehicle_insurance_certificate: null as File | null,
+        vehicle_other_documents: [] as File[],
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        put(`/vehicle-workorders/${vehicleWorkorder.id}`);
+        put(`/vehicle-workorders/${vehicleWorkorder.id}`, {
+            forceFormData: true,
+            preserveScroll: true,
+        });
     };
+
+    const deleteVehicleDocument = (mediaId: number): void => {
+        if (!window.confirm('Remove this file from the work order?')) {
+            return;
+        }
+        router.delete(
+            `/vehicle-workorders/${vehicleWorkorder.id}/media/${mediaId}`,
+            { preserveScroll: true },
+        );
+    };
+
+    const transporterFallbackLabel = useMemo((): string | null => {
+        const tn = data.transport_name?.trim() ?? '';
+        const wo2 = data.wo_no_2?.trim() ?? '';
+        const wo1 = data.wo_no?.trim() ?? '';
+        const wo = wo2 !== '' ? wo2 : wo1;
+        const combined = [tn, wo].filter((p) => p !== '').join(' ');
+
+        return combined !== '' ? combined : null;
+    }, [data.transport_name, data.wo_no, data.wo_no_2]);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Vehicle Work Orders', href: '/vehicle-workorders' },
@@ -109,6 +172,46 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
             href: `/vehicle-workorders/${vehicleWorkorder.id}/edit`,
         },
     ];
+
+    function mediaListBlock(label: string, items: MediaItem[]): ReactNode {
+        if (items.length === 0) {
+            return null;
+        }
+
+        return (
+            <div className="rounded-md border p-3">
+                <p className="text-muted-foreground mb-2 text-sm font-medium">{label}</p>
+                <ul className="space-y-2">
+                    {items.map((m) => (
+                        <li
+                            key={m.id}
+                            className="flex items-center justify-between gap-2 text-sm"
+                        >
+                            <a
+                                href={m.url}
+                                className="text-primary truncate underline underline-offset-2"
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                {m.file_name}
+                            </a>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="text-destructive shrink-0"
+                                onClick={() => deleteVehicleDocument(m.id)}
+                                data-pan="vehicle-workorders-vehicle-document-media-delete"
+                            >
+                                <Trash2 className="size-4" />
+                                <span className="sr-only">Remove file</span>
+                            </Button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -120,20 +223,127 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
                     description={`Siding: ${vehicleWorkorder.siding?.name ?? '-'}`}
                 />
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} encType="multipart/form-data">
                     <div className="space-y-6">
-                        {/* Vehicle & WO Info */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Vehicle & Work Order</CardTitle>
+                                <CardTitle>Transporter &amp; work order</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <TransporterRegistrationCombobox
+                                    includeSidingInDefaults
+                                    initialSelection={matchedTransportRegistration ?? null}
+                                    fallbackLabelFromForm={transporterFallbackLabel}
+                                    defaultSidingIdForClear={defaultSidingIdForClear}
+                                    setData={(field, value) =>
+                                        setData(field as keyof typeof data, value)
+                                    }
+                                />
+
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <Label htmlFor="siding_id">
+                                            Siding <span className="text-destructive">*</span>
+                                        </Label>
+                                        <Select
+                                            value={data.siding_id}
+                                            onValueChange={(v) => setData('siding_id', v)}
+                                        >
+                                            <SelectTrigger id="siding_id">
+                                                <SelectValue placeholder="Select siding" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {sidings.map((s) => (
+                                                    <SelectItem key={s.id} value={s.id.toString()}>
+                                                        {s.name} ({s.code})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.siding_id && (
+                                            <p className="mt-1 text-sm text-destructive">
+                                                {errors.siding_id}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="work_order_date">
+                                            Work order date{' '}
+                                            <span className="text-destructive">*</span>
+                                        </Label>
+                                        <Input
+                                            id="work_order_date"
+                                            type="date"
+                                            value={data.work_order_date}
+                                            onChange={(e) =>
+                                                setData('work_order_date', e.target.value)
+                                            }
+                                            required
+                                        />
+                                        {errors.work_order_date && (
+                                            <p className="mt-1 text-sm text-destructive">
+                                                {errors.work_order_date}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <Label htmlFor="transport_name">
+                                            Transporter name{' '}
+                                            <span className="text-destructive">*</span>
+                                        </Label>
+                                        <Input
+                                            id="transport_name"
+                                            value={data.transport_name}
+                                            onChange={(e) =>
+                                                setData('transport_name', e.target.value)
+                                            }
+                                            required
+                                        />
+                                        {errors.transport_name && (
+                                            <p className="mt-1 text-sm text-destructive">
+                                                {errors.transport_name}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <Label htmlFor="wo_no_2">
+                                            WO no. 2 <span className="text-destructive">*</span>
+                                        </Label>
+                                        <Input
+                                            id="wo_no_2"
+                                            value={data.wo_no_2}
+                                            onChange={(e) => setData('wo_no_2', e.target.value)}
+                                            required
+                                        />
+                                        {errors.wo_no_2 && (
+                                            <p className="mt-1 text-sm text-destructive">
+                                                {errors.wo_no_2}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Vehicle</CardTitle>
                             </CardHeader>
                             <CardContent className="grid gap-4 md:grid-cols-2">
                                 <div>
-                                    <Label htmlFor="vehicle_no">Vehicle No</Label>
+                                    <Label htmlFor="vehicle_no">
+                                        Vehicle no. <span className="text-destructive">*</span>
+                                    </Label>
                                     <Input
                                         id="vehicle_no"
                                         value={data.vehicle_no}
-                                        onChange={(e) => setData('vehicle_no', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('vehicle_no', e.target.value)
+                                        }
+                                        required
                                     />
                                     {errors.vehicle_no && (
                                         <p className="mt-1 text-sm text-destructive">
@@ -142,11 +352,16 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
                                     )}
                                 </div>
                                 <div>
-                                    <Label htmlFor="rcd_pin_no">RCD PIN No</Label>
+                                    <Label htmlFor="rcd_pin_no">
+                                        RCD PIN no. <span className="text-destructive">*</span>
+                                    </Label>
                                     <Input
                                         id="rcd_pin_no"
                                         value={data.rcd_pin_no}
-                                        onChange={(e) => setData('rcd_pin_no', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('rcd_pin_no', e.target.value)
+                                        }
+                                        required
                                     />
                                     {errors.rcd_pin_no && (
                                         <p className="mt-1 text-sm text-destructive">
@@ -154,306 +369,34 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
                                         </p>
                                     )}
                                 </div>
-                                <div>
-                                    <Label htmlFor="transport_name">Transport Name</Label>
-                                    <Input
-                                        id="transport_name"
-                                        value={data.transport_name}
-                                        onChange={(e) =>
-                                            setData('transport_name', e.target.value)
-                                        }
-                                    />
-                                    {errors.transport_name && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.transport_name}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="wo_no">WO No</Label>
-                                    <Input
-                                        id="wo_no"
-                                        value={data.wo_no}
-                                        onChange={(e) => setData('wo_no', e.target.value)}
-                                    />
-                                    {errors.wo_no && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.wo_no}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="wo_no_2">WO No 2</Label>
-                                    <Input
-                                        id="wo_no_2"
-                                        value={data.wo_no_2}
-                                        onChange={(e) => setData('wo_no_2', e.target.value)}
-                                    />
-                                    {errors.wo_no_2 && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.wo_no_2}
-                                        </p>
-                                    )}
-                                </div>
                             </CardContent>
                         </Card>
 
-                        {/* Dates */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Dates</CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                <div>
-                                    <Label htmlFor="work_order_date">Work Order Date</Label>
-                                    <Input
-                                        id="work_order_date"
-                                        type="date"
-                                        value={data.work_order_date}
-                                        onChange={(e) =>
-                                            setData('work_order_date', e.target.value)
-                                        }
-                                    />
-                                    {errors.work_order_date && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.work_order_date}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="issued_date">Issued Date</Label>
-                                    <Input
-                                        id="issued_date"
-                                        type="date"
-                                        value={data.issued_date}
-                                        onChange={(e) => setData('issued_date', e.target.value)}
-                                    />
-                                    {errors.issued_date && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.issued_date}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="regd_date">Regd Date</Label>
-                                    <Input
-                                        id="regd_date"
-                                        type="date"
-                                        value={data.regd_date}
-                                        onChange={(e) => setData('regd_date', e.target.value)}
-                                    />
-                                    {errors.regd_date && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.regd_date}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="permit_validity_date">
-                                        Permit Validity Date
-                                    </Label>
-                                    <Input
-                                        id="permit_validity_date"
-                                        type="date"
-                                        value={data.permit_validity_date}
-                                        onChange={(e) =>
-                                            setData('permit_validity_date', e.target.value)
-                                        }
-                                    />
-                                    {errors.permit_validity_date && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.permit_validity_date}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="tax_validity_date">Tax Validity Date</Label>
-                                    <Input
-                                        id="tax_validity_date"
-                                        type="date"
-                                        value={data.tax_validity_date}
-                                        onChange={(e) =>
-                                            setData('tax_validity_date', e.target.value)
-                                        }
-                                    />
-                                    {errors.tax_validity_date && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.tax_validity_date}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="fitness_validity_date">
-                                        Fitness Validity Date
-                                    </Label>
-                                    <Input
-                                        id="fitness_validity_date"
-                                        type="date"
-                                        value={data.fitness_validity_date}
-                                        onChange={(e) =>
-                                            setData('fitness_validity_date', e.target.value)
-                                        }
-                                    />
-                                    {errors.fitness_validity_date && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.fitness_validity_date}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="insurance_validity_date">
-                                        Insurance Validity Date
-                                    </Label>
-                                    <Input
-                                        id="insurance_validity_date"
-                                        type="date"
-                                        value={data.insurance_validity_date}
-                                        onChange={(e) =>
-                                            setData('insurance_validity_date', e.target.value)
-                                        }
-                                    />
-                                    {errors.insurance_validity_date && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.insurance_validity_date}
-                                        </p>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Owner / Place / Contact */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Owner, Place & Contact</CardTitle>
+                                <CardTitle>Vehicle details</CardTitle>
                             </CardHeader>
                             <CardContent className="grid gap-4 md:grid-cols-2">
                                 <div>
-                                    <Label htmlFor="proprietor_name">Proprietor Name</Label>
-                                    <Input
-                                        id="proprietor_name"
-                                        value={data.proprietor_name}
-                                        onChange={(e) =>
-                                            setData('proprietor_name', e.target.value)
-                                        }
-                                    />
-                                    {errors.proprietor_name && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.proprietor_name}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="represented_by">Represented By</Label>
-                                    <Input
-                                        id="represented_by"
-                                        value={data.represented_by}
-                                        onChange={(e) =>
-                                            setData('represented_by', e.target.value)
-                                        }
-                                    />
-                                    {errors.represented_by && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.represented_by}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="place">Place</Label>
-                                    <Input
-                                        id="place"
-                                        value={data.place}
-                                        onChange={(e) => setData('place', e.target.value)}
-                                    />
-                                    {errors.place && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.place}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="owner_type">Owner Type</Label>
-                                    <Input
-                                        id="owner_type"
-                                        value={data.owner_type}
-                                        onChange={(e) => setData('owner_type', e.target.value)}
-                                    />
-                                    {errors.owner_type && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.owner_type}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="md:col-span-2">
-                                    <Label htmlFor="address">Address</Label>
-                                    <textarea
-                                        id="address"
-                                        value={data.address}
-                                        onChange={(e) => setData('address', e.target.value)}
-                                        rows={2}
-                                        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                    />
-                                    {errors.address && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.address}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="mobile_no_1">Mobile No 1</Label>
-                                    <Input
-                                        id="mobile_no_1"
-                                        value={data.mobile_no_1}
-                                        onChange={(e) =>
-                                            setData('mobile_no_1', e.target.value)
-                                        }
-                                    />
-                                    {errors.mobile_no_1 && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.mobile_no_1}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="mobile_no_2">Mobile No 2</Label>
-                                    <Input
-                                        id="mobile_no_2"
-                                        value={data.mobile_no_2}
-                                        onChange={(e) =>
-                                            setData('mobile_no_2', e.target.value)
-                                        }
-                                    />
-                                    {errors.mobile_no_2 && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.mobile_no_2}
-                                        </p>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Vehicle Details & Tax */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Vehicle Details & Tax</CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <Label htmlFor="tyres">Tyres</Label>
+                                    <Label htmlFor="tyres">
+                                        Tyres <span className="text-destructive">*</span>
+                                    </Label>
                                     <Input
                                         id="tyres"
                                         type="number"
-                                        min={0}
+                                        min={1}
                                         value={data.tyres}
                                         onChange={(e) => setData('tyres', e.target.value)}
+                                        required
                                     />
                                     {errors.tyres && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.tyres}
-                                        </p>
+                                        <p className="mt-1 text-sm text-destructive">{errors.tyres}</p>
                                     )}
                                 </div>
                                 <div>
-                                    <Label htmlFor="tare_weight">Tare Weight</Label>
+                                    <Label htmlFor="tare_weight">
+                                        Tare weight <span className="text-destructive">*</span>
+                                    </Label>
                                     <Input
                                         id="tare_weight"
                                         type="number"
@@ -463,6 +406,7 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
                                         onChange={(e) =>
                                             setData('tare_weight', e.target.value)
                                         }
+                                        required
                                     />
                                     {errors.tare_weight && (
                                         <p className="mt-1 text-sm text-destructive">
@@ -471,7 +415,7 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
                                     )}
                                 </div>
                                 <div>
-                                    <Label htmlFor="maker_model">Maker Model</Label>
+                                    <Label htmlFor="maker_model">Maker model</Label>
                                     <Input
                                         id="maker_model"
                                         value={data.maker_model}
@@ -526,60 +470,7 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
                                         </p>
                                     )}
                                 </div>
-                                <div>
-                                    <Label htmlFor="pan_no">PAN No</Label>
-                                    <Input
-                                        id="pan_no"
-                                        value={data.pan_no}
-                                        onChange={(e) => setData('pan_no', e.target.value)}
-                                    />
-                                    {errors.pan_no && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.pan_no}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="gst_no">GST No</Label>
-                                    <Input
-                                        id="gst_no"
-                                        value={data.gst_no}
-                                        onChange={(e) => setData('gst_no', e.target.value)}
-                                    />
-                                    {errors.gst_no && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.gst_no}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="recommended_by">Recommended By</Label>
-                                    <Input
-                                        id="recommended_by"
-                                        value={data.recommended_by}
-                                        onChange={(e) =>
-                                            setData('recommended_by', e.target.value)
-                                        }
-                                    />
-                                    {errors.recommended_by && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.recommended_by}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label htmlFor="referenced">Referenced</Label>
-                                    <Input
-                                        id="referenced"
-                                        value={data.referenced}
-                                        onChange={(e) => setData('referenced', e.target.value)}
-                                    />
-                                    {errors.referenced && (
-                                        <p className="mt-1 text-sm text-destructive">
-                                            {errors.referenced}
-                                        </p>
-                                    )}
-                                </div>
+
                                 <div className="md:col-span-2">
                                     <Label htmlFor="remarks">Remarks</Label>
                                     <textarea
@@ -595,6 +486,272 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
                                         </p>
                                     )}
                                 </div>
+
+                                <div>
+                                    <Label htmlFor="recommended_by">Recommended by</Label>
+                                    <Input
+                                        id="recommended_by"
+                                        value={data.recommended_by}
+                                        onChange={(e) =>
+                                            setData('recommended_by', e.target.value)
+                                        }
+                                    />
+                                    {errors.recommended_by && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.recommended_by}
+                                        </p>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Vehicle permits &amp; validity</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                <div>
+                                    <Label htmlFor="issued_date">Issued date</Label>
+                                    <Input
+                                        id="issued_date"
+                                        type="date"
+                                        value={data.issued_date}
+                                        onChange={(e) => setData('issued_date', e.target.value)}
+                                    />
+                                    {errors.issued_date && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.issued_date}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="regd_date">Regd date</Label>
+                                    <Input
+                                        id="regd_date"
+                                        type="date"
+                                        value={data.regd_date}
+                                        onChange={(e) => setData('regd_date', e.target.value)}
+                                    />
+                                    {errors.regd_date && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.regd_date}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="permit_validity_date">
+                                        Permit validity
+                                    </Label>
+                                    <Input
+                                        id="permit_validity_date"
+                                        type="date"
+                                        value={data.permit_validity_date}
+                                        onChange={(e) =>
+                                            setData('permit_validity_date', e.target.value)
+                                        }
+                                    />
+                                    {errors.permit_validity_date && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.permit_validity_date}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="tax_validity_date">Tax validity</Label>
+                                    <Input
+                                        id="tax_validity_date"
+                                        type="date"
+                                        value={data.tax_validity_date}
+                                        onChange={(e) =>
+                                            setData('tax_validity_date', e.target.value)
+                                        }
+                                    />
+                                    {errors.tax_validity_date && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.tax_validity_date}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="fitness_validity_date">
+                                        Fitness validity
+                                    </Label>
+                                    <Input
+                                        id="fitness_validity_date"
+                                        type="date"
+                                        value={data.fitness_validity_date}
+                                        onChange={(e) =>
+                                            setData('fitness_validity_date', e.target.value)
+                                        }
+                                    />
+                                    {errors.fitness_validity_date && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.fitness_validity_date}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="insurance_validity_date">
+                                        Insurance validity
+                                    </Label>
+                                    <Input
+                                        id="insurance_validity_date"
+                                        type="date"
+                                        value={data.insurance_validity_date}
+                                        onChange={(e) =>
+                                            setData('insurance_validity_date', e.target.value)
+                                        }
+                                    />
+                                    {errors.insurance_validity_date && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.insurance_validity_date}
+                                        </p>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Representative &amp; location</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <Label htmlFor="represented_by">Represented by</Label>
+                                    <Input
+                                        id="represented_by"
+                                        value={data.represented_by}
+                                        onChange={(e) =>
+                                            setData('represented_by', e.target.value)
+                                        }
+                                    />
+                                    {errors.represented_by && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.represented_by}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="place">Place</Label>
+                                    <Input
+                                        id="place"
+                                        value={data.place}
+                                        onChange={(e) => setData('place', e.target.value)}
+                                    />
+                                    {errors.place && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.place}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="owner_type">Owner type</Label>
+                                    <Input
+                                        id="owner_type"
+                                        value={data.owner_type}
+                                        onChange={(e) =>
+                                            setData('owner_type', e.target.value)
+                                        }
+                                    />
+                                    {errors.owner_type && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.owner_type}
+                                        </p>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Vehicle documents</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {mediaListBlock(
+                                    'Current RC',
+                                    vehicleDocumentMedia.vehicle_rc,
+                                )}
+                                <div>
+                                    <Label htmlFor="vehicle_rc_certificate">
+                                        Replace vehicle RC
+                                    </Label>
+                                    <Input
+                                        id="vehicle_rc_certificate"
+                                        type="file"
+                                        accept={DOCUMENT_ACCEPT}
+                                        className="cursor-pointer"
+                                        onChange={(e) => {
+                                            const f = e.target.files?.[0];
+                                            setData('vehicle_rc_certificate', f ?? null);
+                                        }}
+                                    />
+                                    {errors.vehicle_rc_certificate && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.vehicle_rc_certificate}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {mediaListBlock(
+                                    'Current insurance',
+                                    vehicleDocumentMedia.vehicle_insurance,
+                                )}
+                                <div>
+                                    <Label htmlFor="vehicle_insurance_certificate">
+                                        Replace insurance document
+                                    </Label>
+                                    <Input
+                                        id="vehicle_insurance_certificate"
+                                        type="file"
+                                        accept={DOCUMENT_ACCEPT}
+                                        className="cursor-pointer"
+                                        onChange={(e) => {
+                                            const f = e.target.files?.[0];
+                                            setData(
+                                                'vehicle_insurance_certificate',
+                                                f ?? null,
+                                            );
+                                        }}
+                                    />
+                                    {errors.vehicle_insurance_certificate && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors.vehicle_insurance_certificate}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {mediaListBlock(
+                                    'Other documents',
+                                    vehicleDocumentMedia.vehicle_other_documents,
+                                )}
+                                <div>
+                                    <Label htmlFor="vehicle_other_documents">
+                                        Add other documents
+                                    </Label>
+                                    <Input
+                                        id="vehicle_other_documents"
+                                        type="file"
+                                        accept={DOCUMENT_ACCEPT}
+                                        multiple
+                                        className="cursor-pointer"
+                                        onChange={(e) => {
+                                            const list = e.target.files;
+                                            setData(
+                                                'vehicle_other_documents',
+                                                list?.length ? Array.from(list) : [],
+                                            );
+                                        }}
+                                    />
+                                    <p className="text-muted-foreground mt-1 text-xs">
+                                        Uploads append to existing files (remove individual files
+                                        with the trash icon above). PDF or images, up to 20 MB each.
+                                    </p>
+                                    {errors['vehicle_other_documents.0'] && (
+                                        <p className="mt-1 text-sm text-destructive">
+                                            {errors['vehicle_other_documents.0']}
+                                        </p>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
 
@@ -604,8 +761,12 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
                                     Cancel
                                 </Button>
                             </Link>
-                            <Button type="submit" disabled={processing} data-pan="vehicle-workorder-update">
-                                Update Work Order
+                            <Button
+                                type="submit"
+                                disabled={processing}
+                                data-pan="vehicle-workorder-update"
+                            >
+                                Update work order
                             </Button>
                         </div>
                     </div>

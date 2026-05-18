@@ -388,7 +388,6 @@ return [
         'vehicle-workorders.transport-registrations.store' => 'sections.transport.create',
         'vehicle-workorders.transport-registrations.edit' => 'sections.transport.update',
         'vehicle-workorders.transport-registrations.update' => 'sections.transport.update',
-        'vehicle-workorders.transport-registrations.destroy-media' => 'sections.transport.update',
         'vehicle-workorders.transport-registrations.destroy' => 'sections.transport.update',
 
         // Railway Receipts

@@ -5,16 +5,44 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-final class VehicleWorkorder extends Model
+final class VehicleWorkorder extends Model implements HasMedia
 {
+    use InteractsWithMedia;
+
     protected $table = 'vehicle_workorders';
 
     protected $guarded = [];
 
-    public function siding()
+    public function siding(): BelongsTo
     {
         return $this->belongsTo(Siding::class);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $docMimes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+
+        $this->addMediaCollection('vehicle_rc')
+            ->singleFile()
+            ->acceptsMimeTypes($docMimes);
+
+        $this->addMediaCollection('vehicle_insurance')
+            ->singleFile()
+            ->acceptsMimeTypes($docMimes);
+
+        $this->addMediaCollection('vehicle_other_documents')
+            ->acceptsMimeTypes($docMimes);
     }
 
     /**
@@ -23,6 +51,7 @@ final class VehicleWorkorder extends Model
     protected function casts(): array
     {
         return [
+            'tyres' => 'integer',
             'work_order_date' => 'date',
             'issued_date' => 'date',
             'regd_date' => 'date',
