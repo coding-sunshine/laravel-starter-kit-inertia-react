@@ -41,6 +41,21 @@ Schedule::command('loadrite:close-stale-rakes')
     ->onOneServer()
     ->name('loadrite-close-stale-rakes');
 
+// Loadrite: deep catch-up sweep. The 5-minute poller only looks back a few
+// hours; Loadrite's cloud API can publish an event days late, and an outage
+// (e.g. disk-full) can leave a multi-day hole. This re-sweeps the last 3 days
+// for every configured siding so no late/lost event is missed permanently.
+foreach (App\Models\LoadriteSetting::query()->whereNotNull('siding_id')->pluck('siding_id') as $loadriteSidingId) {
+    Schedule::command('loadrite:catchup', [
+        '--siding' => $loadriteSidingId,
+        '--from' => now()->subDays(3)->format('Y-m-d H:i:s'),
+    ])
+        ->everySixHours()
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->name("loadrite-catchup-siding-{$loadriteSidingId}");
+}
+
 // Backfill pcc_weight_mt on any wagons added since the last run so newly-placed
 // rakes get their carrying-capacity from existing fleet data, which the wagon
 // status resolver needs to compute Loaded / Overload / Underload.
