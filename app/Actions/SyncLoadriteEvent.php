@@ -420,12 +420,15 @@ final readonly class SyncLoadriteEvent
             $update['wagon_type'] = $cap['type'];
         }
 
-        // CC from the fleet (wagon-match or type-modal) supersedes the backfill
-        // estimate — it is traceable to a real registered wagon.
+        // CC + tare come from the railway's official capacity table — the
+        // authoritative source (the fleet pcc_weight_mt column has errors).
         $effectivePcc = $existingPcc;
         if ($cap['cc'] !== null && $cap['cc'] > 0) {
             $update['pcc_weight_mt'] = $cap['cc'];
             $effectivePcc = $cap['cc'];
+        }
+        if ($cap['tare'] !== null && $cap['tare'] > 0) {
+            $update['tare_weight_mt'] = $cap['tare'];
         }
 
         if ($update !== []) {

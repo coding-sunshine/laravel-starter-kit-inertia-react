@@ -89,6 +89,10 @@ final class LoadriteRebuildWagonIdentitiesCommand extends Command
                 $stampedCc++;
             }
 
+            if ($cap['tare'] !== null && $cap['tare'] > 0) {
+                $update['tare_weight_mt'] = $cap['tare'];
+            }
+
             if ($cap['cc'] === null && $parsed['wagon_number'] === null) {
                 $unresolved++;
             }

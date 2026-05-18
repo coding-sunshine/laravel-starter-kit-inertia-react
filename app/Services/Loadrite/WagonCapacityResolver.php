@@ -7,84 +7,94 @@ namespace App\Services\Loadrite;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Resolves a wagon's real type and permissible carrying capacity (CC) from
- * the fleet, given the wagon number and/or type abbreviation a Loadrite
- * operator keyed into the event UserData.
+ * Resolves a wagon's full type and official carrying capacity (CC).
  *
- * Two-tier, evidence-based — no hardcoded capacities:
+ * CC and tare come from the railway's official "CC WEIGHT" table
+ * (config/loadrite.php → wagon_cc) — NOT from the fleet's pcc_weight_mt
+ * column, which has known errors (it carried 79 MT for BOXNS where the
+ * official CC is 70.70).
+ *
+ * The full wagon type is resolved two ways:
  *  1. Wagon-number match — the operator-keyed running number (e.g. 64209) is
- *     a suffix of a registered fleet wagon (e.g. ECOR64209). That fleet row
- *     carries the real type and CC.
- *  2. Type-abbreviation fallback — the keyed type code (HL, HSM1, HL2D…) is a
- *     suffix of full fleet wagon_type values (BOXNHL, BOBRNHSM1…). The
- *     count-weighted modal pcc of matching fleet wagons is used.
+ *     a suffix of a registered fleet wagon (ECOR64209); that fleet row's
+ *     wagon_type is the precise type.
+ *  2. Type-abbreviation map — the keyed short code (HL, HSM1, NS…) maps to a
+ *     full type via config. Ambiguous codes default to the dominant variant.
  *
- * Both tiers read only existing fleet data, so the CC is always traceable to
- * real wagons the client already operates.
+ * The CC is then a straight lookup of that type in the official table.
  */
 final class WagonCapacityResolver
 {
-    /** @var array<string, array{type: ?string, cc: ?float}> */
-    private array $typeCache = [];
-
-    /** @var array<string, array{type: ?string, cc: ?float, full_number: ?string}> */
+    /** @var array<string, array{type: ?string, full_number: ?string}> */
     private array $wagonCache = [];
 
     /**
-     * Resolve type + CC for a wagon, preferring an exact fleet wagon-number
-     * match and falling back to the type abbreviation.
-     *
-     * @return array{cc: ?float, type: ?string, full_number: ?string, source: string}
+     * @return array{cc: ?float, tare: ?float, type: ?string, full_number: ?string, source: string}
      */
     public function resolve(?string $wagonNumber, ?string $typeAbbr): array
     {
+        // 1. Precise type from a fleet wagon-number match.
+        $fullNumber = null;
+        $type = null;
+        $source = 'unresolved';
+
         if ($wagonNumber !== null && $wagonNumber !== '') {
-            $byNumber = $this->byWagonNumber($wagonNumber);
-            if ($byNumber['cc'] !== null) {
-                return [
-                    'cc' => $byNumber['cc'],
-                    'type' => $byNumber['type'],
-                    'full_number' => $byNumber['full_number'],
-                    'source' => 'fleet-wagon-match',
-                ];
+            $byNumber = $this->typeByWagonNumber($wagonNumber);
+            if ($byNumber['type'] !== null) {
+                $type = $byNumber['type'];
+                $fullNumber = $byNumber['full_number'];
+                $source = 'fleet-wagon-match';
             }
         }
 
-        if ($this->isUsableTypeAbbreviation($typeAbbr)) {
-            $byType = $this->byTypeAbbreviation($typeAbbr);
-            if ($byType['cc'] !== null) {
-                return [
-                    'cc' => $byType['cc'],
-                    'type' => $byType['type'],
-                    'full_number' => null,
-                    'source' => 'fleet-type-modal',
-                ];
+        // 2. Fall back to the keyed type abbreviation.
+        if ($type === null && $this->isUsableTypeAbbreviation($typeAbbr)) {
+            $mapped = $this->typeByAbbreviation($typeAbbr);
+            if ($mapped !== null) {
+                $type = $mapped;
+                $source = 'type-abbreviation';
             }
         }
 
-        return ['cc' => null, 'type' => null, 'full_number' => null, 'source' => 'unresolved'];
+        $cap = $this->officialCapacity($type);
+
+        return [
+            'cc' => $cap['cc'],
+            'tare' => $cap['tare'],
+            'type' => $type,
+            'full_number' => $fullNumber,
+            'source' => $cap['cc'] !== null ? $source : 'unresolved',
+        ];
     }
 
     /**
-     * A type abbreviation is only usable for a suffix match if it contains a
-     * letter and is at least two characters. Bare numbers ("2", "11342") and
-     * single characters are operator mis-keys — using them would false-match
-     * any wagon_type ending in that character. Such events still resolve CC
-     * from the wagon number (tier 1).
+     * Official CC + tare for a full wagon type. Case-insensitive exact match
+     * against the railway table.
+     *
+     * @return array{cc: ?float, tare: ?float}
      */
-    private function isUsableTypeAbbreviation(?string $abbr): bool
+    private function officialCapacity(?string $type): array
     {
-        if ($abbr === null || mb_strlen($abbr) < 2) {
-            return false;
+        if ($type === null) {
+            return ['cc' => null, 'tare' => null];
         }
 
-        return preg_match('/[A-Za-z]/', $abbr) === 1;
+        $table = (array) config('loadrite.wagon_cc', []);
+        $key = mb_strtoupper(mb_trim($type));
+
+        foreach ($table as $name => $cap) {
+            if (mb_strtoupper((string) $name) === $key) {
+                return ['cc' => (float) $cap['cc'], 'tare' => (float) $cap['tare']];
+            }
+        }
+
+        return ['cc' => null, 'tare' => null];
     }
 
     /**
-     * @return array{type: ?string, cc: ?float, full_number: ?string}
+     * @return array{type: ?string, full_number: ?string}
      */
-    private function byWagonNumber(string $wagonNumber): array
+    private function typeByWagonNumber(string $wagonNumber): array
     {
         $key = mb_strtoupper($wagonNumber);
         if (isset($this->wagonCache[$key])) {
@@ -93,40 +103,42 @@ final class WagonCapacityResolver
 
         $row = DB::table('wagons')
             ->whereRaw('UPPER(wagon_number) LIKE ?', ['%'.$key])
-            ->whereRaw('pcc_weight_mt::numeric > 0')
             ->whereNotNull('wagon_type')
             ->orderByDesc('id')
-            ->first(['wagon_number', 'wagon_type', 'pcc_weight_mt']);
+            ->first(['wagon_number', 'wagon_type']);
 
         $result = $row !== null
-            ? ['type' => $row->wagon_type, 'cc' => (float) $row->pcc_weight_mt, 'full_number' => $row->wagon_number]
-            : ['type' => null, 'cc' => null, 'full_number' => null];
+            ? ['type' => $row->wagon_type, 'full_number' => $row->wagon_number]
+            : ['type' => null, 'full_number' => null];
 
         return $this->wagonCache[$key] = $result;
     }
 
-    /**
-     * @return array{type: ?string, cc: ?float}
-     */
-    private function byTypeAbbreviation(string $abbr): array
+    private function typeByAbbreviation(string $abbr): ?string
     {
-        $key = mb_strtoupper($abbr);
-        if (isset($this->typeCache[$key])) {
-            return $this->typeCache[$key];
+        $map = (array) config('loadrite.type_abbreviations', []);
+        $key = mb_strtoupper(mb_trim($abbr));
+
+        foreach ($map as $code => $fullType) {
+            if (mb_strtoupper((string) $code) === $key) {
+                return (string) $fullType;
+            }
         }
 
-        $row = DB::table('wagons')
-            ->whereRaw('UPPER(wagon_type) LIKE ?', ['%'.$key])
-            ->whereRaw('pcc_weight_mt::numeric > 0')
-            ->selectRaw('wagon_type, pcc_weight_mt::numeric AS cc, COUNT(*) AS n')
-            ->groupBy('wagon_type', DB::raw('pcc_weight_mt::numeric'))
-            ->orderByDesc('n')
-            ->first();
+        return null;
+    }
 
-        $result = $row !== null
-            ? ['type' => $row->wagon_type, 'cc' => (float) $row->cc]
-            : ['type' => null, 'cc' => null];
+    /**
+     * Reject bare-number or single-character type tokens (operator mis-keys
+     * like "2" or "11342"). A usable abbreviation contains a letter and is at
+     * least two characters.
+     */
+    private function isUsableTypeAbbreviation(?string $abbr): bool
+    {
+        if ($abbr === null || mb_strlen($abbr) < 2) {
+            return false;
+        }
 
-        return $this->typeCache[$key] = $result;
+        return preg_match('/[A-Za-z]/', $abbr) === 1;
     }
 }
