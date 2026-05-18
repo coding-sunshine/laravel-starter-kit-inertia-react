@@ -8,213 +8,116 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Backfill wagons.pcc_weight_mt where it is null/zero.
+ * Align wagons.pcc_weight_mt (and tare_weight_mt) to the railway's official
+ * "CC WEIGHT" table (config/loadrite.php → wagon_cc), keyed by wagon type.
  *
- * pcc_weight_mt (per-wagon permissible carrying capacity) is the target
- * weight WagonStatusResolver uses to decide Loaded / Overload / Underload.
- * When it is null every loaded wagon falls through to "loading" forever and
- * the loading-progress donut reads 0%.
+ * The fleet's stored pcc_weight_mt had errors (e.g. 79 MT for BOXNS where the
+ * official CC is 70.70). This command makes the official table the single
+ * source of truth: every wagon with a known type gets the official CC + tare.
  *
- * Resolution strategy — purely data-driven, no hardcoded capacities:
- *  1. Wagon HAS a wagon_type → copy the count-weighted modal pcc of every
- *     already-populated wagon of that exact wagon_type.
- *  2. Wagon has NULL wagon_type but its rake has a rake_type → copy the
- *     count-weighted modal pcc of every populated wagon whose wagon_type
- *     begins with that rake_type (the fleet uses fine-grained subtypes,
- *     e.g. rake_type "BOXN" → BOXNHL / BOXNHL25T / ...).
- *  3. Otherwise the wagon is left untouched and reported as unresolved.
+ * Wagons with no wagon_type are left untouched — their type and capacity are
+ * filled later from the Loadrite event UserData (loadrite:rebuild-wagon-
+ * identities / live ingestion).
  *
- * Always run with --dry-run first.
+ * Scheduled hourly. Always run with --dry-run first.
  */
 final class WagonsBackfillPccCommand extends Command
 {
     protected $signature = 'wagons:backfill-pcc
-                            {--dry-run : Show the plan without writing}
-                            {--rake= : Limit to a single rake id}';
+                            {--siding= : Limit to one siding id}
+                            {--rake= : Limit to one rake id}
+                            {--dry-run : Show the plan without writing}';
 
-    protected $description = 'Backfill wagons.pcc_weight_mt from fleet data where it is null/zero.';
+    protected $description = 'Align wagon pcc_weight_mt + tare to the official CC table by wagon type.';
 
     public function handle(): int
     {
-        $dryRun = (bool) $this->option('dry-run');
+        $sidingFilter = $this->option('siding') ? (int) $this->option('siding') : null;
         $rakeFilter = $this->option('rake') ? (int) $this->option('rake') : null;
+        $dryRun = (bool) $this->option('dry-run');
 
-        $exactPcc = $this->modalPccByExactType();
-        $familyPcc = $this->modalPccByFamily();
+        // Case-insensitive official CC lookup.
+        $lookup = [];
+        foreach ((array) config('loadrite.wagon_cc', []) as $type => $cap) {
+            $lookup[mb_strtoupper((string) $type)] = $cap;
+        }
 
-        $this->info(sprintf(
-            'Reference: %d exact wagon_type capacities, %d rake-type family capacities.',
-            count($exactPcc),
-            count($familyPcc),
-        ));
+        if ($lookup === []) {
+            $this->error('config/loadrite.php wagon_cc table is empty.');
+
+            return self::FAILURE;
+        }
 
         $targets = DB::table('wagons')
-            ->leftJoin('rakes', 'rakes.id', '=', 'wagons.rake_id')
-            ->where(function ($q): void {
-                $q->whereNull('wagons.pcc_weight_mt')
-                    ->orWhereRaw('wagons.pcc_weight_mt::numeric = 0');
-            })
-            ->when($rakeFilter, fn ($q) => $q->where('wagons.rake_id', $rakeFilter))
-            ->select(
-                'wagons.id',
-                'wagons.wagon_type',
-                'rakes.rake_type',
-            )
+            ->whereNotNull('wagon_type')
+            ->where('wagon_type', '!=', '')
+            ->when($rakeFilter, fn ($q) => $q->where('rake_id', $rakeFilter))
+            ->when($sidingFilter, fn ($q) => $q->whereIn('rake_id', function ($sub) use ($sidingFilter) {
+                $sub->select('id')->from('rakes')->where('siding_id', $sidingFilter);
+            }))
+            ->select('id', 'wagon_type', 'pcc_weight_mt', 'tare_weight_mt')
             ->get();
 
-        $byExact = 0;
-        $byFamily = 0;
-        $unresolved = 0;
+        $corrected = 0;
+        $alreadyOk = 0;
+        $unknownType = 0;
         $updates = [];
 
         foreach ($targets as $w) {
-            $pcc = null;
-            $via = null;
-
-            if ($w->wagon_type !== null && isset($exactPcc[$w->wagon_type])) {
-                $pcc = $exactPcc[$w->wagon_type];
-                $via = 'exact:'.$w->wagon_type;
-                $byExact++;
-            } elseif ($w->rake_type !== null) {
-                $match = $this->matchFamily($w->rake_type, $familyPcc);
-                if ($match !== null) {
-                    $pcc = $match;
-                    $via = 'family:'.$w->rake_type;
-                    $byFamily++;
-                }
-            }
-
-            if ($pcc === null) {
-                $unresolved++;
+            $cap = $lookup[mb_strtoupper((string) $w->wagon_type)] ?? null;
+            if ($cap === null) {
+                $unknownType++;
 
                 continue;
             }
 
-            $updates[] = ['id' => (int) $w->id, 'pcc' => $pcc, 'via' => $via];
+            $ccMatches = $w->pcc_weight_mt !== null
+                && abs((float) $w->pcc_weight_mt - (float) $cap['cc']) < 0.01;
+            $tareMatches = $w->tare_weight_mt !== null
+                && abs((float) $w->tare_weight_mt - (float) $cap['tare']) < 0.01;
+
+            if ($ccMatches && $tareMatches) {
+                $alreadyOk++;
+
+                continue;
+            }
+
+            $updates[] = ['id' => (int) $w->id, 'cc' => (float) $cap['cc'], 'tare' => (float) $cap['tare']];
+            $corrected++;
         }
 
         $this->table(
-            ['Resolution', 'Wagons'],
+            ['Result', 'Count'],
             [
-                ['exact wagon_type', $byExact],
-                ['rake_type family', $byFamily],
-                ['unresolved (skipped)', $unresolved],
-                ['total to update', count($updates)],
+                ['wagons with known type', $targets->count() - $unknownType],
+                ['already correct', $alreadyOk],
+                ['to correct', $corrected],
+                ['unknown wagon_type (skipped)', $unknownType],
             ],
         );
 
-        if ($updates !== []) {
-            $sample = array_slice($updates, 0, 8);
-            $this->line('Sample:');
-            foreach ($sample as $u) {
-                $this->line(sprintf('  wagon #%d → pcc %.2f (%s)', $u['id'], $u['pcc'], $u['via']));
+        if (! $dryRun && $updates !== []) {
+            $written = 0;
+            foreach (array_chunk($updates, 500) as $chunk) {
+                DB::transaction(function () use ($chunk, &$written): void {
+                    foreach ($chunk as $u) {
+                        $written += DB::table('wagons')
+                            ->where('id', $u['id'])
+                            ->update([
+                                'pcc_weight_mt' => $u['cc'],
+                                'tare_weight_mt' => $u['tare'],
+                                'updated_at' => now(),
+                            ]);
+                    }
+                });
             }
+            $this->info("Corrected {$written} wagons to the official CC table.");
+        } elseif ($dryRun) {
+            $this->warn('Dry run — no rows written.');
+        } else {
+            $this->info('All wagons already match the official CC table.');
         }
-
-        if ($dryRun) {
-            $this->warn('Dry run — no rows written. Re-run without --dry-run to apply.');
-
-            return self::SUCCESS;
-        }
-
-        $written = 0;
-        foreach (array_chunk($updates, 500) as $chunk) {
-            DB::transaction(function () use ($chunk, &$written): void {
-                foreach ($chunk as $u) {
-                    $written += DB::table('wagons')
-                        ->where('id', $u['id'])
-                        ->update([
-                            'pcc_weight_mt' => $u['pcc'],
-                            'updated_at' => now(),
-                        ]);
-                }
-            });
-        }
-
-        $this->info("Updated {$written} wagons.");
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Count-weighted modal pcc for each exact wagon_type among populated wagons.
-     *
-     * @return array<string, float>
-     */
-    private function modalPccByExactType(): array
-    {
-        $rows = DB::table('wagons')
-            ->whereNotNull('wagon_type')
-            ->whereRaw('pcc_weight_mt::numeric > 0')
-            ->selectRaw('wagon_type, pcc_weight_mt::numeric AS pcc, COUNT(*) AS n')
-            ->groupBy('wagon_type', DB::raw('pcc_weight_mt::numeric'))
-            ->orderByDesc('n')
-            ->get();
-
-        $out = [];
-        foreach ($rows as $r) {
-            // First row per type wins (rows are ordered by descending count).
-            if (! isset($out[$r->wagon_type])) {
-                $out[$r->wagon_type] = (float) $r->pcc;
-            }
-        }
-
-        return $out;
-    }
-
-    /**
-     * Count-weighted modal pcc for each rake-type family. A family is every
-     * populated wagon whose wagon_type starts with the rake_type string.
-     *
-     * @return array<string, float>
-     */
-    private function modalPccByFamily(): array
-    {
-        $rakeTypes = DB::table('rakes')
-            ->whereNotNull('rake_type')
-            ->distinct()
-            ->pluck('rake_type')
-            ->all();
-
-        $out = [];
-        foreach ($rakeTypes as $rakeType) {
-            $row = DB::table('wagons')
-                ->whereRaw('pcc_weight_mt::numeric > 0')
-                ->where('wagon_type', 'like', $rakeType.'%')
-                ->selectRaw('pcc_weight_mt::numeric AS pcc, COUNT(*) AS n')
-                ->groupBy(DB::raw('pcc_weight_mt::numeric'))
-                ->orderByDesc('n')
-                ->first();
-
-            if ($row !== null) {
-                $out[$rakeType] = (float) $row->pcc;
-            }
-        }
-
-        return $out;
-    }
-
-    /**
-     * Resolve a rake_type to a family pcc, preferring the longest (most
-     * specific) matching family key.
-     *
-     * @param  array<string, float>  $familyPcc
-     */
-    private function matchFamily(string $rakeType, array $familyPcc): ?float
-    {
-        if (isset($familyPcc[$rakeType])) {
-            return $familyPcc[$rakeType];
-        }
-
-        $best = null;
-        $bestLen = 0;
-        foreach ($familyPcc as $key => $pcc) {
-            if (str_starts_with($rakeType, $key) && mb_strlen($key) > $bestLen) {
-                $best = $pcc;
-                $bestLen = mb_strlen($key);
-            }
-        }
-
-        return $best;
     }
 }

@@ -33,6 +33,46 @@ Schedule::command('model:prune', [
 // Loadrite: ensure polling jobs are dispatched for all configured sidings.
 Schedule::command('loadrite:start-polling')->everyFiveMinutes();
 
+// Loadrite: stamp loading_end_time on rakes that have been silent for 6+ hours so
+// incoming events don't keep gluing to a stale "open" rake.
+Schedule::command('loadrite:close-stale-rakes')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->name('loadrite-close-stale-rakes');
+
+// Loadrite: deep catch-up sweep. The 5-minute poller only looks back a few
+// hours; Loadrite's cloud API can publish an event days late, and an outage
+// (e.g. disk-full) can leave a multi-day hole. This re-sweeps the last 3 days
+// for every configured siding so no late/lost event is missed permanently.
+foreach (App\Models\LoadriteSetting::query()->whereNotNull('siding_id')->pluck('siding_id') as $loadriteSidingId) {
+    Schedule::command('loadrite:catchup', [
+        '--siding' => $loadriteSidingId,
+        '--from' => now()->subDays(3)->format('Y-m-d H:i:s'),
+    ])
+        ->everySixHours()
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->name("loadrite-catchup-siding-{$loadriteSidingId}");
+}
+
+// Backfill pcc_weight_mt on any wagons added since the last run so newly-placed
+// rakes get their carrying-capacity from existing fleet data, which the wagon
+// status resolver needs to compute Loaded / Overload / Underload.
+Schedule::command('wagons:backfill-pcc')
+    ->hourly()
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->name('wagons-backfill-pcc');
+
+// Loadrite: nightly reconciliation — sum of wagon_loading.loaded_quantity_mt
+// vs sum of loadrite_events Short Total weights per rake. Logs mismatches.
+Schedule::command('loadrite:verify-totals --log')
+    ->dailyAt('02:50')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->name('loadrite-verify-totals');
+
 // RRMCS: check loading rakes for demurrage threshold crossings.
 Schedule::command('rrmcs:check-demurrage')->everyFiveMinutes();
 

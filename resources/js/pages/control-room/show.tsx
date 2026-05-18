@@ -100,9 +100,12 @@ export default function ControlRoomShow({
         .filter((l) => l.status === 'active' && l.current_wagon_id !== null)
         .map((l) => l.current_wagon_id as number);
 
+    const rakeLabel =
+        data.rake.rake_serial_number ?? data.rake.rake_number ?? null;
+
     const subtitle = [
         data.rake.siding?.name,
-        data.rake.rake_number,
+        rakeLabel,
         `${data.rake.wagon_count} wagons`,
     ]
         .filter(Boolean)
@@ -113,15 +116,15 @@ export default function ControlRoomShow({
             breadcrumbs={[
                 { title: 'Control Room', href: '/control-room' },
                 {
-                    title: data.rake.rake_number ?? `Rake #${data.rake.id}`,
+                    title: rakeLabel ?? `Rake #${data.rake.id}`,
                     href: `/control-room/${data.rake.id}`,
                 },
             ]}
         >
-            <Head title={`Control Room — ${data.rake.rake_number ?? 'Rake'}`} />
+            <Head title={`Control Room — ${rakeLabel ?? 'Rake'}`} />
             <div className="-m-4 sm:-m-6 lg:-m-8">
                 <ControlRoomShell
-                    title={data.rake.rake_number ?? `Rake #${data.rake.id}`}
+                    title={rakeLabel ?? `Rake #${data.rake.id}`}
                     subtitle={subtitle}
                     staleStatus={stale.status}
                     secondsSince={stale.secondsSince}

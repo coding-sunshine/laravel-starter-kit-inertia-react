@@ -84,7 +84,10 @@ export function SidingCardV2({ siding, onOpen, index = 0, pulseEventId = null }:
                 </div>
                 {siding.rake && (
                     <span className="text-sm text-slate-600">
-                        Rake No. {siding.rake.rake_number ?? '—'}
+                        Rake No.{' '}
+                        {siding.rake.rake_serial_number ??
+                            siding.rake.rake_number ??
+                            '—'}
                     </span>
                 )}
                 {siding.rake?.state && (

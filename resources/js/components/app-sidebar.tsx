@@ -52,19 +52,14 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-dashboard',
     },
     {
+        // The live monitor. Points at the rebuilt /control-panel-2 surface;
+        // the legacy /control-room route still resolves for old bookmarks but
+        // is intentionally not linked in the nav.
         title: 'Control Room',
-        href: '/control-room',
-        icon: Radio,
-        permission: 'sections.live_monitor.view',
-        dataPan: 'nav-control-room',
-    },
-    {
-        title: 'Control Panel v2',
         href: '/control-panel-2',
         icon: Radio,
         permission: 'sections.live_monitor.view',
-        feature: 'control_panel_v2',
-        dataPan: 'nav-control-panel-v2',
+        dataPan: 'nav-control-room',
     },
     {
         title: 'Settings',
@@ -413,11 +408,9 @@ export function AppSidebar() {
 
         // --- Group 1: Overview ---
         const overviewItems: NavItem[] = visible(
-            [
-                byTitle('Dashboard'),
-                byTitle('Control Room'),
-                byTitle('Control Panel v2'),
-            ].filter(Boolean) as NavItem[],
+            [byTitle('Dashboard'), byTitle('Control Room')].filter(
+                Boolean,
+            ) as NavItem[],
         );
 
         // --- Group 2: Loading Operations ---

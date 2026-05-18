@@ -69,7 +69,7 @@ export default function ControlPanelV2Index({
 
     return (
         <AppLayout>
-            <Head title="Control Panel — All Sidings" />
+            <Head title="Control Room — All Sidings" />
 
             <PersistentHeader
                 totalSidings={overview.totals.sidings}

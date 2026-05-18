@@ -171,7 +171,7 @@ export default function ControlPanelV2Siding({
 
     return (
         <AppLayout>
-            <Head title={`Control Panel — ${siding.name}`} />
+            <Head title={`Control Room — ${siding.name}`} />
 
             <PersistentHeader
                 totalSidings={totalsForHeader.sidings}
@@ -208,7 +208,9 @@ export default function ControlPanelV2Siding({
                                     <div className="text-sm text-slate-500">
                                         Rake No.{' '}
                                         <span className="font-medium text-slate-700">
-                                            {rakeData.rake.rake_number ?? '—'}
+                                            {rakeData.rake.rake_serial_number ??
+                                                rakeData.rake.rake_number ??
+                                                '—'}
                                         </span>
                                         {rakeData.rake.state && (
                                             <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium uppercase text-amber-800">
