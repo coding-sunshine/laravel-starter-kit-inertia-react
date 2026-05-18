@@ -260,6 +260,7 @@ final class AppServiceProvider extends ServiceProvider
             'vehicle-workorders-transport-registrations-delete',
             'vehicle-workorders-transport-registrations-media-delete',
             'vehicle-workorders-transport-registrations-table',
+            'vehicle-workorders-transporters-column-picker',
             'vehicle-workorders-filters',
             'vehicle-workorders-filters-vehicles',
             'vehicle-workorders-filters-transporters',

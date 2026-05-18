@@ -337,7 +337,15 @@ final class VehicleWorkorderController extends Controller
      */
     private function transportWorkOrderRegistrationsBaseQuery(array $sidingIds, array $filters): Builder
     {
+        $registrationTable = (new TransportWorkOrderRegistration)->getTable();
+        [$assignedVehiclesSql, $assignedVehiclesBindings] = $this->assignedVehicleWorkordersCountSelect(
+            $sidingIds,
+            $registrationTable,
+        );
+
         return TransportWorkOrderRegistration::query()
+            ->select("{$registrationTable}.*")
+            ->selectRaw("({$assignedVehiclesSql}) as assigned_vehicle_workorders_count", $assignedVehiclesBindings)
             ->where(function (Builder $q) use ($sidingIds): void {
                 $q->whereNull('siding_id')
                     ->orWhereIn('siding_id', $sidingIds);
@@ -359,6 +367,59 @@ final class VehicleWorkorderController extends Controller
             )
             ->orderByDesc('work_order_date')
             ->orderByDesc('created_at');
+    }
+
+    /**
+     * Correlated CASE/subquery counting {@see VehicleWorkorder} rows for this registration: same trimmed
+     * transporter name, {@see VehicleWorkorder::wo_no} equal (trimmed) to registration
+     * {@see TransportWorkOrderRegistration::work_order_no_1} or {@see TransportWorkOrderRegistration::work_order_no_2},
+     * scoped to accessible sidings; when the registration has a siding, work orders must share that siding.
+     *
+     * @param  array<int, int|string>  $sidingIds
+     * @return array{0: string, 1: list<int>}
+     */
+    private function assignedVehicleWorkordersCountSelect(array $sidingIds, string $registrationTable): array
+    {
+        $vwTable = (new VehicleWorkorder)->getTable();
+
+        $normalizedSidingIds = array_values(array_unique(array_map(
+            static fn (int|string $id): int => (int) $id,
+            $sidingIds,
+        )));
+
+        if ($normalizedSidingIds === []) {
+            $sidingPredicate = '1 = 0';
+            $bindings = [];
+        } else {
+            $placeholders = implode(',', array_fill(0, count($normalizedSidingIds), '?'));
+            $sidingPredicate = "vw.siding_id in ({$placeholders})";
+            $bindings = $normalizedSidingIds;
+        }
+
+        $sql = <<<SQL
+case
+    when trim(coalesce({$registrationTable}.transporter_name, '')) = ''
+        or (
+            trim(coalesce({$registrationTable}.work_order_no_1, '')) = ''
+            and trim(coalesce({$registrationTable}.work_order_no_2, '')) = ''
+        )
+    then 0
+    else (
+        select count(*)
+        from {$vwTable} as vw
+        where {$sidingPredicate}
+        and ({$registrationTable}.siding_id is null or vw.siding_id = {$registrationTable}.siding_id)
+        and lower(trim(coalesce(vw.transport_name, ''))) = lower(trim(coalesce({$registrationTable}.transporter_name, '')))
+        and trim(coalesce(vw.wo_no, '')) <> ''
+        and (
+            trim(coalesce(vw.wo_no, '')) = trim(coalesce({$registrationTable}.work_order_no_1, ''))
+            or trim(coalesce(vw.wo_no, '')) = trim(coalesce({$registrationTable}.work_order_no_2, ''))
+        )
+    )
+end
+SQL;
+
+        return [$sql, $bindings];
     }
 
     /**

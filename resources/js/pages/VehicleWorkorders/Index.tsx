@@ -1,4 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import TransportRegistrationsTable, {
+    type PaginatedTransportRegistrations,
+} from '@/pages/VehicleWorkorders/TransportRegistrationsTable';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +13,7 @@ import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/s
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
-import { Filter, Pencil, Trash2, Truck, CarFront } from 'lucide-react';
+import { Filter, Pencil, Truck, CarFront } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { type BreadcrumbItem } from '@/types';
 
@@ -58,27 +61,6 @@ interface VehicleWorkorder {
 
 interface PaginatedWorkorders {
     data: VehicleWorkorder[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    links: { url: string | null; label: string; active: boolean }[];
-}
-
-interface TransportRegistrationRow {
-    id: number;
-    siding_id: number | null;
-    work_order_no_1: string | null;
-    work_order_no_2: string | null;
-    work_order_date: string | null;
-    transporter_name: string | null;
-    /** Omitted or true = active when older payloads omit the flag. */
-    is_active?: boolean | null;
-    siding?: Siding | null;
-}
-
-interface PaginatedTransportRegistrations {
-    data: TransportRegistrationRow[];
     current_page: number;
     last_page: number;
     per_page: number;
@@ -307,13 +289,13 @@ export default function VehicleWorkordersIndex({
                             Filters
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3 pt-0">
+                    <CardContent className="space-y-2 pt-0">
                         {view === 'vehicles' ? (
                             <div
-                                className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4"
+                                className="grid max-w-6xl grid-cols-1 justify-items-start gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4"
                                 data-pan="vehicle-workorders-filters-vehicles"
                             >
-                                <div className="space-y-1">
+                                <div className="w-full max-w-[260px] space-y-1">
                                     <Label htmlFor="siding_id" className="text-xs">
                                         Siding
                                     </Label>
@@ -327,7 +309,7 @@ export default function VehicleWorkordersIndex({
                                             setLocalFilters((f) => ({ ...f, siding_id: v || undefined }))
                                         }
                                     >
-                                        <SelectTrigger id="siding_id" className="h-9">
+                                        <SelectTrigger id="siding_id" className="h-9 w-full max-w-full">
                                             <SelectValue placeholder="All sidings" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -340,7 +322,7 @@ export default function VehicleWorkordersIndex({
                                     </Select>
                                 </div>
                                 <div
-                                    className="space-y-1"
+                                    className="w-full max-w-[260px] space-y-1"
                                     data-pan="vehicle-workorders-filter-transport-name-search-vehicles"
                                 >
                                     <Label className="text-xs">Transport name</Label>
@@ -359,7 +341,7 @@ export default function VehicleWorkordersIndex({
                                         className="h-9 min-h-9"
                                     />
                                 </div>
-                                <div className="space-y-1">
+                                <div className="w-full max-w-[260px] space-y-1">
                                     <Label htmlFor="vehicle_no" className="text-xs">
                                         Vehicle no.
                                     </Label>
@@ -376,7 +358,7 @@ export default function VehicleWorkordersIndex({
                                         }
                                     />
                                 </div>
-                                <div className="space-y-1">
+                                <div className="w-full max-w-[260px] space-y-1">
                                     <Label htmlFor="regd_date" className="text-xs">
                                         Regd date
                                     </Label>
@@ -396,10 +378,10 @@ export default function VehicleWorkordersIndex({
                             </div>
                         ) : (
                             <div
-                                className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-2"
+                                className="grid max-w-2xl grid-cols-1 justify-items-start gap-x-4 gap-y-2 sm:grid-cols-2"
                                 data-pan="vehicle-workorders-filters-transporters"
                             >
-                                <div className="space-y-1">
+                                <div className="w-full max-w-[260px] space-y-1">
                                     <Label htmlFor="siding_id_tr" className="text-xs">
                                         Siding
                                     </Label>
@@ -413,7 +395,7 @@ export default function VehicleWorkordersIndex({
                                             setLocalFilters((f) => ({ ...f, siding_id: v || undefined }))
                                         }
                                     >
-                                        <SelectTrigger id="siding_id_tr" className="h-9">
+                                        <SelectTrigger id="siding_id_tr" className="h-9 w-full max-w-full">
                                             <SelectValue placeholder="All sidings" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -426,7 +408,7 @@ export default function VehicleWorkordersIndex({
                                     </Select>
                                 </div>
                                 <div
-                                    className="space-y-1"
+                                    className="w-full max-w-[260px] space-y-1"
                                     data-pan="vehicle-workorders-filter-transport-name-search"
                                 >
                                     <Label className="text-xs">Transport name</Label>
@@ -535,7 +517,10 @@ export default function VehicleWorkordersIndex({
                                             <TableHead>Siding</TableHead>
                                             <TableHead>Vehicle No</TableHead>
                                             <TableHead>RCD PIN No</TableHead>
-                                            <TableHead>Transport Name</TableHead>
+                                            <TableHead>Transport name</TableHead>
+                                            <TableHead className="max-w-[200px] whitespace-normal">
+                                                WO no 2
+                                            </TableHead>
                                             <TableHead>Tyres</TableHead>
                                             <TableHead>Tare Weight</TableHead>
                                             <TableHead>Regd Date</TableHead>
@@ -563,8 +548,15 @@ export default function VehicleWorkordersIndex({
                                                     {wo.vehicle_no ?? '-'}
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap">{wo.rcd_pin_no ?? '-'}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{wo.transport_name ?? '-'}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{wo.tyres != null ? wo.tyres : '-'}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {wo.transport_name ?? '-'}
+                                                </TableCell>
+                                                <TableCell className="max-w-[200px] min-w-0 align-top text-sm whitespace-normal break-words">
+                                                    {wo.wo_no_2?.trim() ? wo.wo_no_2 : '-'}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {wo.tyres != null ? wo.tyres : '-'}
+                                                </TableCell>
                                                 <TableCell className="whitespace-nowrap">{wo.tare_weight != null ? wo.tare_weight : '-'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{formatDate(wo.regd_date)}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{formatDate(wo.permit_validity_date)}</TableCell>
@@ -625,130 +617,11 @@ export default function VehicleWorkordersIndex({
                     )}
 
                     {view === 'transporters' && transportWorkOrderRegistrations && (
-                        <Card data-pan="vehicle-workorders-transport-registrations-table">
-                            <CardHeader>
-                                <CardTitle>Transporters</CardTitle>
-                                <CardDescription>
-                                    {transportWorkOrderRegistrations.total}{' '}
-                                    {transportWorkOrderRegistrations.total !== 1 ? 'records' : 'record'} from
-                                    transporter registrations
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {transportWorkOrderRegistrations.data.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Siding</TableHead>
-                                                    <TableHead>WO no 1</TableHead>
-                                                    <TableHead>WO no 2</TableHead>
-                                                    <TableHead>Work order date</TableHead>
-                                                    <TableHead>Transporter</TableHead>
-                                                    <TableHead className="whitespace-nowrap">Active</TableHead>
-                                                    <TableHead className="w-[88px] text-right">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {transportWorkOrderRegistrations.data.map((row) => (
-                                                    <TableRow key={row.id}>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.siding
-                                                                ? `${row.siding.name} (${row.siding.code})`
-                                                                : '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.work_order_no_1 ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.work_order_no_2 ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {formatDate(row.work_order_date)}
-                                                        </TableCell>
-                                                        <TableCell className="max-w-[220px] truncate">
-                                                            {row.transporter_name ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.is_active === false ? (
-                                                                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                                                    Inactive
-                                                                </span>
-                                                            ) : (
-                                                                <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">
-                                                                    Active
-                                                                </span>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right whitespace-nowrap">
-                                                            <div className="flex flex-wrap justify-end gap-1">
-                                                                {transportRegistrationPermissions.canUpdate ? (
-                                                                    <Button variant="outline" size="icon-sm" asChild>
-                                                                        <Link
-                                                                            href={`/vehicle-workorders/transport-registrations/${row.id}/edit`}
-                                                                            aria-label="Edit transporter registration"
-                                                                            title="Edit"
-                                                                            data-pan="vehicle-workorders-transport-registrations-edit"
-                                                                        >
-                                                                            <Pencil className="h-4 w-4" />
-                                                                        </Link>
-                                                                    </Button>
-                                                                ) : null}
-                                                                {transportRegistrationPermissions.canDelete ? (
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="icon-sm"
-                                                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                                        data-pan="vehicle-workorders-transport-registrations-delete"
-                                                                        type="button"
-                                                                        aria-label="Delete transporter registration"
-                                                                        title="Delete"
-                                                                        onClick={() =>
-                                                                            deleteTransportRegistration(row.id)
-                                                                        }
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                ) : null}
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                        {transportWorkOrderRegistrations.last_page > 1 ? (
-                                            <div className="mt-4 flex flex-wrap gap-2">
-                                        {transportWorkOrderRegistrations.links.map((link, index) => (
-                                            <Link
-                                                key={`${link.url ?? 'null'}-${link.label}-tr-${index}`}
-                                                        href={link.url ?? '#'}
-                                                        className={
-                                                            link.active
-                                                                ? 'rounded border bg-muted px-2 py-1 text-sm font-medium'
-                                                                : 'rounded border px-2 py-1 text-sm'
-                                                        }
-                                                    >
-                                                        {link.label}
-                                                    </Link>
-                                                ))}
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                ) : (
-                                    <div className="rounded-lg border border-dashed p-8 text-center">
-                                        <p className="text-sm text-muted-foreground">
-                                            No transporter registrations yet.{` `}
-                                            {transportRegistrationPermissions.canCreate ? (
-                                                <>
-                                                    Use <span className="font-medium">New transporter</span> to add
-                                                    one.
-                                                </>
-                                            ) : null}
-                                        </p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <TransportRegistrationsTable
+                            transportWorkOrderRegistrations={transportWorkOrderRegistrations}
+                            transportRegistrationPermissions={transportRegistrationPermissions}
+                            onDeleteRegistration={deleteTransportRegistration}
+                        />
                     )}
                 </div>
             </div>
