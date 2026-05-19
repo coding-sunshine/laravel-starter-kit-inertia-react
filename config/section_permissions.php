@@ -384,6 +384,12 @@ return [
         'vehicle-workorders.edit' => 'sections.transport.update',
         'vehicle-workorders.update' => 'sections.transport.update',
 
+        'vehicle-workorders.transport-registrations.create' => 'sections.transport.create',
+        'vehicle-workorders.transport-registrations.store' => 'sections.transport.create',
+        'vehicle-workorders.transport-registrations.edit' => 'sections.transport.update',
+        'vehicle-workorders.transport-registrations.update' => 'sections.transport.update',
+        'vehicle-workorders.transport-registrations.destroy' => 'sections.transport.update',
+
         // Railway Receipts
         'railway-receipts.index' => 'sections.railway_receipts.view',
         'railway-receipts.import' => 'sections.railway_receipts.upload',

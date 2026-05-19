@@ -10,6 +10,8 @@ export interface RrDocumentRecord {
     rr_number: string;
     rr_received_date: string;
     rr_weight_mt: string | null;
+    /** Net dispatch weight from RR PDF when parsed (FOIS ACTL WGHT). */
+    actual_weight_mt?: string | null;
     document_status: string;
     diverrt_destination_id?: number | null;
 }

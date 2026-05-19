@@ -4,21 +4,26 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\MapTransportRegistrationToVehicleWorkorderDefaults;
+use App\Exports\TransportWorkOrderRegistrationExport;
 use App\Exports\VehicleWorkorderExport;
-use App\Exports\VehicleWorkorderTransporterExport;
+use App\Http\Requests\DestroyVehicleWorkorderMediaRequest;
 use App\Http\Requests\IndexVehicleWorkorderRequest;
 use App\Http\Requests\StoreVehicleWorkorderRequest;
 use App\Http\Requests\UpdateVehicleWorkorderRequest;
 use App\Models\Siding;
+use App\Models\TransportWorkOrderRegistration;
 use App\Models\User;
 use App\Models\VehicleWorkorder;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 final class VehicleWorkorderController extends Controller
@@ -32,11 +37,15 @@ final class VehicleWorkorderController extends Controller
         $view = $filters['view'] ?? 'vehicles';
 
         $vehicleWorkorders = null;
-        $transporterWorkorders = null;
+        $transportWorkOrderRegistrations = null;
+
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
 
         if ($view === 'transporters') {
-            $transporterWorkorders = $this->transporterWorkordersAggregatedQuery($user, $filters)
-                ->paginate(15)
+            $transportWorkOrderRegistrations = $this->transportWorkOrderRegistrationsBaseQuery($sidingIds, $filters)
+                ->paginate(50)
                 ->withQueryString();
         } else {
             $vehicleWorkorders = $this->vehicleWorkordersBaseQuery($user, $filters)
@@ -44,72 +53,56 @@ final class VehicleWorkorderController extends Controller
                 ->withQueryString();
         }
 
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
-
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
-        // Dropdown options: all distinct names across every siding the user can access.
-        // Do not scope by the current siding filter — otherwise names from other sidings
-        // disappear from the list while the table filter still applies siding separately.
-        $transportNames = VehicleWorkorder::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('transport_name')
-            ->where('transport_name', '!=', '')
-            ->distinct()
-            ->orderBy('transport_name')
-            ->pluck('transport_name')
-            ->values()
-            ->all();
-
         /** @var array<int, string> */
-        $proprietorNames = VehicleWorkorder::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('proprietor_name')
-            ->where('proprietor_name', '!=', '')
-            ->distinct()
-            ->orderBy('proprietor_name')
-            ->pluck('proprietor_name')
-            ->values()
-            ->all();
+        $transportNames = $view === 'transporters'
+            ? TransportWorkOrderRegistration::query()
+                ->where(function (Builder $q) use ($sidingIds): void {
+                    $q->whereNull('siding_id')
+                        ->orWhereIn('siding_id', $sidingIds);
+                })
+                ->whereNotNull('transporter_name')
+                ->where('transporter_name', '!=', '')
+                ->distinct()
+                ->orderBy('transporter_name')
+                ->pluck('transporter_name')
+                ->values()
+                ->all()
+            : VehicleWorkorder::query()
+                ->whereIn('siding_id', $sidingIds)
+                ->whereNotNull('transport_name')
+                ->where('transport_name', '!=', '')
+                ->distinct()
+                ->orderBy('transport_name')
+                ->pluck('transport_name')
+                ->values()
+                ->all();
 
+        /** @var list<string> */
         $filterKeys = [
             'view',
+            'page',
             'siding_id',
-            'vehicle_no',
-            'wo_no',
-            'wo_no_2',
             'transport_name',
-            'mobile',
-            'mobile_no_1',
-            'mobile_no_2',
-            'model',
-            'work_order_date',
-            'issued_date',
-            'proprietor_name',
-            'address',
-            'owner_type',
-            'pan_no',
-            'gst_no',
-            'min_vehicles',
-            'max_vehicles',
+            'vehicle_no',
             'regd_date',
-            'permit_validity_date',
-            'tax_validity_date',
-            'insurance_validity_date',
         ];
 
         return Inertia::render('VehicleWorkorders/Index', [
             'view' => $view,
             'vehicleWorkorders' => $vehicleWorkorders,
-            'transporterWorkorders' => $transporterWorkorders,
+            'transportWorkOrderRegistrations' => $transportWorkOrderRegistrations,
+            'transportRegistrationPermissions' => [
+                'canCreate' => $user->hasPermissionTo('sections.transport.create'),
+                'canUpdate' => $user->hasPermissionTo('sections.transport.update'),
+                'canDelete' => $user->hasPermissionTo('sections.transport.update'),
+            ],
             'sidings' => $sidings,
             'transportNames' => $transportNames,
-            'proprietorNames' => $proprietorNames,
             'filters' => $request->only($filterKeys),
             'flash' => [
                 'success' => $request->session()->get('success'),
@@ -136,11 +129,15 @@ final class VehicleWorkorderController extends Controller
         $user = Auth::user();
         $filters = $request->validated();
 
-        $rows = $this->transporterWorkordersAggregatedQuery($user, $filters)->get();
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
 
-        $filename = 'Transporter_Workorders_'.now()->format('Y-m-d_His').'.xlsx';
+        $rows = $this->transportWorkOrderRegistrationsBaseQuery($sidingIds, $filters)->get();
 
-        return Excel::download(new VehicleWorkorderTransporterExport($rows), $filename);
+        $filename = 'Transport_Work_Order_Registrations_'.now()->format('Y-m-d_His').'.xlsx';
+
+        return Excel::download(new TransportWorkOrderRegistrationExport($rows), $filename);
     }
 
     public function create(): Response
@@ -161,8 +158,60 @@ final class VehicleWorkorderController extends Controller
         ]);
     }
 
+    public function searchTransportRegistrationsForVehicleWorkorder(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        $needle = mb_trim((string) $request->query('q', ''));
+        $like = '%'.$this->escapeSqlLikePattern($needle).'%';
+
+        /** @var Builder $query */
+        $query = TransportWorkOrderRegistration::query()
+            ->where('is_active', true)
+            ->where(function (Builder $q) use ($sidingIds): void {
+                $q->whereNull('siding_id')
+                    ->orWhereIn('siding_id', $sidingIds);
+            })
+            ->when(
+                $needle !== '',
+                fn (Builder $q) => $q->where(function (Builder $inner) use ($like): void {
+                    $inner->whereRaw(
+                        'LOWER(COALESCE(transporter_name, \'\')) LIKE LOWER(?)',
+                        [$like],
+                    )->orWhereRaw(
+                        'LOWER(COALESCE(work_order_no_1, \'\')) LIKE LOWER(?)',
+                        [$like],
+                    )->orWhereRaw(
+                        'LOWER(COALESCE(work_order_no_2, \'\')) LIKE LOWER(?)',
+                        [$like],
+                    );
+                }),
+            )
+            ->orderByRaw('COALESCE(transporter_name, \'\') ASC')
+            ->orderByRaw('COALESCE(work_order_no_1, \'\') ASC')
+            ->limit(50);
+
+        $mapper = app(MapTransportRegistrationToVehicleWorkorderDefaults::class);
+
+        $data = $query->get()->map(function (TransportWorkOrderRegistration $r) use ($mapper): array {
+            return [
+                'id' => $r->id,
+                'label' => $mapper->registrationPickerLabel($r),
+                'defaults' => $mapper->handle($r),
+            ];
+        })->values()->all();
+
+        return response()->json(['data' => $data]);
+    }
+
     public function edit(VehicleWorkorder $vehicleWorkorder): Response|RedirectResponse
     {
+        /** @var User $user */
         $user = Auth::user();
         if (! $user->canAccessSiding($vehicleWorkorder->siding_id)) {
             abort(403, 'You do not have access to this work order.');
@@ -170,14 +219,31 @@ final class VehicleWorkorderController extends Controller
 
         $vehicleWorkorder->load('siding:id,name,code');
 
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        $sidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
+
+        $vehicleWorkorder->loadMissing('media');
+
         return Inertia::render('VehicleWorkorders/Edit', [
             'vehicleWorkorder' => $vehicleWorkorder,
+            'matchedTransportRegistration' => $this->matchedTransportRegistrationForVehicleWorkorder($vehicleWorkorder, $user),
+            'sidings' => $sidings,
+            'vehicleDocumentMedia' => $this->vehicleWorkorderDocumentsPayload($vehicleWorkorder),
         ]);
     }
 
     public function store(StoreVehicleWorkorderRequest $request): RedirectResponse
     {
-        VehicleWorkorder::query()->create($request->validated());
+        $vehicleWorkorder = VehicleWorkorder::query()->create(
+            $this->vehicleWorkorderRowFromRequest($request),
+        );
+        $this->persistVehicleWorkorderDocuments($vehicleWorkorder, $request);
 
         return redirect()
             ->route('vehicle-workorders.index')
@@ -186,11 +252,34 @@ final class VehicleWorkorderController extends Controller
 
     public function update(UpdateVehicleWorkorderRequest $request, VehicleWorkorder $vehicleWorkorder): RedirectResponse
     {
-        $vehicleWorkorder->update($request->validated());
+        $vehicleWorkorder->update($this->vehicleWorkorderRowFromRequest($request));
+        $this->persistVehicleWorkorderDocuments($vehicleWorkorder, $request);
 
         return redirect()
             ->route('vehicle-workorders.index')
             ->with('success', 'Vehicle work order updated successfully.');
+    }
+
+    public function destroyMedia(
+        DestroyVehicleWorkorderMediaRequest $request,
+        VehicleWorkorder $vehicleWorkorder,
+        Media $media,
+    ): RedirectResponse {
+        $allowedCollections = ['vehicle_rc', 'vehicle_insurance', 'vehicle_other_documents'];
+
+        /** @var Media|null $owned */
+        $owned = $vehicleWorkorder->media()
+            ->whereKey($media->getKey())
+            ->whereIn('collection_name', $allowedCollections)
+            ->first();
+
+        abort_if($owned === null, 404);
+
+        $owned->delete();
+
+        return redirect()
+            ->route('vehicle-workorders.edit', ['vehicle_workorder' => $vehicleWorkorder])
+            ->with('success', 'Attached file removed.');
     }
 
     /**
@@ -213,11 +302,6 @@ final class VehicleWorkorderController extends Controller
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
 
-        $mobile = isset($filters['mobile']) && is_string($filters['mobile']) ? mb_trim($filters['mobile']) : '';
-        $mobileNo1 = isset($filters['mobile_no_1']) && is_string($filters['mobile_no_1']) ? mb_trim($filters['mobile_no_1']) : '';
-        $mobileNo2 = isset($filters['mobile_no_2']) && is_string($filters['mobile_no_2']) ? mb_trim($filters['mobile_no_2']) : '';
-        $model = isset($filters['model']) && is_string($filters['model']) ? mb_trim($filters['model']) : '';
-
         return VehicleWorkorder::query()
             ->whereIn('siding_id', $sidingIds)
             ->when(
@@ -232,164 +316,258 @@ final class VehicleWorkorderController extends Controller
                 ),
             )
             ->when(
-                ! empty($filters['wo_no'] ?? null),
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(wo_no, \'\'))) = LOWER(?)',
-                    [mb_trim((string) $filters['wo_no'])],
-                ),
-            )
-            ->when(
-                ! empty($filters['wo_no_2'] ?? null),
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(wo_no_2, \'\'))) = LOWER(?)',
-                    [mb_trim((string) $filters['wo_no_2'])],
-                ),
-            )
-            ->when(
                 ! empty($filters['transport_name'] ?? null),
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(transport_name, \'\'))) = LOWER(?)',
-                    [mb_trim((string) $filters['transport_name'])],
-                ),
-            )
-            ->when($mobile !== '', function (Builder $q) use ($mobile): void {
-                $q->where(function (Builder $inner) use ($mobile): void {
-                    $inner->whereRaw(
-                        'LOWER(TRIM(COALESCE(mobile_no_1, \'\'))) = LOWER(?)',
-                        [$mobile],
-                    )->orWhereRaw(
-                        'LOWER(TRIM(COALESCE(mobile_no_2, \'\'))) = LOWER(?)',
-                        [$mobile],
+                function (Builder $q) use ($filters): void {
+                    $needle = mb_trim((string) $filters['transport_name']);
+                    $q->whereRaw(
+                        'LOWER(TRIM(COALESCE(transport_name, \'\'))) LIKE LOWER(?)',
+                        ['%'.$needle.'%'],
                     );
-                });
-            })
-            ->when(
-                $mobileNo1 !== '',
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(mobile_no_1, \'\'))) = LOWER(?)',
-                    [$mobileNo1],
-                ),
-            )
-            ->when(
-                $mobileNo2 !== '',
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(mobile_no_2, \'\'))) = LOWER(?)',
-                    [$mobileNo2],
-                ),
-            )
-            ->when(
-                $model !== '',
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(model, \'\'))) = LOWER(?)',
-                    [$model],
-                ),
-            )
-            ->when(
-                ! empty($filters['work_order_date'] ?? null),
-                fn (Builder $q) => $q->whereDate('work_order_date', $filters['work_order_date']),
-            )
-            ->when(
-                ! empty($filters['issued_date'] ?? null),
-                fn (Builder $q) => $q->whereDate('issued_date', $filters['issued_date']),
-            )
-            ->when(
-                ! empty($filters['proprietor_name'] ?? null),
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(proprietor_name, \'\'))) = LOWER(?)',
-                    [mb_trim((string) $filters['proprietor_name'])],
-                ),
-            )
-            ->when(
-                ! empty($filters['address'] ?? null),
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(address, \'\'))) = LOWER(?)',
-                    [mb_trim((string) $filters['address'])],
-                ),
-            )
-            ->when(
-                ! empty($filters['owner_type'] ?? null),
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(owner_type, \'\'))) = LOWER(?)',
-                    [mb_trim((string) $filters['owner_type'])],
-                ),
-            )
-            ->when(
-                ! empty($filters['pan_no'] ?? null),
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(pan_no, \'\'))) = LOWER(?)',
-                    [mb_trim((string) $filters['pan_no'])],
-                ),
-            )
-            ->when(
-                ! empty($filters['gst_no'] ?? null),
-                fn (Builder $q) => $q->whereRaw(
-                    'LOWER(TRIM(COALESCE(gst_no, \'\'))) = LOWER(?)',
-                    [mb_trim((string) $filters['gst_no'])],
-                ),
+                },
             )
             ->when(
                 ! empty($filters['regd_date'] ?? null),
                 fn (Builder $q) => $q->whereDate('regd_date', $filters['regd_date']),
-            )
-            ->when(
-                ! empty($filters['permit_validity_date'] ?? null),
-                fn (Builder $q) => $q->whereDate('permit_validity_date', $filters['permit_validity_date']),
-            )
-            ->when(
-                ! empty($filters['tax_validity_date'] ?? null),
-                fn (Builder $q) => $q->whereDate('tax_validity_date', $filters['tax_validity_date']),
-            )
-            ->when(
-                ! empty($filters['insurance_validity_date'] ?? null),
-                fn (Builder $q) => $q->whereDate('insurance_validity_date', $filters['insurance_validity_date']),
             );
     }
 
     /**
-     * One row per transporter work order (grouped), with vehicle count.
-     *
+     * @param  array<int, int|string>  $sidingIds
      * @param  array<string, mixed>  $filters
      */
-    private function transporterWorkordersAggregatedQuery(User $user, array $filters): Builder
+    private function transportWorkOrderRegistrationsBaseQuery(array $sidingIds, array $filters): Builder
     {
-        $vw = 'vehicle_workorders';
+        $registrationTable = (new TransportWorkOrderRegistration)->getTable();
+        [$assignedVehiclesSql, $assignedVehiclesBindings] = $this->assignedVehicleWorkordersCountSelect(
+            $sidingIds,
+            $registrationTable,
+        );
 
-        return $this->vehicleWorkordersFilteredQuery($user, $filters)
-            ->join('sidings', 'sidings.id', '=', "{$vw}.siding_id")
-            ->select([
-                "{$vw}.siding_id",
-                DB::raw('MAX(sidings.name) as siding_name'),
-                DB::raw("MAX({$vw}.transport_name) as transport_name"),
-                DB::raw("MAX({$vw}.wo_no) as wo_no"),
-                DB::raw("MAX({$vw}.wo_no_2) as wo_no_2"),
-                DB::raw("MAX({$vw}.work_order_date) as work_order_date"),
-                DB::raw("MAX({$vw}.issued_date) as issued_date"),
-                DB::raw("MAX({$vw}.proprietor_name) as proprietor_name"),
-                DB::raw("MAX({$vw}.address) as address"),
-                DB::raw("MAX({$vw}.mobile_no_1) as mobile_no_1"),
-                DB::raw("MAX({$vw}.mobile_no_2) as mobile_no_2"),
-                DB::raw("MAX({$vw}.owner_type) as owner_type"),
-                DB::raw("MAX({$vw}.pan_no) as pan_no"),
-                DB::raw("MAX({$vw}.gst_no) as gst_no"),
-                DB::raw('COUNT(*) as vehicle_count'),
-            ])
-            ->groupBy([
-                "{$vw}.siding_id",
-                DB::raw("COALESCE({$vw}.transport_name, '')"),
-                DB::raw("COALESCE({$vw}.wo_no, '')"),
-                DB::raw("COALESCE({$vw}.wo_no_2, '')"),
-                "{$vw}.work_order_date",
-                "{$vw}.issued_date",
-            ])
+        return TransportWorkOrderRegistration::query()
+            ->select("{$registrationTable}.*")
+            ->selectRaw("({$assignedVehiclesSql}) as assigned_vehicle_workorders_count", $assignedVehiclesBindings)
+            ->where(function (Builder $q) use ($sidingIds): void {
+                $q->whereNull('siding_id')
+                    ->orWhereIn('siding_id', $sidingIds);
+            })
+            ->with('siding:id,name,code')
             ->when(
-                isset($filters['min_vehicles']) && $filters['min_vehicles'] !== null && $filters['min_vehicles'] !== '',
-                fn (Builder $q) => $q->havingRaw('COUNT(*) >= ?', [(int) $filters['min_vehicles']]),
+                ! empty($filters['siding_id'] ?? null),
+                fn (Builder $q) => $q->where('siding_id', (int) $filters['siding_id']),
             )
             ->when(
-                isset($filters['max_vehicles']) && $filters['max_vehicles'] !== null && $filters['max_vehicles'] !== '',
-                fn (Builder $q) => $q->havingRaw('COUNT(*) <= ?', [(int) $filters['max_vehicles']]),
+                ! empty($filters['transport_name'] ?? null),
+                function (Builder $q) use ($filters): void {
+                    $needle = mb_trim((string) $filters['transport_name']);
+                    $q->whereRaw(
+                        'LOWER(TRIM(COALESCE(transporter_name, \'\'))) LIKE LOWER(?)',
+                        ['%'.$needle.'%'],
+                    );
+                },
             )
-            ->orderByRaw("MAX({$vw}.work_order_date) DESC NULLS LAST")
-            ->orderByRaw("MAX({$vw}.created_at) DESC");
+            ->orderByDesc('work_order_date')
+            ->orderByDesc('created_at');
+    }
+
+    /**
+     * Correlated CASE/subquery counting {@see VehicleWorkorder} rows for this registration: same trimmed
+     * transporter name, {@see VehicleWorkorder::wo_no} equal (trimmed) to registration
+     * {@see TransportWorkOrderRegistration::work_order_no_1} or {@see TransportWorkOrderRegistration::work_order_no_2},
+     * scoped to accessible sidings; when the registration has a siding, work orders must share that siding.
+     *
+     * @param  array<int, int|string>  $sidingIds
+     * @return array{0: string, 1: list<int>}
+     */
+    private function assignedVehicleWorkordersCountSelect(array $sidingIds, string $registrationTable): array
+    {
+        $vwTable = (new VehicleWorkorder)->getTable();
+
+        $normalizedSidingIds = array_values(array_unique(array_map(
+            static fn (int|string $id): int => (int) $id,
+            $sidingIds,
+        )));
+
+        if ($normalizedSidingIds === []) {
+            $sidingPredicate = '1 = 0';
+            $bindings = [];
+        } else {
+            $placeholders = implode(',', array_fill(0, count($normalizedSidingIds), '?'));
+            $sidingPredicate = "vw.siding_id in ({$placeholders})";
+            $bindings = $normalizedSidingIds;
+        }
+
+        $sql = <<<SQL
+case
+    when trim(coalesce({$registrationTable}.transporter_name, '')) = ''
+        or (
+            trim(coalesce({$registrationTable}.work_order_no_1, '')) = ''
+            and trim(coalesce({$registrationTable}.work_order_no_2, '')) = ''
+        )
+    then 0
+    else (
+        select count(*)
+        from {$vwTable} as vw
+        where {$sidingPredicate}
+        and ({$registrationTable}.siding_id is null or vw.siding_id = {$registrationTable}.siding_id)
+        and lower(trim(coalesce(vw.transport_name, ''))) = lower(trim(coalesce({$registrationTable}.transporter_name, '')))
+        and trim(coalesce(vw.wo_no, '')) <> ''
+        and (
+            trim(coalesce(vw.wo_no, '')) = trim(coalesce({$registrationTable}.work_order_no_1, ''))
+            or trim(coalesce(vw.wo_no, '')) = trim(coalesce({$registrationTable}.work_order_no_2, ''))
+        )
+    )
+end
+SQL;
+
+        return [$sql, $bindings];
+    }
+
+    /**
+     * Escapes `\`, `%`, `_` inside a substring used inside SQL LIKE `... LIKE ?`.
+     */
+    private function escapeSqlLikePattern(string $literal): string
+    {
+        $literal = str_replace('\\', '\\\\', $literal);
+
+        return str_replace(['%', '_'], ['\\%', '\\_'], $literal);
+    }
+
+    /**
+     * @return array<string, array<int, array{id: int, name: string, file_name: string, url: string}>>
+     */
+    private function vehicleWorkorderDocumentsPayload(VehicleWorkorder $workorder): array
+    {
+        $map = static function (Media $media): array {
+            return [
+                'id' => (int) $media->id,
+                'name' => (string) $media->name,
+                'file_name' => $media->file_name,
+                'url' => $media->getUrl(),
+            ];
+        };
+
+        return [
+            'vehicle_rc' => $workorder->getMedia('vehicle_rc')->map($map)->values()->all(),
+            'vehicle_insurance' => $workorder->getMedia('vehicle_insurance')->map($map)->values()->all(),
+            'vehicle_other_documents' => $workorder->getMedia('vehicle_other_documents')->map($map)->values()->all(),
+        ];
+    }
+
+    /**
+     * Map validated request input to {@see VehicleWorkorder} columns (upload fields handled separately).
+     *
+     * @return array<string, mixed>
+     */
+    private function vehicleWorkorderRowFromRequest(StoreVehicleWorkorderRequest|UpdateVehicleWorkorderRequest $request): array
+    {
+        return [
+            'siding_id' => $request->integer('siding_id'),
+            'vehicle_no' => $request->vehicle_no,
+            'rcd_pin_no' => $request->rcd_pin_no,
+            'transport_name' => $request->transport_name,
+            'wo_no' => $request->wo_no,
+            'wo_no_2' => $request->wo_no_2,
+            'work_order_date' => $request->work_order_date,
+            'issued_date' => $request->issued_date,
+            'proprietor_name' => $request->proprietor_name,
+            'represented_by' => $request->represented_by,
+            'place' => $request->place,
+            'address' => $request->address,
+            'tyres' => $request->integer('tyres'),
+            'tare_weight' => $request->tare_weight,
+            'mobile_no_1' => $request->mobile_no_1,
+            'mobile_no_2' => $request->mobile_no_2,
+            'owner_type' => $request->owner_type,
+            'regd_date' => $request->regd_date,
+            'permit_validity_date' => $request->permit_validity_date,
+            'tax_validity_date' => $request->tax_validity_date,
+            'fitness_validity_date' => $request->fitness_validity_date,
+            'insurance_validity_date' => $request->insurance_validity_date,
+            'maker_model' => $request->maker_model,
+            'make' => $request->make,
+            'model' => $request->model,
+            'remarks' => $request->remarks,
+            'recommended_by' => $request->recommended_by,
+            'referenced' => $request->referenced,
+            'local_or_non_local' => $request->local_or_non_local,
+            'pan_no' => $request->pan_no,
+            'gst_no' => $request->gst_no,
+        ];
+    }
+
+    private function persistVehicleWorkorderDocuments(VehicleWorkorder $workorder, Request $request): void
+    {
+        if ($request->hasFile('vehicle_rc_certificate')) {
+            $workorder->clearMediaCollection('vehicle_rc');
+            $workorder->addMediaFromRequest('vehicle_rc_certificate')->toMediaCollection('vehicle_rc');
+        }
+
+        if ($request->hasFile('vehicle_insurance_certificate')) {
+            $workorder->clearMediaCollection('vehicle_insurance');
+            $workorder->addMediaFromRequest('vehicle_insurance_certificate')->toMediaCollection('vehicle_insurance');
+        }
+
+        /** @var array<int, mixed> */
+        $otherFilesRaw = $request->file('vehicle_other_documents') ?? [];
+
+        foreach ($otherFilesRaw as $file) {
+            if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
+                $workorder->addMedia($file)->toMediaCollection('vehicle_other_documents');
+            }
+        }
+    }
+
+    /**
+     * @return array{id: int, label: string}|null
+     */
+    private function matchedTransportRegistrationForVehicleWorkorder(VehicleWorkorder $workorder, User $user): ?array
+    {
+        $transport = mb_trim((string) ($workorder->transport_name ?? ''));
+        $woNo = mb_trim((string) ($workorder->wo_no ?? ''));
+        if ($transport === '' || $woNo === '') {
+            return null;
+        }
+
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        $vehicleSidingId = (int) $workorder->siding_id;
+
+        $matches = TransportWorkOrderRegistration::query()
+            ->where('is_active', true)
+            ->where(function (Builder $q) use ($sidingIds): void {
+                $q->whereNull('siding_id')
+                    ->orWhereIn('siding_id', $sidingIds);
+            })
+            ->where(function (Builder $q) use ($vehicleSidingId): void {
+                $q->whereNull('siding_id')
+                    ->orWhere('siding_id', $vehicleSidingId);
+            })
+            ->whereRaw(
+                'LOWER(TRIM(COALESCE(transporter_name, \'\'))) = LOWER(?)',
+                [$transport],
+            )
+            ->whereRaw(
+                'LOWER(TRIM(COALESCE(work_order_no_1, \'\'))) = LOWER(?)',
+                [$woNo],
+            )
+            ->orderBy('id')
+            ->get();
+
+        if ($matches->count() !== 1) {
+            return null;
+        }
+
+        /** @var TransportWorkOrderRegistration $registration */
+        $registration = $matches->first();
+
+        $label = app(MapTransportRegistrationToVehicleWorkorderDefaults::class)
+            ->registrationPickerLabel($registration);
+
+        return [
+            'id' => (int) $registration->id,
+            'label' => $label,
+        ];
     }
 }

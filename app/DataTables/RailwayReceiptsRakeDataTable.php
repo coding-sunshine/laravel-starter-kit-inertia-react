@@ -39,6 +39,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
         public ?string $rr_number,
         public ?string $rr_received_date,
         public ?string $rr_weight_mt,
+        public ?string $actual_weight_mt,
         public ?string $document_status,
         public ?bool $has_discrepancy,
         public ?string $discrepancy_details,
@@ -76,6 +77,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             rr_number: $doc !== null ? $doc->rr_number : null,
             rr_received_date: $doc?->rr_received_date?->format('Y-m-d'),
             rr_weight_mt: $doc !== null && $doc->rr_weight_mt !== null ? (string) $doc->rr_weight_mt : null,
+            actual_weight_mt: $doc?->actualWeightMtForListing(),
             document_status: $doc?->document_status,
             has_discrepancy: $doc !== null ? (bool) $doc->has_discrepancy : null,
             discrepancy_details: $doc?->discrepancy_details,
@@ -124,7 +126,8 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             new Column(id: 'loading_date', label: 'Loading date', type: 'date', sortable: true, filterable: true),
             new Column(id: 'rr_number', label: 'RR number', type: 'text', sortable: true, filterable: true),
             new Column(id: 'rr_received_date', label: 'Received date', type: 'date', sortable: true, filterable: false),
-            new Column(id: 'rr_weight_mt', label: 'Weight (MT)', type: 'number', sortable: true, filterable: false),
+            new Column(id: 'rr_weight_mt', label: 'Chargeable (MT)', type: 'number', sortable: true, filterable: false),
+            new Column(id: 'actual_weight_mt', label: 'Actual (MT)', type: 'number', sortable: false, filterable: false),
         ];
     }
 
@@ -142,7 +145,8 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
             ->with([
                 'siding:id,code,name',
                 'indent:id,indent_number,fnr_number',
-                'rrDocument:id,rake_id,diverrt_destination_id,rr_number,rr_received_date,rr_weight_mt,document_status,has_discrepancy,discrepancy_details,fnr,from_station_code,to_station_code,freight_total,distance_km,commodity_code,commodity_description,invoice_number,invoice_date,rate,class',
+                'rrDocument:id,rake_id,diverrt_destination_id,rr_number,rr_received_date,rr_weight_mt,rr_details,document_status,has_discrepancy,discrepancy_details,fnr,from_station_code,to_station_code,freight_total,distance_km,commodity_code,commodity_description,invoice_number,invoice_date,rate,class',
+                'rrDocument.wagonSnapshots:id,rr_document_id,loaded_weight_mt',
             ]);
 
         $query->where(function (Builder $q): void {

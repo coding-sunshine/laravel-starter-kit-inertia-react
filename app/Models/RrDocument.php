@@ -84,6 +84,48 @@ final class RrDocument extends Model implements HasMedia
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    /**
+     * Net / actual dispatch weight from parsed RR (FOIS `ACTL WGHT`), persisted in {@see $rr_details}.
+     */
+    public function actualWeightMtFromDetails(): ?string
+    {
+        $details = $this->rr_details;
+        if (! is_array($details)) {
+            return null;
+        }
+        $raw = $details['actual_weight_mt'] ?? null;
+        if ($raw === null || $raw === '' || ! is_numeric($raw)) {
+            return null;
+        }
+
+        return (string) round((float) $raw, 4);
+    }
+
+    /**
+     * Actual / net weight for UI lists: sum of wagon snapshot loaded weights (parsed ACTL per wagon), with
+     * fallback to header ACTL {@see actualWeightMtFromDetails} when snapshots are missing or have no loads.
+     */
+    public function actualWeightMtForListing(): ?string
+    {
+        $this->loadMissing('wagonSnapshots:id,rr_document_id,loaded_weight_mt');
+
+        $sum = 0.0;
+        $hasLoaded = false;
+        foreach ($this->wagonSnapshots as $row) {
+            if ($row->loaded_weight_mt === null) {
+                continue;
+            }
+            $hasLoaded = true;
+            $sum += (float) $row->loaded_weight_mt;
+        }
+
+        if ($hasLoaded) {
+            return (string) round($sum, 4);
+        }
+
+        return $this->actualWeightMtFromDetails();
+    }
+
     protected function casts(): array
     {
         return [

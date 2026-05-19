@@ -22,7 +22,17 @@ use Spatie\PdfToText\Pdf;
  */
 final readonly class RrParserService
 {
+    /** Standard electronically transmitted RR layout (ICR / FOIS canonical copy). */
+    public const RR_FORMAT_ET_RR = 'et_rr';
+
+    /** FOIS portal “RR Details” printout (different labels and wagon table layout). */
+    public const RR_FORMAT_FOIS_PRINTED = 'fois_printed';
+
     private const WAGON_SECTION_START = 'Wagon details of the Railway Receipt';
+
+    private const FOIS_WAGON_SECTION_START = 'Wagon Details of the RR';
+
+    private const FOIS_DETECT_WINDOW = 4000;
 
     private const WAGON_TABLE_TOTAL_PATTERNS = ['Total:', 'Grand Total', 'TOTAL'];
 
@@ -32,10 +42,12 @@ final readonly class RrParserService
      * Parse an RR PDF and return structured data in the format expected by RrImportService.
      *
      * @return array{
+     *     rr_format: 'et_rr'|'fois_printed',
      *     rr_number: string,
      *     fnr: string|null,
      *     rr_date: string|null,
      *     rr_received_date: string|null,
+     *     actual_weight_mt: float|null,
      *     distance_km: float,
      *     total_weight: float,
      *     wagon_count: int,
@@ -85,6 +97,51 @@ final readonly class RrParserService
      */
     public function parseExtractedText(string $text): array
     {
+        if ($this->detectStandardEtRrFormat($text)) {
+            return $this->parseExtractedTextStandardEtRr($text);
+        }
+
+        if ($this->detectFoisPrintedFormat($text)) {
+            return $this->parseExtractedTextFoisPrinted($text);
+        }
+
+        throw new InvalidArgumentException('This does not appear to be a Railway Receipt PDF.');
+    }
+
+    private function detectStandardEtRrFormat(string $text): bool
+    {
+        if (mb_stripos($text, self::WAGON_SECTION_START) === false) {
+            return false;
+        }
+
+        $lower = mb_strtolower($text);
+
+        return str_contains($lower, 'electronically transmitted railway receipt')
+            || str_contains($lower, 'et-rr')
+            || str_contains($lower, '(et-rr)')
+            || str_contains($lower, 'et_rr')
+            || str_contains($lower, '(et_rr)');
+    }
+
+    private function detectFoisPrintedFormat(string $text): bool
+    {
+        if (mb_stripos($text, self::FOIS_WAGON_SECTION_START) === false) {
+            return false;
+        }
+
+        $lead = mb_substr($text, 0, self::FOIS_DETECT_WINDOW);
+        if (mb_stripos($lead, 'RR DETAILS') !== false || mb_stripos($lead, 'fois.indianrail.gov.in') !== false) {
+            return true;
+        }
+
+        return (bool) preg_match('/^\s*RR\s*NO\.?\s+\d{8,12}/im', mb_substr($text, 0, self::FOIS_DETECT_WINDOW));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parseExtractedTextStandardEtRr(string $text): array
+    {
         $this->assertRailwayReceiptDocument($text);
 
         $headerSection = $this->extractHeaderSection($text);
@@ -112,10 +169,12 @@ final readonly class RrParserService
         $rrDate = $header['rr_received_date'] ?? null;
 
         return [
+            'rr_format' => self::RR_FORMAT_ET_RR,
             'rr_number' => $header['rr_number'],
             'fnr' => $header['fnr'] ?? null,
             'rr_date' => $rrDate,
             'rr_received_date' => $rrDate,
+            'actual_weight_mt' => null,
             'rr_weight_mt' => $totalWeight,
             'distance_km' => (float) ($header['distance_km'] ?? 0),
             'total_weight' => $totalWeight,
@@ -135,6 +194,102 @@ final readonly class RrParserService
         ];
     }
 
+    /**
+     * FOIS RR Details portal print layout.
+     *
+     * @return array<string, mixed>
+     */
+    private function parseExtractedTextFoisPrinted(string $text): array
+    {
+        $wagonPos = mb_stripos($text, self::FOIS_WAGON_SECTION_START);
+        if ($wagonPos === false) {
+            throw new InvalidArgumentException('FOIS wagon section anchor not found.');
+        }
+
+        $beforeWagon = mb_substr($text, 0, $wagonPos);
+        $afterMarker = mb_substr($text, $wagonPos + mb_strlen(self::FOIS_WAGON_SECTION_START));
+        $headerSlice = mb_substr($beforeWagon, 0);
+
+        $chargeStartMin = mb_strlen($headerSlice);
+        foreach (['OTHR CHRG', 'FREIGHT:'] as $marker) {
+            $p = mb_stripos($headerSlice, $marker);
+            if ($p !== false && $p < $chargeStartMin) {
+                $chargeStartMin = $p;
+            }
+        }
+
+        $fieldHeader = mb_substr($headerSlice, 0, $chargeStartMin);
+        $chargesSliceFromHeader = $this->truncateFoisChargesNarrativeTail(mb_substr($headerSlice, $chargeStartMin));
+
+        $header = $this->parseFoisHeaderSection($fieldHeader);
+        $charges = $this->parseChargesSection($chargesSliceFromHeader);
+
+        if (($header['freight_total'] ?? 0) <= 0.0 && preg_match('/Freight:\s*(?:Rs\s*)?([\d,]+(?:\.\d+)?)/i', $chargesSliceFromHeader, $freightLine)) {
+            $header['freight_total'] ??= (float) str_replace(',', '', $freightLine[1]);
+        }
+
+        $wagonSection = mb_substr($afterMarker, 0);
+        $wagonsParsed = $this->parseFoisWagonSection($wagonSection);
+
+        if (empty($header['rr_number'])) {
+            throw new InvalidArgumentException('This does not appear to be a Railway Receipt PDF. RR number could not be found.');
+        }
+
+        $totalWeight = (float) ($header['total_weight'] ?? 0);
+        if ($totalWeight === 0.0 && ! empty($wagonsParsed)) {
+            $chargeableSum = $this->sumWagonChargeableWeight($wagonsParsed);
+            $totalWeight = $chargeableSum > 0.0 ? $chargeableSum : (float) array_sum(array_column($wagonsParsed, 'loaded_weight'));
+        }
+
+        $wagonCount = (int) ($header['wagon_count'] ?? count($wagonsParsed));
+        if ($wagonCount === 0 && ! empty($wagonsParsed)) {
+            $wagonCount = count($wagonsParsed);
+        }
+
+        $wagonsForImport = [];
+
+        foreach ($wagonsParsed as $row) {
+            unset($row['chargeable_weight_pdf']);
+            $wagonsForImport[] = $row;
+        }
+
+        $rrDate = $header['rr_received_date'] ?? null;
+        $freightTotalResolved = (float) ($header['freight_total'] ?? 0);
+        if ($freightTotalResolved <= 0.0 && $charges !== []) {
+            foreach ($charges as $chargeLine) {
+                if (($chargeLine['code'] ?? '') === 'FREIGHT' && (($chargeLine['amount'] ?? 0) > 0)) {
+                    $freightTotalResolved = (float) $chargeLine['amount'];
+                    break;
+                }
+            }
+        }
+
+        return [
+            'rr_format' => self::RR_FORMAT_FOIS_PRINTED,
+            'rr_number' => $header['rr_number'],
+            'fnr' => $header['fnr'] ?? null,
+            'rr_date' => $rrDate,
+            'rr_received_date' => $rrDate,
+            'actual_weight_mt' => isset($header['actual_weight_mt']) ? (float) $header['actual_weight_mt'] : null,
+            'rr_weight_mt' => $totalWeight,
+            'distance_km' => (float) ($header['distance_km'] ?? 0),
+            'total_weight' => $totalWeight,
+            'wagon_count' => $wagonCount,
+            'freight_total' => $freightTotalResolved,
+            'from_station_code' => $header['from_station_code'] ?? null,
+            'to_station_code' => $header['to_station_code'] ?? null,
+            'commodity_code' => $header['commodity_code'] ?? null,
+            'commodity_description' => $header['commodity_description'] ?? null,
+            'invoice_number' => $header['invoice_number'] ?? null,
+            'invoice_date' => $header['invoice_date'] ?? null,
+            'rate' => isset($header['rate']) ? (float) $header['rate'] : null,
+            'class' => $header['class'] ?? null,
+            'wagons' => $wagonsForImport,
+            'charges' => $charges,
+            'raw_text' => $text,
+        ];
+    }
+
     private function assertRailwayReceiptDocument(string $text): void
     {
         $lower = mb_strtolower($text);
@@ -144,6 +299,209 @@ final readonly class RrParserService
         if (! $hasEtRr) {
             throw new InvalidArgumentException('This does not appear to be a Railway Receipt PDF.');
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parseFoisHeaderSection(string $headerText): array
+    {
+        $result = [];
+
+        if (preg_match('/\bRR\s*NO\.?\s*[:\t ]*\s*(\d{8,12})/i', $headerText, $m)) {
+            $result['rr_number'] = mb_trim($m[1]);
+        }
+
+        if (preg_match('/\bRR\s*DATE\s*[:\t ]*\s*(\d{2}[-\/]\d{2}[-\/]\d{4})/i', $headerText, $m)) {
+            $result['rr_received_date'] = $this->normalizeDate($m[1]);
+        }
+
+        if (preg_match('/\bFNR\s*[:\t ]*\s*(\d{8,14})/i', $headerText, $m)) {
+            $result['fnr'] = mb_trim($m[1]);
+        }
+
+        if (preg_match('/\bACTL\s+WGHT\s*[:\t ]*\s*([\d,]+(?:\.\d+)?)/i', $headerText, $m)) {
+            $result['actual_weight_mt'] = (float) str_replace(',', '', mb_trim($m[1]));
+        }
+
+        if (preg_match('/\bTOTAL\s+CHRG\s+WT\.?\s*[:\t ]*\s*([\d,]+(?:\.\d+)?)/i', $headerText, $m)) {
+            $result['total_weight'] = (float) str_replace(',', '', mb_trim($m[1]));
+        } elseif (preg_match('/\bCHBL\s+WGHT\s+AT\s+NORM(?:\.?\s+RATE)?\s*[:\t ]*\s*([\d,]+(?:\.\d+)?)/i', $headerText, $m)) {
+            $result['total_weight'] = (float) str_replace(',', '', mb_trim($m[1]));
+        }
+
+        if (preg_match('/\bCHRG\s+DIST\s*[:\t ]*\s*([\d,]+(?:\.\d+)?)/i', $headerText, $m)) {
+            $result['distance_km'] = (float) str_replace(',', '', mb_trim($m[1]));
+        }
+
+        if (preg_match('/\bWGON\s+FRWH\s*[:\t ]*\s*(\d+)/i', $headerText, $m)) {
+            $result['wagon_count'] = (int) $m[1];
+        }
+
+        $fromPos = mb_stripos($headerText, 'FROM STATION');
+        $toPos = mb_stripos($headerText, 'TO STATION');
+        if ($fromPos !== false && $toPos !== false && $toPos > $fromPos) {
+            $fromBlock = mb_substr($headerText, $fromPos, $toPos - $fromPos);
+            if (preg_match('/\bCODE\s*:\s*[ \t]*([A-Za-z0-9]{2,12})\b/u', $fromBlock, $m)) {
+                $result['from_station_code'] = mb_trim($m[1]);
+            }
+            if (! isset($result['from_station_code']) && preg_match('/FROM\s+STATION\s*\/\s*SIDING\s*:[^\r\n]*\b([A-Za-z]{2,8})\s+\d{6,}/iu', $fromBlock, $m)) {
+                $result['from_station_code'] = mb_strtoupper(mb_trim($m[1]));
+            }
+        }
+
+        if (! isset($result['to_station_code']) && $toPos !== false) {
+            $toBlock = mb_substr($headerText, $toPos, 2800);
+            if (preg_match('/\bCODE\s*:\s*[ \t]*([A-Za-z0-9]{2,12})\b/u', $toBlock, $m)) {
+                $result['to_station_code'] = mb_trim($m[1]);
+            }
+        }
+
+        if (preg_match('/\bCMDT\s+CODE\s*[:\t ]*\s*(\d{6,12})/i', $headerText, $m)) {
+            $result['commodity_code'] = mb_trim($m[1]);
+        }
+
+        if (preg_match('/\bCOMMODITY\s+DESCRIPTION\s*:\s*([^\n]+)/iu', $headerText, $m)) {
+            $result['commodity_description'] = mb_trim($m[1]);
+        }
+
+        if (preg_match('/\bINVC\s+NO\.?\s*[:\t ]*\s*(\d+)/iu', $headerText, $m)) {
+            $result['invoice_number'] = mb_trim($m[1]);
+        }
+
+        if (preg_match('/\bINVC\s+DATE\s*[:\t ]*\s*(\d{2}[-\/]\d{2}[-\/]\d{4})/iu', $headerText, $m)) {
+            $result['invoice_date'] = $this->normalizeDate($m[1]);
+        }
+
+        foreach (preg_split('/\r\n|\r|\n/', $headerText) as $line) {
+            if (! preg_match('/RISK\s+RATE\s*:/i', $line)) {
+                continue;
+            }
+            if (preg_match('/\bCLASS\s*:\s*([^\t\n\r]+)/i', $line, $cm)) {
+                $cls = mb_trim(str_replace(',', '', preg_replace('/\s+/', ' ', $cm[1])));
+                $clsParts = preg_split('/\s+RATE\s*:/iu', $cls, 2);
+                $cls = mb_trim(($clsParts === false) ? $cls : $clsParts[0]);
+                if ($cls !== '' && $cls !== '-') {
+                    $result['class'] = mb_trim(mb_substr($cls, 0, 48));
+                }
+            }
+            if (preg_match_all('/\bRATE\s*:\s*([\d.]+)/iu', $line, $rms) && isset($rms[1][count($rms[1]) - 1])) {
+                $result['rate'] = (float) $rms[1][count($rms[1]) - 1];
+                if ($result['rate'] <= 0) {
+                    unset($result['rate']);
+                }
+            }
+            break;
+        }
+
+        if (preg_match('/\bFREIGHT\s*:\s*[ \t]*(?:Rs\s*)?([\d,]+(?:\.\d+)?)/iu', $headerText, $m)) {
+            $result['freight_total'] ??= (float) str_replace(',', '', mb_trim($m[1]));
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function parseFoisWagonSection(string $wagonSection): array
+    {
+        $wagons = [];
+        $lines = preg_split('/\r\n|\r|\n/', $wagonSection);
+
+        foreach ($lines as $line) {
+            $line = preg_replace('/\[[\d]+\]/', '', (string) $line);
+            if (mb_stripos((string) $line, 'fois.indianrail.gov.in') !== false) {
+                continue;
+            }
+
+            $trimLine = mb_trim((string) $line);
+            if ($trimLine === '' || preg_match('#^--+[\s\d/]+-+$#', $trimLine)) {
+                continue;
+            }
+
+            if ($this->isLikelyFoisWagonColumnHeaderRow($trimLine)) {
+                continue;
+            }
+
+            if ($this->isTotalOrSummaryRow($trimLine)) {
+                continue;
+            }
+
+            if (preg_match('/^\s*\d{1,2}\/\d/', $trimLine)) {
+                continue;
+            }
+
+            $wagon = $this->parseFoisWagonRow($trimLine);
+            if ($wagon !== null) {
+                $wagons[] = $wagon;
+            }
+        }
+
+        return $wagons;
+    }
+
+    private function isLikelyFoisWagonColumnHeaderRow(string $line): bool
+    {
+        $upper = mb_strtoupper($line);
+
+        return str_contains($upper, 'SR.NO')
+            || str_contains($upper, 'OWNG')
+            || str_contains($upper, 'PARTY NUMB')
+            || (str_contains($upper, 'CMDT')
+                && str_contains($upper, 'GROSS')
+                && str_contains($upper, 'CHBL'));
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function parseFoisWagonRow(string $line): ?array
+    {
+        if (! preg_match('/^\s*(\d+)\s+([A-Z]{2,4})\s+([A-Z][A-Z0-9]{3,13})\s+(\d{9,14})\s+(.+)$/i', $line, $m)) {
+            return null;
+        }
+
+        $seq = (int) $m[1];
+        $wagonType = mb_strtoupper(mb_trim($m[3]));
+        $wagonNumber = mb_trim($m[4]);
+
+        $rest = mb_trim($m[5]);
+        $numbers = $this->extractNumbersFromWagonRest($rest);
+
+        $pcc = $numbers['cc'] ?? 0.0;
+        $loaded = $numbers['actual'] ?? $numbers['chargeable'] ?? $pcc;
+        $permissible = $numbers['permissible'] ?? $pcc;
+        $overload = $numbers['overload'] ?? 0.0;
+
+        return [
+            'sequence' => $seq,
+            'wagon_number' => $wagonNumber,
+            'wagon_type' => $wagonType,
+            'pcc_weight' => $pcc,
+            'loaded_weight' => $loaded,
+            'permissible_weight' => $permissible,
+            'overload_weight' => $overload,
+            'tare_weight' => $numbers['tare'] ?? null,
+            'gross_weight' => $numbers['gross'] ?? null,
+            'chargeable_weight_pdf' => $numbers['chargeable'] ?? null,
+        ];
+    }
+
+    /**
+     * Sum per-wagon CHBL/chargeable column when present on parsed FOIS rows (for header total_weight fallback).
+     */
+    private function sumWagonChargeableWeight(array $wagons): float
+    {
+        $sum = 0.0;
+        foreach ($wagons as $wagon) {
+            $c = $wagon['chargeable_weight_pdf'] ?? null;
+            if ($c !== null && is_numeric($c)) {
+                $sum += (float) $c;
+            }
+        }
+
+        return round($sum, 6);
     }
 
     private function extractHeaderSection(string $text): string
@@ -196,8 +554,11 @@ final readonly class RrParserService
 
         $end = mb_strlen($text);
         $totalFreightPos = mb_stripos($text, 'Total Freight:', $start);
+        if ($totalFreightPos === false) {
+            $totalFreightPos = mb_stripos($text, 'TOTAL FREIGHT:', $start);
+        }
         if ($totalFreightPos !== false) {
-            $end = $totalFreightPos + 200;
+            $end = $totalFreightPos + 220;
         }
 
         return mb_substr($text, $start, min($end - $start, 2500)) ?: '';
@@ -478,7 +839,7 @@ final readonly class RrParserService
         $charges = [];
         $seen = [];
 
-        if (preg_match('/Freight:\s*Rs\s*([\d,]+)/i', $chargesText, $m) && ! isset($seen['FREIGHT'])) {
+        if (preg_match('/Freight:\s*(?:Rs\s*)?([\d,]+(?:\.\d+)?)/i', $chargesText, $m) && ! isset($seen['FREIGHT'])) {
             $charges[] = [
                 'code' => 'FREIGHT',
                 'name' => 'Freight',
@@ -487,7 +848,7 @@ final readonly class RrParserService
             $seen['FREIGHT'] = true;
         }
 
-        if (preg_match('/Total\s+Freight:\s*Rs\s*([\d,]+)/i', $chargesText, $m)) {
+        if (preg_match('/Total\s+Freight:\s*(?:Rs\s*)?([\d,]+(?:\.\d+)?)/i', $chargesText, $m)) {
             $amount = (float) str_replace(',', '', $m[1]);
             if (! isset($seen['FREIGHT'])) {
                 $charges[] = ['code' => 'FREIGHT', 'name' => 'Freight', 'amount' => $amount];
@@ -510,27 +871,32 @@ final readonly class RrParserService
             }
         }
 
-        if (preg_match_all('/([A-Z]{2,6})\s+([\d,]+(?:\.\d+)?)/', $chargesText, $matches, PREG_SET_ORDER)) {
-            $skip = ['Code', 'RS', 'Amount', 'MT', 'KM', 'OR', 'NO'];
-            foreach ($matches as $m) {
-                $code = $m[1];
-                if (isset($seen[$code]) || in_array($code, $skip, true)) {
-                    continue;
+        return $charges;
+    }
+
+    /**
+     * FOIS prints real charge lines (FREIGHT, POL1, *GST) then long narrative (*GST PARTICULARS, REMARKS).
+     * Do not feed that prose into {@see parseChargesSection} or word+number patterns match "FOR 19", "RC 19", "WT 3699", etc.
+     */
+    private function truncateFoisChargesNarrativeTail(string $slice): string
+    {
+        $cut = mb_strlen($slice);
+        $patterns = [
+            '/\*?\s*GST\s+PARTICULARS/is',
+            '/\bREMARKS\s*:/i',
+            '/^ALLOCATION AND OTHER DETAILS/im',
+            '/fois\.indianrail\.gov\.in/i',
+        ];
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $slice, $m, PREG_OFFSET_CAPTURE)) {
+                $pos = $m[0][1];
+                if ($pos >= 0 && $pos < $cut) {
+                    $cut = $pos;
                 }
-                $amount = (float) str_replace(',', '', $m[2]);
-                if ($amount < 1 || $amount > 999_999_999) {
-                    continue;
-                }
-                $charges[] = [
-                    'code' => $code,
-                    'name' => $this->chargeCodeToName($code),
-                    'amount' => $amount,
-                ];
-                $seen[$code] = true;
             }
         }
 
-        return $charges;
+        return mb_substr($slice, 0, $cut) ?: $slice;
     }
 
     private function chargeCodeToName(string $code): ?string

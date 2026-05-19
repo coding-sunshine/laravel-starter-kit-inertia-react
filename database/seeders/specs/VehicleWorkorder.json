@@ -173,7 +173,12 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
     "value_hints": {
         "transport_name": {
             "type": "name",

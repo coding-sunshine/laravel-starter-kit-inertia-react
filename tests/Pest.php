@@ -14,6 +14,19 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
+    ->beforeEach(function (): void {
+        Str::createRandomStringsNormally();
+        Str::createUuidsNormally();
+        Http::preventStrayRequests();
+        Process::preventStrayProcesses();
+        Sleep::fake();
+
+        $this->freezeTime();
+        $this->withoutVite();
+    })
+    ->in('Pure');
+
+pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->beforeEach(function (): void {
         Str::createRandomStringsNormally();
@@ -26,6 +39,22 @@ pest()->extend(TestCase::class)
         $this->withoutVite();
     })
     ->in('Feature', 'Unit');
+
+pest()->extend(TestCase::class)
+    ->in('Validator');
+
+pest()->extend(TestCase::class)
+    ->beforeEach(function (): void {
+        Str::createRandomStringsNormally();
+        Str::createUuidsNormally();
+        Http::preventStrayRequests();
+        Process::preventStrayProcesses();
+        Sleep::fake();
+
+        $this->freezeTime();
+        $this->withoutVite();
+    })
+    ->in('Railway');
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)

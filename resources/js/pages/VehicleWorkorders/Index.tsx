@@ -1,4 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import TransportRegistrationsTable, {
+    type PaginatedTransportRegistrations,
+} from '@/pages/VehicleWorkorders/TransportRegistrationsTable';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,69 +68,29 @@ interface PaginatedWorkorders {
     links: { url: string | null; label: string; active: boolean }[];
 }
 
-interface TransporterWorkorderRow {
-    siding_id: number;
-    siding_name: string | null;
-    transport_name: string | null;
-    wo_no: string | null;
-    wo_no_2: string | null;
-    work_order_date: string | null;
-    issued_date: string | null;
-    proprietor_name: string | null;
-    address: string | null;
-    mobile_no_1: string | null;
-    mobile_no_2: string | null;
-    owner_type: string | null;
-    pan_no: string | null;
-    gst_no: string | null;
-    vehicle_count: number;
-}
-
-interface PaginatedTransporterWorkorders {
-    data: TransporterWorkorderRow[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    links: { url: string | null; label: string; active: boolean }[];
+interface TransportRegistrationPermissions {
+    canCreate: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
 }
 
 interface Filters {
     view?: 'vehicles' | 'transporters';
-    /** May be string or number from the server query string / PHP. */
+    page?: string | number;
     siding_id?: string | number;
-    vehicle_no?: string;
-    wo_no?: string;
-    wo_no_2?: string;
     transport_name?: string;
-    mobile?: string;
-    mobile_no_1?: string;
-    mobile_no_2?: string;
-    model?: string;
-    work_order_date?: string;
-    issued_date?: string;
-    proprietor_name?: string;
-    address?: string;
-    owner_type?: string;
-    pan_no?: string;
-    gst_no?: string;
-    min_vehicles?: string | number;
-    max_vehicles?: string | number;
+    vehicle_no?: string;
     regd_date?: string;
-    permit_validity_date?: string;
-    tax_validity_date?: string;
-    insurance_validity_date?: string;
 }
 
 interface Props {
     view: 'vehicles' | 'transporters';
     vehicleWorkorders: PaginatedWorkorders | null;
-    transporterWorkorders: PaginatedTransporterWorkorders | null;
+    transportWorkOrderRegistrations: PaginatedTransportRegistrations | null;
+    transportRegistrationPermissions: TransportRegistrationPermissions;
     sidings: Siding[];
-    /** Distinct transporter names for dropdown; omitted only if page props are stale. */
+    /** Distinct transporter names for transport name filter. */
     transportNames?: string[];
-    /** Distinct proprietor names for dropdown (transporters tab). */
-    proprietorNames?: string[];
     filters: Filters;
 }
 
@@ -144,7 +107,15 @@ function formatDate(dateStr: string | null): string {
     }
 }
 
-/** Vehicle tab / vehicle XLSX export: siding, vehicle identity, transport, proprietor, vehicle document dates. */
+/** Append pagination when preserving page > 1. */
+function appendPageParam(params: URLSearchParams, f: Filters): void {
+    const pageNum = f.page !== undefined && f.page !== '' ? Number(f.page) : 1;
+    if (Number.isFinite(pageNum) && pageNum > 1) {
+        params.set('page', String(pageNum));
+    }
+}
+
+/** Vehicles tab list + XLSX export query. */
 function appendVehicleFilterParams(params: URLSearchParams, f: Filters): void {
     if (f.siding_id !== undefined && f.siding_id !== '') {
         params.set('siding_id', String(f.siding_id));
@@ -155,30 +126,13 @@ function appendVehicleFilterParams(params: URLSearchParams, f: Filters): void {
     if (f.vehicle_no?.trim()) {
         params.set('vehicle_no', f.vehicle_no.trim());
     }
-    if (f.mobile?.trim()) {
-        params.set('mobile', f.mobile.trim());
-    }
-    if (f.model?.trim()) {
-        params.set('model', f.model.trim());
-    }
-    if (f.proprietor_name?.trim()) {
-        params.set('proprietor_name', f.proprietor_name.trim());
-    }
     if (f.regd_date) {
         params.set('regd_date', f.regd_date);
     }
-    if (f.permit_validity_date) {
-        params.set('permit_validity_date', f.permit_validity_date);
-    }
-    if (f.tax_validity_date) {
-        params.set('tax_validity_date', f.tax_validity_date);
-    }
-    if (f.insurance_validity_date) {
-        params.set('insurance_validity_date', f.insurance_validity_date);
-    }
+    appendPageParam(params, f);
 }
 
-/** Transporter tab / grouped transporter XLSX export. */
+/** Transporters tab list + export query. */
 function appendTransporterFilterParams(params: URLSearchParams, f: Filters): void {
     if (f.siding_id !== undefined && f.siding_id !== '') {
         params.set('siding_id', String(f.siding_id));
@@ -186,45 +140,7 @@ function appendTransporterFilterParams(params: URLSearchParams, f: Filters): voi
     if (f.transport_name?.trim()) {
         params.set('transport_name', f.transport_name.trim());
     }
-    if (f.wo_no?.trim()) {
-        params.set('wo_no', f.wo_no.trim());
-    }
-    if (f.wo_no_2?.trim()) {
-        params.set('wo_no_2', f.wo_no_2.trim());
-    }
-    if (f.work_order_date) {
-        params.set('work_order_date', f.work_order_date);
-    }
-    if (f.issued_date) {
-        params.set('issued_date', f.issued_date);
-    }
-    if (f.proprietor_name?.trim()) {
-        params.set('proprietor_name', f.proprietor_name.trim());
-    }
-    if (f.address?.trim()) {
-        params.set('address', f.address.trim());
-    }
-    if (f.mobile_no_1?.trim()) {
-        params.set('mobile_no_1', f.mobile_no_1.trim());
-    }
-    if (f.mobile_no_2?.trim()) {
-        params.set('mobile_no_2', f.mobile_no_2.trim());
-    }
-    if (f.owner_type?.trim()) {
-        params.set('owner_type', f.owner_type.trim());
-    }
-    if (f.pan_no?.trim()) {
-        params.set('pan_no', f.pan_no.trim());
-    }
-    if (f.gst_no?.trim()) {
-        params.set('gst_no', f.gst_no.trim());
-    }
-    if (f.min_vehicles !== undefined && f.min_vehicles !== '') {
-        params.set('min_vehicles', String(f.min_vehicles));
-    }
-    if (f.max_vehicles !== undefined && f.max_vehicles !== '') {
-        params.set('max_vehicles', String(f.max_vehicles));
-    }
+    appendPageParam(params, f);
 }
 
 function filtersToRouterParams(view: 'vehicles' | 'transporters', f: Filters): Record<string, string> {
@@ -243,29 +159,19 @@ function filtersToRouterParams(view: 'vehicles' | 'transporters', f: Filters): R
     return params;
 }
 
-function transporterRowKey(row: TransporterWorkorderRow, index: number): string {
-    return [
-        row.siding_id,
-        row.transport_name ?? '',
-        row.wo_no ?? '',
-        row.wo_no_2 ?? '',
-        row.work_order_date ?? '',
-        row.issued_date ?? '',
-        index,
-    ].join(':');
-}
-
 const TRANSPORT_NAME_ALL = '__all__';
-
-const PROPRIETOR_NAME_ALL = '__all_proprietor__';
 
 export default function VehicleWorkordersIndex({
     view,
     vehicleWorkorders,
-    transporterWorkorders,
+    transportWorkOrderRegistrations,
+    transportRegistrationPermissions = {
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+    },
     sidings,
     transportNames = [],
-    proprietorNames = [],
     filters,
 }: Props) {
     const { flash } = usePage<Props & { flash?: { success?: string } }>().props;
@@ -295,26 +201,16 @@ export default function VehicleWorkordersIndex({
         ];
     }, [transporterNameSelectOptions]);
 
-    const proprietorNameSelectOptions = useMemo(() => {
-        const names = [...proprietorNames];
-        const cur = localFilters.proprietor_name?.trim();
-        if (cur && !names.includes(cur)) {
-            names.push(cur);
-            names.sort((a, b) => a.localeCompare(b));
+    function deleteTransportRegistration(id: number): void {
+        if (
+            !window.confirm(
+                'Delete this transporter registration? Attached documents will be removed. This cannot be undone.',
+            )
+        ) {
+            return;
         }
-        return names;
-    }, [proprietorNames, localFilters.proprietor_name]);
-
-    const proprietorNameSelectValue = localFilters.proprietor_name?.trim()
-        ? localFilters.proprietor_name
-        : PROPRIETOR_NAME_ALL;
-
-    const proprietorNameSearchOptions = useMemo((): SearchableSelectOption[] => {
-        return [
-            { value: PROPRIETOR_NAME_ALL, label: 'All proprietors' },
-            ...proprietorNameSelectOptions.map((name) => ({ value: name, label: name })),
-        ];
-    }, [proprietorNameSelectOptions]);
+        router.delete(`/vehicle-workorders/transport-registrations/${id}`, { preserveScroll: true });
+    }
 
     const vehicleExportHref = useMemo(() => {
         const params = new URLSearchParams();
@@ -335,7 +231,9 @@ export default function VehicleWorkordersIndex({
     }, [filters]);
 
     const applyFilters = () => {
-        router.get('/vehicle-workorders', filtersToRouterParams(view, localFilters), { preserveState: true });
+        const payload = { ...localFilters };
+        delete payload.page;
+        router.get('/vehicle-workorders', filtersToRouterParams(view, payload), { preserveState: true });
     };
 
     const clearFilters = () => {
@@ -362,9 +260,19 @@ export default function VehicleWorkordersIndex({
                         description="Manage vehicle work order records from workload data"
                     />
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                        <Link href="/vehicle-workorders/create">
-                            <Button>Add Work Order</Button>
-                        </Link>
+                        {view === 'transporters' ? (
+                            transportRegistrationPermissions.canCreate ? (
+                                <Link href="/vehicle-workorders/transport-registrations/create">
+                                    <Button data-pan="vehicle-workorders-transport-registrations-create-header">
+                                        New transporter
+                                    </Button>
+                                </Link>
+                            ) : null
+                        ) : (
+                            <Link href="/vehicle-workorders/create">
+                                <Button>Add Work Order</Button>
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -381,13 +289,13 @@ export default function VehicleWorkordersIndex({
                             Filters
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3 pt-0">
+                    <CardContent className="space-y-2 pt-0">
                         {view === 'vehicles' ? (
                             <div
-                                className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+                                className="grid max-w-6xl grid-cols-1 justify-items-start gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4"
                                 data-pan="vehicle-workorders-filters-vehicles"
                             >
-                                <div className="space-y-1">
+                                <div className="w-full max-w-[260px] space-y-1">
                                     <Label htmlFor="siding_id" className="text-xs">
                                         Siding
                                     </Label>
@@ -401,7 +309,7 @@ export default function VehicleWorkordersIndex({
                                             setLocalFilters((f) => ({ ...f, siding_id: v || undefined }))
                                         }
                                     >
-                                        <SelectTrigger id="siding_id" className="h-9">
+                                        <SelectTrigger id="siding_id" className="h-9 w-full max-w-full">
                                             <SelectValue placeholder="All sidings" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -414,7 +322,7 @@ export default function VehicleWorkordersIndex({
                                     </Select>
                                 </div>
                                 <div
-                                    className="space-y-1"
+                                    className="w-full max-w-[260px] space-y-1"
                                     data-pan="vehicle-workorders-filter-transport-name-search-vehicles"
                                 >
                                     <Label className="text-xs">Transport name</Label>
@@ -433,9 +341,9 @@ export default function VehicleWorkordersIndex({
                                         className="h-9 min-h-9"
                                     />
                                 </div>
-                                <div className="space-y-1">
+                                <div className="w-full max-w-[260px] space-y-1">
                                     <Label htmlFor="vehicle_no" className="text-xs">
-                                        Vehicle No
+                                        Vehicle no.
                                     </Label>
                                     <Input
                                         id="vehicle_no"
@@ -450,61 +358,7 @@ export default function VehicleWorkordersIndex({
                                         }
                                     />
                                 </div>
-                                <div
-                                    className="space-y-1"
-                                    data-pan="vehicle-workorders-filter-proprietor-name-search-vehicles"
-                                >
-                                    <Label className="text-xs">Proprietor name</Label>
-                                    <SearchableSelect
-                                        options={proprietorNameSearchOptions}
-                                        value={proprietorNameSelectValue}
-                                        onValueChange={(v) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                proprietor_name: v === PROPRIETOR_NAME_ALL ? undefined : v,
-                                            }))
-                                        }
-                                        placeholder="All proprietors"
-                                        searchPlaceholder="Search proprietors..."
-                                        emptyMessage="No proprietors match your search."
-                                        className="h-9 min-h-9"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="mobile" className="text-xs">
-                                        Mobile (1 or 2)
-                                    </Label>
-                                    <Input
-                                        id="mobile"
-                                        className="h-9"
-                                        placeholder="Search mobile"
-                                        value={localFilters.mobile ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                mobile: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="model" className="text-xs">
-                                        Model
-                                    </Label>
-                                    <Input
-                                        id="model"
-                                        className="h-9"
-                                        placeholder="Model"
-                                        value={localFilters.model ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                model: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
+                                <div className="w-full max-w-[260px] space-y-1">
                                     <Label htmlFor="regd_date" className="text-xs">
                                         Regd date
                                     </Label>
@@ -521,66 +375,15 @@ export default function VehicleWorkordersIndex({
                                         }
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="permit_validity_date" className="text-xs">
-                                        Permit validity
-                                    </Label>
-                                    <Input
-                                        id="permit_validity_date"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.permit_validity_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                permit_validity_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="tax_validity_date" className="text-xs">
-                                        Tax validity
-                                    </Label>
-                                    <Input
-                                        id="tax_validity_date"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.tax_validity_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                tax_validity_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="insurance_validity_date" className="text-xs">
-                                        Insurance validity
-                                    </Label>
-                                    <Input
-                                        id="insurance_validity_date"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.insurance_validity_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                insurance_validity_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
                             </div>
                         ) : (
                             <div
-                                className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+                                className="grid max-w-2xl grid-cols-1 justify-items-start gap-x-4 gap-y-2 sm:grid-cols-2"
                                 data-pan="vehicle-workorders-filters-transporters"
                             >
-                                <div className="space-y-1">
+                                <div className="w-full max-w-[260px] space-y-1">
                                     <Label htmlFor="siding_id_tr" className="text-xs">
-                                        Siding name
+                                        Siding
                                     </Label>
                                     <Select
                                         value={
@@ -592,7 +395,7 @@ export default function VehicleWorkordersIndex({
                                             setLocalFilters((f) => ({ ...f, siding_id: v || undefined }))
                                         }
                                     >
-                                        <SelectTrigger id="siding_id_tr" className="h-9">
+                                        <SelectTrigger id="siding_id_tr" className="h-9 w-full max-w-full">
                                             <SelectValue placeholder="All sidings" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -605,7 +408,7 @@ export default function VehicleWorkordersIndex({
                                     </Select>
                                 </div>
                                 <div
-                                    className="space-y-1"
+                                    className="w-full max-w-[260px] space-y-1"
                                     data-pan="vehicle-workorders-filter-transport-name-search"
                                 >
                                     <Label className="text-xs">Transport name</Label>
@@ -622,232 +425,6 @@ export default function VehicleWorkordersIndex({
                                         searchPlaceholder="Search transporters..."
                                         emptyMessage="No transporters match your search."
                                         className="h-9 min-h-9"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="wo_no_tr" className="text-xs">
-                                        WO no
-                                    </Label>
-                                    <Input
-                                        id="wo_no_tr"
-                                        className="h-9"
-                                        value={localFilters.wo_no ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                wo_no: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="wo_no_2_tr" className="text-xs">
-                                        WO no 2
-                                    </Label>
-                                    <Input
-                                        id="wo_no_2_tr"
-                                        className="h-9"
-                                        value={localFilters.wo_no_2 ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                wo_no_2: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="work_order_date_tr" className="text-xs">
-                                        Work order date
-                                    </Label>
-                                    <Input
-                                        id="work_order_date_tr"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.work_order_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                work_order_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="issued_date_tr" className="text-xs">
-                                        Issue date
-                                    </Label>
-                                    <Input
-                                        id="issued_date_tr"
-                                        type="date"
-                                        className="h-9"
-                                        value={localFilters.issued_date ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                issued_date: e.target.value || undefined,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div
-                                    className="space-y-1"
-                                    data-pan="vehicle-workorders-filter-proprietor-name-search"
-                                >
-                                    <Label className="text-xs">Proprietor name</Label>
-                                    <SearchableSelect
-                                        options={proprietorNameSearchOptions}
-                                        value={proprietorNameSelectValue}
-                                        onValueChange={(v) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                proprietor_name: v === PROPRIETOR_NAME_ALL ? undefined : v,
-                                            }))
-                                        }
-                                        placeholder="All proprietors"
-                                        searchPlaceholder="Search proprietors..."
-                                        emptyMessage="No proprietors match your search."
-                                        className="h-9 min-h-9"
-                                    />
-                                </div>
-                                <div className="space-y-1 sm:col-span-2">
-                                    <Label htmlFor="address_tr" className="text-xs">
-                                        Address
-                                    </Label>
-                                    <Input
-                                        id="address_tr"
-                                        className="h-9"
-                                        value={localFilters.address ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                address: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="mobile_no_1_tr" className="text-xs">
-                                        Mobile
-                                    </Label>
-                                    <Input
-                                        id="mobile_no_1_tr"
-                                        className="h-9"
-                                        value={localFilters.mobile_no_1 ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                mobile_no_1: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="mobile_no_2_tr" className="text-xs">
-                                        Mobile 2
-                                    </Label>
-                                    <Input
-                                        id="mobile_no_2_tr"
-                                        className="h-9"
-                                        value={localFilters.mobile_no_2 ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                mobile_no_2: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="owner_type_tr" className="text-xs">
-                                        Owner type
-                                    </Label>
-                                    <Input
-                                        id="owner_type_tr"
-                                        className="h-9"
-                                        value={localFilters.owner_type ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                owner_type: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="pan_no_tr" className="text-xs">
-                                        PAN no
-                                    </Label>
-                                    <Input
-                                        id="pan_no_tr"
-                                        className="h-9"
-                                        value={localFilters.pan_no ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                pan_no: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="gst_no_tr" className="text-xs">
-                                        GST no
-                                    </Label>
-                                    <Input
-                                        id="gst_no_tr"
-                                        className="h-9"
-                                        value={localFilters.gst_no ?? ''}
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                gst_no: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="min_vehicles_tr" className="text-xs">
-                                        Total vehicles (min)
-                                    </Label>
-                                    <Input
-                                        id="min_vehicles_tr"
-                                        type="number"
-                                        min={0}
-                                        className="h-9"
-                                        value={
-                                            localFilters.min_vehicles === undefined || localFilters.min_vehicles === ''
-                                                ? ''
-                                                : String(localFilters.min_vehicles)
-                                        }
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                min_vehicles: e.target.value === '' ? undefined : e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="max_vehicles_tr" className="text-xs">
-                                        Total vehicles (max)
-                                    </Label>
-                                    <Input
-                                        id="max_vehicles_tr"
-                                        type="number"
-                                        min={0}
-                                        className="h-9"
-                                        value={
-                                            localFilters.max_vehicles === undefined || localFilters.max_vehicles === ''
-                                                ? ''
-                                                : String(localFilters.max_vehicles)
-                                        }
-                                        onChange={(e) =>
-                                            setLocalFilters((f) => ({
-                                                ...f,
-                                                max_vehicles: e.target.value === '' ? undefined : e.target.value,
-                                            }))
-                                        }
                                     />
                                 </div>
                             </div>
@@ -874,7 +451,7 @@ export default function VehicleWorkordersIndex({
                                     className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
                                     data-pan="vehicle-workorders-export-transporters-xlsx"
                                 >
-                                    Export transporters XLSX
+                                    Export registrations XLSX
                                 </a>
                             )}
                         </div>
@@ -940,7 +517,10 @@ export default function VehicleWorkordersIndex({
                                             <TableHead>Siding</TableHead>
                                             <TableHead>Vehicle No</TableHead>
                                             <TableHead>RCD PIN No</TableHead>
-                                            <TableHead>Transport Name</TableHead>
+                                            <TableHead>Transport name</TableHead>
+                                            <TableHead className="max-w-[200px] whitespace-normal">
+                                                WO no 2
+                                            </TableHead>
                                             <TableHead>Tyres</TableHead>
                                             <TableHead>Tare Weight</TableHead>
                                             <TableHead>Regd Date</TableHead>
@@ -968,8 +548,15 @@ export default function VehicleWorkordersIndex({
                                                     {wo.vehicle_no ?? '-'}
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap">{wo.rcd_pin_no ?? '-'}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{wo.transport_name ?? '-'}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{wo.tyres != null ? wo.tyres : '-'}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {wo.transport_name ?? '-'}
+                                                </TableCell>
+                                                <TableCell className="max-w-[200px] min-w-0 align-top text-sm whitespace-normal break-words">
+                                                    {wo.wo_no_2?.trim() ? wo.wo_no_2 : '-'}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {wo.tyres != null ? wo.tyres : '-'}
+                                                </TableCell>
                                                 <TableCell className="whitespace-nowrap">{wo.tare_weight != null ? wo.tare_weight : '-'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{formatDate(wo.regd_date)}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{formatDate(wo.permit_validity_date)}</TableCell>
@@ -1029,116 +616,12 @@ export default function VehicleWorkordersIndex({
                 </Card>
                     )}
 
-                    {view === 'transporters' && transporterWorkorders && (
-                        <Card data-pan="vehicle-workorders-transporters-table">
-                            <CardHeader>
-                                <CardTitle>Transporters</CardTitle>
-                                <CardDescription>
-                                    {transporterWorkorders.total} transporter work order
-                                    {transporterWorkorders.total !== 1 ? 's' : ''} found
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {transporterWorkorders.data.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Siding name</TableHead>
-                                                    <TableHead>Transport name</TableHead>
-                                                    <TableHead>WO no</TableHead>
-                                                    <TableHead>WO no 2</TableHead>
-                                                    <TableHead>Work order date</TableHead>
-                                                    <TableHead>Issue date</TableHead>
-                                                    <TableHead>Proprietor name</TableHead>
-                                                    <TableHead>Address</TableHead>
-                                                    <TableHead>Mobile</TableHead>
-                                                    <TableHead>Mobile 2</TableHead>
-                                                    <TableHead>Owner type</TableHead>
-                                                    <TableHead>PAN no</TableHead>
-                                                    <TableHead>GST no</TableHead>
-                                                    <TableHead>No. of vehicles</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {transporterWorkorders.data.map((row, index) => (
-                                                    <TableRow key={transporterRowKey(row, index)}>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.siding_name ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.transport_name ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.wo_no ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.wo_no_2 ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {formatDate(row.work_order_date)}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {formatDate(row.issued_date)}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.proprietor_name ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell
-                                                            className="max-w-[200px] truncate"
-                                                            title={row.address ?? undefined}
-                                                        >
-                                                            {row.address ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.mobile_no_1 ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.mobile_no_2 ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.owner_type ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.pan_no ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            {row.gst_no ?? '-'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap font-medium tabular-nums">
-                                                            {row.vehicle_count}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                        {transporterWorkorders.last_page > 1 && (
-                                            <div className="mt-4 flex flex-wrap gap-2">
-                                                {transporterWorkorders.links.map((link, index) => (
-                                                    <Link
-                                                        key={`${link.url ?? 'null'}-${link.label}-${index}`}
-                                                        href={link.url ?? '#'}
-                                                        className={
-                                                            link.active
-                                                                ? 'rounded border bg-muted px-2 py-1 text-sm font-medium'
-                                                                : 'rounded border px-2 py-1 text-sm'
-                                                        }
-                                                    >
-                                                        {link.label}
-                                                    </Link>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="rounded-lg border border-dashed p-8 text-center">
-                                        <p className="text-sm text-muted-foreground">
-                                            No transporter work orders found. Try adjusting your filters.
-                                        </p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                    {view === 'transporters' && transportWorkOrderRegistrations && (
+                        <TransportRegistrationsTable
+                            transportWorkOrderRegistrations={transportWorkOrderRegistrations}
+                            transportRegistrationPermissions={transportRegistrationPermissions}
+                            onDeleteRegistration={deleteTransportRegistration}
+                        />
                     )}
                 </div>
             </div>
