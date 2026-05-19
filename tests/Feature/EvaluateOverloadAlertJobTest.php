@@ -20,7 +20,7 @@ beforeEach(function (): void {
 
 it('fires no alert below 90% CC', function (): void {
     Event::fake();
-    $wagon = Wagon::factory()->create(['wagon_number' => 1]);
+    $wagon = Wagon::factory()->create(['wagon_number' => 1, 'wagon_sequence' => 1, 'pcc_weight_mt' => 68]);
     WagonLoading::factory()->create(['rake_id' => $this->rake->id, 'wagon_id' => $wagon->id, 'cc_capacity_mt' => 68, 'weight_source' => 'manual']);
 
     (new EvaluateOverloadAlertJob(['Sequence' => 1, 'Weight' => 60.0, 'Timestamp' => now()->toIso8601String()], $this->siding->id))->handle();
@@ -31,7 +31,7 @@ it('fires no alert below 90% CC', function (): void {
 
 it('fires warning alert at exactly 90% CC and sets debounce key', function (): void {
     Event::fake();
-    $wagon = Wagon::factory()->create(['wagon_number' => 2]);
+    $wagon = Wagon::factory()->create(['wagon_number' => 2, 'wagon_sequence' => 2, 'pcc_weight_mt' => 68]);
     WagonLoading::factory()->create(['rake_id' => $this->rake->id, 'wagon_id' => $wagon->id, 'cc_capacity_mt' => 68, 'weight_source' => 'manual']);
 
     // 61.2 / 68 = 90%
@@ -43,7 +43,7 @@ it('fires warning alert at exactly 90% CC and sets debounce key', function (): v
 
 it('does not fire duplicate alert within 5-minute debounce window', function (): void {
     Event::fake();
-    $wagon = Wagon::factory()->create(['wagon_number' => 3]);
+    $wagon = Wagon::factory()->create(['wagon_number' => 3, 'wagon_sequence' => 3, 'pcc_weight_mt' => 68]);
     WagonLoading::factory()->create(['rake_id' => $this->rake->id, 'wagon_id' => $wagon->id, 'cc_capacity_mt' => 68, 'weight_source' => 'manual']);
     Cache::put("loadrite:alert:{$wagon->id}:warning", true, now()->addMinutes(5));
 
@@ -54,7 +54,7 @@ it('does not fire duplicate alert within 5-minute debounce window', function ():
 
 it('fires critical alert at 100%+ CC', function (): void {
     Event::fake();
-    $wagon = Wagon::factory()->create(['wagon_number' => 4]);
+    $wagon = Wagon::factory()->create(['wagon_number' => 4, 'wagon_sequence' => 4, 'pcc_weight_mt' => 68]);
     WagonLoading::factory()->create(['rake_id' => $this->rake->id, 'wagon_id' => $wagon->id, 'cc_capacity_mt' => 68, 'weight_source' => 'manual']);
 
     // 68.1 / 68 = 100.1%
@@ -65,7 +65,7 @@ it('fires critical alert at 100%+ CC', function (): void {
 
 it('skips weighbridge records', function (): void {
     Event::fake();
-    $wagon = Wagon::factory()->create(['wagon_number' => 5]);
+    $wagon = Wagon::factory()->create(['wagon_number' => 5, 'wagon_sequence' => 5, 'pcc_weight_mt' => 68]);
     WagonLoading::factory()->create(['rake_id' => $this->rake->id, 'wagon_id' => $wagon->id, 'cc_capacity_mt' => 68, 'weight_source' => 'weighbridge']);
 
     (new EvaluateOverloadAlertJob(['Sequence' => 5, 'Weight' => 70.0, 'Timestamp' => now()->toIso8601String()], $this->siding->id))->handle();

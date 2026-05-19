@@ -165,8 +165,17 @@ final class RakeLoaderListDataTable extends AbstractDataTable
             || array_key_exists('placement_time', $filters);
 
         if (! $hasExplicitDateFilter) {
-            $today = CarbonImmutable::now()->toDateString();
-            $query->whereBetween('loading_date', [$today, $today]);
+            // Default to the most recent loading date that actually has a
+            // displayable rake (siding scope + weighment + data_source filters
+            // are already applied above). Loadrite publishes events hours late
+            // and loading spans days, so a plain "today" default routinely
+            // shows an empty page even though loaded rakes exist. Falling back
+            // to the latest day with data keeps the landing view populated.
+            $mostRecentDate = $query->max('loading_date');
+            $targetDate = $mostRecentDate !== null
+                ? CarbonImmutable::parse($mostRecentDate)->toDateString()
+                : CarbonImmutable::now()->toDateString();
+            $query->whereBetween('loading_date', [$targetDate, $targetDate]);
         }
 
         return $query;
