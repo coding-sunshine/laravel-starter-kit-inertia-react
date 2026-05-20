@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-05-14 (mobile dashboard RR upload coverage API)
+**Last Updated**: 2026-05-20 (vehicle dispatch reconciliation report)
 
 ## Closure
 
@@ -679,7 +679,7 @@ Management dashboard JSON for native clients (`/api/v1/dashboard/*`). See [Dashb
 | GET | `api/v1/dashboard/loader-overload/operators/show` | api.v1.dashboard.loader-overload.operators.show | api, throttle:60,1, auth:sanctum, feature:api_access |
 | GET | `api/v1/dashboard/loader-overload` | api.v1.dashboard.loader-overload | api, throttle:60,1, auth:sanctum, feature:api_access |
 
-`siding-performance-metrics` delegates to web `ExecutiveDashboardController::sidingPerformanceMetrics` (same contract as `dashboard.siding-performance-metrics`). **`rr-upload-coverage`** returns `data.penaltyControlRrCoverage` from `ExecutiveDashboardController::buildPenaltyControlRrCoverage()` (dashboard date range + siding filters), authorized with `dashboard.widgets.siding_overview_rr_rake_coverage` (same widget as web siding overview RR chart). Full filters, response, and errors: [mobile-dashboard-rr-upload-coverage-api.md](./mobile-dashboard-rr-upload-coverage-api.md). `rake-performance/rakes` delegates to `rakePerformanceList` (same as web list). `rake-performance/rakes/{rake}` uses `rakePerformanceDetailForApi` (same **`data`** shape as web detail; not date/filter-scoped like web `rakePerformanceDetail`). Legacy `rake-performance` returns the full `buildRakePerformance()` array (deprecated for large scopes). **`loader-overload/loaders`** and related routes use `LoaderOverloadMetricsService` with the same JSON as web `LoaderOverloadWebController`; legacy **`loader-overload`** returns `loaderOverloadTrends` only (deprecated for UI parity).
+`siding-performance-metrics` delegates to web `ExecutiveDashboardController::sidingPerformanceMetrics` (same contract as `dashboard.siding-performance-metrics`). **`rr-upload-coverage`** returns `data.penaltyControlRrCoverage` from `ExecutiveDashboardController::buildPenaltyControlRrCoverage()` (dashboard date range + siding filters), authorized with `dashboard.widgets.siding_overview_rr_rake_coverage` (same widget as web siding overview RR chart). Full filters, response, and errors: [mobile-dashboard-rr-upload-coverage-api.md](./mobile-dashboard-rr-upload-coverage-api.md). `rake-performance/rakes` delegates to `rakePerformanceList` (same as web list). `rake-performance/rakes/{rake}` uses `rakePerformanceDetailForApi` (same **`data`** shape as web detail; not date/filter-scoped like web `rakePerformanceDetail`). Web-only **`GET /dashboard/rake-performance/overload-trends`** (`dashboard.rake-performance.overload-trends`) serves siding-wise daily overload/underload % for the Load trends tab — see [dashboard-rake-performance.md](./dashboard-rake-performance.md). Legacy `rake-performance` returns the full `buildRakePerformance()` array (deprecated for large scopes). **`loader-overload/loaders`** and related routes use `LoaderOverloadMetricsService` with the same JSON as web `LoaderOverloadWebController`; legacy **`loader-overload`** returns `loaderOverloadTrends` only (deprecated for UI parity).
 
 ## Impersonation (filament-impersonate)
 
@@ -1105,4 +1105,27 @@ See [Filament > User impersonation](../backend/filament.md#user-impersonation).
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
 | POST | `api/v1/rakes/{rake}/weighments/fetch-from-rr` | api.v1.rakes.weighments.fetch-from-rr | api, throttle, auth:sanctum, feature:api_access |
+
+## VehicleDispatchController
+
+**Controller**: `App\Http\Controllers\VehicleDispatchController`
+
+Coal-site dispatch register and DPR. Reconciliation report compares `siding_vehicle_dispatches` (dispatched) with `daily_vehicle_entries` (`entry_type = road_dispatch`, received / stock status).
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `vehicle-dispatch` | vehicle-dispatch.index | web, auth, verified |
+| GET | `vehicle-dispatch/reconciliation-report` | vehicle-dispatch.reconciliation-report | web, auth, verified |
+| GET | `vehicle-dispatch/dpr-data` | vehicle-dispatch.dpr-data | web, auth, verified |
+| GET | `vehicle-dispatch/calendar-days` | vehicle-dispatch.calendar-days | web, auth, verified |
+| PUT | `vehicle-dispatch/{vehicle_dispatch}` | vehicle-dispatch.update | web, auth, verified |
+| POST | `vehicle-dispatch/import` | vehicle-dispatch.import | web, auth, verified |
+| POST | `vehicle-dispatch/save` | vehicle-dispatch.save | web, auth, verified |
+| GET | `vehicle-dispatch/dpr-export` | vehicle-dispatch.dpr-export | web, auth, verified |
+
+### `reconciliationReport` JSON (query: `siding_id`, `from`, `to`)
+
+Requires `users.access_to_siding_shift_data` (Filament user field “Access to all siding shift data”). No `sections.*` route permission.
+
+Returns `{ siding, from, to, days[], range_total }`. Each day has `shifts[]` (1–3) and `day_total` with `dispatch_trips`, `dispatch_qty`, `received_trips`, `received_qty`, `in_transit_trips`, `in_transit_qty`. `range_total` includes `stock_updated_mt` (completed `net_wt`) and `in_progress_gross_mt` (non-completed `gross_wt`), matching the daily vehicle entries shift report rules.
 

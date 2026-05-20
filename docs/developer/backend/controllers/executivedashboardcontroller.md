@@ -17,6 +17,7 @@ Serves the main Inertia dashboard (`/dashboard`) and related JSON endpoints for 
 | `sidingPerformanceMetrics` | GET | `dashboard/siding-performance-metrics`; mobile delegates from `GET /api/v1/dashboard/siding-performance-metrics` | JSON for siding performance charts (independent `sp_rakes_*` / `sp_penalty_*` date slices) |
 | `rakePerformanceList` | GET | `dashboard/rake-performance/rakes`; mobile `GET /api/v1/dashboard/rake-performance/rakes` | JSON list for rake performance (paginated summary) |
 | `rakePerformanceDetail` | GET | `dashboard/rake-performance/rakes/{rake}` | JSON detail for one rake (wagons + loaders); list filters + date range |
+| `rakePerformanceOverloadTrends` | GET | `dashboard/rake-performance/overload-trends` | JSON daily overload/underload % by siding (`rp_overload_period`; `LoaderOverloadMetricsService::buildDailyOverloadTrendsBySiding`) |
 | `rakePerformanceDetailForApi` | (mobile only) | `GET /api/v1/dashboard/rake-performance/rakes/{rake}` via `MobileDashboardController::rakePerformanceRakeShow` | Same `data` shape as `rakePerformanceDetail`; scope by rake id + siding access only |
 
 ## `sidingPerformanceMetrics` query parameters
@@ -44,6 +45,7 @@ Per-chart overrides (optional):
 - `api.v1.dashboard.siding-performance-metrics`: `GET /api/v1/dashboard/siding-performance-metrics` — same JSON; Sanctum + `feature:api_access`; delegates to this controller via `MobileDashboardController::sidingPerformanceMetrics`
 - `dashboard.rake-performance.rakes.index`: `GET /dashboard/rake-performance/rakes` — JSON
 - `dashboard.rake-performance.rakes.show`: `GET /dashboard/rake-performance/rakes/{rake}` — JSON
+- `dashboard.rake-performance.overload-trends`: `GET /dashboard/rake-performance/overload-trends` — JSON (Load trends tab)
 - `api.v1.dashboard.rake-performance.rakes.index`: `GET /api/v1/dashboard/rake-performance/rakes` — same JSON as web list; Sanctum + `feature:api_access`; `MobileDashboardController::rakePerformanceRakesIndex`
 - `api.v1.dashboard.rake-performance.rakes.show`: `GET /api/v1/dashboard/rake-performance/rakes/{rake}` — same **`data`** shape as web detail; `rakePerformanceDetailForApi` (not date-scoped like web); `MobileDashboardController::rakePerformanceRakeShow`
 

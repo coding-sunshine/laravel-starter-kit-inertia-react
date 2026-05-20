@@ -19,6 +19,7 @@ import { toDatetimeLocal } from './utils';
 import MainDataTab from './MainDataTab';
 import DPRTab from './DPRTab';
 import VehicleDispatchTabs, { type VehicleDispatchTabValue } from './VehicleDispatchTabs';
+import DispatchReconciliationDialog from './dispatch-reconciliation-dialog';
 
 interface Props {
     vehicleDispatches: {
@@ -45,6 +46,11 @@ interface Props {
     vehicle_dispatch_import_total_rows?: number | null;
     flash?: { success?: string };
     tab?: string;
+    reconciliationReportSidings?: Array<{
+        id: number;
+        name: string;
+        code: string;
+    }>;
 }
 
 export interface DispatchReport {
@@ -83,8 +89,11 @@ export default function VehicleDispatchIndex({
     import_target_date,
     flash,
     tab = 'main-data',
+    reconciliationReportSidings = [],
 }: Props) {
     const pageProps = usePage<Props>().props;
+    const showReconciliationReport = reconciliationReportSidings.length > 0;
+    const [reconciliationOpen, setReconciliationOpen] = useState(false);
     const [searchFilters, setSearchFilters] = useState<Filters>(() => filters);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
         if (filters.date_from || filters.date_to) {
@@ -520,6 +529,19 @@ export default function VehicleDispatchIndex({
                     <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-100">
                         <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
                         <span>{successMessage}</span>
+                    </div>
+                )}
+
+                {showReconciliationReport && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setReconciliationOpen(true)}
+                            data-pan="vehicle-dispatch-reconciliation-report"
+                        >
+                            Dispatch vs received
+                        </Button>
                     </div>
                 )}
 
@@ -1014,6 +1036,14 @@ export default function VehicleDispatchIndex({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {showReconciliationReport && (
+                <DispatchReconciliationDialog
+                    open={reconciliationOpen}
+                    onOpenChange={setReconciliationOpen}
+                    sidings={reconciliationReportSidings}
+                />
             )}
         </AppLayout>
     );

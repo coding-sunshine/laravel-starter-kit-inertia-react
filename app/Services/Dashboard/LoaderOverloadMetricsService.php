@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Dashboard;
 
 use App\Models\Loader;
+use App\Models\Siding;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use DateTimeInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -23,6 +25,108 @@ final class LoaderOverloadMetricsService
      * @param  array{power_plant?: string|null, rake_number?: string|null, loader_id?: int|null, loader_operator_name?: string|null, shift?: string|null, underload_threshold_percent?: float}  $filterContext
      * @return array{loaders: array<int, array{id: int, name: string, siding: string, operators: array<int, string>}>, monthly: array<int, array<string, mixed>>}
      */
+    /**
+     * Daily overload/underload wagon rates grouped by siding (rake performance trends tab).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{underload_threshold_percent?: float}  $filterContext
+     * @param  ?array<int>  $rakeIds  When set, restrict to these rake ids (power plant / rake number filters).
+     * @return array{
+     *   from: string,
+     *   to: string,
+     *   underload_threshold: float,
+     *   by_siding: list<array{
+     *     siding_id: int,
+     *     siding_name: string,
+     *     summary: array{
+     *       avg_daily_overload_pct: float,
+     *       avg_daily_underload_pct: float,
+     *       days_with_activity: int,
+     *       total_wagons: int,
+     *     },
+     *     daily: list<array{
+     *       date: string,
+     *       label: string,
+     *       overload_pct: float,
+     *       underload_pct: float,
+     *       total_wagons: int,
+     *     }>,
+     *   }>,
+     * }
+     */
+    public function buildDailyOverloadTrendsBySiding(
+        array $sidingIds,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $filterContext = [],
+        ?array $rakeIds = null,
+    ): array {
+        $fromDate = Carbon::parse($from)->toDateString();
+        $toDate = Carbon::parse($to)->toDateString();
+        $underloadThresholdPercent = isset($filterContext['underload_threshold_percent'])
+            ? max(0.0, min(100.0, (float) $filterContext['underload_threshold_percent']))
+            : 1.0;
+
+        if ($sidingIds === []) {
+            return [
+                'from' => $fromDate,
+                'to' => $toDate,
+                'underload_threshold' => $underloadThresholdPercent,
+                'by_siding' => [],
+            ];
+        }
+
+        $sidingNames = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->pluck('name', 'id');
+
+        $day = $this->daySelectAndGroupBySiding();
+        $pctSelect = $this->dailyOverloadUnderloadPctSelect($underloadThresholdPercent);
+
+        $rows = $this->baseRakePerformanceWagonLoadingQuery($sidingIds, $fromDate, $toDate, $rakeIds)
+            ->selectRaw("r.siding_id, {$day['select']} as load_date, {$pctSelect}")
+            ->groupByRaw($day['groupBy'])
+            ->orderBy('r.siding_id')
+            ->orderBy('load_date')
+            ->get();
+
+        $bySidingId = [];
+        foreach ($rows as $row) {
+            $sidingId = (int) $row->siding_id;
+            if (! isset($bySidingId[$sidingId])) {
+                $bySidingId[$sidingId] = [];
+            }
+            $loadDate = $this->normalizeLoadDateString($row->load_date);
+            $bySidingId[$sidingId][$loadDate] = [
+                'date' => $loadDate,
+                'label' => Carbon::parse($loadDate)->format('j M'),
+                'overload_pct' => (float) $row->overload_pct,
+                'underload_pct' => (float) $row->underload_pct,
+                'total_wagons' => (int) $row->total_wagons,
+            ];
+        }
+
+        $bySiding = [];
+        foreach ($sidingNames as $sidingId => $sidingName) {
+            $dailyByDate = $bySidingId[(int) $sidingId] ?? [];
+            $daily = $this->fillDailySeriesForRange($fromDate, $toDate, $dailyByDate);
+            $bySiding[] = [
+                'siding_id' => (int) $sidingId,
+                'siding_name' => (string) $sidingName,
+                'summary' => $this->summaryFromDailyPctSeries($daily),
+                'daily' => $daily,
+            ];
+        }
+
+        return [
+            'from' => $fromDate,
+            'to' => $toDate,
+            'underload_threshold' => $underloadThresholdPercent,
+            'by_siding' => $bySiding,
+        ];
+    }
+
     public function buildLoaderOverloadTrends(
         array $sidingIds,
         CarbonInterface $from,
@@ -264,7 +368,7 @@ final class LoaderOverloadMetricsService
             return new LengthAwarePaginator([], 0, $perPage, $page);
         }
 
-        $sidingNames = \App\Models\Siding::query()
+        $sidingNames = Siding::query()
             ->whereIn('id', $pairs->pluck('siding_id')->unique())
             ->pluck('name', 'id');
 
@@ -323,7 +427,7 @@ final class LoaderOverloadMetricsService
             ? max(0.0, min(100.0, (float) $filterContext['underload_threshold_percent']))
             : 1.0;
 
-        $siding = \App\Models\Siding::query()->find($sidingId);
+        $siding = Siding::query()->find($sidingId);
         if ($siding === null) {
             return null;
         }
@@ -604,6 +708,145 @@ final class LoaderOverloadMetricsService
         }
 
         $wlQuery->where("{$tableAlias}.loader_operator_name", $normalized);
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @param  ?array<int>  $rakeIds
+     */
+    private function baseRakePerformanceWagonLoadingQuery(
+        array $sidingIds,
+        string $fromDate,
+        string $toDate,
+        ?array $rakeIds = null,
+    ): Builder {
+        $wlQuery = DB::table('wagon_loading as wl')
+            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
+            ->whereIn('r.siding_id', $sidingIds)
+            ->whereNotNull('r.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('r.loading_date', true), [$fromDate, $toDate]);
+
+        if ($rakeIds !== null) {
+            if ($rakeIds === []) {
+                $wlQuery->whereRaw('1 = 0');
+            } else {
+                $wlQuery->whereIn('r.id', $rakeIds);
+            }
+        }
+
+        return $wlQuery;
+    }
+
+    private function dailyOverloadUnderloadPctSelect(float $underloadThresholdPercent): string
+    {
+        $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
+        $eligible = "wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0";
+        $threshold = sprintf('%.4F', max(0.0, min(100.0, $underloadThresholdPercent)));
+        $overloadCase = "CASE WHEN {$eligible} AND wl.loaded_quantity_mt > {$ccEff} THEN 1 ELSE 0 END";
+        $underloadCase = "CASE WHEN {$eligible} AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= {$threshold} THEN 1 ELSE 0 END";
+
+        return "sum(CASE WHEN {$eligible} THEN 1 ELSE 0 END) as total_wagons, ".
+            "sum({$overloadCase}) as overloaded_wagons, ".
+            "sum({$underloadCase}) as underloaded_wagons, ".
+            'ROUND(100.0 * sum('.$overloadCase.') / NULLIF(sum(CASE WHEN '.$eligible.' THEN 1 ELSE 0 END), 0), 1) as overload_pct, '.
+            'ROUND(100.0 * sum('.$underloadCase.') / NULLIF(sum(CASE WHEN '.$eligible.' THEN 1 ELSE 0 END), 0), 1) as underload_pct';
+    }
+
+    /**
+     * @return array{select: string, groupBy: string}
+     */
+    private function daySelectAndGroupBySiding(): array
+    {
+        $driver = DB::getDriverName();
+        if ($driver === 'pgsql') {
+            return [
+                'select' => '(r.loading_date)::date',
+                'groupBy' => 'r.siding_id, (r.loading_date)::date',
+            ];
+        }
+        if ($driver === 'sqlite') {
+            return [
+                'select' => 'date(r.loading_date)',
+                'groupBy' => 'r.siding_id, date(r.loading_date)',
+            ];
+        }
+
+        return [
+            'select' => 'DATE(r.loading_date)',
+            'groupBy' => 'r.siding_id, DATE(r.loading_date)',
+        ];
+    }
+
+    private function normalizeLoadDateString(mixed $loadDate): string
+    {
+        if ($loadDate instanceof DateTimeInterface) {
+            return $loadDate->format('Y-m-d');
+        }
+
+        return Carbon::parse((string) $loadDate)->toDateString();
+    }
+
+    /**
+     * @param  array<string, array{date: string, label: string, overload_pct: float, underload_pct: float, total_wagons: int}>  $dailyByDate
+     * @return list<array{date: string, label: string, overload_pct: float, underload_pct: float, total_wagons: int}>
+     */
+    private function fillDailySeriesForRange(string $fromDate, string $toDate, array $dailyByDate): array
+    {
+        $out = [];
+        $cursor = Carbon::parse($fromDate)->startOfDay();
+        $end = Carbon::parse($toDate)->startOfDay();
+        while ($cursor->lte($end)) {
+            $key = $cursor->toDateString();
+            if (isset($dailyByDate[$key])) {
+                $out[] = $dailyByDate[$key];
+            } else {
+                $out[] = [
+                    'date' => $key,
+                    'label' => $cursor->format('j M'),
+                    'overload_pct' => 0.0,
+                    'underload_pct' => 0.0,
+                    'total_wagons' => 0,
+                ];
+            }
+            $cursor->addDay();
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  list<array{date: string, label: string, overload_pct: float, underload_pct: float, total_wagons: int}>  $daily
+     * @return array{avg_daily_overload_pct: float, avg_daily_underload_pct: float, days_with_activity: int, total_wagons: int}
+     */
+    private function summaryFromDailyPctSeries(array $daily): array
+    {
+        $activeDays = array_values(array_filter($daily, fn (array $d): bool => $d['total_wagons'] > 0));
+        $daysWithActivity = count($activeDays);
+        $totalWagons = array_sum(array_column($daily, 'total_wagons'));
+
+        if ($daysWithActivity === 0) {
+            return [
+                'avg_daily_overload_pct' => 0.0,
+                'avg_daily_underload_pct' => 0.0,
+                'days_with_activity' => 0,
+                'total_wagons' => 0,
+            ];
+        }
+
+        $overloadSum = 0.0;
+        $underloadSum = 0.0;
+        foreach ($activeDays as $day) {
+            $overloadSum += $day['overload_pct'];
+            $underloadSum += $day['underload_pct'];
+        }
+
+        return [
+            'avg_daily_overload_pct' => round($overloadSum / $daysWithActivity, 1),
+            'avg_daily_underload_pct' => round($underloadSum / $daysWithActivity, 1),
+            'days_with_activity' => $daysWithActivity,
+            'total_wagons' => $totalWagons,
+        ];
     }
 
     /**

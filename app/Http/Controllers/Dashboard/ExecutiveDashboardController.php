@@ -352,6 +352,54 @@ final class ExecutiveDashboardController extends Controller
         ]);
     }
 
+    public function rakePerformanceOverloadTrends(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(DashboardWidgetPermissions::userCanSeeDashboardSection($user, 'rake-performance'), 403);
+
+        $resolved = $this->filters->resolve($request);
+        $period = mb_strtolower((string) $request->query('rp_overload_period', 'month'));
+        [$from, $to] = $this->resolveRpOverloadPeriodBounds($request);
+
+        $sidingIds = $resolved['filteredSidingIds'];
+        $sidingIdFilter = $request->filled('siding_id') ? (int) $request->query('siding_id') : null;
+        if ($sidingIdFilter !== null && $sidingIdFilter > 0) {
+            if (! in_array($sidingIdFilter, $resolved['filteredSidingIds'], true)) {
+                abort(422, 'The selected siding is not in the current filter scope.');
+            }
+            $sidingIds = [$sidingIdFilter];
+        }
+
+        $rakeIds = $this->optionalFilteredRakeIdsForSidingPerformance(
+            $resolved['filteredSidingIds'],
+            $resolved['filterContext'],
+        );
+
+        $data = $this->loaderOverloadMetrics->buildDailyOverloadTrendsBySiding(
+            $sidingIds,
+            $from,
+            $to,
+            $resolved['filterContext'],
+            $rakeIds,
+        );
+
+        return response()->json([
+            'period' => $period,
+            'filters' => array_merge(
+                $this->serializeRakePerformanceListFilters($resolved),
+                [
+                    'rp_overload_period' => $period,
+                    'rp_overload_from' => $from->toDateString(),
+                    'rp_overload_to' => $to->toDateString(),
+                    'siding_id' => $sidingIdFilter,
+                ],
+            ),
+            'data' => $data,
+        ]);
+    }
+
     /**
      * Executive Yesterday tab data (Yesterday/Today/Week/Month/FY) for production and dispatch,
      * plus Custom Range and FY summary tables.
@@ -3619,6 +3667,20 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<string, mixed>  $resolved
      * @return array{0: CarbonInterface, 1: CarbonInterface}
      */
+    /**
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    private function resolveRpOverloadPeriodBounds(Request $request): array
+    {
+        $period = mb_strtolower((string) $request->query('rp_overload_period', 'month'));
+        $allowed = ['today', 'yesterday', 'week', 'month', 'last_month'];
+        if (! in_array($period, $allowed, true)) {
+            abort(422, 'Invalid rp_overload_period.');
+        }
+
+        return $this->filters->boundsForPeriod($period, null, null);
+    }
+
     private function resolveSidingPerformanceChartBounds(Request $request, array $resolved, string $prefix): array
     {
         $periodKey = "{$prefix}_period";

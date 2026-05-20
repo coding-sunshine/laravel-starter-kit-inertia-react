@@ -1,4 +1,8 @@
 import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
+import {
+    RakePerformanceOverloadTrends,
+    type RpOverloadTrendsPeriod,
+} from '@/components/dashboard/rake-performance-overload-trends';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { Button } from '@/components/ui/button';
 import {
@@ -563,6 +567,49 @@ function buildRakePerformanceApiSearchParams(args: {
     if (args.perPage != null) {
         u.set('per_page', String(args.perPage));
     }
+    if (args.sidingId != null && args.sidingId > 0) {
+        u.set('siding_id', String(args.sidingId));
+    }
+
+    return u.toString();
+}
+
+function buildRakePerformanceOverloadTrendsParams(args: {
+    filters: DashboardFilters;
+    allSidingIds: number[];
+    trendsPeriod: RpOverloadTrendsPeriod;
+    sidingId?: number;
+    underloadThreshold?: number;
+}): string {
+    const u = new URLSearchParams();
+    u.set('section', 'rake-performance');
+    u.set('rp_overload_period', args.trendsPeriod);
+
+    const sidingIds = args.filters.siding_ids;
+    if (sidingIds.length > 0 && sidingIds.length < args.allSidingIds.length) {
+        u.set('siding_ids', sidingIds.join(','));
+    }
+
+    const powerPlant = args.filters.power_plant ?? '';
+    if (powerPlant !== '') {
+        u.set('power_plant', powerPlant);
+    }
+
+    const rakeNumber = args.filters.rake_number ?? '';
+    if (rakeNumber !== '') {
+        u.set('rake_number', rakeNumber);
+    }
+
+    const utRaw =
+        args.underloadThreshold ?? args.filters.underload_threshold ?? 1;
+    const ut = Number(utRaw);
+    if (!Number.isNaN(ut)) {
+        u.set(
+            'underload_threshold',
+            String(Math.max(0, Math.min(100, ut))),
+        );
+    }
+
     if (args.sidingId != null && args.sidingId > 0) {
         u.set('siding_id', String(args.sidingId));
     }
@@ -4581,6 +4628,45 @@ export function RakePerformanceSection({
     const [detailLoading, setDetailLoading] = useState(false);
     const [detailError, setDetailError] = useState<string | null>(null);
     const [modalUnderloadThreshold, setModalUnderloadThreshold] = useState(1);
+    const [sectionTab, setSectionTab] = useState<'list' | 'trends'>('list');
+    const [trendsPeriod, setTrendsPeriod] =
+        useState<RpOverloadTrendsPeriod>('month');
+
+    const trendsFilterKey = useMemo(
+        () =>
+            [
+                trendsPeriod,
+                selectedSidingTab,
+                filters.siding_ids.join(','),
+                filters.power_plant ?? '',
+                filters.rake_number ?? '',
+                filters.underload_threshold,
+            ].join('|'),
+        [
+            trendsPeriod,
+            selectedSidingTab,
+            filters.siding_ids,
+            filters.power_plant,
+            filters.rake_number,
+            filters.underload_threshold,
+        ],
+    );
+
+    const buildOverloadTrendsSearchParams = useCallback(
+        (args: {
+            trendsPeriod: RpOverloadTrendsPeriod;
+            sidingId?: number;
+            underloadThreshold: number;
+        }) =>
+            buildRakePerformanceOverloadTrendsParams({
+                filters,
+                allSidingIds,
+                trendsPeriod: args.trendsPeriod,
+                sidingId: args.sidingId,
+                underloadThreshold: args.underloadThreshold,
+            }),
+        [filters, allSidingIds],
+    );
 
     useEffect(() => {
         setSelectedSidingTab('all');
@@ -4790,7 +4876,42 @@ export function RakePerformanceSection({
                 />
             </div>
 
-            {listError != null && (
+            <div
+                role="group"
+                aria-label="Rake performance view"
+                className="mt-4 inline-flex items-center rounded-md border border-input bg-background p-0.5 shadow-sm"
+            >
+                <button
+                    type="button"
+                    onClick={() => setSectionTab('list')}
+                    aria-pressed={sectionTab === 'list'}
+                    className={cn(
+                        'flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                        sectionTab === 'list'
+                            ? 'bg-foreground text-background'
+                            : 'text-muted-foreground hover:text-foreground',
+                    )}
+                >
+                    <TableIcon className="size-3.5" aria-hidden="true" />
+                    Rake list
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setSectionTab('trends')}
+                    aria-pressed={sectionTab === 'trends'}
+                    className={cn(
+                        'flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                        sectionTab === 'trends'
+                            ? 'bg-foreground text-background'
+                            : 'text-muted-foreground hover:text-foreground',
+                    )}
+                >
+                    <BarChart3 className="size-3.5" aria-hidden="true" />
+                    Load trends
+                </button>
+            </div>
+
+            {sectionTab === 'list' && listError != null && (
                 <p className="mt-4 text-sm text-red-600" role="alert">
                     {listError}
                 </p>
@@ -4837,6 +4958,24 @@ export function RakePerformanceSection({
                 </div>
             )}
 
+            {sectionTab === 'trends' && (
+                <RakePerformanceOverloadTrends
+                    active={sectionTab === 'trends'}
+                    selectedSidingTab={selectedSidingTab}
+                    trendsPeriod={trendsPeriod}
+                    onTrendsPeriodChange={setTrendsPeriod}
+                    defaultUnderloadThreshold={filters.underload_threshold ?? 1}
+                    buildSearchParams={buildOverloadTrendsSearchParams}
+                    scopeFilterKey={[
+                        filters.siding_ids.join(','),
+                        filters.power_plant ?? '',
+                        filters.rake_number ?? '',
+                    ].join('|')}
+                />
+            )}
+
+            {sectionTab === 'list' && (
+            <>
             <div className="mt-4 overflow-x-auto">
                 {listLoading ? (
                     <p className="py-8 text-center text-sm text-gray-600">
@@ -4988,6 +5127,8 @@ export function RakePerformanceSection({
                         );
                     })()}
                 </div>
+            )}
+            </>
             )}
 
             <Dialog
