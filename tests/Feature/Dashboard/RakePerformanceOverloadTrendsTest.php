@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\Rake;
+use App\Models\RrDocument;
+use App\Models\RrWagonSnapshot;
 use App\Models\Siding;
 use App\Models\User;
-use App\Models\Wagon;
-use App\Models\WagonLoading;
 use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -23,6 +23,31 @@ function rakeOverloadTrendsUser(): User
     $user->assignRole('super-admin');
 
     return $user;
+}
+
+/**
+ * @param  list<array{permissible_weight_mt: float, loaded_weight_mt: float}>  $wagons
+ */
+function attachRrWagonSnapshotsToRake(Rake $rake, array $wagons): RrDocument
+{
+    $doc = RrDocument::query()->create([
+        'rake_id' => $rake->id,
+        'rr_number' => 'RR-TEST-'.uniqid('', true),
+        'rr_received_date' => now(),
+    ]);
+
+    foreach ($wagons as $index => $wagon) {
+        RrWagonSnapshot::query()->create([
+            'rr_document_id' => $doc->id,
+            'rake_id' => $rake->id,
+            'wagon_sequence' => $index + 1,
+            'wagon_number' => (string) (1000 + $index),
+            'permissible_weight_mt' => $wagon['permissible_weight_mt'],
+            'loaded_weight_mt' => $wagon['loaded_weight_mt'],
+        ]);
+    }
+
+    return $doc;
 }
 
 test('overload trends requires authentication', function (): void {
@@ -49,33 +74,10 @@ test('overload trends returns siding-wise daily percentages for today', function
         'loading_date' => now()->toDateString(),
     ]);
 
-    $wagonOverload = Wagon::factory()->forRake($rake)->create([
-        'pcc_weight_mt' => 100,
-    ]);
-    $wagonUnderload = Wagon::factory()->forRake($rake)->create([
-        'pcc_weight_mt' => 100,
-    ]);
-    $wagonOk = Wagon::factory()->forRake($rake)->create([
-        'pcc_weight_mt' => 100,
-    ]);
-
-    WagonLoading::factory()->create([
-        'rake_id' => $rake->id,
-        'wagon_id' => $wagonOverload->id,
-        'loaded_quantity_mt' => 110,
-        'cc_capacity_mt' => 100,
-    ]);
-    WagonLoading::factory()->create([
-        'rake_id' => $rake->id,
-        'wagon_id' => $wagonUnderload->id,
-        'loaded_quantity_mt' => 90,
-        'cc_capacity_mt' => 100,
-    ]);
-    WagonLoading::factory()->create([
-        'rake_id' => $rake->id,
-        'wagon_id' => $wagonOk->id,
-        'loaded_quantity_mt' => 100,
-        'cc_capacity_mt' => 100,
+    attachRrWagonSnapshotsToRake($rake, [
+        ['permissible_weight_mt' => 100, 'loaded_weight_mt' => 110],
+        ['permissible_weight_mt' => 100, 'loaded_weight_mt' => 90],
+        ['permissible_weight_mt' => 100, 'loaded_weight_mt' => 100],
     ]);
 
     $response = $this->actingAs($user)
@@ -103,19 +105,16 @@ test('overload trends returns siding-wise daily percentages for today', function
         ->and($todayPoint['underload_pct'])->toBe(3.3);
 });
 
-test('overload trends averages per-wagon severity percent of CC', function (): void {
+test('overload trends averages per-wagon severity percent of RR capacity', function (): void {
     $user = rakeOverloadTrendsUser();
     $siding = Siding::factory()->create();
     $rake = Rake::factory()->create([
         'siding_id' => $siding->id,
         'loading_date' => now()->toDateString(),
     ]);
-    $wagon = Wagon::factory()->forRake($rake)->create(['pcc_weight_mt' => 100]);
-    WagonLoading::factory()->create([
-        'rake_id' => $rake->id,
-        'wagon_id' => $wagon->id,
-        'loaded_quantity_mt' => 99,
-        'cc_capacity_mt' => 100,
+
+    attachRrWagonSnapshotsToRake($rake, [
+        ['permissible_weight_mt' => 100, 'loaded_weight_mt' => 99],
     ]);
 
     $response = $this->actingAs($user)
@@ -145,12 +144,8 @@ test('overload trends only queries the requested period', function (): void {
     ]);
 
     foreach ([$rakeToday, $rakeYesterday] as $rake) {
-        $wagon = Wagon::factory()->forRake($rake)->create(['pcc_weight_mt' => 100]);
-        WagonLoading::factory()->create([
-            'rake_id' => $rake->id,
-            'wagon_id' => $wagon->id,
-            'loaded_quantity_mt' => 110,
-            'cc_capacity_mt' => 100,
+        attachRrWagonSnapshotsToRake($rake, [
+            ['pcc_weight_mt' => 100, 'loaded_weight_mt' => 110],
         ]);
     }
 
@@ -171,4 +166,29 @@ test('overload trends only queries the requested period', function (): void {
 
     $yesterdayResponse->assertOk();
     expect($yesterdayResponse->json('data.by_siding.0.summary.total_wagons'))->toBe(1);
+});
+
+test('overload trends ignores wagon loading when only RR snapshots exist', function (): void {
+    $user = rakeOverloadTrendsUser();
+    $siding = Siding::factory()->create();
+    $rake = Rake::factory()->create([
+        'siding_id' => $siding->id,
+        'loading_date' => now()->toDateString(),
+    ]);
+
+    attachRrWagonSnapshotsToRake($rake, [
+        ['permissible_weight_mt' => 100, 'loaded_weight_mt' => 95],
+    ]);
+
+    $response = $this->actingAs($user)
+        ->getJson(route('dashboard.rake-performance.overload-trends', [
+            'rp_overload_period' => 'today',
+            'siding_id' => $siding->id,
+        ]));
+
+    $response->assertOk();
+    $todayPoint = collect($response->json('data.by_siding.0.daily'))->first(
+        fn (array $d): bool => $d['total_wagons'] > 0,
+    );
+    expect($todayPoint['underload_pct'])->toBe(5.0);
 });

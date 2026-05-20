@@ -79,7 +79,7 @@ final class LoaderOverloadMetricsService
         $day = $this->daySelectAndGroupBySiding();
         $pctSelect = $this->dailyOverloadUnderloadPctSelect();
 
-        $rows = $this->baseRakePerformanceWagonLoadingQuery($sidingIds, $fromDate, $toDate, $rakeIds)
+        $rows = $this->baseRakePerformanceRrWagonSnapshotQuery($sidingIds, $fromDate, $toDate, $rakeIds)
             ->selectRaw("r.siding_id, {$day['select']} as load_date, {$pctSelect}")
             ->groupByRaw($day['groupBy'])
             ->orderBy('r.siding_id')
@@ -708,45 +708,98 @@ final class LoaderOverloadMetricsService
      * @param  array<int>  $sidingIds
      * @param  ?array<int>  $rakeIds
      */
-    private function baseRakePerformanceWagonLoadingQuery(
+    private function baseRakePerformanceRrWagonSnapshotQuery(
         array $sidingIds,
         string $fromDate,
         string $toDate,
         ?array $rakeIds = null,
     ): Builder {
-        $wlQuery = DB::table('wagon_loading as wl')
-            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
-            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
+        $query = DB::table('rr_wagon_snapshots as rws')
+            ->join('rr_documents as rd', 'rd.id', '=', 'rws.rr_document_id')
+            ->join('rakes as r', function ($join): void {
+                $join->whereRaw('r.id = COALESCE(rws.rake_id, rd.rake_id)');
+            })
+            ->whereNull('r.deleted_at')
             ->whereIn('r.siding_id', $sidingIds)
             ->whereNotNull('r.loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('r.loading_date', true), [$fromDate, $toDate]);
 
         if ($rakeIds !== null) {
             if ($rakeIds === []) {
-                $wlQuery->whereRaw('1 = 0');
+                $query->whereRaw('1 = 0');
             } else {
-                $wlQuery->whereIn('r.id', $rakeIds);
+                $query->whereIn('r.id', $rakeIds);
             }
         }
 
-        return $wlQuery;
+        return $query;
     }
 
     /**
-     * Average per-wagon overload/underload severity (% of effective CC), 0 when at limit.
+     * Net/load for one `rr_wagon_snapshots` row: `loaded_weight_mt`, else `gross_weight_mt - tare_weight_mt`.
+     */
+    private function sqlRrWagonSnapshotLineNetMt(string $alias = 'rws'): string
+    {
+        $loaded = "{$alias}.loaded_weight_mt";
+        $gross = "{$alias}.gross_weight_mt";
+        $tare = "{$alias}.tare_weight_mt";
+        $grossMinusTare = match (DB::getDriverName()) {
+            'pgsql' => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN ({$gross}::double precision - {$tare}::double precision) ELSE NULL END",
+            'sqlite' => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN (CAST({$gross} AS REAL) - CAST({$tare} AS REAL)) ELSE NULL END",
+            default => "CASE WHEN {$gross} IS NOT NULL AND {$tare} IS NOT NULL "
+                ."THEN ({$gross} - {$tare}) ELSE NULL END",
+        };
+
+        return match (DB::getDriverName()) {
+            'pgsql' => "COALESCE({$loaded}::double precision, ({$grossMinusTare}))",
+            'sqlite' => "COALESCE(CAST({$loaded} AS REAL), ({$grossMinusTare}))",
+            default => "COALESCE({$loaded}, ({$grossMinusTare}))",
+        };
+    }
+
+    /**
+     * Carrying capacity on one `rr_wagon_snapshots` row: RR permissible weight only.
+     */
+    private function sqlRrWagonSnapshotCapMt(string $alias = 'rws'): string
+    {
+        $perm = "{$alias}.permissible_weight_mt";
+
+        return match (DB::getDriverName()) {
+            'pgsql' => "{$perm}::double precision",
+            'sqlite' => "CAST({$perm} AS REAL)",
+            default => $perm,
+        };
+    }
+
+    /**
+     * Average per-wagon overload/underload severity (% of RR snapshot capacity), 0 when at limit.
      */
     private function dailyOverloadUnderloadPctSelect(): string
     {
-        $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
-        $eligible = "wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0";
-        $overloadPct = "CASE WHEN {$eligible} AND wl.loaded_quantity_mt > {$ccEff} ".
-            "THEN (wl.loaded_quantity_mt - {$ccEff}) * 100.0 / {$ccEff} ELSE 0 END";
-        $underloadPct = "CASE WHEN {$eligible} AND wl.loaded_quantity_mt < {$ccEff} ".
-            "THEN ({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff} ELSE 0 END";
+        $lineNet = $this->sqlRrWagonSnapshotLineNetMt('rws');
+        $ccEff = $this->sqlRrWagonSnapshotCapMt('rws');
+        $eligible = "({$lineNet}) IS NOT NULL AND ({$ccEff}) IS NOT NULL AND ({$ccEff}) > 0";
+        $overloadPct = "CASE WHEN {$eligible} AND ({$lineNet}) > ({$ccEff}) ".
+            "THEN (({$lineNet}) - ({$ccEff})) * 100.0 / ({$ccEff}) ELSE 0 END";
+        $underloadPct = "CASE WHEN {$eligible} AND ({$lineNet}) < ({$ccEff}) ".
+            "THEN (({$ccEff}) - ({$lineNet})) * 100.0 / ({$ccEff}) ELSE 0 END";
 
         return "sum(CASE WHEN {$eligible} THEN 1 ELSE 0 END) as total_wagons, ".
-            "ROUND(AVG({$overloadPct}), 1) as overload_pct, ".
-            "ROUND(AVG({$underloadPct}), 1) as underload_pct";
+            "{$this->sqlRoundAvgOneDecimal($overloadPct)} as overload_pct, ".
+            "{$this->sqlRoundAvgOneDecimal($underloadPct)} as underload_pct";
+    }
+
+    /**
+     * PostgreSQL `ROUND(double precision, int)` is invalid; cast AVG to numeric first.
+     */
+    private function sqlRoundAvgOneDecimal(string $avgExpression): string
+    {
+        return match (DB::getDriverName()) {
+            'pgsql' => "ROUND(AVG({$avgExpression})::numeric, 1)",
+            default => "ROUND(AVG({$avgExpression}), 1)",
+        };
     }
 
     /**

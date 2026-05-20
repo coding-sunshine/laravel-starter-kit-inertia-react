@@ -210,13 +210,12 @@ export function RakePerformanceOverloadTrends({
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                     <p className="text-xs text-gray-600">
-                        Daily average overload / underload % per wagon (loader
-                        quantity vs CC) for rakes in scope
+                        Daily average overload / underload % per wagon (RR
+                        actual weight vs permissible weight) for rakes in scope
                     </p>
                     <p className="text-xs font-medium text-red-600">
-                        Based on wagon loading data — not weighment records.
-                        Rakes without weighment may appear here but not in the
-                        list.
+                        Based on Railway Receipt wagon snapshot data — not
+                        loader weighment or in-motion weighbridge records.
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -439,9 +438,9 @@ export function RakePerformanceOverloadTrends({
                     )}
 
                     <p className="text-[11px] text-gray-500">
-                        Average of each wagon&apos;s overload/underload as % of
-                        CC (0% when at limit). Period: {payload.from} –{' '}
-                        {payload.to}.
+                        Average of each RR wagon line&apos;s overload/underload
+                        as % of permissible weight (0% when at limit). Period:{' '}
+                        {payload.from} – {payload.to}.
                     </p>
                 </>
             )}

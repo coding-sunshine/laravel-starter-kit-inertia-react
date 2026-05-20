@@ -90,7 +90,7 @@ Optional keys such as `section`, `loader_id`, `shift`, etc. may appear on the qu
 
 ### `GET .../rake-performance/overload-trends` (Load trends tab)
 
-Siding-wise daily **average overload/underload % per wagon** (severity vs effective CC: `COALESCE(wagon_loading.cc_capacity_mt, wagons.pcc_weight_mt)`). Each wagon contributes `(excess or shortfall) / CC × 100`, or `0` when at limit; daily value is `AVG(...)` over eligible wagons. Used by the **Load trends** tab; fetched lazily when active.
+Siding-wise daily **average overload/underload % per wagon** from **`rr_wagon_snapshots`** (RR parsed wagon lines). Net weight per line: `loaded_weight_mt`, else `gross_weight_mt − tare_weight_mt`; carrying capacity: **`permissible_weight_mt`** only. Each line contributes `(excess or shortfall) / permissible weight × 100`, or `0` when at limit; daily value is `AVG(...)` over eligible lines grouped by `rakes.loading_date`. Used by the **Load trends** tab; fetched lazily when active.
 
 **Query parameters** (independent of dashboard `period` / `from` / `to`):
 
