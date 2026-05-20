@@ -34,10 +34,19 @@ beforeEach(function (): void {
 it('dispatches child jobs per event and updates cursor', function (): void {
     Bus::fake([SyncLoadriteWeightJob::class, EvaluateOverloadAlertJob::class, PollLoadriteJob::class]);
 
+    // Events must be newer than the poll's FromLocalTime (now - lookback) for
+    // the cursor to advance to them.
+    $earlierTime = now()->subMinutes(20)->format('Y-m-d\TH:i:s\Z');
+    $latestTime = now()->subMinutes(10)->format('Y-m-d\TH:i:s\Z');
+
+    // The Loadrite API wraps events in a paginated { data, metaData } envelope.
     MockClient::global([
         MockResponse::make([
-            ['Sequence' => 1, 'Timestamp' => '2026-04-30T10:00:00Z', 'Weight' => 45.2],
-            ['Sequence' => 2, 'Timestamp' => '2026-04-30T10:05:00Z', 'Weight' => 60.1],
+            'data' => [
+                ['Id' => 'evt-1', 'Event' => 'Add', 'Weight' => 45.2, 'Time' => $earlierTime],
+                ['Id' => 'evt-2', 'Event' => 'Short Total', 'Weight' => 60.1, 'Time' => $latestTime],
+            ],
+            'metaData' => ['numberOfPages' => 1],
         ], 200),
     ]);
 
@@ -47,7 +56,7 @@ it('dispatches child jobs per event and updates cursor', function (): void {
     Bus::assertDispatched(EvaluateOverloadAlertJob::class, 2);
     Bus::assertDispatched(PollLoadriteJob::class);
 
-    expect(Cache::get("loadrite:cursor:{$this->sidingId}"))->toBe('2026-04-30T10:05:00Z');
+    expect(Cache::get("loadrite:cursor:{$this->sidingId}"))->toBe($latestTime);
 });
 
 it('exits immediately if Redis lock is already held', function (): void {

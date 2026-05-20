@@ -45,15 +45,21 @@ Schedule::command('loadrite:close-stale-rakes')
 // hours; Loadrite's cloud API can publish an event days late, and an outage
 // (e.g. disk-full) can leave a multi-day hole. This re-sweeps the last 3 days
 // for every configured siding so no late/lost event is missed permanently.
-foreach (App\Models\LoadriteSetting::query()->whereNotNull('siding_id')->pluck('siding_id') as $loadriteSidingId) {
-    Schedule::command('loadrite:catchup', [
-        '--siding' => $loadriteSidingId,
-        '--from' => now()->subDays(3)->format('Y-m-d H:i:s'),
-    ])
-        ->everySixHours()
-        ->withoutOverlapping()
-        ->onOneServer()
-        ->name("loadrite-catchup-siding-{$loadriteSidingId}");
+// Guard the DB read: routes/console.php is evaluated on every artisan call,
+// including `migrate` on a fresh database and the test suite's in-memory
+// SQLite before migrations run. Querying loadrite_settings unconditionally
+// throws "no such table" in those cases.
+if (Illuminate\Support\Facades\Schema::hasTable('loadrite_settings')) {
+    foreach (App\Models\LoadriteSetting::query()->whereNotNull('siding_id')->pluck('siding_id') as $loadriteSidingId) {
+        Schedule::command('loadrite:catchup', [
+            '--siding' => $loadriteSidingId,
+            '--from' => now()->subDays(3)->format('Y-m-d H:i:s'),
+        ])
+            ->everySixHours()
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->name("loadrite-catchup-siding-{$loadriteSidingId}");
+    }
 }
 
 // Backfill pcc_weight_mt on any wagons added since the last run so newly-placed
