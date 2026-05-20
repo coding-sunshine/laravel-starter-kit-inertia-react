@@ -14,6 +14,9 @@ final class VehicleDispatch extends Model
 {
     use HasFactory;
 
+    /** PostgreSQL: calendar date of {@see $issued_on} for grouping and filters. */
+    public const ISSUED_ON_DATE_SQL = '(issued_on)::date';
+
     protected $table = 'siding_vehicle_dispatches';
 
     protected $fillable = [
@@ -69,6 +72,24 @@ final class VehicleDispatch extends Model
         return '3rd';
     }
 
+    /**
+     * PostgreSQL expression: shift sort order 1–3 from {@see $shift} or {@see $issued_on} time buckets.
+     * Matches {@see shiftFromIssuedOn()} and {@see scopeForShift()}.
+     */
+    public static function shiftSortOrderSql(string $issuedOnColumn = 'issued_on'): string
+    {
+        return <<<SQL
+CASE
+    WHEN shift IN ('1st', '1', '1ST') THEN 1
+    WHEN shift IN ('2nd', '2', '2ND') THEN 2
+    WHEN shift IN ('3rd', '3', '3RD') THEN 3
+    WHEN ({$issuedOnColumn})::time >= TIME '00:00:00' AND ({$issuedOnColumn})::time <= TIME '08:00:00' THEN 1
+    WHEN ({$issuedOnColumn})::time > TIME '08:00:00' AND ({$issuedOnColumn})::time <= TIME '16:00:00' THEN 2
+    ELSE 3
+END
+SQL;
+    }
+
     public function siding(): BelongsTo
     {
         return $this->belongsTo(Siding::class);
@@ -101,23 +122,12 @@ final class VehicleDispatch extends Model
         }
 
         return $query->whereNotNull('issued_on')->where(function ($q) use ($shift): void {
-            $driver = $q->getConnection()->getDriverName();
-            if ($driver === 'sqlite') {
-                if ($shift === '1st') {
-                    $q->whereRaw("time(issued_on) >= '00:00:00' AND time(issued_on) <= '08:00:00'");
-                } elseif ($shift === '2nd') {
-                    $q->whereRaw("time(issued_on) >= '08:01:00' AND time(issued_on) <= '16:00:00'");
-                } else {
-                    $q->whereRaw("time(issued_on) >= '16:01:00'");
-                }
+            if ($shift === '1st') {
+                $q->whereRaw('(issued_on)::time >= ? AND (issued_on)::time <= ?', ['00:00:00', '08:00:00']);
+            } elseif ($shift === '2nd') {
+                $q->whereRaw('(issued_on)::time > ? AND (issued_on)::time <= ?', ['08:00:00', '16:00:00']);
             } else {
-                if ($shift === '1st') {
-                    $q->whereRaw('TIME(issued_on) >= ? AND TIME(issued_on) <= ?', ['00:00:00', '08:00:00']);
-                } elseif ($shift === '2nd') {
-                    $q->whereRaw('TIME(issued_on) > ? AND TIME(issued_on) <= ?', ['08:00:00', '16:00:00']);
-                } else {
-                    $q->whereRaw('TIME(issued_on) > ?', ['16:00:00']);
-                }
+                $q->whereRaw('(issued_on)::time > ?', ['16:00:00']);
             }
         });
     }

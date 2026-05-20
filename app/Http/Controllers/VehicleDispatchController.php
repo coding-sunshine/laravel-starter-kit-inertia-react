@@ -9,6 +9,8 @@ use App\Models\DispatchReport;
 use App\Models\Siding;
 use App\Models\User;
 use App\Models\VehicleDispatch;
+use App\Services\DispatchReconciliationReportService;
+use App\Support\RoadDispatchShiftReport;
 use Carbon\Carbon;
 use DateTimeImmutable;
 use DOMDocument;
@@ -18,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -73,11 +76,24 @@ final class VehicleDispatchController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
+        $reconciliationReportSidings = [];
+        if ($user->access_to_siding_shift_data) {
+            $reconciliationReportSidings = RoadDispatchShiftReport::orderedReportSidings()
+                ->map(fn (Siding $s): array => [
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'code' => $s->code,
+                ])
+                ->values()
+                ->all();
+        }
+
         return Inertia::render('VehicleDispatch/Index', [
             'vehicleDispatches' => $vehicleDispatches,
             'filters' => $request->only(['date_from', 'date_to', 'date', 'permit_no', 'truck_regd_no']),
             'tab' => $request->get('tab', 'main-data'),
             'sidings' => $sidings,
+            'reconciliationReportSidings' => $reconciliationReportSidings,
             'preview_data' => $request->session()->get('preview_data', []),
             'import_target_date' => $request->session()->get('import_target_date'),
             'vehicle_dispatch_import_skipped' => $request->session()->pull('vehicle_dispatch_import_skipped'),
@@ -86,6 +102,67 @@ final class VehicleDispatchController extends Controller
                 'success' => $request->session()->get('success'),
                 'import_errors' => $request->session()->get('import_errors'),
             ],
+        ]);
+    }
+
+    public function reconciliationReport(
+        Request $request,
+        DispatchReconciliationReportService $reportService,
+    ): JsonResponse {
+        /** @var User|null $user */
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+        abort_unless($user->access_to_siding_shift_data, 403);
+
+        $validated = $request->validate([
+            'siding_id' => 'required|integer|exists:sidings,id',
+            'from' => 'required|date_format:Y-m-d',
+            'to' => 'required|date_format:Y-m-d|after_or_equal:from',
+        ]);
+
+        $sidingId = (int) $validated['siding_id'];
+        $siding = Siding::query()->findOrFail($sidingId);
+        if (! RoadDispatchShiftReport::isAllowedSidingCode((string) $siding->code)) {
+            abort(403, 'This siding is not available for the dispatch reconciliation report.');
+        }
+
+        $from = Carbon::parse($validated['from'])->startOfDay();
+        $to = Carbon::parse($validated['to'])->startOfDay();
+        $spanDays = (int) $from->diffInDays($to) + 1;
+        if ($spanDays > RoadDispatchShiftReport::MAX_SPAN_DAYS) {
+            throw ValidationException::withMessages([
+                'to' => __('The date range may not exceed :days days.', ['days' => RoadDispatchShiftReport::MAX_SPAN_DAYS]),
+            ]);
+        }
+
+        try {
+            $report = $reportService->getReport(
+                $sidingId,
+                $from->toDateString(),
+                $to->toDateString(),
+            );
+        } catch (Throwable $e) {
+            Log::error('Dispatch reconciliation report failed', [
+                'exception' => $e,
+                'siding_id' => $sidingId,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to load dispatch reconciliation report.',
+            ], 500);
+        }
+
+        return response()->json([
+            'siding' => [
+                'id' => $siding->id,
+                'name' => $siding->name,
+                'code' => $siding->code,
+            ],
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            ...$report,
         ]);
     }
 

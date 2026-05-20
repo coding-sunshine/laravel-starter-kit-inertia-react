@@ -214,6 +214,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('dashboard.rake-performance.rakes.index');
     Route::get('dashboard/rake-performance/rakes/{rake}', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceDetail'])
         ->name('dashboard.rake-performance.rakes.show');
+    Route::get('dashboard/rake-performance/overload-trends', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'rakePerformanceOverloadTrends'])
+        ->name('dashboard.rake-performance.overload-trends');
     Route::get('dashboard/loader-overload/loaders', [App\Http\Controllers\Dashboard\LoaderOverloadWebController::class, 'loaders'])
         ->name('dashboard.loader-overload.loaders.index');
     Route::get('dashboard/loader-overload/loaders/{loader}', [App\Http\Controllers\Dashboard\LoaderOverloadWebController::class, 'loaderShow'])
@@ -433,6 +435,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Vehicle Dispatch Register
     Route::get('vehicle-dispatch', [VehicleDispatchController::class, 'index'])->name('vehicle-dispatch.index');
+    Route::get('vehicle-dispatch/reconciliation-report', [VehicleDispatchController::class, 'reconciliationReport'])->name('vehicle-dispatch.reconciliation-report');
     Route::get('vehicle-dispatch/dpr-data', [VehicleDispatchController::class, 'dprData'])->name('vehicle-dispatch.dpr-data');
     Route::get('vehicle-dispatch/calendar-days', [VehicleDispatchController::class, 'calendarDays'])->name('vehicle-dispatch.calendar-days');
     Route::put('vehicle-dispatch/{vehicle_dispatch}', [VehicleDispatchController::class, 'update'])->name('vehicle-dispatch.update');
