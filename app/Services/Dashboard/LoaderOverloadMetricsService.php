@@ -26,7 +26,7 @@ final class LoaderOverloadMetricsService
      * @return array{loaders: array<int, array{id: int, name: string, siding: string, operators: array<int, string>}>, monthly: array<int, array<string, mixed>>}
      */
     /**
-     * Daily overload/underload wagon rates grouped by siding (rake performance trends tab).
+     * Daily average overload/underload % per wagon (severity vs CC), grouped by siding (Load trends tab).
      *
      * @param  array<int>  $sidingIds
      * @param  array{underload_threshold_percent?: float}  $filterContext
@@ -34,7 +34,6 @@ final class LoaderOverloadMetricsService
      * @return array{
      *   from: string,
      *   to: string,
-     *   underload_threshold: float,
      *   by_siding: list<array{
      *     siding_id: int,
      *     siding_name: string,
@@ -63,15 +62,11 @@ final class LoaderOverloadMetricsService
     ): array {
         $fromDate = Carbon::parse($from)->toDateString();
         $toDate = Carbon::parse($to)->toDateString();
-        $underloadThresholdPercent = isset($filterContext['underload_threshold_percent'])
-            ? max(0.0, min(100.0, (float) $filterContext['underload_threshold_percent']))
-            : 1.0;
 
         if ($sidingIds === []) {
             return [
                 'from' => $fromDate,
                 'to' => $toDate,
-                'underload_threshold' => $underloadThresholdPercent,
                 'by_siding' => [],
             ];
         }
@@ -82,7 +77,7 @@ final class LoaderOverloadMetricsService
             ->pluck('name', 'id');
 
         $day = $this->daySelectAndGroupBySiding();
-        $pctSelect = $this->dailyOverloadUnderloadPctSelect($underloadThresholdPercent);
+        $pctSelect = $this->dailyOverloadUnderloadPctSelect();
 
         $rows = $this->baseRakePerformanceWagonLoadingQuery($sidingIds, $fromDate, $toDate, $rakeIds)
             ->selectRaw("r.siding_id, {$day['select']} as load_date, {$pctSelect}")
@@ -122,7 +117,6 @@ final class LoaderOverloadMetricsService
         return [
             'from' => $fromDate,
             'to' => $toDate,
-            'underload_threshold' => $underloadThresholdPercent,
             'by_siding' => $bySiding,
         ];
     }
@@ -738,19 +732,21 @@ final class LoaderOverloadMetricsService
         return $wlQuery;
     }
 
-    private function dailyOverloadUnderloadPctSelect(float $underloadThresholdPercent): string
+    /**
+     * Average per-wagon overload/underload severity (% of effective CC), 0 when at limit.
+     */
+    private function dailyOverloadUnderloadPctSelect(): string
     {
         $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
         $eligible = "wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0";
-        $threshold = sprintf('%.4F', max(0.0, min(100.0, $underloadThresholdPercent)));
-        $overloadCase = "CASE WHEN {$eligible} AND wl.loaded_quantity_mt > {$ccEff} THEN 1 ELSE 0 END";
-        $underloadCase = "CASE WHEN {$eligible} AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= {$threshold} THEN 1 ELSE 0 END";
+        $overloadPct = "CASE WHEN {$eligible} AND wl.loaded_quantity_mt > {$ccEff} ".
+            "THEN (wl.loaded_quantity_mt - {$ccEff}) * 100.0 / {$ccEff} ELSE 0 END";
+        $underloadPct = "CASE WHEN {$eligible} AND wl.loaded_quantity_mt < {$ccEff} ".
+            "THEN ({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff} ELSE 0 END";
 
         return "sum(CASE WHEN {$eligible} THEN 1 ELSE 0 END) as total_wagons, ".
-            "sum({$overloadCase}) as overloaded_wagons, ".
-            "sum({$underloadCase}) as underloaded_wagons, ".
-            'ROUND(100.0 * sum('.$overloadCase.') / NULLIF(sum(CASE WHEN '.$eligible.' THEN 1 ELSE 0 END), 0), 1) as overload_pct, '.
-            'ROUND(100.0 * sum('.$underloadCase.') / NULLIF(sum(CASE WHEN '.$eligible.' THEN 1 ELSE 0 END), 0), 1) as underload_pct';
+            "ROUND(AVG({$overloadPct}), 1) as overload_pct, ".
+            "ROUND(AVG({$underloadPct}), 1) as underload_pct";
     }
 
     /**

@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -8,7 +7,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { JsonFetchError, laravelJsonFetch } from '@/lib/laravel-json-fetch';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     CartesianGrid,
     Legend,
@@ -67,7 +66,6 @@ export interface RpOverloadTrendsSidingSeries {
 interface RpOverloadTrendsPayload {
     from: string;
     to: string;
-    underload_threshold: number;
     by_siding: RpOverloadTrendsSidingSeries[];
 }
 
@@ -76,23 +74,14 @@ interface Props {
     selectedSidingTab: 'all' | number;
     trendsPeriod: RpOverloadTrendsPeriod;
     onTrendsPeriodChange: (period: RpOverloadTrendsPeriod) => void;
-    defaultUnderloadThreshold: number;
     buildSearchParams: (args: {
         trendsPeriod: RpOverloadTrendsPeriod;
         sidingId?: number;
-        underloadThreshold: number;
     }) => string;
     scopeFilterKey: string;
 }
 
 type TrendsMetric = 'overload' | 'underload';
-
-function clampUnderloadPercent(n: number): number {
-    if (Number.isNaN(n)) {
-        return 1;
-    }
-    return Math.max(0, Math.min(100, n));
-}
 
 function formatPct(v: number | string | undefined): string {
     const n = Number(v ?? 0);
@@ -136,7 +125,6 @@ export function RakePerformanceOverloadTrends({
     selectedSidingTab,
     trendsPeriod,
     onTrendsPeriodChange,
-    defaultUnderloadThreshold,
     buildSearchParams,
     scopeFilterKey,
 }: Props) {
@@ -146,46 +134,12 @@ export function RakePerformanceOverloadTrends({
     );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [underloadThreshold, setUnderloadThreshold] = useState(() =>
-        clampUnderloadPercent(defaultUnderloadThreshold),
-    );
-    const [underloadDraft, setUnderloadDraft] = useState(() =>
-        String(clampUnderloadPercent(defaultUnderloadThreshold)),
-    );
-
-    useEffect(() => {
-        const v = clampUnderloadPercent(defaultUnderloadThreshold);
-        setUnderloadThreshold(v);
-        setUnderloadDraft(String(v));
-    }, [defaultUnderloadThreshold]);
 
     const filterKey = useMemo(
         () =>
-            [
-                trendsPeriod,
-                selectedSidingTab,
-                underloadThreshold,
-                scopeFilterKey,
-            ].join('|'),
-        [trendsPeriod, selectedSidingTab, underloadThreshold, scopeFilterKey],
+            [trendsPeriod, selectedSidingTab, scopeFilterKey].join('|'),
+        [trendsPeriod, selectedSidingTab, scopeFilterKey],
     );
-
-    const commitUnderloadDraft = useCallback(() => {
-        const raw = underloadDraft.trim();
-        if (raw === '') {
-            setUnderloadDraft('1');
-            setUnderloadThreshold(1);
-            return;
-        }
-        const v = parseFloat(raw);
-        if (Number.isNaN(v)) {
-            setUnderloadDraft(String(underloadThreshold));
-            return;
-        }
-        const clamped = clampUnderloadPercent(v);
-        setUnderloadDraft(String(clamped));
-        setUnderloadThreshold(clamped);
-    }, [underloadDraft, underloadThreshold]);
 
     useEffect(() => {
         if (!active) {
@@ -200,7 +154,6 @@ export function RakePerformanceOverloadTrends({
             trendsPeriod,
             sidingId:
                 selectedSidingTab === 'all' ? undefined : selectedSidingTab,
-            underloadThreshold,
         });
 
         laravelJsonFetch<{ data: RpOverloadTrendsPayload }>(
@@ -254,10 +207,18 @@ export function RakePerformanceOverloadTrends({
 
     return (
         <div className="mt-4 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-gray-600">
-                    Daily wagon overload / underload rates for rakes in scope
-                </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                    <p className="text-xs text-gray-600">
+                        Daily average overload / underload % per wagon (loader
+                        quantity vs CC) for rakes in scope
+                    </p>
+                    <p className="text-xs font-medium text-red-600">
+                        Based on wagon loading data — not weighment records.
+                        Rakes without weighment may appear here but not in the
+                        list.
+                    </p>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                     {isAllSidings && (
                         <div
@@ -306,33 +267,6 @@ export function RakePerformanceOverloadTrends({
                             ))}
                         </SelectContent>
                     </Select>
-                    <div className="flex flex-col gap-0.5">
-                        <label
-                            htmlFor="rp-overload-underload-threshold"
-                            className="text-[10px] font-medium text-gray-600"
-                        >
-                            Underload threshold (% of CC)
-                        </label>
-                        <Input
-                            id="rp-overload-underload-threshold"
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            max={100}
-                            step={0.1}
-                            className="h-8 w-[4.5rem] rounded-md border border-gray-200 bg-white px-2 text-xs tabular-nums"
-                            value={underloadDraft}
-                            onChange={(e) => {
-                                setUnderloadDraft(e.target.value);
-                            }}
-                            onBlur={commitUnderloadDraft}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    commitUnderloadDraft();
-                                }
-                            }}
-                        />
-                    </div>
                 </div>
             </div>
 
@@ -365,7 +299,7 @@ export function RakePerformanceOverloadTrends({
                                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                                         <div>
                                             <span className="text-red-600">
-                                                Avg overload
+                                                Avg overload %/wagon
                                             </span>
                                             <p className="font-semibold tabular-nums text-gray-900">
                                                 {formatPct(
@@ -376,7 +310,7 @@ export function RakePerformanceOverloadTrends({
                                         </div>
                                         <div>
                                             <span className="text-amber-800">
-                                                Avg underload
+                                                Avg underload %/wagon
                                             </span>
                                             <p className="font-semibold tabular-nums text-gray-900">
                                                 {formatPct(
@@ -404,7 +338,7 @@ export function RakePerformanceOverloadTrends({
                             </div>
                             <div className="rounded-lg border border-amber-100 bg-amber-50/50 p-4">
                                 <p className="text-xs font-medium text-amber-900">
-                                    Avg daily underload
+                                    Avg underload % per wagon
                                 </p>
                                 <p className="mt-1 text-2xl font-bold tabular-nums text-amber-950">
                                     {formatPct(
@@ -505,9 +439,9 @@ export function RakePerformanceOverloadTrends({
                     )}
 
                     <p className="text-[11px] text-gray-500">
-                        Percent of eligible wagons per day. Underload threshold:{' '}
-                        {underloadThreshold}% of CC. Period:{' '}
-                        {payload.from} – {payload.to}.
+                        Average of each wagon&apos;s overload/underload as % of
+                        CC (0% when at limit). Period: {payload.from} –{' '}
+                        {payload.to}.
                     </p>
                 </>
             )}

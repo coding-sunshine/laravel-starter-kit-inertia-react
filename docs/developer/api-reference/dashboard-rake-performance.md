@@ -90,21 +90,21 @@ Optional keys such as `section`, `loader_id`, `shift`, etc. may appear on the qu
 
 ### `GET .../rake-performance/overload-trends` (Load trends tab)
 
-Siding-wise daily overload/underload **percentages** (wagon-level, SQL-aggregated). Used by the **Load trends** tab in Rake-wise performance; fetched lazily when that tab is active.
+Siding-wise daily **average overload/underload % per wagon** (severity vs effective CC: `COALESCE(wagon_loading.cc_capacity_mt, wagons.pcc_weight_mt)`). Each wagon contributes `(excess or shortfall) / CC × 100`, or `0` when at limit; daily value is `AVG(...)` over eligible wagons. Used by the **Load trends** tab; fetched lazily when active.
 
 **Query parameters** (independent of dashboard `period` / `from` / `to`):
 
 - **`rp_overload_period`** (required for correct range): `today`, `yesterday`, `week`, `month`, `last_month`. Invalid value → **422**.
 - **`siding_id`**: optional; one siding within current scope (same validation as list).
-- **`siding_ids`**, **`power_plant`**, **`rake_number`**, **`underload_threshold`**: same as list (sticky dashboard filters).
+- **`siding_ids`**, **`power_plant`**, **`rake_number`**: same as list (sticky dashboard filters). Does not use `underload_threshold` (loader trends still do).
 
 **Response** (`application/json`):
 
 - **`period`**: echoed `rp_overload_period`.
 - **`filters`**: resolved dashboard filters plus `rp_overload_period`, `rp_overload_from`, `rp_overload_to`, optional `siding_id`.
-- **`data`**: `{ from, to, underload_threshold, by_siding: [{ siding_id, siding_name, summary: { avg_daily_overload_pct, avg_daily_underload_pct, days_with_activity, total_wagons }, daily: [{ date, label, overload_pct, underload_pct, total_wagons }] }] }`.
+- **`data`**: `{ from, to, by_siding: [{ siding_id, siding_name, summary: { avg_daily_overload_pct, avg_daily_underload_pct, days_with_activity, total_wagons }, daily: [{ date, label, overload_pct, underload_pct, total_wagons }] }] }`.
 
-Percentages are one decimal (e.g. `3.2`). Summary averages are the mean of daily rates on days with `total_wagons > 0`.
+Percentages are one decimal (e.g. `2.8`). Summary averages are the mean of daily rates on days with `total_wagons > 0`.
 
 ## Related
 
