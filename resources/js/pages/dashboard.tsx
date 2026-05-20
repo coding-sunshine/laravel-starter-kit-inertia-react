@@ -579,7 +579,6 @@ function buildRakePerformanceOverloadTrendsParams(args: {
     allSidingIds: number[];
     trendsPeriod: RpOverloadTrendsPeriod;
     sidingId?: number;
-    underloadThreshold?: number;
 }): string {
     const u = new URLSearchParams();
     u.set('section', 'rake-performance');
@@ -598,16 +597,6 @@ function buildRakePerformanceOverloadTrendsParams(args: {
     const rakeNumber = args.filters.rake_number ?? '';
     if (rakeNumber !== '') {
         u.set('rake_number', rakeNumber);
-    }
-
-    const utRaw =
-        args.underloadThreshold ?? args.filters.underload_threshold ?? 1;
-    const ut = Number(utRaw);
-    if (!Number.isNaN(ut)) {
-        u.set(
-            'underload_threshold',
-            String(Math.max(0, Math.min(100, ut))),
-        );
     }
 
     if (args.sidingId != null && args.sidingId > 0) {
@@ -4656,14 +4645,12 @@ export function RakePerformanceSection({
         (args: {
             trendsPeriod: RpOverloadTrendsPeriod;
             sidingId?: number;
-            underloadThreshold: number;
         }) =>
             buildRakePerformanceOverloadTrendsParams({
                 filters,
                 allSidingIds,
                 trendsPeriod: args.trendsPeriod,
                 sidingId: args.sidingId,
-                underloadThreshold: args.underloadThreshold,
             }),
         [filters, allSidingIds],
     );
@@ -4964,7 +4951,6 @@ export function RakePerformanceSection({
                     selectedSidingTab={selectedSidingTab}
                     trendsPeriod={trendsPeriod}
                     onTrendsPeriodChange={setTrendsPeriod}
-                    defaultUnderloadThreshold={filters.underload_threshold ?? 1}
                     buildSearchParams={buildOverloadTrendsSearchParams}
                     scopeFilterKey={[
                         filters.siding_ids.join(','),
