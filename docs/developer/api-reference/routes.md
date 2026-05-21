@@ -1142,3 +1142,18 @@ Super-admin-only inspection and single-day rebuild for `daily_siding_vehicle_dis
 
 **Query (`index`):** `date_from`, `date_to` (optional, default last 14 days through today), `detail_date` (optional, bucket drill-down), `page` (day list), `detail_page` (bucket pagination).
 
+## DailyVehicleEntryRollupAdminController
+
+**Controller**: `App\Http\Controllers\DailyVehicleEntryRollupAdminController`
+
+Super-admin-only inspection and single-day rebuild for `daily_vehicle_entry_rollups` (road dispatch `daily_vehicle_entries` only). Same access pattern as siding dispatch rollups: **no** sidebar link and **no** `sections.*` route permission mapping; **`abort_unless($user->isSuperAdmin())`** on both actions.
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `daily-vehicle-entry-rollups` | daily-vehicle-entry-rollups.index | web, auth, verified |
+| POST | `daily-vehicle-entry-rollups/recalculate` | daily-vehicle-entry-rollups.recalculate | web, auth, verified |
+
+**Query (`index`):** same shape as siding rollup admin (`date_from`, `date_to`, `detail_date`, `page`, `detail_page`). **POST (`recalculate`):** `date` (required), optional echo-back query keys `date_from`, `date_to`, `detail_date`.
+
+Wayfinder: `@/routes/daily-vehicle-entry-rollups`
+
