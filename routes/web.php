@@ -22,6 +22,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CoalStockApproxDetailController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\DailySidingVehicleDispatchRollupAdminController;
 use App\Http\Controllers\DailyVehicleEntryController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\Exports\CoalTransportReportExportController;
@@ -443,6 +444,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('vehicle-dispatch/save', [VehicleDispatchController::class, 'saveImport'])->name('vehicle-dispatch.save');
     Route::post('dispatch-reports/generate', [GenerateDispatchReportController::class, 'generate'])->name('dispatch-reports.generate');
     Route::get('vehicle-dispatch/dpr-export', DispatchReportDprExportController::class)->name('vehicle-dispatch.dpr-export');
+
+    /** Super-admin-only tool (no sidebar entry / section permission); bookmark URL. */
+    Route::get('daily-siding-dispatch-rollups', [DailySidingVehicleDispatchRollupAdminController::class, 'index'])
+        ->name('daily-siding-dispatch-rollups.index');
+    Route::post('daily-siding-dispatch-rollups/recalculate', [DailySidingVehicleDispatchRollupAdminController::class, 'recalculate'])
+        ->name('daily-siding-dispatch-rollups.recalculate');
 
     // Vehicle Work Orders
     Route::get('vehicle-workorders', [VehicleWorkorderController::class, 'index'])->name('vehicle-workorders.index');

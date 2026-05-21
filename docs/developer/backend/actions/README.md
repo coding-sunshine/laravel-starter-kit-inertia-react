@@ -68,6 +68,7 @@ All Actions:
 | [CalculateSidingRiskScoresAction](./CalculateSidingRiskScoresAction.md) | N/A | ✅ |
 | [ClassifyPenaltyRootCauseAction](./ClassifyPenaltyRootCauseAction.md) | N/A | ✅ |
 | [GeneratePenaltyPredictionsAction](./GeneratePenaltyPredictionsAction.md) | N/A | ✅ |
+| [RecalculateDailySidingVehicleDispatchRollups](./recalculatedailysidingvehicledispatchrollups.md) | Rebuild daily siding_vehicle_dispatch rollups | ✅ |
 | [RecommendDisputeAction](./RecommendDisputeAction.md) | N/A | ✅ |
 | [CreateUnloadFromArrival](./createunloadfromarrival.md) | N/A | ✅ |
 | [GenerateDispatchReport](./generatedispatchreport.md) | N/A | ✅ |

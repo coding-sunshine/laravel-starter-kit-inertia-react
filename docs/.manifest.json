@@ -789,6 +789,18 @@
                 "relatedRoutes": []
             }
         },
+        "RecalculateDailySidingVehicleDispatchRollups": {
+            "documented": true,
+            "path": "./recalculatedailysidingvehicledispatchrollups.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "DailySidingVehicleDispatchRollup",
+                    "SidingVehicleDispatch"
+                ],
+                "relatedRoutes": []
+            }
+        },
         "GenerateDailyBriefingAction": {
             "documented": true,
             "path": "./generatedailybriefingaction.md",
