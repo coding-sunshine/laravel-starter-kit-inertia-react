@@ -27,7 +27,7 @@ final class ProductionEntry extends Model
 
     protected $casts = [
         'type' => 'string',
-        'date' => 'date',
+        'date' => 'date:Y-m-d',
         'trip' => 'string',
         'qty' => 'decimal:2',
         'siding_id' => 'integer',

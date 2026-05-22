@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import InputError from '@/components/input-error';
+import { formatDateOnly } from '@/lib/date-only';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 export type ProductionType = 'coal' | 'ob';
@@ -32,11 +33,6 @@ function productionBasePath(type: ProductionType): string {
 
 function productionTitle(type: ProductionType): string {
     return type === 'coal' ? 'Production – Coal' : 'Production – OB';
-}
-
-function formatDateOnly(value: string): string {
-    if (!value) return '';
-    return value.slice(0, 10);
 }
 
 export default function ProductionIndex({ entries, type }: Props) {
