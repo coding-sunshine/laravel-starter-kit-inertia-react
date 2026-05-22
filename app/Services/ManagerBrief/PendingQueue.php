@@ -14,12 +14,14 @@ use App\Services\ForceMajeure\Contracts\DowntimePenaltyMatcherContract;
  *   been reviewed by a supervisor (supervisor_review_at IS NULL).
  * - overrides_oldest_minutes: age of the oldest pending override in minutes, or null if none.
  * - disputes_ready: force-majeure candidates from DowntimePenaltyMatcher ready to file.
- * - disputes_estimated_rs: rough monetary estimate for those disputes
- *   (overlap_minutes × rs_per_mt, where rs_per_mt defaults to 1000).
+ * - disputes_estimated_rs: rough monetary estimate for those disputes.
+ *   Formula: (overlap_minutes / 60) × rs_per_hour (demurrage rate).
+ *   The previous formula (overlap_minutes × rs_per_mt) was dimensionally wrong
+ *   (minutes × Rs/MT produces a unit-less nonsense number).
  */
 final readonly class PendingQueue
 {
-    private const float DEFAULT_RS_PER_MT = 1000.0;
+    private const float DEFAULT_RS_PER_HOUR = 5000.0;
 
     public function __construct(
         private DowntimePenaltyMatcherContract $matcher,
@@ -35,7 +37,9 @@ final readonly class PendingQueue
      */
     public function handle(int $sidingId): array
     {
-        $rsPerMt = (float) config('penalties.overload.rs_per_mt', self::DEFAULT_RS_PER_MT);
+        // Recovery value approximation: (overlap_minutes / 60) × rs_per_hour.
+        // Using the demurrage hourly rate is dimensionally correct.
+        $rsPerHour = (float) config('penalties.demurrage.rs_per_hour', self::DEFAULT_RS_PER_HOUR);
 
         // Pending overrides: supervisor_review_at IS NULL for rakes at this siding.
         $pending = LoadingOverride::query()
@@ -55,12 +59,11 @@ final readonly class PendingQueue
 
         $disputesReady = count($candidates);
 
-        $disputesEstimatedRs = (float) array_sum(
-            array_map(
-                static fn (array $c): float => (float) ($c['overlap_minutes'] * $rsPerMt),
-                $candidates,
-            ),
-        );
+        $disputesEstimatedRs = 0.0;
+
+        foreach ($candidates as $candidate) {
+            $disputesEstimatedRs += round(((float) $candidate['overlap_minutes'] / 60.0) * $rsPerHour, 2);
+        }
 
         return [
             'overrides_pending' => $overridesPending,

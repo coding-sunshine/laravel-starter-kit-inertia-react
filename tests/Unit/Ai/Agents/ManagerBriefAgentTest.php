@@ -172,6 +172,43 @@ it('drops cards failing schema validation', function (): void {
     expect($result[1]->severity)->toBe('medium');
 });
 
+it('drops cards with protocol relative or javascript deep_link', function (): void {
+    $signals = [
+        makeAgentSignal(['type' => 'overload_exposure']),
+    ];
+
+    $cards = [
+        // Rejected: protocol-relative URL
+        makeCardArray(['severity' => 'high', 'title' => 'Protocol relative', 'deep_link' => '//evil.com/x']),
+        // Rejected: javascript: scheme (lowercase)
+        makeCardArray(['severity' => 'high', 'title' => 'JS scheme lower', 'deep_link' => '/javascript:alert(1)']),
+        // Rejected: JAVASCRIPT: scheme (uppercase, should be caught case-insensitively)
+        makeCardArray(['severity' => 'high', 'title' => 'JS scheme upper', 'deep_link' => '/JAVASCRIPT:void(0)']),
+        // Rejected: data: URI
+        makeCardArray(['severity' => 'medium', 'title' => 'Data URI', 'deep_link' => '/data:text/html,<h1>x</h1>']),
+        // Rejected: vbscript:
+        makeCardArray(['severity' => 'low', 'title' => 'VBScript', 'deep_link' => '/vbscript:MsgBox(1)']),
+        // Rejected: not an allowed prefix at all
+        makeCardArray(['severity' => 'low', 'title' => 'Unknown prefix', 'deep_link' => '/unknown-section/foo']),
+        // Accepted: valid allowed prefix
+        makeCardArray(['severity' => 'critical', 'title' => 'Valid dashboard link', 'deep_link' => '/dashboard']),
+        // Accepted: valid allowed prefix with query string
+        makeCardArray(['severity' => 'high', 'title' => 'Valid disputes link', 'deep_link' => '/disputes?ref=brief']),
+    ];
+
+    $json = json_encode($cards);
+
+    Prism::fake([makeFakeTextResponse($json)]);
+
+    $agent = new ManagerBriefAgent(new PrismService);
+    $result = $agent->synthesise($signals);
+
+    // Only the two valid cards (dashboard + disputes) survive.
+    expect($result)->toBeArray()->toHaveCount(2);
+    expect($result[0]->deepLink)->toBe('/dashboard');
+    expect($result[1]->deepLink)->toBe('/disputes?ref=brief');
+});
+
 it('clamps output to 5 cards even if model returns more', function (): void {
     $signals = [
         makeAgentSignal(),

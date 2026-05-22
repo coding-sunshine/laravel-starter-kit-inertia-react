@@ -115,10 +115,14 @@ it('excludes overrides from other sidings', function (): void {
     expect($result['overrides_pending'])->toBe(0);
 });
 
-it('computes disputes_estimated_rs from overlap minutes', function (): void {
+it('computes disputes_estimated_rs from overlap minutes using demurrage rate', function (): void {
     $siding = Siding::factory()->create();
 
-    // 45 + 60 = 105 overlap_minutes × 1000 Rs/MT (default) = 105 000
+    // Formula: (overlap_minutes / 60) × rs_per_hour (default 5000).
+    // 45 min → (45/60) × 5000 = 3750.00
+    // 60 min → (60/60) × 5000 = 5000.00
+    // Total: 8750.00
+    // The old formula (overlap_minutes × rs_per_mt=1000) was dimensionally wrong.
     $candidates = [
         ['rake_id' => 1, 'reconciliation_id' => 1, 'downtime_event_id' => 1, 'overlap_minutes' => 45, 'reason' => 'Equipment downtime', 'reasons_all' => ['Equipment downtime'], 'event_ids' => [1]],
         ['rake_id' => 2, 'reconciliation_id' => 2, 'downtime_event_id' => 2, 'overlap_minutes' => 60, 'reason' => 'Equipment downtime', 'reasons_all' => ['Equipment downtime'], 'event_ids' => [2]],
@@ -126,5 +130,5 @@ it('computes disputes_estimated_rs from overlap minutes', function (): void {
 
     $result = makePendingQueue($candidates)->handle((int) $siding->id);
 
-    expect($result['disputes_estimated_rs'])->toBe(105000.0);
+    expect($result['disputes_estimated_rs'])->toBe(8750.0);
 });

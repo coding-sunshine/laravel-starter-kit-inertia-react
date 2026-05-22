@@ -301,10 +301,16 @@ final readonly class CollectSignals
                 }
             }
 
+            // Recovery value approximation: (overlap_minutes / 60) × rs_per_hour.
+            // Using the demurrage rate (Rs/hour) is dimensionally correct;
+            // the old formula (overlap_minutes × rs_per_mt) mixed minutes with Rs/MT.
+            $rsPerHour = (float) config('penalties.demurrage.rs_per_hour', 5000);
+            $rsAtStake = round(($candidate['overlap_minutes'] / 60.0) * $rsPerHour, 2);
+
             $signals[] = new Signal(
                 type: 'force_majeure',
                 severity: 'medium',
-                rsAtStake: (float) ($candidate['overlap_minutes'] * 1000),
+                rsAtStake: $rsAtStake,
                 recencyMinutes: $recencyMinutes,
                 actionability: 0.6,
                 payload: [

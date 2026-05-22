@@ -41,8 +41,8 @@ final class ManagerBriefController extends Controller
         $cached = Cache::get($cacheKey);
 
         if ($cached === null) {
-            // Cache miss → serve placeholder, queue async generation
-            Artisan::queue('manager-brief:refresh', ['--siding' => $sidingId]);
+            // Cache miss → serve placeholder, queue async generation (deduplicated).
+            $this->dispatchRefreshOnce($sidingId);
 
             $actions = [];
             $generatedAt = CarbonImmutable::now()->toIso8601String();
@@ -61,8 +61,8 @@ final class ManagerBriefController extends Controller
 
             $ageMinutes = $payload->generatedAt->diffInMinutes(CarbonImmutable::now());
             if ($ageMinutes > 60) {
-                // Stale — serve current data and queue a background refresh
-                Artisan::queue('manager-brief:refresh', ['--siding' => $sidingId]);
+                // Stale — serve current data and queue a background refresh (deduplicated).
+                $this->dispatchRefreshOnce($sidingId);
             }
         }
 
@@ -151,9 +151,36 @@ final class ManagerBriefController extends Controller
         $siding = $this->resolveSiding($user);
         $sidingId = $siding->id;
 
-        Artisan::queue('manager-brief:refresh', ['--siding' => $sidingId]);
+        $this->dispatchRefreshOnce($sidingId);
 
         return response()->json(['dispatched' => true], 202);
+    }
+
+    /**
+     * Dispatch the manager-brief refresh command at most once per 5-minute window.
+     *
+     * Concurrent HTTP requests (e.g. multiple polling tabs) and stale-cache paths
+     * can all race to enqueue the same expensive AI job. We use an atomic lock with
+     * a 5-minute TTL to ensure only the first requester within that window dispatches;
+     * subsequent callers cannot acquire the lock and skip dispatch.
+     *
+     * The lock is held for the full TTL (300 s) rather than released after dispatch.
+     * This prevents re-dispatch within the window even from sequential requests.
+     * The schedule's withoutOverlapping() guards against duplicate cron runs;
+     * this lock only deduplicates the HTTP-triggered dispatches.
+     */
+    private function dispatchRefreshOnce(int $sidingId): void
+    {
+        $lock = Cache::lock("manager-brief:refresh-dispatch:{$sidingId}", 300);
+
+        if (! $lock->get()) {
+            // Another request already holds the dispatch lock within this 5-minute window; skip.
+            return;
+        }
+
+        // Lock acquired — dispatch and leave the lock held for its TTL so that
+        // further requests within the window are deduplicated.
+        Artisan::queue('manager-brief:refresh', ['--siding' => $sidingId]);
     }
 
     /**
@@ -174,13 +201,23 @@ final class ManagerBriefController extends Controller
             return $siding;
         }
 
-        // Super-admin without explicit siding selection: pick the first allowed siding.
-        // Phase-2 will aggregate across all accessible sidings.
+        // Super-admin without explicit siding selection: pick the first siding that belongs
+        // to the current tenant organisation (when in tenant context) to prevent data leakage
+        // across organisations. Phase-2 will aggregate across all accessible sidings.
         if ($user->isSuperAdmin()) {
-            $first = Siding::query()->orderBy('id')->first();
+            $superAdminQuery = Siding::query()->orderBy('id');
+
+            if (TenantContext::check()) {
+                $superAdminQuery->where('organization_id', TenantContext::id());
+            }
+
+            $first = $superAdminQuery->first();
+
             if ($first instanceof Siding) {
                 return $first;
             }
+
+            abort(404, 'No siding available for manager brief in the current organisation.');
         }
 
         // Siding-scoped user: use their primary siding or first assigned siding.

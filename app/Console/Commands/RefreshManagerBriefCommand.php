@@ -79,6 +79,7 @@ final class RefreshManagerBriefCommand extends Command
     private function resolveAllSidings(): array
     {
         return Siding::query()
+            ->where('is_active', true)
             ->orderBy('id')
             ->pluck('id')
             ->map(fn (mixed $id): int => (int) $id)

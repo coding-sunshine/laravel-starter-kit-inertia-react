@@ -243,7 +243,10 @@ it('emits force majeure candidate signal via matcher', function (): void {
     expect($signal->payload)->toHaveKey('reconciliation_id', (int) $reconciliation->id);
     expect($signal->payload['overlap_minutes'])->toBeGreaterThanOrEqual(30);
     expect($signal->payload)->toHaveKey('reason');
-    expect($signal->rsAtStake)->toBe((float) ($signal->payload['overlap_minutes'] * 1000));
+    // rs_at_stake = (overlap_minutes / 60) × rs_per_hour (demurrage rate, default 5000).
+    // The old formula (overlap_minutes × 1000) was dimensionally wrong (minutes × Rs/MT).
+    $expectedRs = round(($signal->payload['overlap_minutes'] / 60.0) * 5000.0, 2);
+    expect($signal->rsAtStake)->toBe($expectedRs);
 });
 
 // ---------------------------------------------------------------------------

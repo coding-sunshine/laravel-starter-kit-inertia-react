@@ -30,6 +30,40 @@ use Throwable;
  */
 final readonly class ManagerBriefAgent
 {
+    /**
+     * Allowed deep-link path prefixes.
+     *
+     * Only internal route prefixes are permitted. Anything outside this list
+     * (including protocol-relative URLs or dangerous schemes) is rejected to
+     * prevent open-redirect and XSS vectors when the React side calls router.visit().
+     *
+     * @var list<string>
+     */
+    private const array ALLOWED_DEEP_LINK_PREFIXES = [
+        '/dashboard',
+        '/manager-brief',
+        '/disputes',
+        '/penalties',
+        '/control-panel-2',
+        '/control-room',
+        '/rake-loader',
+        '/rakes',
+        '/sidings',
+        '/loading-overrides',
+    ];
+
+    /**
+     * Dangerous scheme fragments that must never appear in a deep-link (case-insensitive).
+     *
+     * @var list<string>
+     */
+    private const array BLOCKED_SCHEMES = [
+        'javascript:',
+        'data:',
+        'vbscript:',
+        'file:',
+    ];
+
     public function __construct(
         private PrismService $prism,
     ) {}
@@ -232,7 +266,7 @@ final readonly class ManagerBriefAgent
 
         $deepLink = $item['deep_link'] ?? null;
 
-        if (! is_string($deepLink) || $deepLink === '' || ! str_starts_with($deepLink, '/')) {
+        if (! is_string($deepLink) || ! $this->isDeepLinkSafe($deepLink)) {
             return null;
         }
 
@@ -250,5 +284,39 @@ final readonly class ManagerBriefAgent
             deepLink: $deepLink,
             deadline: $deadline,
         );
+    }
+
+    /**
+     * Return true only when the deep-link is a safe internal path.
+     *
+     * Rejects:
+     *  - protocol-relative URLs (starting with //)
+     *  - any path containing blocked schemes (javascript:, data:, vbscript:, file:)
+     *  - paths that do not match an allowed prefix
+     */
+    private function isDeepLinkSafe(string $deepLink): bool
+    {
+        // Reject protocol-relative URLs (//evil.com/…).
+        if (str_starts_with($deepLink, '//')) {
+            return false;
+        }
+
+        // Reject blocked schemes regardless of casing.
+        $lower = mb_strtolower($deepLink);
+
+        foreach (self::BLOCKED_SCHEMES as $scheme) {
+            if (str_contains($lower, $scheme)) {
+                return false;
+            }
+        }
+
+        // Must match one of the allowed internal route prefixes.
+        foreach (self::ALLOWED_DEEP_LINK_PREFIXES as $prefix) {
+            if (str_starts_with($deepLink, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
