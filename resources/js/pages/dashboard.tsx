@@ -39,6 +39,7 @@ import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
 import { useDashboardSectionPayload } from '@/hooks/use-dashboard-section-payload';
 import AppLayout from '@/layouts/app-layout';
 import { JsonFetchError, laravelJsonFetch } from '@/lib/laravel-json-fetch';
+import { EXECUTIVE_SIDING_BAR_CHART_COLORS } from '@/lib/dashboard-siding-chart-colors';
 import { cn } from '@/lib/utils';
 import { ExecutiveOverview } from '@/pages/dashboard/ExecutiveOverview';
 import { LoaderOverloading } from '@/pages/dashboard/LoaderOverloading';
@@ -1092,21 +1093,6 @@ function executiveChartFormatBarTooltipValue(
 
     return `${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`;
 }
-
-/** One color per siding bar (cycles); matches footer legend. */
-const EXECUTIVE_SIDING_BAR_CHART_COLORS = [
-    DASHBOARD_PALETTE.steelBlue,
-    DASHBOARD_PALETTE.successGreen,
-    DASHBOARD_PALETTE.safetyYellow,
-    DASHBOARD_PALETTE.steelBlueLight,
-    DASHBOARD_PALETTE.successGreenLight,
-    DASHBOARD_PALETTE.darkGrey,
-    '#8B5CF6',
-    '#F97316',
-    '#EC4899',
-    '#14B8A6',
-    '#6366F1',
-];
 
 function ExecutiveSidingBarChartCard(props: {
     title: string;

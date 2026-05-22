@@ -1141,3 +1141,31 @@ Requires `users.access_to_siding_shift_data` (Filament user field “Access to a
 
 Returns `{ siding, from, to, days[], range_total }`. Each day has `shifts[]` (1–3) and `day_total` with `dispatch_trips`, `dispatch_qty`, `received_trips`, `received_qty`, `in_transit_trips`, `in_transit_qty`. `range_total` includes `stock_updated_mt` (completed `net_wt`) and `in_progress_gross_mt` (non-completed `gross_wt`), matching the daily vehicle entries shift report rules.
 
+## DailySidingVehicleDispatchRollupAdminController
+
+**Controller**: `App\Http\Controllers\DailySidingVehicleDispatchRollupAdminController`
+
+Super-admin-only inspection and single-day rebuild for `daily_siding_vehicle_dispatch_rollups`. Not linked from the sidebar and **no** `sections.*` route permission mapping (`AutoPermissionMiddleware` allows authenticated requests without an explicit mapping); authorization is **`abort_unless($user->isSuperAdmin())`** on both actions.
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `daily-siding-dispatch-rollups` | daily-siding-dispatch-rollups.index | web, auth, verified |
+| POST | `daily-siding-dispatch-rollups/recalculate` | daily-siding-dispatch-rollups.recalculate | web, auth, verified |
+
+**Query (`index`):** `date_from`, `date_to` (optional, default last 14 days through today), `detail_date` (optional, bucket drill-down), `page` (day list), `detail_page` (bucket pagination).
+
+## DailyVehicleEntryRollupAdminController
+
+**Controller**: `App\Http\Controllers\DailyVehicleEntryRollupAdminController`
+
+Super-admin-only inspection and single-day rebuild for `daily_vehicle_entry_rollups` (road dispatch `daily_vehicle_entries` only). Same access pattern as siding dispatch rollups: **no** sidebar link and **no** `sections.*` route permission mapping; **`abort_unless($user->isSuperAdmin())`** on both actions.
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `daily-vehicle-entry-rollups` | daily-vehicle-entry-rollups.index | web, auth, verified |
+| POST | `daily-vehicle-entry-rollups/recalculate` | daily-vehicle-entry-rollups.recalculate | web, auth, verified |
+
+**Query (`index`):** same shape as siding rollup admin (`date_from`, `date_to`, `detail_date`, `page`, `detail_page`). **POST (`recalculate`):** `date` (required), optional echo-back query keys `date_from`, `date_to`, `detail_date`.
+
+Wayfinder: `@/routes/daily-vehicle-entry-rollups`
+

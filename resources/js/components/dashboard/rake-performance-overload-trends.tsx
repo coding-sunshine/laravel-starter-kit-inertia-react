@@ -7,6 +7,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { JsonFetchError, laravelJsonFetch } from '@/lib/laravel-json-fetch';
+import {
+    executiveSidingChartColor,
+    executiveSidingChartSurface,
+    RAKE_PERFORMANCE_LOAD_TREND_METRIC_COLORS,
+} from '@/lib/dashboard-siding-chart-colors';
 import { useEffect, useMemo, useState } from 'react';
 import {
     CartesianGrid,
@@ -32,17 +37,6 @@ const PERIOD_OPTIONS: { value: RpOverloadTrendsPeriod; label: string }[] = [
     { value: 'week', label: 'This week' },
     { value: 'month', label: 'This month' },
     { value: 'last_month', label: 'Last month' },
-];
-
-const LINE_COLORS = [
-    '#ef4444',
-    '#f97316',
-    '#eab308',
-    '#22c55e',
-    '#3b82f6',
-    '#a855f7',
-    '#ec4899',
-    '#14b8a6',
 ];
 
 export interface RpOverloadTrendsSidingSeries {
@@ -287,40 +281,46 @@ export function RakePerformanceOverloadTrends({
                 <>
                     {isAllSidings ? (
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            {payload.by_siding.map((s) => (
-                                <div
-                                    key={s.siding_id}
-                                    className="rounded-lg border border-gray-100 bg-[#fbfbfc] p-3"
-                                >
-                                    <p className="text-xs font-medium text-gray-800">
-                                        {s.siding_name}
-                                    </p>
-                                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                                        <div>
-                                            <span className="text-red-600">
-                                                Avg overload %/wagon
-                                            </span>
-                                            <p className="font-semibold tabular-nums text-gray-900">
-                                                {formatPct(
-                                                    s.summary
-                                                        .avg_daily_overload_pct,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <span className="text-amber-800">
-                                                Avg underload %/wagon
-                                            </span>
-                                            <p className="font-semibold tabular-nums text-gray-900">
-                                                {formatPct(
-                                                    s.summary
-                                                        .avg_daily_underload_pct,
-                                                )}
-                                            </p>
+                            {payload.by_siding.map((s, i) => {
+                                const sidingSurface =
+                                    executiveSidingChartSurface(i);
+
+                                return (
+                                    <div
+                                        key={s.siding_id}
+                                        className="rounded-lg border p-3"
+                                        style={sidingSurface}
+                                    >
+                                        <p className="text-xs font-medium text-gray-800">
+                                            {s.siding_name}
+                                        </p>
+                                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                                            <div>
+                                                <span className="text-red-600">
+                                                    Avg overload %/wagon
+                                                </span>
+                                                <p className="font-semibold tabular-nums text-gray-900">
+                                                    {formatPct(
+                                                        s.summary
+                                                            .avg_daily_overload_pct,
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-amber-800">
+                                                    Avg underload %/wagon
+                                                </span>
+                                                <p className="font-semibold tabular-nums text-gray-900">
+                                                    {formatPct(
+                                                        s.summary
+                                                            .avg_daily_underload_pct,
+                                                    )}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : singleSiding != null ? (
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -335,11 +335,11 @@ export function RakePerformanceOverloadTrends({
                                     )}
                                 </p>
                             </div>
-                            <div className="rounded-lg border border-amber-100 bg-amber-50/50 p-4">
-                                <p className="text-xs font-medium text-amber-900">
+                            <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                                <p className="text-xs font-medium text-blue-800">
                                     Avg underload % per wagon
                                 </p>
-                                <p className="mt-1 text-2xl font-bold tabular-nums text-amber-950">
+                                <p className="mt-1 text-2xl font-bold tabular-nums text-blue-950">
                                     {formatPct(
                                         singleSiding.summary
                                             .avg_daily_underload_pct,
@@ -400,11 +400,7 @@ export function RakePerformanceOverloadTrends({
                                               type="monotone"
                                               dataKey={s.key}
                                               name={s.label}
-                                              stroke={
-                                                  LINE_COLORS[
-                                                      i % LINE_COLORS.length
-                                                  ]
-                                              }
+                                              stroke={executiveSidingChartColor(i)}
                                               strokeWidth={2}
                                               dot={false}
                                               activeDot={{ r: 4 }}
@@ -417,7 +413,9 @@ export function RakePerformanceOverloadTrends({
                                                   type="monotone"
                                                   dataKey="overload_pct"
                                                   name="Overload"
-                                                  stroke="#ef4444"
+                                                  stroke={
+                                                      RAKE_PERFORMANCE_LOAD_TREND_METRIC_COLORS.overload
+                                                  }
                                                   strokeWidth={2}
                                                   dot={false}
                                                   activeDot={{ r: 4 }}
@@ -426,7 +424,9 @@ export function RakePerformanceOverloadTrends({
                                                   type="monotone"
                                                   dataKey="underload_pct"
                                                   name="Underload"
-                                                  stroke="#d97706"
+                                                  stroke={
+                                                      RAKE_PERFORMANCE_LOAD_TREND_METRIC_COLORS.underload
+                                                  }
                                                   strokeWidth={2}
                                                   dot={false}
                                                   activeDot={{ r: 4 }}

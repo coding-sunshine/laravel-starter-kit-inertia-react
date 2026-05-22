@@ -22,7 +22,9 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CoalStockApproxDetailController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\DailySidingVehicleDispatchRollupAdminController;
 use App\Http\Controllers\DailyVehicleEntryController;
+use App\Http\Controllers\DailyVehicleEntryRollupAdminController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\Exports\CoalTransportReportExportController;
 use App\Http\Controllers\Exports\DispatchReportDprExportController;
@@ -452,6 +454,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('vehicle-dispatch/save', [VehicleDispatchController::class, 'saveImport'])->name('vehicle-dispatch.save');
     Route::post('dispatch-reports/generate', [GenerateDispatchReportController::class, 'generate'])->name('dispatch-reports.generate');
     Route::get('vehicle-dispatch/dpr-export', DispatchReportDprExportController::class)->name('vehicle-dispatch.dpr-export');
+
+    /** Super-admin-only tool (no sidebar entry / section permission); bookmark URL. */
+    Route::get('daily-siding-dispatch-rollups', [DailySidingVehicleDispatchRollupAdminController::class, 'index'])
+        ->name('daily-siding-dispatch-rollups.index');
+    Route::post('daily-siding-dispatch-rollups/recalculate', [DailySidingVehicleDispatchRollupAdminController::class, 'recalculate'])
+        ->name('daily-siding-dispatch-rollups.recalculate');
+
+    /** Super-admin-only tool (no sidebar entry / section permission); bookmark URL. Road dispatch daily_vehicle_entries rollups only. */
+    Route::get('daily-vehicle-entry-rollups', [DailyVehicleEntryRollupAdminController::class, 'index'])
+        ->name('daily-vehicle-entry-rollups.index');
+    Route::post('daily-vehicle-entry-rollups/recalculate', [DailyVehicleEntryRollupAdminController::class, 'recalculate'])
+        ->name('daily-vehicle-entry-rollups.recalculate');
 
     // Vehicle Work Orders
     Route::get('vehicle-workorders', [VehicleWorkorderController::class, 'index'])->name('vehicle-workorders.index');

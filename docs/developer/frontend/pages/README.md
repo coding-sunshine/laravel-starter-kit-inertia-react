@@ -102,6 +102,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [road-dispatch/daily-vehicle-entries/vehicle-entry-table](./road-dispatch/daily-vehicle-entries/vehicle-entry-table.md) | N/A | ✅ |
 | [VehicleDispatch/DPRTab](./VehicleDispatch/DPRTab.md) | N/A | ✅ |
 | [VehicleDispatch/ImportPreviewCard](./VehicleDispatch/ImportPreviewCard.md) | N/A | ✅ |
+| [DailySidingDispatchRollups/Index](./DailySidingDispatchRollups/Index.md) | daily-siding-dispatch-rollups.index, daily-siding-dispatch-rollups.recalculate | ✅ |
 | [VehicleDispatch/Index](./VehicleDispatch/Index.md) | vehicle-dispatch.index, vehicle-dispatch.dpr-data | ✅ |
 | [VehicleDispatch/MainDataTab](./VehicleDispatch/MainDataTab.md) | N/A | ✅ |
 | [VehicleDispatch/VehicleDispatchTable](./VehicleDispatch/VehicleDispatchTable.md) | N/A | ✅ |

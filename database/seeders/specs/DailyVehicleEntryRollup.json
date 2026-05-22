@@ -1,43 +1,48 @@
 {
-    "model": "LoadingOverride",
-    "table": "loading_overrides",
+    "model": "DailyVehicleEntryRollup",
+    "table": "daily_vehicle_entry_rollups",
     "fields": {
         "id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "rake_id": {
+        "rollup_day": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "wagon_loading_id": {
-            "type": "bigint",
+        "shift": {
+            "type": "int2",
             "nullable": true,
             "default": null
         },
-        "operator_id": {
-            "type": "bigint",
+        "entries_count": {
+            "type": "integer",
             "nullable": true,
             "default": null
         },
-        "reason": {
-            "type": "string",
+        "completed_entries_count": {
+            "type": "integer",
             "nullable": true,
             "default": null
         },
-        "notes": {
-            "type": "text",
+        "pending_entries_count": {
+            "type": "integer",
             "nullable": true,
             "default": null
         },
-        "overload_mt": {
+        "completed_net_wt_mt": {
             "type": "numeric",
             "nullable": true,
             "default": null
         },
-        "estimated_penalty_at_time": {
+        "pending_gross_wt_mt": {
             "type": "numeric",
             "nullable": true,
             "default": null
@@ -51,32 +56,14 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "supervisor_review_at": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
-        "rake": {
+        "siding": {
             "type": "belongsTo",
-            "model": "Rake"
-        },
-        "operator": {
-            "type": "belongsTo",
-            "model": "Operator"
-        },
-        "wagonLoading": {
-            "type": "belongsTo",
-            "model": "WagonLoading"
+            "model": "Siding"
         }
     },
-    "value_hints": {
-        "supervisor_review_at": {
-            "type": "datetime",
-            "example": "2024-01-01 00:00:00"
-        }
-    },
+    "value_hints": [],
     "scenarios": []
 }

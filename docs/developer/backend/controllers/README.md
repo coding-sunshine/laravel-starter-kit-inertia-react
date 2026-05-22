@@ -77,6 +77,7 @@ All Controllers:
 | [TxrController](./txrcontroller.md) | N/A | ✅ |
 | [WagonUnfitController](./wagonunfitcontroller.md) | N/A | ✅ |
 | [GenerateDispatchReportController](./generatedispatchreportcontroller.md) | N/A | ✅ |
+| [DailySidingVehicleDispatchRollupAdminController](./dailysidingvehicledispatchrollupadmincontroller.md) | Super-admin daily siding dispatch rollup inspector | ✅ |
 | [VehicleDispatchController](./vehicledispatchcontroller.md) | N/A | ✅ |
 | [VehicleWorkorderController](./vehicleworkordercontroller.md) | N/A | ✅ |
 | [MobileDashboardController](./mobiledashboardcontroller.md) | N/A | ✅ |
