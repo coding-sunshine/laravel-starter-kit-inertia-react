@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-05-11",
+    "lastGenerated": "2026-05-22",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -1159,6 +1159,7 @@
                 "relatedRoutes": [
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -1254,6 +1255,7 @@
                     "rakes.weighments.destroy",
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -1368,6 +1370,7 @@
                     "api.v1.rakes.weighments.destroy",
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -1479,7 +1482,6 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
-                    "LoadriteDowntimeEvent",
                     "PenaltyReconciliation"
                 ],
                 "relatedRoutes": []
@@ -1499,6 +1501,130 @@
                     "railway-receipts.import-preview",
                     "railway-receipts.import"
                 ]
+            }
+        },
+        "BuildManagerBrief": {
+            "documented": true,
+            "path": "../actions/manager-brief.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Siding"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "DeduplicateVehicleWorkordersByVehicleNoAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "VehicleWorkorder"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "ImportTransportWorkOrderRegistrationsFromExcelAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "TransportWorkOrderRegistration"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "ImportVehicleWorkordersFromVehiclesSpreadsheetAction": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "VehicleWorkorder"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "CollectSignals": {
+            "documented": true,
+            "path": "../actions/manager-brief.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "LoadingOverride",
+                    "LoadriteEvent",
+                    "Rake",
+                    "SidingPerformance"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "RankSignals": {
+            "documented": true,
+            "path": "../actions/manager-brief.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": []
+            }
+        },
+        "MapTransportRegistrationToVehicleWorkorderDefaults": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "VehicleWorkorderController"
+                ],
+                "usesModels": [
+                    "TransportWorkOrderRegistration"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.export",
+                    "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.search",
+                    "vehicle-workorders.create",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
+                    "vehicle-workorders.store",
+                    "vehicle-workorders.update"
+                ]
+            }
+        },
+        "RecalculateRakeWeighmentOverload": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Weighment",
+                    "RakeWagonWeighment"
+                ],
+                "relatedRoutes": [
+                    "weighments.index",
+                    "weighments.show",
+                    "weighments.recalculate-overload",
+                    "weighments.download",
+                    "weighments.destroy",
+                    "weighments.import",
+                    "weighments.manual",
+                    "weighments.fetch-from-rr",
+                    "weighments.template-xlsx"
+                ]
+            }
+        },
+        "SyncLoadriteEvent": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Rake",
+                    "WagonLoading"
+                ],
+                "relatedRoutes": []
             }
         }
     },
@@ -2518,8 +2644,11 @@
             "documented": true,
             "path": "./vehicleworkordercontroller.md",
             "relationships": {
-                "usesActions": [],
+                "usesActions": [
+                    "MapTransportRegistrationToVehicleWorkorderDefaults"
+                ],
                 "usesFormRequests": [
+                    "DestroyVehicleWorkorderMediaRequest",
                     "IndexVehicleWorkorderRequest",
                     "StoreVehicleWorkorderRequest",
                     "UpdateVehicleWorkorderRequest"
@@ -2528,8 +2657,10 @@
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.search",
                     "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
                     "vehicle-workorders.store",
                     "vehicle-workorders.update"
                 ],
@@ -2823,6 +2954,7 @@
                 "usesActions": [
                     "DeleteStandaloneHistoricalWeighmentAction",
                     "FetchRakeWeighmentFromRailwayReceipt",
+                    "RecalculateRakeWeighmentOverload",
                     "RecordManualRakeWeighment"
                 ],
                 "usesFormRequests": [],
@@ -3105,6 +3237,64 @@
                 "relatedRoutes": [],
                 "rendersPages": []
             }
+        },
+        "ControlPanelV2Controller": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "control-panel-v2.index",
+                    "control-panel-v2.wagon-timeline",
+                    "control-panel-v2.rake-replay",
+                    "control-panel-v2.show"
+                ],
+                "rendersPages": [
+                    "control-panel-v2/index",
+                    "control-panel-v2/siding"
+                ]
+            }
+        },
+        "ManagerBriefController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "manager-brief.index",
+                    "manager-brief.refresh"
+                ],
+                "rendersPages": [
+                    "manager-brief/index"
+                ]
+            }
+        },
+        "TransportWorkOrderRegistrationController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "DestroyTransportRegistrationMediaRequest",
+                    "DestroyTransportWorkOrderRegistrationRequest",
+                    "StoreTransportWorkOrderRegistrationRequest",
+                    "UpdateTransportWorkOrderRegistrationRequest"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.transport-registrations.create",
+                    "vehicle-workorders.transport-registrations.store",
+                    "vehicle-workorders.transport-registrations.edit",
+                    "vehicle-workorders.transport-registrations.update",
+                    "vehicle-workorders.transport-registrations.destroy-media",
+                    "vehicle-workorders.transport-registrations.destroy"
+                ],
+                "rendersPages": [
+                    "TransportWorkOrderRegistrations/Create",
+                    "TransportWorkOrderRegistrations/Edit"
+                ]
+            }
         }
     },
     "pages": {
@@ -3253,6 +3443,7 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.rr-upload-coverage",
                     "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
@@ -3260,6 +3451,10 @@
                     "api.v1.dashboard.rake-performance.rakes.index",
                     "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
+                    "api.v1.dashboard.loader-overload.loaders.index",
+                    "api.v1.dashboard.loader-overload.loaders.show",
+                    "api.v1.dashboard.loader-overload.operators.index",
+                    "api.v1.dashboard.loader-overload.operators.show",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
                     "invitations.show",
@@ -3283,8 +3478,15 @@
                     "dashboard",
                     "control-room.index",
                     "control-room.show",
+                    "control-panel-v2.index",
+                    "control-panel-v2.wagon-timeline",
+                    "control-panel-v2.rake-replay",
+                    "control-panel-v2.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
+                    "dashboard.road-trip-summary",
+                    "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -3318,6 +3520,8 @@
                     "sidings.monitor",
                     "sidings.quick-placement.show",
                     "sidings.quick-placement.store",
+                    "manager-brief.index",
+                    "manager-brief.refresh",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override",
@@ -3504,8 +3708,16 @@
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.create",
+                    "vehicle-workorders.transport-registrations.search",
+                    "vehicle-workorders.transport-registrations.store",
+                    "vehicle-workorders.transport-registrations.edit",
+                    "vehicle-workorders.transport-registrations.update",
+                    "vehicle-workorders.transport-registrations.destroy-media",
+                    "vehicle-workorders.transport-registrations.destroy",
                     "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
@@ -3534,6 +3746,7 @@
                     "reports.generate",
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -3582,7 +3795,10 @@
                 "relatedRoutes": [
                     "dashboard",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
+                    "dashboard.road-trip-summary",
+                    "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show"
                 ]
@@ -3950,6 +4166,7 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.rr-upload-coverage",
                     "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
@@ -3957,6 +4174,10 @@
                     "api.v1.dashboard.rake-performance.rakes.index",
                     "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
+                    "api.v1.dashboard.loader-overload.loaders.index",
+                    "api.v1.dashboard.loader-overload.loaders.show",
+                    "api.v1.dashboard.loader-overload.operators.index",
+                    "api.v1.dashboard.loader-overload.operators.show",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
                     "invitations.show",
@@ -3980,8 +4201,15 @@
                     "dashboard",
                     "control-room.index",
                     "control-room.show",
+                    "control-panel-v2.index",
+                    "control-panel-v2.wagon-timeline",
+                    "control-panel-v2.rake-replay",
+                    "control-panel-v2.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
+                    "dashboard.road-trip-summary",
+                    "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -4015,6 +4243,8 @@
                     "sidings.monitor",
                     "sidings.quick-placement.show",
                     "sidings.quick-placement.store",
+                    "manager-brief.index",
+                    "manager-brief.refresh",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override",
@@ -4201,8 +4431,16 @@
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.create",
+                    "vehicle-workorders.transport-registrations.search",
+                    "vehicle-workorders.transport-registrations.store",
+                    "vehicle-workorders.transport-registrations.edit",
+                    "vehicle-workorders.transport-registrations.update",
+                    "vehicle-workorders.transport-registrations.destroy-media",
+                    "vehicle-workorders.transport-registrations.destroy",
                     "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
@@ -4231,6 +4469,7 @@
                     "reports.generate",
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -4429,6 +4668,7 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.rr-upload-coverage",
                     "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
@@ -4436,6 +4676,10 @@
                     "api.v1.dashboard.rake-performance.rakes.index",
                     "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
+                    "api.v1.dashboard.loader-overload.loaders.index",
+                    "api.v1.dashboard.loader-overload.loaders.show",
+                    "api.v1.dashboard.loader-overload.operators.index",
+                    "api.v1.dashboard.loader-overload.operators.show",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
                     "invitations.show",
@@ -4459,8 +4703,15 @@
                     "dashboard",
                     "control-room.index",
                     "control-room.show",
+                    "control-panel-v2.index",
+                    "control-panel-v2.wagon-timeline",
+                    "control-panel-v2.rake-replay",
+                    "control-panel-v2.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
+                    "dashboard.road-trip-summary",
+                    "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -4494,6 +4745,8 @@
                     "sidings.monitor",
                     "sidings.quick-placement.show",
                     "sidings.quick-placement.store",
+                    "manager-brief.index",
+                    "manager-brief.refresh",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override",
@@ -4680,8 +4933,16 @@
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.create",
+                    "vehicle-workorders.transport-registrations.search",
+                    "vehicle-workorders.transport-registrations.store",
+                    "vehicle-workorders.transport-registrations.edit",
+                    "vehicle-workorders.transport-registrations.update",
+                    "vehicle-workorders.transport-registrations.destroy-media",
+                    "vehicle-workorders.transport-registrations.destroy",
                     "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
@@ -4710,6 +4971,7 @@
                     "reports.generate",
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -4894,6 +5156,7 @@
                     "api.v1.dashboard.executive",
                     "api.v1.dashboard.executive.custom-range",
                     "api.v1.dashboard.siding-overview",
+                    "api.v1.dashboard.rr-upload-coverage",
                     "api.v1.dashboard.siding-performance-metrics",
                     "api.v1.dashboard.executive-overview",
                     "api.v1.dashboard.operations",
@@ -4901,6 +5164,10 @@
                     "api.v1.dashboard.rake-performance.rakes.index",
                     "api.v1.dashboard.rake-performance.rakes.show",
                     "api.v1.dashboard.rake-performance",
+                    "api.v1.dashboard.loader-overload.loaders.index",
+                    "api.v1.dashboard.loader-overload.loaders.show",
+                    "api.v1.dashboard.loader-overload.operators.index",
+                    "api.v1.dashboard.loader-overload.operators.show",
                     "api.v1.dashboard.loader-overload",
                     "api.v1.dashboard.power-plant",
                     "invitations.show",
@@ -4924,8 +5191,15 @@
                     "dashboard",
                     "control-room.index",
                     "control-room.show",
+                    "control-panel-v2.index",
+                    "control-panel-v2.wagon-timeline",
+                    "control-panel-v2.rake-replay",
+                    "control-panel-v2.show",
                     "dashboard.executive-yesterday-data",
+                    "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
+                    "dashboard.road-trip-summary",
+                    "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
                     "dashboard.loader-overload.loaders.index",
@@ -4959,6 +5233,8 @@
                     "sidings.monitor",
                     "sidings.quick-placement.show",
                     "sidings.quick-placement.store",
+                    "manager-brief.index",
+                    "manager-brief.refresh",
                     "rake-loader.index",
                     "rake-loader.rakes.loading",
                     "rake-loader.rakes.override",
@@ -5145,8 +5421,16 @@
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.create",
+                    "vehicle-workorders.transport-registrations.search",
+                    "vehicle-workorders.transport-registrations.store",
+                    "vehicle-workorders.transport-registrations.edit",
+                    "vehicle-workorders.transport-registrations.update",
+                    "vehicle-workorders.transport-registrations.destroy-media",
+                    "vehicle-workorders.transport-registrations.destroy",
                     "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
                     "vehicle-workorders.store",
                     "vehicle-workorders.update",
                     "railway-receipts.index",
@@ -5175,6 +5459,7 @@
                     "reports.generate",
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -6229,8 +6514,10 @@
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.search",
                     "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
                     "vehicle-workorders.store",
                     "vehicle-workorders.update"
                 ]
@@ -6248,8 +6535,10 @@
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.search",
                     "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
                     "vehicle-workorders.store",
                     "vehicle-workorders.update"
                 ]
@@ -6487,6 +6776,7 @@
                 "relatedRoutes": [
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -6505,6 +6795,7 @@
                 "relatedRoutes": [
                     "weighments.index",
                     "weighments.show",
+                    "weighments.recalculate-overload",
                     "weighments.download",
                     "weighments.destroy",
                     "weighments.import",
@@ -6697,8 +6988,10 @@
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
+                    "vehicle-workorders.transport-registrations.search",
                     "vehicle-workorders.create",
                     "vehicle-workorders.edit",
+                    "vehicle-workorders.destroy-media",
                     "vehicle-workorders.store",
                     "vehicle-workorders.update"
                 ]
@@ -6999,6 +7292,115 @@
                 "relatedRoutes": [
                     "sidings.quick-placement.show",
                     "sidings.quick-placement.store"
+                ]
+            }
+        },
+        "TransportWorkOrderRegistrations/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "TransportWorkOrderRegistrationController"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.transport-registrations.create",
+                    "vehicle-workorders.transport-registrations.store",
+                    "vehicle-workorders.transport-registrations.edit",
+                    "vehicle-workorders.transport-registrations.update",
+                    "vehicle-workorders.transport-registrations.destroy-media",
+                    "vehicle-workorders.transport-registrations.destroy"
+                ]
+            }
+        },
+        "TransportWorkOrderRegistrations/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "TransportWorkOrderRegistrationController"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.transport-registrations.create",
+                    "vehicle-workorders.transport-registrations.store",
+                    "vehicle-workorders.transport-registrations.edit",
+                    "vehicle-workorders.transport-registrations.update",
+                    "vehicle-workorders.transport-registrations.destroy-media",
+                    "vehicle-workorders.transport-registrations.destroy"
+                ]
+            }
+        },
+        "VehicleWorkorders/TransportRegistrationsTable": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "control-panel-v2/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "ControlPanelV2Controller"
+                ],
+                "relatedRoutes": [
+                    "control-panel-v2.index",
+                    "control-panel-v2.wagon-timeline",
+                    "control-panel-v2.rake-replay",
+                    "control-panel-v2.show"
+                ]
+            }
+        },
+        "control-panel-v2/siding": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "ControlPanelV2Controller"
+                ],
+                "relatedRoutes": [
+                    "control-panel-v2.index",
+                    "control-panel-v2.wagon-timeline",
+                    "control-panel-v2.rake-replay",
+                    "control-panel-v2.show"
+                ]
+            }
+        },
+        "dashboard/date-wise-dispatch-section": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "dashboard/shared": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "manager-brief/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "../frontend/pages/manager-brief.md",
+            "relationships": {
+                "renderedBy": [
+                    "ManagerBriefController"
+                ],
+                "relatedRoutes": [
+                    "manager-brief.index",
+                    "manager-brief.refresh"
                 ]
             }
         }

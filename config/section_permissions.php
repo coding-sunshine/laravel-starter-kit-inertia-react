@@ -161,6 +161,11 @@ return [
             'actions' => ['view', 'generate'],
         ],
         [
+            'slug' => 'manager_brief',
+            'label' => 'Manager Brief',
+            'actions' => ['view', 'refresh'],
+        ],
+        [
             'slug' => 'changelog',
             'label' => 'Changelog',
             'actions' => ['view'],
@@ -452,6 +457,10 @@ return [
         'siding-pre-indent-reports.update' => 'sections.siding_pre_indent_reports.update',
         'siding-pre-indent-reports.destroy' => 'sections.siding_pre_indent_reports.delete',
 
+        // Manager Brief
+        'manager-brief.index' => 'sections.manager_brief.view',
+        'manager-brief.refresh' => 'sections.manager_brief.refresh',
+
         // Changelog / Help / Contact (public or feature-gated)
         'changelog.index' => 'sections.changelog.view',
         'help.index' => 'sections.help.view',
@@ -479,6 +488,7 @@ return [
         'billing' => 'sections.billing.view',
         'rakes' => 'sections.rakes.view',
         'rake_loader' => 'sections.rake_loader.view',
+        'manager_brief' => 'sections.manager_brief.view',
         'indents' => 'sections.indents.view',
         'railway_siding_record_data' => 'sections.railway_siding_record_data.view',
         'railway_siding_empty_weighment' => 'sections.railway_siding_empty_weighment.view',

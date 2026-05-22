@@ -185,7 +185,7 @@ export default function ControlPanelV2Siding({
 
             <main className="mx-auto max-w-[1600px] px-4 py-6">
                 <Link
-                    href="/control-panel-2"
+                    href="/control-panel"
                     className="mb-4 inline-flex items-center gap-1 text-sm text-sky-700 hover:underline"
                 >
                     <ArrowLeft className="h-4 w-4" aria-hidden />

@@ -102,5 +102,14 @@ All Actions:
 | SearchForCommandPaletteAction | N/A | ❌ |
 | StitchForceMajeureDisputesAction | N/A | ❌ |
 | PreviewRailwayReceiptImport | N/A | ❌ |
+| [BuildManagerBrief](../actions/manager-brief.md) | N/A | ✅ |
+| DeduplicateVehicleWorkordersByVehicleNoAction | N/A | ❌ |
+| ImportTransportWorkOrderRegistrationsFromExcelAction | N/A | ❌ |
+| ImportVehicleWorkordersFromVehiclesSpreadsheetAction | N/A | ❌ |
+| [CollectSignals](../actions/manager-brief.md) | N/A | ✅ |
+| [RankSignals](../actions/manager-brief.md) | N/A | ✅ |
+| MapTransportRegistrationToVehicleWorkorderDefaults | N/A | ❌ |
+| RecalculateRakeWeighmentOverload | N/A | ❌ |
+| SyncLoadriteEvent | N/A | ❌ |
 
 

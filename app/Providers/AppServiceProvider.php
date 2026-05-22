@@ -26,6 +26,8 @@ use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Observers\UserObserver;
 use App\Policies\ShareablePolicy;
+use App\Services\ForceMajeure\Contracts\DowntimePenaltyMatcherContract;
+use App\Services\ForceMajeure\DowntimePenaltyMatcher;
 use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
@@ -55,6 +57,8 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PrismService::class, fn (): PrismService => new PrismService);
 
         $this->app->singleton(PaymentGatewayManager::class);
+
+        $this->app->bind(DowntimePenaltyMatcherContract::class, DowntimePenaltyMatcher::class);
 
         config(['filament-impersonate.redirect_to' => '/dashboard']);
 
@@ -387,6 +391,10 @@ final class AppServiceProvider extends ServiceProvider
             'nav-penalty-analytics',
             'sidings-quick-placement-placed',
             'sidings-quick-placement-released',
+            'nav-manager-brief',
+            'manager-brief-action-card',
+            'manager-brief-widget-failed',
+            'manager-brief-refresh-now',
         ]);
     }
 
