@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class LoadingOverride extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'rake_id',
         'wagon_loading_id',
@@ -17,6 +20,7 @@ final class LoadingOverride extends Model
         'notes',
         'overload_mt',
         'estimated_penalty_at_time',
+        'supervisor_review_at',
     ];
 
     public function rake(): BelongsTo
@@ -39,6 +43,7 @@ final class LoadingOverride extends Model
         return [
             'overload_mt' => 'decimal:3',
             'estimated_penalty_at_time' => 'decimal:2',
+            'supervisor_review_at' => 'datetime',
         ];
     }
 }
