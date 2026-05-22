@@ -62,6 +62,18 @@ if (Illuminate\Support\Facades\Schema::hasTable('loadrite_settings')) {
     }
 }
 
+// Manager Brief: regenerate AI-powered manager briefings for all active sidings.
+// Guard the DB read: routes/console.php is evaluated on every artisan call,
+// including `migrate` on a fresh database and in-memory SQLite before migrations
+// run; without the guard, querying the sidings table throws "no such table".
+if (Illuminate\Support\Facades\Schema::hasTable('sidings')) {
+    Schedule::command('manager-brief:refresh')
+        ->hourly()
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->name('manager-brief-refresh');
+}
+
 // Backfill pcc_weight_mt on any wagons added since the last run so newly-placed
 // rakes get their carrying-capacity from existing fleet data, which the wagon
 // status resolver needs to compute Loaded / Overload / Underload.
