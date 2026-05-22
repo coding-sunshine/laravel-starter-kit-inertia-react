@@ -161,6 +161,11 @@ return [
             'actions' => ['view', 'generate'],
         ],
         [
+            'slug' => 'manager_brief',
+            'label' => 'Manager Brief',
+            'actions' => ['view', 'refresh'],
+        ],
+        [
             'slug' => 'changelog',
             'label' => 'Changelog',
             'actions' => ['view'],

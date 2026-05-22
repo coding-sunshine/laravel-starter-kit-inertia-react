@@ -35,6 +35,7 @@ use App\Http\Controllers\Indents\IndentsController;
 use App\Http\Controllers\InvitationAcceptController;
 use App\Http\Controllers\LoaderOperatorsController;
 use App\Http\Controllers\LoadersController;
+use App\Http\Controllers\ManagerBriefController;
 use App\Http\Controllers\Notifications\NotificationReadController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OpeningCoalStockController;
@@ -266,6 +267,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('sidings.quick-placement.show');
     Route::post('sidings/{siding}/quick-placement', [App\Http\Controllers\Sidings\QuickPlacementController::class, 'store'])
         ->name('sidings.quick-placement.store');
+
+    // Manager Brief
+    Route::get('manager-brief', [ManagerBriefController::class, 'index'])->name('manager-brief.index');
+    Route::post('manager-brief/refresh', [ManagerBriefController::class, 'refresh'])->name('manager-brief.refresh');
 
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rake-loader', [RakeLoaderController::class, 'index'])->name('rake-loader.index');
