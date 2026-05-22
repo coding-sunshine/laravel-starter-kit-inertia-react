@@ -120,5 +120,8 @@ All Controllers:
 | QuickPlacementController | N/A | ❌ |
 | SidingMonitorController | N/A | ❌ |
 | [RailwayReceiptImportPreviewController](./railwayreceiptimportpreviewcontroller.md) | N/A | ✅ |
+| ControlPanelV2Controller | N/A | ❌ |
+| ManagerBriefController | N/A | ❌ |
+| TransportWorkOrderRegistrationController | N/A | ❌ |
 
 

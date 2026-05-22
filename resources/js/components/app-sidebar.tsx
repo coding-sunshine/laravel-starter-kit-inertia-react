@@ -19,6 +19,7 @@ import { usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     BarChart3,
+    BriefcaseBusiness,
     ClipboardList,
     CreditCard,
     Factory,
@@ -50,6 +51,13 @@ const platformNavItems: NavItem[] = [
         icon: LayoutGrid,
         permission: 'sections.dashboard.view',
         dataPan: 'nav-dashboard',
+    },
+    {
+        title: 'Manager Brief',
+        href: '/manager-brief',
+        icon: BriefcaseBusiness,
+        permission: 'sections.manager_brief.view',
+        dataPan: 'nav-manager-brief',
     },
     {
         // The live monitor. Points at the rebuilt /control-panel-2 surface;
@@ -408,9 +416,11 @@ export function AppSidebar() {
 
         // --- Group 1: Overview ---
         const overviewItems: NavItem[] = visible(
-            [byTitle('Dashboard'), byTitle('Control Room')].filter(
-                Boolean,
-            ) as NavItem[],
+            [
+                byTitle('Dashboard'),
+                byTitle('Manager Brief'),
+                byTitle('Control Room'),
+            ].filter(Boolean) as NavItem[],
         );
 
         // --- Group 2: Loading Operations ---

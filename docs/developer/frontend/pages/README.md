@@ -156,5 +156,13 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | dashboard/SidingOverview | N/A | ❌ |
 | sidings/monitor | sidings.monitor | ❌ |
 | sidings/quick-placement | sidings.quick-placement.show, sidings.quick-placement.store | ❌ |
+| TransportWorkOrderRegistrations/Create | vehicle-workorders.transport-registrations.create, vehicle-workorders.transport-registrations.store | ❌ |
+| TransportWorkOrderRegistrations/Edit | vehicle-workorders.transport-registrations.create, vehicle-workorders.transport-registrations.store | ❌ |
+| VehicleWorkorders/TransportRegistrationsTable | N/A | ❌ |
+| control-panel-v2/index | control-panel-v2.index, control-panel-v2.wagon-timeline | ❌ |
+| control-panel-v2/siding | control-panel-v2.index, control-panel-v2.wagon-timeline | ❌ |
+| dashboard/date-wise-dispatch-section | N/A | ❌ |
+| dashboard/shared | N/A | ❌ |
+| [manager-brief/index](../frontend/pages/manager-brief.md) | manager-brief.index, manager-brief.refresh | ✅ |
 
 

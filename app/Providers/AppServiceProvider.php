@@ -391,6 +391,10 @@ final class AppServiceProvider extends ServiceProvider
             'nav-penalty-analytics',
             'sidings-quick-placement-placed',
             'sidings-quick-placement-released',
+            'nav-manager-brief',
+            'manager-brief-action-card',
+            'manager-brief-widget-failed',
+            'manager-brief-refresh-now',
         ]);
     }
 

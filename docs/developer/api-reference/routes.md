@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-05-20 (vehicle dispatch reconciliation report)
+**Last Updated**: 2026-05-22 (manager-brief routes + vehicle dispatch reconciliation report)
 
 ## Closure
 
@@ -70,6 +70,18 @@ This document lists all available routes in the application.
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
 | POST | `pan/events` | (Pan) | web |
+
+## ManagerBriefController
+
+**Controller**: `App\Http\Controllers\ManagerBriefController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `manager-brief` | manager-brief.index | web, auth, verified |
+| POST | `manager-brief/refresh` | manager-brief.refresh | web, auth, verified |
+
+- `index` — renders the Manager Brief Inertia page for the user's active siding. Requires `sections.manager_brief.view` permission.
+- `refresh` — queues a new AI brief generation (`manager-brief:refresh` Artisan command) and clears the brief cache for the siding. Throttled server-side to once per 60 s.
 
 ## BlogController
 
