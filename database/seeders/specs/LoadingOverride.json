@@ -51,6 +51,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "supervisor_review_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -67,6 +72,11 @@
             "model": "WagonLoading"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "supervisor_review_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
     "scenarios": []
 }
