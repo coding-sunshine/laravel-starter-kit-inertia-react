@@ -197,10 +197,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('control-room', [App\Http\Controllers\LiveMonitorController::class, 'index'])->name('control-room.index');
     Route::get('control-room/{rake}', [App\Http\Controllers\LiveMonitorController::class, 'show'])->name('control-room.show');
 
-    Route::get('control-panel-2', [App\Http\Controllers\ControlPanelV2Controller::class, 'index'])->name('control-panel-v2.index');
-    Route::get('control-panel-2/wagons/{wagon}/loadrite-events', [App\Http\Controllers\ControlPanelV2Controller::class, 'wagonTimeline'])->name('control-panel-v2.wagon-timeline');
-    Route::get('control-panel-2/rakes/{rake}/replay', [App\Http\Controllers\ControlPanelV2Controller::class, 'rakeReplay'])->name('control-panel-v2.rake-replay');
-    Route::get('control-panel-2/{siding}', [App\Http\Controllers\ControlPanelV2Controller::class, 'show'])->name('control-panel-v2.show');
+    Route::get('control-panel', [App\Http\Controllers\ControlPanelV2Controller::class, 'index'])->name('control-panel.index');
+    Route::get('control-panel/wagons/{wagon}/loadrite-events', [App\Http\Controllers\ControlPanelV2Controller::class, 'wagonTimeline'])->name('control-panel.wagon-timeline');
+    Route::get('control-panel/rakes/{rake}/replay', [App\Http\Controllers\ControlPanelV2Controller::class, 'rakeReplay'])->name('control-panel.rake-replay');
+    Route::get('control-panel/{siding}', [App\Http\Controllers\ControlPanelV2Controller::class, 'show'])->name('control-panel.show');
+
+    // Backwards-compat redirect for old /control-panel-2 bookmarks.
+    Route::redirect('control-panel-2', '/control-panel', 301);
+    Route::redirect('control-panel-2/{any}', '/control-panel/{any}', 301)->where('any', '.*');
     Route::get('dashboard/executive-yesterday-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'executiveYesterdayData'])
         ->name('dashboard.executive-yesterday-data');
     Route::get('dashboard/executive-overview/export', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'exportExecutiveOverview'])

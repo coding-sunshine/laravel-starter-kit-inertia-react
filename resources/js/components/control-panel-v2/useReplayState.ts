@@ -45,7 +45,7 @@ export interface UseReplayReturn extends ReplayState {
 }
 
 /**
- * Drives the time-scrubber replay on /control-panel-2/{siding}. Fetches all
+ * Drives the time-scrubber replay on /control-panel/{siding}. Fetches all
  * loadrite_events for the rake, then advances a virtual clock through the
  * window so consumers can derive the wagon state at any point in time.
  */
@@ -63,7 +63,7 @@ export function useReplayState(): UseReplayReturn {
         setState((s) => ({ ...s, isLoading: true, loadError: null }));
         try {
             const r = await fetch(
-                `/control-panel-2/rakes/${rakeId}/replay`,
+                `/control-panel/rakes/${rakeId}/replay`,
                 {
                     headers: { Accept: 'application/json' },
                     credentials: 'same-origin',

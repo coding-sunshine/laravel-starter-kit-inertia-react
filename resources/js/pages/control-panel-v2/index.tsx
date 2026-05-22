@@ -64,7 +64,7 @@ export default function ControlPanelV2Index({
     });
 
     const goToSiding = (sidingId: number) => {
-        router.visit(`/control-panel-2/${sidingId}`);
+        router.visit(`/control-panel/${sidingId}`);
     };
 
     return (

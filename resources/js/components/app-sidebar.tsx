@@ -60,11 +60,11 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-manager-brief',
     },
     {
-        // The live monitor. Points at the rebuilt /control-panel-2 surface;
-        // the legacy /control-room route still resolves for old bookmarks but
-        // is intentionally not linked in the nav.
+        // The live monitor. Points at the rebuilt /control-panel surface;
+        // the legacy /control-room and /control-panel-2 paths still resolve
+        // for old bookmarks but are intentionally not linked in the nav.
         title: 'Control Room',
-        href: '/control-panel-2',
+        href: '/control-panel',
         icon: Radio,
         permission: 'sections.live_monitor.view',
         dataPan: 'nav-control-room',

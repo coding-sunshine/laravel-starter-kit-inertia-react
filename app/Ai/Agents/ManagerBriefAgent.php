@@ -22,7 +22,7 @@ use Throwable;
  * Deep-link rubric injected into the prompt:
  *   - operator_anomaly  → /dashboard?section=loader-overload&operator={name}
  *   - force_majeure     → /disputes
- *   - demurrage_risk    → /control-panel-2
+ *   - demurrage_risk    → /control-panel
  *   - overload_exposure → /dashboard
  *   - scale_silence     → /dashboard
  *   - pending_override  → /dashboard
@@ -44,6 +44,7 @@ final readonly class ManagerBriefAgent
         '/manager-brief',
         '/disputes',
         '/penalties',
+        '/control-panel',
         '/control-panel-2',
         '/control-room',
         '/rake-loader',
@@ -134,7 +135,7 @@ final readonly class ManagerBriefAgent
         Deep-link rubric — use these paths as guidance:
         - operator_anomaly  → /dashboard?section=loader-overload&operator={operator_name_from_payload}
         - force_majeure     → /disputes
-        - demurrage_risk    → /control-panel-2
+        - demurrage_risk    → /control-panel
         - overload_exposure → /dashboard
         - scale_silence     → /dashboard
         - pending_override  → /dashboard

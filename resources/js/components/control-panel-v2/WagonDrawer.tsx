@@ -40,7 +40,7 @@ export function WagonDrawer({ wagon, onClose }: Props) {
         setLoading(true);
         setError(null);
         const controller = new AbortController();
-        fetch(`/control-panel-2/wagons/${wagon.wagon_id}/loadrite-events`, {
+        fetch(`/control-panel/wagons/${wagon.wagon_id}/loadrite-events`, {
             headers: { Accept: 'application/json' },
             signal: controller.signal,
             credentials: 'same-origin',
