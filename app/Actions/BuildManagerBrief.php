@@ -67,7 +67,7 @@ final readonly class BuildManagerBrief
             actions: $cards,
             generatedAt: $now,
             sidingId: $sidingId,
-            modelUsed: config('prism.defaults.fast_model', 'openai/gpt-4o-mini'),
+            modelUsed: config('prism.defaults.model', 'deepseek/deepseek-r1-0528:free'),
             aiStatus: 'ok',
             failedReason: null,
         );
