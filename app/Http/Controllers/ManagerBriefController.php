@@ -15,6 +15,7 @@ use App\Services\SidingContext;
 use App\Services\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -142,7 +143,16 @@ final class ManagerBriefController extends Controller
         ]);
     }
 
-    public function refresh(Request $request): JsonResponse
+    /**
+     * Force an AI brief refresh for the current siding.
+     *
+     * Returns either an Inertia redirect-back (so `router.post()` from the
+     * Inertia client gets a valid Inertia response and re-fetches the page
+     * props) or a plain JSON payload when the request was made with the
+     * non-Inertia `X-Requested-With: XMLHttpRequest` header (kept for any
+     * scripted callers / future API use).
+     */
+    public function refresh(Request $request): JsonResponse|RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -152,6 +162,10 @@ final class ManagerBriefController extends Controller
         $sidingId = $siding->id;
 
         $this->dispatchRefreshOnce($sidingId);
+
+        if ($request->header('X-Inertia')) {
+            return back()->with('manager_brief.refresh_dispatched', true);
+        }
 
         return response()->json(['dispatched' => true], 202);
     }
