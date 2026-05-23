@@ -6,15 +6,17 @@ namespace App\Actions\ManagerBrief;
 
 use App\DataTransferObjects\ManagerBrief\Signal;
 use App\Models\LoadingOverride;
+use App\Models\LoadriteAnomaly;
 use App\Models\LoadriteEvent;
 use App\Models\Rake;
 use App\Models\SidingPerformance;
 use App\Services\ForceMajeure\Contracts\DowntimePenaltyMatcherContract;
+use App\Support\Loadrite\TimestampSanity;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Collects all 11 operational signal types for a given siding and returns
+ * Collects all 12 operational signal types for a given siding and returns
  * them as an unsorted list of Signal DTOs ready for downstream ranking.
  *
  * Signal types emitted (operational):
@@ -31,6 +33,9 @@ use Illuminate\Support\Facades\DB;
  *   9. penalty_trajectory         – penalty Rs growing month-on-month for ≥ 2 consecutive months
  *  10. demurrage_turnaround_risk  – avg rake turnaround exceeds 13 h over last 30 days
  *  11. pcc_drift                  – wagon type whose median loaded_quantity_mt drifts ≥ 0.5 MT from PCC
+ *
+ * Signal types emitted (data quality):
+ *  12. data_quality_anomaly       – open anomaly count > 5 (unmappable wagon types, bogus timestamps, etc.)
  */
 final readonly class CollectSignals
 {
@@ -67,6 +72,7 @@ final readonly class CollectSignals
             $this->collectPenaltyTrajectory($sidingId),
             $this->collectDemurrageTurnaroundRisk($sidingId),
             $this->collectPccDrift($sidingId),
+            $this->collectDataQualityAnomaly($sidingId),
         );
     }
 
@@ -764,28 +770,17 @@ final readonly class CollectSignals
         //   - delta > 14 days (almost certainly a stale-timestamp bug, not a
         //     real loading event — caps the influence of bonkers rows like
         //     placement=2052-10-31 we have seen on live).
-        $nowTs = CarbonImmutable::now()->getTimestamp();
-        $maxValidSeconds = 14 * 24 * 3600;
         $hours = [];
 
         foreach ($rows as $row) {
             $start = CarbonImmutable::parse((string) $row->placement_time);
             $end = CarbonImmutable::parse((string) $row->loading_end_time);
-            $startTs = $start->getTimestamp();
-            $endTs = $end->getTimestamp();
 
-            if ($startTs > $nowTs) {
-                continue;
-            }
-            if ($endTs < $startTs) {
-                continue;
-            }
-            $deltaSeconds = $endTs - $startTs;
-            if ($deltaSeconds > $maxValidSeconds) {
+            if (! TimestampSanity::isReasonableTurnaround($start, $end)) {
                 continue;
             }
 
-            $hours[] = $deltaSeconds / 3600.0;
+            $hours[] = ($end->getTimestamp() - $start->getTimestamp()) / 3600.0;
         }
 
         $rakesObserved = count($hours);
@@ -941,5 +936,55 @@ final readonly class CollectSignals
         }
 
         return $signals;
+    }
+
+    /**
+     * Signal 12: data_quality_anomaly (data quality)
+     *
+     * Emits one signal per siding when the open anomaly count exceeds 5.
+     * These are records where Loadrite auto-correction failed (unmappable wagon
+     * types, bogus timestamps, etc.) and a manager needs to review them.
+     *
+     * Severity: medium (≤ 20 open), high (> 20 open).
+     * rs_at_stake: 0 (compliance signal, no direct monetary impact).
+     *
+     * @return list<Signal>
+     */
+    private function collectDataQualityAnomaly(int $sidingId): array
+    {
+        $openCount = LoadriteAnomaly::query()
+            ->where('siding_id', $sidingId)
+            ->where('status', 'open')
+            ->count();
+
+        if ($openCount <= 5) {
+            return [];
+        }
+
+        $severity = $openCount > 20 ? 'high' : 'medium';
+
+        /** @var array<string, int> $byKind */
+        $byKind = LoadriteAnomaly::query()
+            ->where('siding_id', $sidingId)
+            ->where('status', 'open')
+            ->selectRaw('kind, COUNT(*) as cnt')
+            ->groupBy('kind')
+            ->get()
+            ->mapWithKeys(static fn ($row): array => [$row->kind => (int) $row->cnt])
+            ->all();
+
+        return [
+            new Signal(
+                type: 'data_quality_anomaly',
+                severity: $severity,
+                rsAtStake: 0.0,
+                recencyMinutes: 60,
+                actionability: 0.5,
+                payload: [
+                    'open_count' => $openCount,
+                    'by_kind' => $byKind,
+                ],
+            ),
+        ];
     }
 }

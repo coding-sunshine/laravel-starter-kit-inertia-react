@@ -31,6 +31,7 @@ use Throwable;
  *   - penalty_trajectory        → /dashboard?section=penalties-daily
  *   - demurrage_turnaround_risk → /dashboard?section=rake-operations
  *   - pcc_drift                 → /master-data/sidings
+ *   - data_quality_anomaly      → /admin/loadrite-anomalies
  */
 final readonly class ManagerBriefAgent
 {
@@ -56,6 +57,7 @@ final readonly class ManagerBriefAgent
         '/sidings',
         '/loading-overrides',
         '/master-data',
+        '/admin',
     ];
 
     /**
@@ -153,6 +155,7 @@ final readonly class ManagerBriefAgent
         - penalty_trajectory        → /dashboard?section=penalties-daily
         - demurrage_turnaround_risk → /dashboard?section=rake-operations
         - pcc_drift                 → /master-data/sidings
+        - data_quality_anomaly      → /admin/loadrite-anomalies
 
         Forecast signal types (operator_recurring_risk, penalty_trajectory, demurrage_turnaround_risk, pcc_drift) project future risk from historical patterns — narrate with hedges like "projected", "trending", or "if pattern continues".
 

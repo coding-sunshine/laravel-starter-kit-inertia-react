@@ -6,10 +6,12 @@ namespace App\Actions;
 
 use App\Events\LoadriteEventBroadcast;
 use App\Events\WagonWeightUpdated;
+use App\Models\LoadriteAnomaly;
 use App\Models\Rake;
 use App\Models\WagonLoading;
 use App\Services\Loadrite\LoadriteUserDataParser;
 use App\Services\Loadrite\WagonCapacityResolver;
+use App\Support\Loadrite\TimestampSanity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -72,6 +74,14 @@ final readonly class SyncLoadriteEvent
         if (! $inserted) {
             return false; // Already processed.
         }
+
+        // Record data-quality anomalies for events where auto-correction failed.
+        $loadriteEventId = (int) DB::table('loadrite_events')
+            ->where('event_id', $eventId)
+            ->value('id');
+
+        $eventTime = isset($event['Time']) ? Carbon::parse($event['Time']) : null;
+        $this->recordAnomalyIfNeeded($event, $sidingId, $loadriteEventId ?: null, $parsed, $eventTime);
 
         // Broadcast for /control-panel-2 per-event animations (bucket dump,
         // bulldozer slide). Legacy /control-room ignores this channel.
@@ -437,6 +447,82 @@ final readonly class SyncLoadriteEvent
         }
 
         return $effectivePcc;
+    }
+
+    /**
+     * Persist one LoadriteAnomaly row for each detected data-quality issue in
+     * the parsed event. Idempotent — uses firstOrCreate to avoid duplicates on
+     * re-ingest.
+     *
+     * Issues checked (in order):
+     *   1. wagon_type_unmappable — the raw UserData type field was non-empty but
+     *      the normaliser could not match it to any catalog entry.
+     *   2. bogus_timestamp — event_time is in the future (TimestampSanity rejects).
+     *
+     * Note: operator_unmappable is not emitted here because
+     * OperatorNameCanonicaliser always returns a value for non-empty input
+     * (it falls back to the title-cased input for genuine new operators).
+     *
+     * @param  array<string, mixed>  $event  raw Loadrite payload
+     * @param  array{rake_number: ?string, wagon_number: ?string, wagon_type: ?string, operator: ?string}  $parsed
+     */
+    private function recordAnomalyIfNeeded(
+        array $event,
+        int $sidingId,
+        ?int $loadriteEventId,
+        array $parsed,
+        ?Carbon $eventTime,
+    ): void {
+        // 1. wagon_type_unmappable: normalised wagon_type is null but the raw
+        //    input was non-empty (operator keyed something unrecognisable).
+        $rawType = $this->stringField($event, 'UserData3')
+            ?? $this->stringField($event, 'UserData4')
+            ?? $this->stringField($event, 'UserData2');
+
+        if ($parsed['wagon_type'] === null && $rawType !== null && $rawType !== '') {
+            try {
+                LoadriteAnomaly::firstOrCreate(
+                    [
+                        'siding_id' => $sidingId,
+                        'loadrite_event_id' => $loadriteEventId,
+                        'kind' => 'wagon_type_unmappable',
+                        'raw_value' => $rawType,
+                    ],
+                    [
+                        'context' => ['event_id' => $this->stringField($event, 'Id')],
+                        'status' => 'open',
+                    ],
+                );
+            } catch (Throwable $e) {
+                Log::warning('loadrite: failed to record wagon_type_unmappable anomaly', [
+                    'error' => $e->getMessage(),
+                    'siding_id' => $sidingId,
+                ]);
+            }
+        }
+
+        // 2. bogus_timestamp: event_time is in the future.
+        if ($eventTime !== null && ! TimestampSanity::isReasonablePast($eventTime)) {
+            try {
+                LoadriteAnomaly::firstOrCreate(
+                    [
+                        'siding_id' => $sidingId,
+                        'loadrite_event_id' => $loadriteEventId,
+                        'kind' => 'bogus_timestamp',
+                        'raw_value' => $eventTime->toDateTimeString(),
+                    ],
+                    [
+                        'context' => ['event_id' => $this->stringField($event, 'Id')],
+                        'status' => 'open',
+                    ],
+                );
+            } catch (Throwable $e) {
+                Log::warning('loadrite: failed to record bogus_timestamp anomaly', [
+                    'error' => $e->getMessage(),
+                    'siding_id' => $sidingId,
+                ]);
+            }
+        }
     }
 
     private function resolveWagonLoading(int $sidingId, int $sequence, array $event): ?WagonLoading

@@ -24,6 +24,7 @@ namespace App\DataTransferObjects\ManagerBrief;
  *   - 'penalty_trajectory'         – month-on-month penalty Rs growing consecutively (forecast)
  *   - 'demurrage_turnaround_risk'  – average rake turnaround exceeding SLA (forecast)
  *   - 'pcc_drift'                  – wagon-type median load deviating from PCC (forecast)
+ *   - 'data_quality_anomaly'       – open Loadrite anomaly count exceeds threshold (data quality)
  *
  * Allowed `severity` values: 'critical', 'high', 'medium', 'low'.
  */
