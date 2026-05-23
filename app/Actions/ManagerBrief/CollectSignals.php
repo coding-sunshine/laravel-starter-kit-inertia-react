@@ -758,23 +758,49 @@ final readonly class CollectSignals
             return [];
         }
 
-        $totalHours = 0.0;
+        // Build per-rake turnaround hours, filtering data-quality outliers:
+        //   - end before start (corrupt order)
+        //   - placement_time in the future
+        //   - delta > 14 days (almost certainly a stale-timestamp bug, not a
+        //     real loading event — caps the influence of bonkers rows like
+        //     placement=2052-10-31 we have seen on live).
+        $nowTs = CarbonImmutable::now()->getTimestamp();
+        $maxValidSeconds = 14 * 24 * 3600;
+        $hours = [];
+
         foreach ($rows as $row) {
             $start = CarbonImmutable::parse((string) $row->placement_time);
             $end = CarbonImmutable::parse((string) $row->loading_end_time);
-            // Use raw unix-timestamp delta. Carbon's diffInMinutes/diffInHours
-            // signatures changed across versions and have returned ratios in
-            // unexpected units, producing nonsense Rs estimates. Seconds
-            // arithmetic is unambiguous.
-            $seconds = abs($end->getTimestamp() - $start->getTimestamp());
-            $totalHours += $seconds / 3600.0;
+            $startTs = $start->getTimestamp();
+            $endTs = $end->getTimestamp();
+
+            if ($startTs > $nowTs) {
+                continue;
+            }
+            if ($endTs < $startTs) {
+                continue;
+            }
+            $deltaSeconds = $endTs - $startTs;
+            if ($deltaSeconds > $maxValidSeconds) {
+                continue;
+            }
+
+            $hours[] = $deltaSeconds / 3600.0;
         }
 
-        $rakesObserved = $rows->count();
-        $avgTurnaroundHours = $totalHours / $rakesObserved;
+        $rakesObserved = count($hours);
+        if ($rakesObserved === 0) {
+            return [];
+        }
 
+        // Median, not mean — single outliers should not drag the metric.
+        sort($hours);
+        $mid = (int) floor($rakesObserved / 2);
+        $medianTurnaroundHours = ($rakesObserved % 2 === 0)
+            ? ($hours[$mid - 1] + $hours[$mid]) / 2.0
+            : $hours[$mid];
         $slaHours = 12.0;
-        $overrunHours = $avgTurnaroundHours - $slaHours;
+        $overrunHours = $medianTurnaroundHours - $slaHours;
 
         if ($overrunHours <= 1.0) {
             return [];
@@ -797,7 +823,7 @@ final readonly class CollectSignals
                 recencyMinutes: 60,
                 actionability: 0.7,
                 payload: [
-                    'avg_turnaround_hours' => round($avgTurnaroundHours, 2),
+                    'median_turnaround_hours' => round($medianTurnaroundHours, 2),
                     'sla_hours' => $slaHours,
                     'overrun_hours' => round($overrunHours, 2),
                     'rakes_observed' => $rakesObserved,

@@ -682,7 +682,7 @@ it('emits demurrage turnaround risk signal when avg turnaround exceeds SLA', fun
     expect($signal->severity)->toBe('high');   // overrun 6 h > 4 h → high
     expect($signal->actionability)->toBe(0.7);
     expect($signal->recencyMinutes)->toBe(60);
-    expect($signal->payload['avg_turnaround_hours'])->toBeGreaterThan(12.0);
+    expect($signal->payload['median_turnaround_hours'])->toBeGreaterThan(12.0);
     expect($signal->payload['sla_hours'])->toBe(12.0);
     expect($signal->payload['overrun_hours'])->toBeGreaterThan(0.0);
     expect($signal->payload['rakes_observed'])->toBeGreaterThanOrEqual(1);
