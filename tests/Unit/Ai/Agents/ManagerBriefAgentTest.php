@@ -232,3 +232,59 @@ it('clamps output to 5 cards even if model returns more', function (): void {
     expect($result[0]->title)->toBe('Card 1');
     expect($result[4]->title)->toBe('Card 5');
 });
+
+it('instructs prompt to narrate forecast signals with projected language', function (): void {
+    $signals = [
+        makeAgentSignal([
+            'type' => 'operator_recurring_risk',
+            'severity' => 'high',
+            'rs_at_stake' => 295000.0,
+            'recency_minutes' => 60,
+            'actionability' => 0.6,
+            'payload' => [
+                'operator_name' => 'Test Operator',
+                'overload_rate_pct' => 8.5,
+                'wagons_observed' => 40,
+                'avg_overload_mt' => 2.1,
+                'projected_next_rake_rs' => 10500.0,
+            ],
+        ]),
+    ];
+
+    $responseCard = makeCardArray([
+        'severity' => 'high',
+        'title' => 'Operator recurring overload risk',
+        'why' => 'Projected overload pattern trending upward if pattern continues.',
+        'rs_at_stake' => 10500.0,
+        'deep_link' => '/dashboard?section=loader-overload&operator=Test+Operator',
+    ]);
+
+    $fake = Prism::fake([makeFakeTextResponse(json_encode([$responseCard]))]);
+
+    $agent = new ManagerBriefAgent(new PrismService);
+    $agent->synthesise($signals);
+
+    $fake->assertCallCount(1);
+
+    $fake->assertRequest(function (array $requests): void {
+        $prompt = $requests[0]->prompt();
+
+        // Prompt must name the forecast signal type.
+        expect($prompt)->toContain('operator_recurring_risk');
+
+        // Prompt must instruct the model to use hedge language for forecast signals.
+        $hedgeWords = ['projected', 'trending', 'if pattern continues'];
+        $hasHedge = false;
+
+        foreach ($hedgeWords as $word) {
+            if (str_contains($prompt, $word)) {
+                $hasHedge = true;
+                break;
+            }
+        }
+
+        expect($hasHedge)->toBeTrue(
+            'Expected the prompt to contain a hedge word like "projected", "trending", or "if pattern continues"'
+        );
+    });
+});

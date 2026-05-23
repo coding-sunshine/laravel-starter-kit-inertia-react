@@ -14,17 +14,23 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Collects all 7 operational signal types for a given siding and returns
+ * Collects all 11 operational signal types for a given siding and returns
  * them as an unsorted list of Signal DTOs ready for downstream ranking.
  *
- * Signal types emitted:
- *   1. overload_exposure   – wagons currently being loaded over PCC capacity
- *   2. operator_anomaly    – loader whose this-week overload rate ≥ 2× their 30-day baseline
- *   3. force_majeure       – DEM reconciliation with a qualifying downtime overlap
- *   4. scale_silence       – Loadrite scale silent for > 2 h while an active rake is present
- *   5. pending_override    – oldest unreviewed loading override has been waiting > 2 h
- *   6. underloading_trend  – closing_stock_mt week-over-week drop > 10 %
- *   7. demurrage_risk      – rake within 3 h of the 12-hour SLA from placement_time
+ * Signal types emitted (operational):
+ *   1. overload_exposure          – wagons currently being loaded over PCC capacity
+ *   2. operator_anomaly           – loader whose this-week overload rate ≥ 2× their 30-day baseline
+ *   3. force_majeure              – DEM reconciliation with a qualifying downtime overlap
+ *   4. scale_silence              – Loadrite scale silent for > 2 h while an active rake is present
+ *   5. pending_override           – oldest unreviewed loading override has been waiting > 2 h
+ *   6. underloading_trend         – closing_stock_mt week-over-week drop > 10 %
+ *   7. demurrage_risk             – rake within 3 h of the 12-hour SLA from placement_time
+ *
+ * Signal types emitted (forecast — mine historical data):
+ *   8. operator_recurring_risk    – operator with ≥ 10 wagons and persistent overload rate ≥ 2 %
+ *   9. penalty_trajectory         – penalty Rs growing month-on-month for ≥ 2 consecutive months
+ *  10. demurrage_turnaround_risk  – avg rake turnaround exceeds 13 h over last 30 days
+ *  11. pcc_drift                  – wagon type whose median loaded_quantity_mt drifts ≥ 0.5 MT from PCC
  */
 final readonly class CollectSignals
 {
@@ -57,6 +63,10 @@ final readonly class CollectSignals
             $this->collectPendingOverride($sidingId),
             $this->collectUnderloadingTrend($sidingId),
             $this->collectDemurrageRisk($sidingId),
+            $this->collectOperatorRecurringRisk($sidingId),
+            $this->collectPenaltyTrajectory($sidingId),
+            $this->collectDemurrageTurnaroundRisk($sidingId),
+            $this->collectPccDrift($sidingId),
         );
     }
 
@@ -544,6 +554,346 @@ final readonly class CollectSignals
                     'rake_number' => (string) $rake->rake_number,
                     'hours_remaining' => max(0, (float) round($hoursToDeadline, 2)),
                     'hours_overdue' => (float) $hoursOverdue,
+                ],
+            );
+        }
+
+        return $signals;
+    }
+
+    /**
+     * Signal 8: operator_recurring_risk (forecast)
+     *
+     * For each operator at the siding with ≥ 10 wagons loaded in the last 30 days
+     * and an overload rate (wagons over PCC / total wagons) ≥ 2 %, emit ONE signal.
+     * Severity: critical ≥ 10 %, high ≥ 5 %, medium ≥ 2 %.
+     *
+     * @return list<Signal>
+     */
+    private function collectOperatorRecurringRisk(int $sidingId): array
+    {
+        $rsPerMt = (float) config('penalties.overload.rs_per_mt', 1000);
+
+        $cutoff = CarbonImmutable::now()->subDays(30)->toDateString();
+
+        $driver = DB::getDriverName();
+        $dateCast = $driver === 'pgsql' ? '::date' : '';
+
+        $rows = DB::table('wagon_loading as wl')
+            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
+            ->where('r.siding_id', $sidingId)
+            ->whereNotNull('wl.loader_operator_name')
+            ->where('wl.loader_operator_name', '!=', '')
+            ->whereNotNull('wl.loaded_quantity_mt')
+            ->whereNotNull('w.pcc_weight_mt')
+            ->where(DB::raw("DATE(r.loading_date{$dateCast})"), '>=', $cutoff)
+            ->selectRaw(
+                'TRIM(wl.loader_operator_name) as operator_name,'
+                .' COUNT(*) as total_wagons,'
+                .' SUM(CASE WHEN wl.loaded_quantity_mt > w.pcc_weight_mt'
+                .'     AND (wl.weight_source IS NULL OR wl.weight_source != \'weighbridge\')'
+                .'     THEN 1 ELSE 0 END) as overloaded_wagons,'
+                .' SUM(CASE WHEN wl.loaded_quantity_mt > w.pcc_weight_mt'
+                .'     AND (wl.weight_source IS NULL OR wl.weight_source != \'weighbridge\')'
+                .'     THEN wl.loaded_quantity_mt - w.pcc_weight_mt ELSE 0 END) as overload_mt_sum,'
+                .' SUM(CASE WHEN wl.loaded_quantity_mt > w.pcc_weight_mt'
+                .'     AND (wl.weight_source IS NULL OR wl.weight_source != \'weighbridge\')'
+                .'     THEN 1 ELSE 0 END) as overloaded_count'
+            )
+            ->groupByRaw('TRIM(wl.loader_operator_name)')
+            ->get();
+
+        $signals = [];
+
+        foreach ($rows as $row) {
+            $totalWagons = (int) $row->total_wagons;
+
+            if ($totalWagons < 10) {
+                continue;
+            }
+
+            $overloadedCount = (int) $row->overloaded_wagons;
+            $overloadRate = $totalWagons > 0 ? ($overloadedCount / $totalWagons) : 0.0;
+
+            if ($overloadRate < 0.02) {
+                continue;
+            }
+
+            $severity = match (true) {
+                $overloadRate >= 0.10 => 'critical',
+                $overloadRate >= 0.05 => 'high',
+                default => 'medium',
+            };
+
+            $avgOverloadMt = $overloadedCount > 0
+                ? (float) $row->overload_mt_sum / $overloadedCount
+                : 0.0;
+
+            // projected_next_rake_rs: rate × 59 wagons/rake × avg_overload_mt × rs_per_mt
+            $projectedNextRakeRs = round($overloadRate * 59.0 * $avgOverloadMt * $rsPerMt, 2);
+
+            $signals[] = new Signal(
+                type: 'operator_recurring_risk',
+                severity: $severity,
+                rsAtStake: $projectedNextRakeRs,
+                recencyMinutes: 60,
+                actionability: 0.6,
+                payload: [
+                    'operator_name' => (string) $row->operator_name,
+                    'overload_rate_pct' => round($overloadRate * 100.0, 2),
+                    'wagons_observed' => $totalWagons,
+                    'avg_overload_mt' => round($avgOverloadMt, 3),
+                    'projected_next_rake_rs' => $projectedNextRakeRs,
+                ],
+            );
+        }
+
+        return $signals;
+    }
+
+    /**
+     * Signal 9: penalty_trajectory (forecast)
+     *
+     * Computes siding-level penalty Rs for each of the last 3 calendar months
+     * from SidingPerformance.total_penalty_amount. Emits one signal when
+     * month-on-month growth ≥ 10 % and the trend spans ≥ 2 consecutive months.
+     * Severity: high if growth ≥ 20 % AND 2+ months; medium if 10–20 %.
+     *
+     * @return list<Signal>
+     */
+    private function collectPenaltyTrajectory(int $sidingId): array
+    {
+        $today = CarbonImmutable::today();
+
+        // Build 3 calendar-month windows: current, prior, two-months-ago.
+        $months = [];
+
+        for ($offset = 0; $offset <= 2; $offset++) {
+            $monthStart = $today->subMonths($offset)->startOfMonth()->toDateString();
+            $monthEnd = $today->subMonths($offset)->endOfMonth()->toDateString();
+
+            $total = (float) SidingPerformance::query()
+                ->where('siding_id', $sidingId)
+                ->whereDate('as_of_date', '>=', $monthStart)
+                ->whereDate('as_of_date', '<=', $monthEnd)
+                ->sum('total_penalty_amount');
+
+            $months[] = $total;
+        }
+
+        // $months[0] = current month, $months[1] = prior month, $months[2] = two months ago.
+        [$currentRs, $priorRs, $twoMonthsAgoRs] = $months;
+
+        if ($priorRs <= 0.0) {
+            return [];
+        }
+
+        $momGrowth = ($currentRs - $priorRs) / $priorRs;
+
+        if ($momGrowth < 0.10) {
+            return [];
+        }
+
+        // Check for consecutive growth: current > prior AND prior > two-months-ago.
+        $monthsOfGrowth = 1;
+
+        if ($twoMonthsAgoRs > 0.0 && $priorRs > $twoMonthsAgoRs) {
+            $monthsOfGrowth = 2;
+        }
+
+        if ($monthsOfGrowth < 2) {
+            return [];
+        }
+
+        $severity = ($momGrowth >= 0.20 && $monthsOfGrowth >= 2) ? 'high' : 'medium';
+        $rsAtStake = round($currentRs * $momGrowth, 2);
+
+        return [
+            new Signal(
+                type: 'penalty_trajectory',
+                severity: $severity,
+                rsAtStake: $rsAtStake,
+                recencyMinutes: 60,
+                actionability: 0.5,
+                payload: [
+                    'current_month_rs' => round($currentRs, 2),
+                    'previous_month_rs' => round($priorRs, 2),
+                    'growth_pct' => round($momGrowth * 100.0, 1),
+                    'months_of_growth' => $monthsOfGrowth,
+                ],
+            ),
+        ];
+    }
+
+    /**
+     * Signal 10: demurrage_turnaround_risk (forecast)
+     *
+     * Computes average (loading_end_time − placement_time) in hours across rakes
+     * at the siding in the last 30 days where both timestamps are non-null and
+     * state != 'cancelled'. Emits when avg > 13 h (SLA = 12 h, overrun > 1 h).
+     * Severity: high if overrun > 4 h, medium if > 2 h, low if > 1 h.
+     *
+     * @return list<Signal>
+     */
+    private function collectDemurrageTurnaroundRisk(int $sidingId): array
+    {
+        $rsPerHour = (float) config('penalties.demurrage.rs_per_hour', 5000);
+
+        $cutoff = CarbonImmutable::now()->subDays(30)->toDateTimeString();
+
+        $driver = DB::getDriverName();
+
+        // Compute average turnaround in hours; use portable TIMESTAMPDIFF or julianday.
+        if ($driver === 'sqlite') {
+            $diffHoursExpr = '(JULIANDAY(loading_end_time) - JULIANDAY(placement_time)) * 24';
+        } else {
+            $diffHoursExpr = 'TIMESTAMPDIFF(SECOND, placement_time, loading_end_time) / 3600.0';
+        }
+
+        $result = DB::table('rakes')
+            ->where('siding_id', $sidingId)
+            ->where('state', '!=', 'cancelled')
+            ->whereNotNull('placement_time')
+            ->whereNotNull('loading_end_time')
+            ->where('placement_time', '>=', $cutoff)
+            ->selectRaw("AVG({$diffHoursExpr}) as avg_hours, COUNT(*) as rakes_count")
+            ->first();
+
+        if ($result === null || (int) $result->rakes_count === 0) {
+            return [];
+        }
+
+        $avgTurnaroundHours = (float) $result->avg_hours;
+        $rakesObserved = (int) $result->rakes_count;
+
+        $slaHours = 12.0;
+        $overrunHours = $avgTurnaroundHours - $slaHours;
+
+        if ($overrunHours <= 1.0) {
+            return [];
+        }
+
+        $severity = match (true) {
+            $overrunHours > 4.0 => 'high',
+            $overrunHours > 2.0 => 'medium',
+            default => 'low',
+        };
+
+        // rs_at_stake = avg_overrun_hours × rs_per_hour × rakes_per_month (observed cadence)
+        $rsAtStake = round($overrunHours * $rsPerHour * $rakesObserved, 2);
+
+        return [
+            new Signal(
+                type: 'demurrage_turnaround_risk',
+                severity: $severity,
+                rsAtStake: $rsAtStake,
+                recencyMinutes: 60,
+                actionability: 0.7,
+                payload: [
+                    'avg_turnaround_hours' => round($avgTurnaroundHours, 2),
+                    'sla_hours' => $slaHours,
+                    'overrun_hours' => round($overrunHours, 2),
+                    'rakes_observed' => $rakesObserved,
+                ],
+            ),
+        ];
+    }
+
+    /**
+     * Signal 11: pcc_drift (forecast)
+     *
+     * For each wagon type at the siding, computes median (loaded_quantity_mt − pcc_weight_mt)
+     * over the last 30 days. Only considers types with ≥ 5 loaded wagons; skips
+     * weighbridge-sourced rows. Emits one signal per wagon type whose absolute
+     * median drift ≥ 0.5 MT.
+     * Severity: medium if |drift| ≥ 1.5 MT, low otherwise.
+     *
+     * @return list<Signal>
+     */
+    private function collectPccDrift(int $sidingId): array
+    {
+        $rsPerMt = (float) config('penalties.overload.rs_per_mt', 1000);
+
+        $cutoff = CarbonImmutable::now()->subDays(30)->toDateString();
+        $driver = DB::getDriverName();
+        $dateCast = $driver === 'pgsql' ? '::date' : '';
+
+        // Pull all qualifying wagon-loading rows for the window.
+        $rows = DB::table('wagon_loading as wl')
+            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
+            ->where('r.siding_id', $sidingId)
+            ->whereNotNull('wl.loaded_quantity_mt')
+            ->whereNotNull('w.pcc_weight_mt')
+            ->where('w.pcc_weight_mt', '>', 0)
+            ->where(function ($q): void {
+                $q->whereNull('wl.weight_source')
+                    ->orWhere('wl.weight_source', '!=', 'weighbridge');
+            })
+            ->where(DB::raw("DATE(r.loading_date{$dateCast})"), '>=', $cutoff)
+            ->selectRaw(
+                'w.wagon_type,'
+                .' (wl.loaded_quantity_mt - w.pcc_weight_mt) as drift_mt'
+            )
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        // Group drifts by wagon type.
+        $byType = [];
+        $totalWagons = $rows->count();
+
+        foreach ($rows as $row) {
+            $type = (string) ($row->wagon_type ?? 'UNKNOWN');
+            $byType[$type][] = (float) $row->drift_mt;
+        }
+
+        $signals = [];
+
+        foreach ($byType as $wagonType => $drifts) {
+            $wagonsInType = count($drifts);
+
+            if ($wagonsInType < 5) {
+                continue;
+            }
+
+            // Compute median drift.
+            sort($drifts);
+            $midIndex = (int) floor($wagonsInType / 2);
+            $medianDrift = ($wagonsInType % 2 === 0)
+                ? ($drifts[$midIndex - 1] + $drifts[$midIndex]) / 2.0
+                : $drifts[$midIndex];
+
+            if (abs($medianDrift) < 0.5) {
+                continue;
+            }
+
+            $severity = abs($medianDrift) >= 1.5 ? 'medium' : 'low';
+
+            $fractionOfFleet = $totalWagons > 0 ? ($wagonsInType / $totalWagons) : 0.0;
+
+            // rakes_per_month = observed rakes in window (30 days / 30 = 1.0 factor → same count).
+            $rakesPerMonth = max(1, (int) round($totalWagons / 59.0));
+
+            $rsAtStake = round(
+                abs($medianDrift) * $rakesPerMonth * 59.0 * $rsPerMt * $fractionOfFleet,
+                2
+            );
+
+            $signals[] = new Signal(
+                type: 'pcc_drift',
+                severity: $severity,
+                rsAtStake: $rsAtStake,
+                recencyMinutes: 60,
+                actionability: 0.4,
+                payload: [
+                    'wagon_type' => $wagonType,
+                    'median_drift_mt' => round($medianDrift, 3),
+                    'wagons_observed' => $wagonsInType,
+                    'fraction_of_fleet_pct' => round($fractionOfFleet * 100.0, 1),
                 ],
             );
         }

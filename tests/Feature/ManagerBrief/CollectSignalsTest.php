@@ -442,3 +442,370 @@ it('returns empty array when siding has no data', function (): void {
     expect($signals)->toBeArray();
     expect($signals)->toBeEmpty();
 });
+
+// ---------------------------------------------------------------------------
+// 8 — operator_recurring_risk (forecast)
+// ---------------------------------------------------------------------------
+
+it('emits operator recurring risk signal when overload baseline reaches threshold', function (): void {
+    $siding = Siding::factory()->create();
+    $sidingId = (int) $siding->id;
+
+    $today = CarbonImmutable::today();
+    $recentDate = $today->subDays(5)->toDateString();
+
+    // Seed a rake within last 30 days.
+    $rake = Rake::factory()->create([
+        'siding_id' => $sidingId,
+        'state' => 'dispatched',
+        'loading_date' => $recentDate,
+    ]);
+
+    // 15 wagons for "Risky Operator": 5 overloaded → 33 % rate (≥ 10 % → critical).
+    for ($i = 1; $i <= 15; $i++) {
+        $w = Wagon::factory()->create([
+            'rake_id' => $rake->id,
+            'pcc_weight_mt' => 68.0,
+            'is_unfit' => false,
+        ]);
+        WagonLoading::factory()->create([
+            'rake_id' => $rake->id,
+            'wagon_id' => $w->id,
+            'loaded_quantity_mt' => $i <= 5 ? 75.0 : 65.0,  // 5 overloaded (≥ pcc 68)
+            'loader_operator_name' => 'Risky Operator',
+            'weight_source' => 'manual',
+        ]);
+    }
+
+    $action = makeCollectSignals(makeMatcher());
+    $signals = $action->handle($sidingId);
+
+    $recurringSignals = array_values(
+        array_filter($signals, fn (Signal $s) => $s->type === 'operator_recurring_risk')
+    );
+
+    expect($recurringSignals)->toHaveCount(1);
+
+    $signal = $recurringSignals[0];
+
+    expect($signal->severity)->toBe('critical');  // 33 % ≥ 10 %
+    expect($signal->actionability)->toBe(0.6);
+    expect($signal->recencyMinutes)->toBe(60);
+    expect($signal->payload['operator_name'])->toBe('Risky Operator');
+    expect($signal->payload['overload_rate_pct'])->toBeGreaterThanOrEqual(10.0);
+    expect($signal->payload['wagons_observed'])->toBeGreaterThanOrEqual(10);
+    expect($signal->payload['avg_overload_mt'])->toBeGreaterThan(0.0);
+    expect($signal->payload['projected_next_rake_rs'])->toBeGreaterThan(0.0);
+    expect($signal->rsAtStake)->toBeGreaterThan(0.0);
+});
+
+it('does not emit operator recurring risk signal when overload rate is below 2 pct', function (): void {
+    $siding = Siding::factory()->create();
+    $sidingId = (int) $siding->id;
+
+    $today = CarbonImmutable::today();
+    $recentDate = $today->subDays(5)->toDateString();
+
+    $rake = Rake::factory()->create([
+        'siding_id' => $sidingId,
+        'state' => 'dispatched',
+        'loading_date' => $recentDate,
+    ]);
+
+    // 20 wagons, 0 overloaded → 0 % rate → no signal.
+    for ($i = 1; $i <= 20; $i++) {
+        $w = Wagon::factory()->create([
+            'rake_id' => $rake->id,
+            'pcc_weight_mt' => 68.0,
+            'is_unfit' => false,
+        ]);
+        WagonLoading::factory()->create([
+            'rake_id' => $rake->id,
+            'wagon_id' => $w->id,
+            'loaded_quantity_mt' => 65.0,
+            'loader_operator_name' => 'Safe Operator',
+            'weight_source' => 'manual',
+        ]);
+    }
+
+    $action = makeCollectSignals(makeMatcher());
+    $signals = $action->handle($sidingId);
+
+    $recurringSignals = array_values(
+        array_filter($signals, fn (Signal $s) => $s->type === 'operator_recurring_risk')
+    );
+
+    expect($recurringSignals)->toBeEmpty();
+});
+
+// ---------------------------------------------------------------------------
+// 9 — penalty_trajectory (forecast)
+// ---------------------------------------------------------------------------
+
+it('emits penalty trajectory signal when penalty Rs grows MoM', function (): void {
+    $siding = Siding::factory()->create();
+    $sidingId = (int) $siding->id;
+
+    $today = CarbonImmutable::today();
+
+    // Seed SidingPerformance for current month, prior month, and two months ago.
+    // Two months ago: Rs 10,000 → prior month: Rs 15,000 (50 % growth) → current: Rs 25,000 (66 % growth).
+    // Both month-on-month deltas are ≥ 10 %, trend spans 2 months → high severity (≥ 20 %).
+    $twoMonthsAgoStart = $today->subMonths(2)->startOfMonth()->toDateString();
+    $priorMonthStart = $today->subMonths(1)->startOfMonth()->toDateString();
+    $currentMonthStart = $today->startOfMonth()->toDateString();
+
+    SidingPerformance::create([
+        'siding_id' => $sidingId,
+        'as_of_date' => $twoMonthsAgoStart,
+        'total_penalty_amount' => 10000.0,
+        'closing_stock_mt' => 0,
+        'rakes_processed' => 0,
+        'penalty_incidents' => 0,
+        'average_demurrage_hours' => 0,
+        'overload_incidents' => 0,
+    ]);
+
+    SidingPerformance::create([
+        'siding_id' => $sidingId,
+        'as_of_date' => $priorMonthStart,
+        'total_penalty_amount' => 15000.0,
+        'closing_stock_mt' => 0,
+        'rakes_processed' => 0,
+        'penalty_incidents' => 0,
+        'average_demurrage_hours' => 0,
+        'overload_incidents' => 0,
+    ]);
+
+    SidingPerformance::create([
+        'siding_id' => $sidingId,
+        'as_of_date' => $currentMonthStart,
+        'total_penalty_amount' => 25000.0,
+        'closing_stock_mt' => 0,
+        'rakes_processed' => 0,
+        'penalty_incidents' => 0,
+        'average_demurrage_hours' => 0,
+        'overload_incidents' => 0,
+    ]);
+
+    $action = makeCollectSignals(makeMatcher());
+    $signals = $action->handle($sidingId);
+
+    $trajectorySignals = array_values(
+        array_filter($signals, fn (Signal $s) => $s->type === 'penalty_trajectory')
+    );
+
+    expect($trajectorySignals)->toHaveCount(1);
+
+    $signal = $trajectorySignals[0];
+
+    expect($signal->severity)->toBe('high');  // ≥ 20 % growth and 2 months
+    expect($signal->actionability)->toBe(0.5);
+    expect($signal->recencyMinutes)->toBe(60);
+    expect($signal->payload['current_month_rs'])->toBe(25000.0);
+    expect($signal->payload['previous_month_rs'])->toBe(15000.0);
+    expect($signal->payload['growth_pct'])->toBeGreaterThanOrEqual(20.0);
+    expect($signal->payload['months_of_growth'])->toBe(2);
+    expect($signal->rsAtStake)->toBeGreaterThan(0.0);
+});
+
+it('does not emit penalty trajectory signal when growth is below 10 pct', function (): void {
+    $siding = Siding::factory()->create();
+    $sidingId = (int) $siding->id;
+
+    $today = CarbonImmutable::today();
+
+    SidingPerformance::create([
+        'siding_id' => $sidingId,
+        'as_of_date' => $today->subMonths(1)->startOfMonth()->toDateString(),
+        'total_penalty_amount' => 10000.0,
+        'closing_stock_mt' => 0,
+        'rakes_processed' => 0,
+        'penalty_incidents' => 0,
+        'average_demurrage_hours' => 0,
+        'overload_incidents' => 0,
+    ]);
+
+    SidingPerformance::create([
+        'siding_id' => $sidingId,
+        'as_of_date' => $today->startOfMonth()->toDateString(),
+        'total_penalty_amount' => 10500.0,  // only 5 % growth → below threshold
+        'closing_stock_mt' => 0,
+        'rakes_processed' => 0,
+        'penalty_incidents' => 0,
+        'average_demurrage_hours' => 0,
+        'overload_incidents' => 0,
+    ]);
+
+    $action = makeCollectSignals(makeMatcher());
+    $signals = $action->handle($sidingId);
+
+    $trajectorySignals = array_values(
+        array_filter($signals, fn (Signal $s) => $s->type === 'penalty_trajectory')
+    );
+
+    expect($trajectorySignals)->toBeEmpty();
+});
+
+// ---------------------------------------------------------------------------
+// 10 — demurrage_turnaround_risk (forecast)
+// ---------------------------------------------------------------------------
+
+it('emits demurrage turnaround risk signal when avg turnaround exceeds SLA', function (): void {
+    $siding = Siding::factory()->create();
+    $sidingId = (int) $siding->id;
+
+    $today = CarbonImmutable::now();
+
+    // 3 rakes with 18-hour turnaround (SLA = 12 h, overrun = 6 h > 4 h → severity: high).
+    for ($i = 0; $i < 3; $i++) {
+        $placement = $today->subDays($i + 1)->subHours(18);
+        Rake::factory()->create([
+            'siding_id' => $sidingId,
+            'state' => 'dispatched',
+            'placement_time' => $placement->toDateTimeString(),
+            'loading_end_time' => $placement->addHours(18)->toDateTimeString(),
+        ]);
+    }
+
+    $action = makeCollectSignals(makeMatcher());
+    $signals = $action->handle($sidingId);
+
+    $turnaroundSignals = array_values(
+        array_filter($signals, fn (Signal $s) => $s->type === 'demurrage_turnaround_risk')
+    );
+
+    expect($turnaroundSignals)->toHaveCount(1);
+
+    $signal = $turnaroundSignals[0];
+
+    expect($signal->severity)->toBe('high');   // overrun 6 h > 4 h → high
+    expect($signal->actionability)->toBe(0.7);
+    expect($signal->recencyMinutes)->toBe(60);
+    expect($signal->payload['avg_turnaround_hours'])->toBeGreaterThan(12.0);
+    expect($signal->payload['sla_hours'])->toBe(12.0);
+    expect($signal->payload['overrun_hours'])->toBeGreaterThan(0.0);
+    expect($signal->payload['rakes_observed'])->toBeGreaterThanOrEqual(1);
+    expect($signal->rsAtStake)->toBeGreaterThan(0.0);
+});
+
+it('does not emit demurrage turnaround risk signal when avg turnaround is within SLA plus 1h', function (): void {
+    $siding = Siding::factory()->create();
+    $sidingId = (int) $siding->id;
+
+    $today = CarbonImmutable::now();
+
+    // 2 rakes with exactly 12-hour turnaround → overrun = 0 h → no signal.
+    for ($i = 0; $i < 2; $i++) {
+        $placement = $today->subDays($i + 1)->subHours(12);
+        Rake::factory()->create([
+            'siding_id' => $sidingId,
+            'state' => 'dispatched',
+            'placement_time' => $placement->toDateTimeString(),
+            'loading_end_time' => $placement->addHours(12)->toDateTimeString(),
+        ]);
+    }
+
+    $action = makeCollectSignals(makeMatcher());
+    $signals = $action->handle($sidingId);
+
+    $turnaroundSignals = array_values(
+        array_filter($signals, fn (Signal $s) => $s->type === 'demurrage_turnaround_risk')
+    );
+
+    expect($turnaroundSignals)->toBeEmpty();
+});
+
+// ---------------------------------------------------------------------------
+// 11 — pcc_drift (forecast)
+// ---------------------------------------------------------------------------
+
+it('emits pcc drift signal when wagon type median load deviates', function (): void {
+    $siding = Siding::factory()->create();
+    $sidingId = (int) $siding->id;
+
+    $today = CarbonImmutable::today();
+    $recentDate = $today->subDays(5)->toDateString();
+
+    // One rake, 8 wagons of type 'BOXN': each loaded at 70 MT, PCC = 68 MT.
+    // drift = +2 MT per wagon → median drift = 2 MT ≥ 1.5 MT → medium severity.
+    $rake = Rake::factory()->create([
+        'siding_id' => $sidingId,
+        'state' => 'dispatched',
+        'loading_date' => $recentDate,
+    ]);
+
+    for ($i = 1; $i <= 8; $i++) {
+        $w = Wagon::factory()->create([
+            'rake_id' => $rake->id,
+            'wagon_type' => 'BOXN',
+            'pcc_weight_mt' => 68.0,
+            'is_unfit' => false,
+        ]);
+        WagonLoading::factory()->create([
+            'rake_id' => $rake->id,
+            'wagon_id' => $w->id,
+            'loaded_quantity_mt' => 70.0,  // drift = +2 MT
+            'weight_source' => 'manual',   // not weighbridge
+        ]);
+    }
+
+    $action = makeCollectSignals(makeMatcher());
+    $signals = $action->handle($sidingId);
+
+    $driftSignals = array_values(
+        array_filter($signals, fn (Signal $s) => $s->type === 'pcc_drift')
+    );
+
+    expect($driftSignals)->toHaveCount(1);
+
+    $signal = $driftSignals[0];
+
+    expect($signal->severity)->toBe('medium');  // |2 MT| ≥ 1.5 MT
+    expect($signal->actionability)->toBe(0.4);
+    expect($signal->recencyMinutes)->toBe(60);
+    expect($signal->payload['wagon_type'])->toBe('BOXN');
+    expect((float) $signal->payload['median_drift_mt'])->toBeGreaterThan(0.0);
+    expect($signal->payload['wagons_observed'])->toBe(8);
+    expect($signal->payload['fraction_of_fleet_pct'])->toBeGreaterThan(0.0);
+    expect($signal->rsAtStake)->toBeGreaterThan(0.0);
+});
+
+it('does not emit pcc drift signal when median drift is below 0.5 MT', function (): void {
+    $siding = Siding::factory()->create();
+    $sidingId = (int) $siding->id;
+
+    $today = CarbonImmutable::today();
+    $recentDate = $today->subDays(5)->toDateString();
+
+    $rake = Rake::factory()->create([
+        'siding_id' => $sidingId,
+        'state' => 'dispatched',
+        'loading_date' => $recentDate,
+    ]);
+
+    // 6 wagons of type 'BVZI': loaded at 68.2 MT, PCC = 68.0 → drift = 0.2 MT → below threshold.
+    for ($i = 1; $i <= 6; $i++) {
+        $w = Wagon::factory()->create([
+            'rake_id' => $rake->id,
+            'wagon_type' => 'BVZI',
+            'pcc_weight_mt' => 68.0,
+            'is_unfit' => false,
+        ]);
+        WagonLoading::factory()->create([
+            'rake_id' => $rake->id,
+            'wagon_id' => $w->id,
+            'loaded_quantity_mt' => 68.2,
+            'weight_source' => 'manual',
+        ]);
+    }
+
+    $action = makeCollectSignals(makeMatcher());
+    $signals = $action->handle($sidingId);
+
+    $driftSignals = array_values(
+        array_filter($signals, fn (Signal $s) => $s->type === 'pcc_drift')
+    );
+
+    expect($driftSignals)->toBeEmpty();
+});

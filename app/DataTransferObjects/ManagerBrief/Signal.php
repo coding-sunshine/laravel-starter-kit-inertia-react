@@ -13,13 +13,17 @@ namespace App\DataTransferObjects\ManagerBrief;
  * score so that RankSignals can prioritise them before the AI agent narrates.
  *
  * Allowed `type` values:
- *   - 'overload_exposure'   – wagons at risk of penalty due to overloading
- *   - 'operator_anomaly'    – unusual loader-operator pattern detected
- *   - 'force_majeure'       – recovery opportunity from a force-majeure event
- *   - 'scale_silence'       – Loadrite scale has been silent / offline
- *   - 'pending_override'    – a loading override is awaiting approval
- *   - 'underloading_trend'  – consistent underloading against target tonnage
- *   - 'demurrage_risk'      – rake approaching demurrage threshold
+ *   - 'overload_exposure'          – wagons at risk of penalty due to overloading
+ *   - 'operator_anomaly'           – unusual loader-operator pattern detected
+ *   - 'force_majeure'              – recovery opportunity from a force-majeure event
+ *   - 'scale_silence'              – Loadrite scale has been silent / offline
+ *   - 'pending_override'           – a loading override is awaiting approval
+ *   - 'underloading_trend'         – consistent underloading against target tonnage
+ *   - 'demurrage_risk'             – rake approaching demurrage threshold
+ *   - 'operator_recurring_risk'    – operator with a persistent overload rate above threshold (forecast)
+ *   - 'penalty_trajectory'         – month-on-month penalty Rs growing consecutively (forecast)
+ *   - 'demurrage_turnaround_risk'  – average rake turnaround exceeding SLA (forecast)
+ *   - 'pcc_drift'                  – wagon-type median load deviating from PCC (forecast)
  *
  * Allowed `severity` values: 'critical', 'high', 'medium', 'low'.
  */
