@@ -762,7 +762,12 @@ final readonly class CollectSignals
         foreach ($rows as $row) {
             $start = CarbonImmutable::parse((string) $row->placement_time);
             $end = CarbonImmutable::parse((string) $row->loading_end_time);
-            $totalHours += abs($end->diffInMinutes($start, true)) / 60.0;
+            // Use raw unix-timestamp delta. Carbon's diffInMinutes/diffInHours
+            // signatures changed across versions and have returned ratios in
+            // unexpected units, producing nonsense Rs estimates. Seconds
+            // arithmetic is unambiguous.
+            $seconds = abs($end->getTimestamp() - $start->getTimestamp());
+            $totalHours += $seconds / 3600.0;
         }
 
         $rakesObserved = $rows->count();
@@ -843,13 +848,23 @@ final readonly class CollectSignals
             return [];
         }
 
-        // Group drifts by wagon type.
+        // Group drifts by wagon type. Skip rows whose wagon_type is null /
+        // empty / a placeholder — that bucket is a data-quality problem,
+        // not an actionable CC-drift signal.
         $byType = [];
-        $totalWagons = $rows->count();
+        $totalWagons = 0;
 
         foreach ($rows as $row) {
-            $type = (string) ($row->wagon_type ?? 'UNKNOWN');
+            $type = mb_trim((string) ($row->wagon_type ?? ''));
+            if ($type === '' || mb_strtoupper($type) === 'UNKNOWN') {
+                continue;
+            }
             $byType[$type][] = (float) $row->drift_mt;
+            $totalWagons++;
+        }
+
+        if ($totalWagons === 0) {
+            return [];
         }
 
         $signals = [];
