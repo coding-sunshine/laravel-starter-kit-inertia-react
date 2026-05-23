@@ -742,30 +742,31 @@ final readonly class CollectSignals
 
         $cutoff = CarbonImmutable::now()->subDays(30)->toDateTimeString();
 
-        $driver = DB::getDriverName();
-
-        // Compute average turnaround in hours; use portable TIMESTAMPDIFF or julianday.
-        if ($driver === 'sqlite') {
-            $diffHoursExpr = '(JULIANDAY(loading_end_time) - JULIANDAY(placement_time)) * 24';
-        } else {
-            $diffHoursExpr = 'TIMESTAMPDIFF(SECOND, placement_time, loading_end_time) / 3600.0';
-        }
-
-        $result = DB::table('rakes')
+        // Fetch the raw timestamps and compute the per-rake delta in PHP.
+        // Avoids dialect-specific date arithmetic (TIMESTAMPDIFF is MySQL,
+        // EXTRACT(EPOCH) is Postgres, JULIANDAY is SQLite). Window is
+        // ~30-90 rakes, well within memory.
+        $rows = DB::table('rakes')
             ->where('siding_id', $sidingId)
             ->where('state', '!=', 'cancelled')
             ->whereNotNull('placement_time')
             ->whereNotNull('loading_end_time')
             ->where('placement_time', '>=', $cutoff)
-            ->selectRaw("AVG({$diffHoursExpr}) as avg_hours, COUNT(*) as rakes_count")
-            ->first();
+            ->get(['placement_time', 'loading_end_time']);
 
-        if ($result === null || (int) $result->rakes_count === 0) {
+        if ($rows->isEmpty()) {
             return [];
         }
 
-        $avgTurnaroundHours = (float) $result->avg_hours;
-        $rakesObserved = (int) $result->rakes_count;
+        $totalHours = 0.0;
+        foreach ($rows as $row) {
+            $start = CarbonImmutable::parse((string) $row->placement_time);
+            $end = CarbonImmutable::parse((string) $row->loading_end_time);
+            $totalHours += abs($end->diffInMinutes($start, true)) / 60.0;
+        }
+
+        $rakesObserved = $rows->count();
+        $avgTurnaroundHours = $totalHours / $rakesObserved;
 
         $slaHours = 12.0;
         $overrunHours = $avgTurnaroundHours - $slaHours;
