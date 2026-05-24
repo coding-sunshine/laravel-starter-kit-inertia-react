@@ -35,11 +35,11 @@ const PERIOD_OPTIONS: {
 const EMPTY_DISPATCH_SUMMARY: DispatchSummaryByPeriod = {
     default_period: 'today',
     periods: {
-        today: { received_mt: 0, dispatched_mt: 0, from: '', to: '' },
-        yesterday: { received_mt: 0, dispatched_mt: 0, from: '', to: '' },
-        month: { received_mt: 0, dispatched_mt: 0, from: '', to: '' },
-        last_month: { received_mt: 0, dispatched_mt: 0, from: '', to: '' },
-        fy: { received_mt: 0, dispatched_mt: 0, from: '', to: '' },
+        today: { received_mt: 0, dispatched_mt: 0, mines_dispatch_mt: 0, from: '', to: '' },
+        yesterday: { received_mt: 0, dispatched_mt: 0, mines_dispatch_mt: 0, from: '', to: '' },
+        month: { received_mt: 0, dispatched_mt: 0, mines_dispatch_mt: 0, from: '', to: '' },
+        last_month: { received_mt: 0, dispatched_mt: 0, mines_dispatch_mt: 0, from: '', to: '' },
+        fy: { received_mt: 0, dispatched_mt: 0, mines_dispatch_mt: 0, from: '', to: '' },
     },
 };
 
@@ -59,6 +59,7 @@ export function DispatchSummary({
 
     const totalDispatched = slice?.dispatched_mt ?? 0;
     const totalReceived = slice?.received_mt ?? 0;
+    const totalMinesDispatch = slice?.mines_dispatch_mt ?? 0;
     const variance = totalDispatched - totalReceived;
     const balancePct =
         totalDispatched > 0 || totalReceived > 0
@@ -111,9 +112,10 @@ export function DispatchSummary({
                 </Select>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                    <Stat label="Dispatched" value={totalDispatched} />
-                    <Stat label="Received" value={totalReceived} />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <Stat label="Rake Dispatched" value={totalDispatched} />
+                    <Stat label="Siding Received" value={totalReceived} />
+                    <Stat label="Mines Dispatch" value={totalMinesDispatch} />
                 </div>
 
                 <div className="mt-auto">

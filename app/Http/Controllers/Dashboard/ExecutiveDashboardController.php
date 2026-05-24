@@ -499,13 +499,13 @@ final class ExecutiveDashboardController extends Controller
             $obRow = (clone $prodScope)
                 ->where('type', ProductionEntry::TYPE_OB)
                 ->whereRaw($this->dateOnlyBetweenSql('date', true), [$fromDate, $toDate])
-                ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
                 ->first();
 
             $coalRow = (clone $prodScope)
                 ->where('type', ProductionEntry::TYPE_COAL)
                 ->whereRaw($this->dateOnlyBetweenSql('date', true), [$fromDate, $toDate])
-                ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
                 ->first();
 
             $roadTotals[$key] = [
@@ -1529,7 +1529,7 @@ final class ExecutiveDashboardController extends Controller
      *
      * @param  array<int>  $sidingIds
      * @return array{
-     *     periods: array<string, array{received_mt: float, dispatched_mt: float, from: string, to: string}>,
+     *     periods: array<string, array{received_mt: float, dispatched_mt: float, mines_dispatch_mt: float, from: string, to: string}>,
      *     default_period: string
      * }
      */
@@ -1545,6 +1545,7 @@ final class ExecutiveDashboardController extends Controller
 
             $receivedMt = 0.0;
             $dispatchedMt = 0.0;
+            $minesDispatchMt = 0.0;
 
             if ($sidingIds !== []) {
                 $receivedMt = (float) DailyVehicleEntry::query()
@@ -1552,6 +1553,15 @@ final class ExecutiveDashboardController extends Controller
                     ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
                     ->where('status', 'completed')
                     ->whereHas('stockLedger')
+                    ->whereBetween('entry_date', [$fromDate, $toDate])
+                    ->sum('net_wt');
+
+                // Mines dispatch: coal dispatched from mines by road (trucks), completed entries
+                // within the period window — same source/filter as road dispatch aggregate elsewhere.
+                $minesDispatchMt = (float) DailyVehicleEntry::query()
+                    ->whereIn('siding_id', $sidingIds)
+                    ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+                    ->where('status', 'completed')
                     ->whereBetween('entry_date', [$fromDate, $toDate])
                     ->sum('net_wt');
 
@@ -1578,6 +1588,7 @@ final class ExecutiveDashboardController extends Controller
             $periods[$periodKey] = [
                 'received_mt' => round($receivedMt, 2),
                 'dispatched_mt' => round($dispatchedMt, 2),
+                'mines_dispatch_mt' => round($minesDispatchMt, 2),
                 'from' => $fromDate,
                 'to' => $toDate,
             ];
@@ -4352,7 +4363,7 @@ final class ExecutiveDashboardController extends Controller
             $customObTotalsRow = (clone $prodCustomScope)
                 ->where('type', ProductionEntry::TYPE_OB)
                 ->whereRaw($this->dateOnlyBetweenSql('date', true), [$obFrom, $obTo])
-                ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
                 ->first();
         }
 
@@ -4360,7 +4371,7 @@ final class ExecutiveDashboardController extends Controller
             $customCoalTotalsRow = (clone $prodCustomScope)
                 ->where('type', ProductionEntry::TYPE_COAL)
                 ->whereRaw($this->dateOnlyBetweenSql('date', true), [$coalFrom, $coalTo])
-                ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
                 ->first();
         }
 
@@ -4442,7 +4453,7 @@ final class ExecutiveDashboardController extends Controller
                     $row = $prodScope
                         ->where('type', ProductionEntry::TYPE_OB)
                         ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
-                        ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                        ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
                         ->first();
 
                     return [
@@ -4474,7 +4485,7 @@ final class ExecutiveDashboardController extends Controller
                     $row = $prodScope
                         ->where('type', ProductionEntry::TYPE_COAL)
                         ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
-                        ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                        ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
                         ->first();
 
                     return [
