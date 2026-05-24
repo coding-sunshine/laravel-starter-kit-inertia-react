@@ -499,13 +499,13 @@ final class ExecutiveDashboardController extends Controller
             $obRow = (clone $prodScope)
                 ->where('type', ProductionEntry::TYPE_OB)
                 ->whereRaw($this->dateOnlyBetweenSql('date', true), [$fromDate, $toDate])
-                ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
+                ->selectRaw($this->numericTripSumSql().' as trips, coalesce(sum(qty), 0) as qty')
                 ->first();
 
             $coalRow = (clone $prodScope)
                 ->where('type', ProductionEntry::TYPE_COAL)
                 ->whereRaw($this->dateOnlyBetweenSql('date', true), [$fromDate, $toDate])
-                ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
+                ->selectRaw($this->numericTripSumSql().' as trips, coalesce(sum(qty), 0) as qty')
                 ->first();
 
             $roadTotals[$key] = [
@@ -4363,7 +4363,7 @@ final class ExecutiveDashboardController extends Controller
             $customObTotalsRow = (clone $prodCustomScope)
                 ->where('type', ProductionEntry::TYPE_OB)
                 ->whereRaw($this->dateOnlyBetweenSql('date', true), [$obFrom, $obTo])
-                ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
+                ->selectRaw($this->numericTripSumSql().' as trips, coalesce(sum(qty), 0) as qty')
                 ->first();
         }
 
@@ -4371,7 +4371,7 @@ final class ExecutiveDashboardController extends Controller
             $customCoalTotalsRow = (clone $prodCustomScope)
                 ->where('type', ProductionEntry::TYPE_COAL)
                 ->whereRaw($this->dateOnlyBetweenSql('date', true), [$coalFrom, $coalTo])
-                ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
+                ->selectRaw($this->numericTripSumSql().' as trips, coalesce(sum(qty), 0) as qty')
                 ->first();
         }
 
@@ -4453,7 +4453,7 @@ final class ExecutiveDashboardController extends Controller
                     $row = $prodScope
                         ->where('type', ProductionEntry::TYPE_OB)
                         ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
-                        ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
+                        ->selectRaw($this->numericTripSumSql().' as trips, coalesce(sum(qty), 0) as qty')
                         ->first();
 
                     return [
@@ -4485,7 +4485,7 @@ final class ExecutiveDashboardController extends Controller
                     $row = $prodScope
                         ->where('type', ProductionEntry::TYPE_COAL)
                         ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
-                        ->selectRaw('coalesce(sum(trip), 0) as trips, coalesce(sum(qty), 0) as qty')
+                        ->selectRaw($this->numericTripSumSql().' as trips, coalesce(sum(qty), 0) as qty')
                         ->first();
 
                     return [
@@ -4912,6 +4912,22 @@ final class ExecutiveDashboardController extends Controller
         }
 
         return "DATE({$column}) BETWEEN ? AND ?";
+    }
+
+    /**
+     * Portable SUM over production_entries.trip, which is stored as VARCHAR.
+     * Postgres cannot sum a character column and errors on non-numeric values,
+     * so it is regex-guarded and cast to numeric; SQLite (tests) casts text to
+     * numeric and treats non-numeric as 0. Returns a coalesced aggregate
+     * expression (no alias) for embedding in selectRaw.
+     */
+    private function numericTripSumSql(): string
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            return 'coalesce(sum(case when trip ~ \'^[0-9]+(\.[0-9]+)?$\' then trip::numeric else 0 end), 0)';
+        }
+
+        return 'coalesce(sum(cast(trip as numeric)), 0)';
     }
 
     /**
