@@ -773,13 +773,26 @@ final class ExecutiveDashboardController extends Controller
                     ->selectRaw('coalesce(sum(received_qty), 0) as qty')
                     ->value('qty');
 
-                $preRailQty = (float) Rake::query()
+                // Prefer RakeWeighment.total_net_weight_mt (same as buildDispatchSummaryByPeriod);
+                // fall back to Rake.loaded_weight_mt when weighment rows sum to zero.
+                $preRailRakeIds = Rake::query()
                     ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                     ->whereNotNull('loading_date')
                     ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$preFrom->toDateString(), $preTo->toDateString()])
                     ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
-                    ->selectRaw('coalesce(sum(loaded_weight_mt), 0) as qty')
-                    ->value('qty');
+                    ->pluck('id');
+
+                if ($preRailRakeIds->isNotEmpty()) {
+                    $preRailQty = (float) RakeWeighment::query()
+                        ->whereIn('rake_id', $preRailRakeIds->all())
+                        ->sum('total_net_weight_mt');
+
+                    if ($preRailQty === 0.0) {
+                        $preRailQty = (float) Rake::query()
+                            ->whereIn('id', $preRailRakeIds->all())
+                            ->sum('loaded_weight_mt');
+                    }
+                }
             }
 
             $postRoadQty = 0.0;
@@ -793,13 +806,25 @@ final class ExecutiveDashboardController extends Controller
                     ->selectRaw('coalesce(sum(coalesce(gross_wt, 0) - coalesce(tare_wt, 0)), 0) as qty')
                     ->value('qty');
 
-                $postRailQty = (float) Rake::query()
+                // Prefer RakeWeighment.total_net_weight_mt; fall back to Rake.loaded_weight_mt.
+                $postRailRakeIds = Rake::query()
                     ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                     ->whereNotNull('loading_date')
                     ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$postFrom->toDateString(), $postTo->toDateString()])
                     ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
-                    ->selectRaw('coalesce(sum(loaded_weight_mt), 0) as qty')
-                    ->value('qty');
+                    ->pluck('id');
+
+                if ($postRailRakeIds->isNotEmpty()) {
+                    $postRailQty = (float) RakeWeighment::query()
+                        ->whereIn('rake_id', $postRailRakeIds->all())
+                        ->sum('total_net_weight_mt');
+
+                    if ($postRailQty === 0.0) {
+                        $postRailQty = (float) Rake::query()
+                            ->whereIn('id', $postRailRakeIds->all())
+                            ->sum('loaded_weight_mt');
+                    }
+                }
             }
 
             $fyChartRows[] = [
@@ -1527,9 +1552,14 @@ final class ExecutiveDashboardController extends Controller
      * Received: completed daily vehicle entries with stock posted (entry_date).
      * Dispatched: rakes with loading_date and weighment (weight from rake_weighments).
      *
+     * opening_balance_mt: sum of the most-recent SidingOpeningBalance row per siding (same source used by
+     * buildSidingStocks as a fallback when no StockLedger row exists). This is a static "book opening balance"
+     * rather than a date-windowed figure; it represents the balance at the start of the siding's history and
+     * is used in the Net formula: opening_balance + received − rail_dispatch.
+     *
      * @param  array<int>  $sidingIds
      * @return array{
-     *     periods: array<string, array{received_mt: float, dispatched_mt: float, mines_dispatch_mt: float, from: string, to: string}>,
+     *     periods: array<string, array{received_mt: float, dispatched_mt: float, mines_dispatch_mt: float, opening_balance_mt: float, from: string, to: string}>,
      *     default_period: string
      * }
      */
@@ -1537,6 +1567,17 @@ final class ExecutiveDashboardController extends Controller
     {
         $periodKeys = ['today', 'yesterday', 'month', 'last_month', 'fy'];
         $periods = [];
+
+        // Opening balance: sum across all requested sidings from SidingOpeningBalance — the same
+        // source buildSidingStocks falls back to when no StockLedger row is present. It is a
+        // static dataset-level opening figure (not per-period), so we compute it once and reuse
+        // across all period slices.
+        $openingBalanceMt = 0.0;
+        if ($sidingIds !== []) {
+            foreach ($sidingIds as $sid) {
+                $openingBalanceMt += SidingOpeningBalance::getOpeningBalanceForSiding($sid);
+            }
+        }
 
         foreach ($periodKeys as $periodKey) {
             [$from, $to] = $this->filters->boundsForDispatchSummaryPeriod($periodKey);
@@ -1589,6 +1630,7 @@ final class ExecutiveDashboardController extends Controller
                 'received_mt' => round($receivedMt, 2),
                 'dispatched_mt' => round($dispatchedMt, 2),
                 'mines_dispatch_mt' => round($minesDispatchMt, 2),
+                'opening_balance_mt' => round($openingBalanceMt, 2),
                 'from' => $fromDate,
                 'to' => $toDate,
             ];
