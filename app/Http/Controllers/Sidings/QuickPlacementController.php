@@ -21,7 +21,7 @@ final class QuickPlacementController extends Controller
             ->whereNull('dispatch_time')
             ->orderByDesc('created_at')
             ->limit(50)
-            ->get(['id', 'rake_number', 'placement_time', 'loading_end_time']);
+            ->get(['id', 'rake_number', 'rake_serial_number', 'placement_time', 'loading_end_time']);
 
         return Inertia::render('sidings/quick-placement', [
             'siding' => ['id' => $siding->id, 'name' => $siding->name],

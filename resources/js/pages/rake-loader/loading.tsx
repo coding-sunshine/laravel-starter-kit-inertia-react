@@ -46,6 +46,7 @@ type WagonLoadingRecord = {
 type RakeHydrated = {
     id: number;
     rake_number: string | null;
+    rake_serial_number: string | null;
     loader_weighment_status?: string | null;
     loading_start_time?: string | null;
     loading_end_time?: string | null;
@@ -87,15 +88,19 @@ export default function RakeLoaderLoading({ rake: initialRake, loadingRecommenda
 
     const pccSummary = useMemo(() => summarisePccStates(pccStates), [pccStates]);
 
+    // Always present the operator-facing rake serial number; fall back to the
+    // internal sequence number only when no serial has been keyed yet.
+    const rakeLabel = rake.rake_serial_number ?? rake.rake_number;
+
     const breadcrumbs: BreadcrumbItem[] = useMemo(
         () => [
             { title: 'Rake Loader', href: '/rake-loader' },
             {
-                title: rake.rake_number ? `Load ${rake.rake_number}` : 'Wagon loading',
+                title: rakeLabel ? `Load ${rakeLabel}` : 'Wagon loading',
                 href: `/rake-loader/rakes/${rake.id}/loading`,
             },
         ],
-        [rake.id, rake.rake_number],
+        [rake.id, rakeLabel],
     );
 
     const fitWagons = rake.wagons?.filter((w) => !w.is_unfit) ?? [];
@@ -113,15 +118,15 @@ export default function RakeLoaderLoading({ rake: initialRake, loadingRecommenda
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={rake.rake_number ? `Load ${rake.rake_number}` : 'Wagon loading'} />
+            <Head title={rakeLabel ? `Load ${rakeLabel}` : 'Wagon loading'} />
 
             <div className="space-y-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <Heading
                         title="Wagon loading"
                         description={
-                            rake.rake_number
-                                ? `Loader weighment for rake ${rake.rake_number}.`
+                            rakeLabel
+                                ? `Loader weighment for rake ${rakeLabel}.`
                                 : 'Enter loader weighment for each wagon.'
                         }
                     />
@@ -156,7 +161,7 @@ export default function RakeLoaderLoading({ rake: initialRake, loadingRecommenda
                             <span>
                                 Loader weighment{' '}
                                 <span className="text-muted-foreground">
-                                    {rake.rake_number ? `(${rake.rake_number})` : ''}
+                                    {rakeLabel ? `(${rakeLabel})` : ''}
                                 </span>
                             </span>
                             <Badge variant={allFitWagonsComplete ? 'default' : 'secondary'}>

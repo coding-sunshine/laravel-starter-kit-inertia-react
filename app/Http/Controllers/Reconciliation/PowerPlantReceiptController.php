@@ -24,12 +24,12 @@ final class PowerPlantReceiptController extends Controller
             : $user->accessibleSidings()->get()->pluck('id')->all();
 
         $query = PowerPlantReceipt::query()
-            ->with('rake:id,rake_number', 'powerPlant:id,name,code')
+            ->with('rake:id,rake_number,rake_serial_number', 'powerPlant:id,name,code')
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->latest('receipt_date');
 
         $receipts = $query->paginate(15)->withQueryString();
-        $rakes = Rake::query()->whereIn('siding_id', $sidingIds)->orderBy('rake_number')->get(['id', 'rake_number']);
+        $rakes = Rake::query()->whereIn('siding_id', $sidingIds)->orderBy('rake_number')->get(['id', 'rake_number', 'rake_serial_number']);
         $powerPlants = PowerPlant::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
 
         return Inertia::render('reconciliation/power-plant-receipts/index', [
@@ -45,7 +45,7 @@ final class PowerPlantReceiptController extends Controller
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
-        $rakes = Rake::query()->whereIn('siding_id', $sidingIds)->orderBy('rake_number')->get(['id', 'rake_number']);
+        $rakes = Rake::query()->whereIn('siding_id', $sidingIds)->orderBy('rake_number')->get(['id', 'rake_number', 'rake_serial_number']);
         $powerPlants = PowerPlant::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
 
         return Inertia::render('reconciliation/power-plant-receipts/create', [

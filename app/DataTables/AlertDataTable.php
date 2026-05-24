@@ -26,6 +26,7 @@ final class AlertDataTable extends AbstractDataTable
         public ?int $rake_id,
         public ?int $siding_id,
         public ?string $rake_number,
+        public ?string $rake_serial_number,
         public ?string $siding_name,
     ) {}
 
@@ -42,6 +43,7 @@ final class AlertDataTable extends AbstractDataTable
             rake_id: $model->rake_id,
             siding_id: $model->siding_id,
             rake_number: $model->rake?->rake_number,
+            rake_serial_number: $model->rake?->rake_serial_number,
             siding_name: $model->siding?->name,
         );
     }
@@ -93,7 +95,7 @@ final class AlertDataTable extends AbstractDataTable
             : ($user ? $user->accessibleSidings()->get()->pluck('id')->all() : []);
 
         return Alert::query()
-            ->with('rake:id,rake_number', 'siding:id,name,code')
+            ->with('rake:id,rake_number,rake_serial_number', 'siding:id,name,code')
             ->forSidings($sidingIds);
     }
 

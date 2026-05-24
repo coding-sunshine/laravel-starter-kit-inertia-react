@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 type Rake = {
     id: number;
     rake_number: string;
+    rake_serial_number?: string | null;
     placement_time: string | null;
     loading_end_time: string | null;
 };
@@ -170,7 +171,7 @@ export default function QuickPlacement({ siding, rakes }: Props) {
                                                     <div className="flex items-start gap-3">
                                                         <Train className="mt-0.5 h-5 w-5 text-muted-foreground" aria-hidden="true" />
                                                         <div>
-                                                            <div className="font-medium leading-tight">{r.rake_number}</div>
+                                                            <div className="font-medium leading-tight">{r.rake_serial_number ?? r.rake_number}</div>
                                                             <RakeTimeline rake={r} />
                                                         </div>
                                                     </div>
@@ -185,7 +186,7 @@ export default function QuickPlacement({ siding, rakes }: Props) {
                                                         disabled={placedDisabled}
                                                         onClick={() => submit(r.id, 'placed')}
                                                         data-pan="sidings-quick-placement-placed"
-                                                        aria-label={`Mark rake ${r.rake_number} as placed`}
+                                                        aria-label={`Mark rake ${r.rake_serial_number ?? r.rake_number} as placed`}
                                                     >
                                                         <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                                                         {isPending && pending?.event === 'placed' ? 'Saving…' : 'Placed'}
@@ -198,7 +199,7 @@ export default function QuickPlacement({ siding, rakes }: Props) {
                                                         disabled={releasedDisabled}
                                                         onClick={() => submit(r.id, 'released')}
                                                         data-pan="sidings-quick-placement-released"
-                                                        aria-label={`Mark rake ${r.rake_number} as released`}
+                                                        aria-label={`Mark rake ${r.rake_serial_number ?? r.rake_number} as released`}
                                                     >
                                                         <Circle className="h-4 w-4" aria-hidden="true" />
                                                         {isPending && pending?.event === 'released' ? 'Saving…' : 'Released'}

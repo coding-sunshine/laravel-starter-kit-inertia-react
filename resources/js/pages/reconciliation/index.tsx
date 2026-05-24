@@ -24,6 +24,7 @@ interface Siding {
 interface ReconciliationRow {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
     siding_name: string | null;
     overall_status: string;
 }
@@ -119,6 +120,9 @@ export default function ReconciliationIndex({
                                 },
                             ]}
                             renderCell={(columnId, _value, row) => {
+                                if (columnId === 'rake_number') {
+                                    return row.rake_serial_number ?? row.rake_number;
+                                }
                                 if (columnId === 'siding_name') {
                                     return row.siding_name ?? '—';
                                 }

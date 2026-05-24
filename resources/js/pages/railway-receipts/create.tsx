@@ -10,6 +10,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 interface Rake {
     id: number;
     rake_number: string;
+    rake_serial_number?: string | null;
     siding_id: number;
 }
 
@@ -79,7 +80,7 @@ export default function RailwayReceiptsCreate({
                             <option value="">Select rake</option>
                             {rakes.map((r) => (
                                 <option key={r.id} value={r.id}>
-                                    {r.rake_number}
+                                    {r.rake_serial_number ?? r.rake_number}
                                 </option>
                             ))}
                         </select>

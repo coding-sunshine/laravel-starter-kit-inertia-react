@@ -19,6 +19,7 @@ final class ReconciliationDataTable extends AbstractDataTable
     public function __construct(
         public int $id,
         public string $rake_number,
+        public ?string $rake_serial_number,
         public ?string $siding_name,
         public string $overall_status,
     ) {}
@@ -33,6 +34,7 @@ final class ReconciliationDataTable extends AbstractDataTable
         return new self(
             id: $model->id,
             rake_number: $model->rake_number,
+            rake_serial_number: $model->rake_serial_number,
             siding_name: $model->siding?->name,
             overall_status: $worst,
         );
