@@ -117,9 +117,14 @@ return [
         'recent' => 60,
         'pending' => 60,
         'completed' => 60,
-        'recent_failed' => 10080,
-        'failed' => 10080,
-        'monitored' => 10080,
+        // Failed-job metadata was the source of repeated Redis memory bloat
+        // (10+ GB) at this app's job volume. 7-day retention is excessive;
+        // 2-3 days is plenty for debugging. Combined with the Redis maxmemory
+        // cap + volatile-lru eviction policy set on the server, this keeps
+        // Redis bounded.
+        'recent_failed' => 2880,
+        'failed' => 4320,
+        'monitored' => 2880,
     ],
 
     /*
