@@ -20,13 +20,18 @@ use Throwable;
  * silently and the survivors are clamped to 5.
  *
  * Deep-link rubric injected into the prompt:
- *   - operator_anomaly  → /dashboard?section=loader-overload&operator={name}
- *   - force_majeure     → /disputes
- *   - demurrage_risk    → /control-panel
- *   - overload_exposure → /dashboard
- *   - scale_silence     → /dashboard
- *   - pending_override  → /dashboard
- *   - underloading_trend → /dashboard
+ *   - operator_anomaly          → /dashboard?section=loader-overload&operator={name}
+ *   - force_majeure             → /disputes
+ *   - demurrage_risk            → /control-panel
+ *   - overload_exposure         → /dashboard
+ *   - scale_silence             → /dashboard
+ *   - pending_override          → /dashboard
+ *   - underloading_trend        → /dashboard
+ *   - operator_recurring_risk   → /dashboard?section=loader-overload&operator={operator_name}
+ *   - penalty_trajectory        → /dashboard?section=penalties-daily
+ *   - demurrage_turnaround_risk → /dashboard?section=rake-operations
+ *   - pcc_drift                 → /master-data/sidings
+ *   - data_quality_anomaly      → /admin/loadrite-anomalies
  */
 final readonly class ManagerBriefAgent
 {
@@ -51,6 +56,8 @@ final readonly class ManagerBriefAgent
         '/rakes',
         '/sidings',
         '/loading-overrides',
+        '/master-data',
+        '/admin',
     ];
 
     /**
@@ -81,8 +88,12 @@ final readonly class ManagerBriefAgent
         try {
             $prompt = $this->buildPrompt($signals, $context);
 
+            // Use defaultModel (config: prism.defaults.model — currently a free
+            // OpenRouter route, e.g. deepseek/deepseek-r1-0528:free) so manager
+            // briefs do not incur paid LLM cost. fastModel is reserved for
+            // latency-sensitive paid flows.
             $response = $this->prism
-                ->text($this->prism->fastModel())
+                ->text($this->prism->defaultModel())
                 ->withPrompt($prompt)
                 ->asText();
 
@@ -133,13 +144,20 @@ final readonly class ManagerBriefAgent
         - deadline: ISO 8601 datetime string or null if no hard deadline
 
         Deep-link rubric — use these paths as guidance:
-        - operator_anomaly  → /dashboard?section=loader-overload&operator={operator_name_from_payload}
-        - force_majeure     → /disputes
-        - demurrage_risk    → /control-panel
-        - overload_exposure → /dashboard
-        - scale_silence     → /dashboard
-        - pending_override  → /dashboard
-        - underloading_trend → /dashboard
+        - operator_anomaly          → /dashboard?section=loader-overload&operator={operator_name_from_payload}
+        - force_majeure             → /disputes
+        - demurrage_risk            → /control-panel
+        - overload_exposure         → /dashboard
+        - scale_silence             → /dashboard
+        - pending_override          → /dashboard
+        - underloading_trend        → /dashboard
+        - operator_recurring_risk   → /dashboard?section=loader-overload&operator={operator_name_from_payload}
+        - penalty_trajectory        → /dashboard?section=penalties-daily
+        - demurrage_turnaround_risk → /dashboard?section=rake-operations
+        - pcc_drift                 → /master-data/sidings
+        - data_quality_anomaly      → /admin/loadrite-anomalies
+
+        Forecast signal types (operator_recurring_risk, penalty_trajectory, demurrage_turnaround_risk, pcc_drift) project future risk from historical patterns — narrate with hedges like "projected", "trending", or "if pattern continues".
 
         Return ONLY a valid JSON array. No markdown fences, no commentary. Example structure:
         [{"severity":"high","title":"Example action","why":"Because X is happening.","rs_at_stake":120.5,"deep_link":"/dashboard","deadline":null}]

@@ -32,6 +32,7 @@ interface AlertRow {
     rake_id: number | null;
     siding_id: number | null;
     rake_number: string | null;
+    rake_serial_number: string | null;
     siding_name: string | null;
 }
 
@@ -82,9 +83,10 @@ export default function AlertsIndex({ tableData }: Props) {
                             ]}
                             renderCell={(columnId, _value, row) => {
                                 if (columnId === 'rake_number') {
-                                    return row.rake_number
-                                        ? row.rake_number
-                                        : row.siding_name ?? '—';
+                                    const label = row.rake_number
+                                        ? (row.rake_serial_number ?? row.rake_number)
+                                        : null;
+                                    return label ?? row.siding_name ?? '—';
                                 }
                                 if (columnId === 'severity') {
                                     return (

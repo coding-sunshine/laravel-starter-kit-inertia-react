@@ -15,6 +15,7 @@ import { Receipt } from 'lucide-react';
 interface Rake {
     id: number;
     rake_number: string;
+    rake_serial_number?: string | null;
 }
 
 interface PowerPlant {
@@ -121,8 +122,9 @@ export default function PowerPlantReceiptsIndex({ receipts }: Props) {
                                                     className="border-b last:border-0 hover:bg-muted/30"
                                                 >
                                                     <td className="px-5 py-3.5 font-medium">
-                                                        {r.rake?.rake_number ??
-                                                            r.rake_id}
+                                                        {r.rake
+                                                            ? (r.rake.rake_serial_number ?? r.rake.rake_number)
+                                                            : r.rake_id}
                                                     </td>
                                                     <td className="px-5 py-3.5">
                                                         {r.power_plant?.name ??

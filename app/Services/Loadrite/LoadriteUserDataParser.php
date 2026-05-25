@@ -13,9 +13,22 @@ namespace App\Services\Loadrite;
  *   - type   = the token containing at least one letter (HL, HSM1, HL2D…)
  *   - rake   = a purely-numeric token with value <= 999
  *   - wagon  = a purely-numeric token with value >= 1000 (the larger one)
+ *
+ * Parsed wagon_type values are normalised through WagonTypeNormaliser before
+ * being returned. If the raw value cannot be confidently matched to a catalog
+ * entry, wagon_type will be null (data-quality concern surfaced by anomaly
+ * tracking).
+ *
+ * Parsed operator values are canonicalised through OperatorNameCanonicaliser
+ * before being returned so the scoreboard groups the same person consistently.
  */
 final class LoadriteUserDataParser
 {
+    public function __construct(
+        private readonly WagonTypeNormaliser $typeNormaliser = new WagonTypeNormaliser,
+        private readonly ?OperatorNameCanonicaliser $operatorCanonicaliser = null,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $event  raw Loadrite event
      * @return array{rake_number: ?string, wagon_number: ?string, wagon_type: ?string, operator: ?string}
@@ -39,12 +52,14 @@ final class LoadriteUserDataParser
      */
     private function parseByLayout(array $event, array $layout): array
     {
+        $rawOperator = $this->field($event, $layout['operator'] ?? null)
+            ?? $this->field($event, 'Operator');
+
         return [
             'rake_number' => $this->field($event, $layout['rake'] ?? null),
             'wagon_number' => $this->field($event, $layout['wagon'] ?? null),
-            'wagon_type' => $this->field($event, $layout['type'] ?? null),
-            'operator' => $this->field($event, $layout['operator'] ?? null)
-                ?? $this->field($event, 'Operator'),
+            'wagon_type' => $this->typeNormaliser->normalise($this->field($event, $layout['type'] ?? null)),
+            'operator' => $this->canonicaliseOperator($rawOperator),
         ];
     }
 
@@ -62,7 +77,7 @@ final class LoadriteUserDataParser
             }
         }
 
-        $type = null;
+        $rawType = null;
         $rake = null;
         $wagon = null;
         $operator = $this->field($event, 'Operator');
@@ -70,8 +85,8 @@ final class LoadriteUserDataParser
         foreach ($tokens as $t) {
             if (! is_numeric($t) && preg_match('/[A-Za-z]/', $t) === 1) {
                 // Alphabetic token: a short type code, else an operator name.
-                if (mb_strlen($t) <= 6 && $type === null) {
-                    $type = $t;
+                if (mb_strlen($t) <= 6 && $rawType === null) {
+                    $rawType = $t;
                 } elseif ($operator === null) {
                     $operator = $t;
                 }
@@ -91,9 +106,26 @@ final class LoadriteUserDataParser
         return [
             'rake_number' => $rake,
             'wagon_number' => $wagon,
-            'wagon_type' => $type,
-            'operator' => $operator,
+            'wagon_type' => $this->typeNormaliser->normalise($rawType),
+            'operator' => $this->canonicaliseOperator($operator),
         ];
+    }
+
+    /**
+     * Canonicalise the operator name through the injected canonicaliser when
+     * available. Falls back to returning the raw value unchanged (null-safe).
+     */
+    private function canonicaliseOperator(?string $raw): ?string
+    {
+        if ($raw === null) {
+            return null;
+        }
+
+        if ($this->operatorCanonicaliser === null) {
+            return $raw;
+        }
+
+        return $this->operatorCanonicaliser->canonicalise($raw);
     }
 
     /**

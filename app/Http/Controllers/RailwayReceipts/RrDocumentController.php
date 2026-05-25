@@ -264,7 +264,7 @@ final class RrDocumentController extends Controller
         $rakes = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->orderBy('rake_number')
-            ->get(['id', 'rake_number', 'siding_id']);
+            ->get(['id', 'rake_number', 'rake_serial_number', 'siding_id']);
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
             ->orderBy('name')

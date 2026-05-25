@@ -9,6 +9,7 @@ import { Head, useForm } from '@inertiajs/react';
 interface Rake {
     id: number;
     rake_number: string;
+    rake_serial_number?: string | null;
 }
 
 interface PowerPlant {
@@ -72,7 +73,7 @@ export default function PowerPlantReceiptsCreate({
                             <option value="">Select rake</option>
                             {rakes.map((r) => (
                                 <option key={r.id} value={r.id}>
-                                    {r.rake_number}
+                                    {r.rake_serial_number ?? r.rake_number}
                                 </option>
                             ))}
                         </select>

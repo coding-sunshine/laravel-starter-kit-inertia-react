@@ -902,10 +902,13 @@ export default function RakesShow({
         }
     }, [selectedWagon]);
 
+    const displayRakeNumber = rake.rake_serial_number || rake.rake_number;
+    const showRakeNumberFallback = !rake.rake_serial_number && !!rake.rake_number;
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Rakes', href: '/rakes', interactive: false },
         {
-            title: rake.rake_number,
+            title: displayRakeNumber,
             href: `/rakes/${rake.id}`,
             interactive: false,
         },
@@ -951,8 +954,6 @@ export default function RakesShow({
     }, [rake.rakeCharges]);
 
     const templateDownloadError = page.props.errors?.template;
-    const displayRakeNumber = rake.rake_serial_number || rake.rake_number;
-    const showRakeNumberFallback = !rake.rake_serial_number && !!rake.rake_number;
     const indentPriorityNumber = rake.indent?.indent_number ?? '—';
 
     return (

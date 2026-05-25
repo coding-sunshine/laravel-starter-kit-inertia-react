@@ -131,6 +131,7 @@ final class RakeLoaderController extends Controller
         return [
             'id' => $rake->id,
             'rake_number' => $rake->rake_number,
+            'rake_serial_number' => $rake->rake_serial_number,
             'loader_weighment_status' => $rake->loader_weighment_status,
             'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
             'loading_end_time' => $rake->loading_end_time?->toIso8601String(),

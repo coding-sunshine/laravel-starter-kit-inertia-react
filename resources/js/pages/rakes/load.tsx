@@ -111,6 +111,7 @@ interface LoadState {
 interface RakeData {
     id: number;
     rake_number: string;
+    rake_serial_number?: string | null;
     state: string;
     siding?: Siding | null;
     wagons: Wagon[];
@@ -823,9 +824,11 @@ export default function RakesLoad({ rake, loadState, demurrage_rate_per_mt_hour 
         }
     };
 
+    const rakeLabel = rake.rake_serial_number ?? rake.rake_number;
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Rakes', href: '/rakes' },
-        { title: rake.rake_number, href: `/rakes/${rake.id}` },
+        { title: rakeLabel, href: `/rakes/${rake.id}` },
         { title: 'Loading', href: `/rakes/${rake.id}/load` },
     ];
 
@@ -835,12 +838,12 @@ export default function RakesLoad({ rake, loadState, demurrage_rate_per_mt_hour 
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Rake ${rake.rake_number} Loading`} />
+            <Head title={`Rake ${rakeLabel} Loading`} />
 
             <div className="space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <Heading
-                        title={`Rake ${rake.rake_number} – Loading`}
+                        title={`Rake ${rakeLabel} – Loading`}
                         description={
                             rake.siding ? `${rake.siding.name} (${rake.siding.code})` : 'Coal loading process'
                         }

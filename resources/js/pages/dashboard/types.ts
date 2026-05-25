@@ -28,6 +28,8 @@ export type DispatchSummaryPeriodKey =
 export interface DispatchSummaryPeriodSlice {
     received_mt: number;
     dispatched_mt: number;
+    mines_dispatch_mt: number;
+    opening_balance_mt: number;
     from: string;
     to: string;
 }

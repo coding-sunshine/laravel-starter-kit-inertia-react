@@ -20,6 +20,7 @@ interface Siding {
 interface Rake {
     id: number;
     rake_number: string;
+    rake_serial_number?: string | null;
     siding?: Siding | null;
 }
 
@@ -38,21 +39,23 @@ interface Props {
 }
 
 export default function ReconciliationShow({ rake, points }: Props) {
+    const rakeLabel = rake.rake_serial_number ?? rake.rake_number;
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Reconciliation', href: '/reconciliation' },
         {
-            title: `Rake ${rake.rake_number}`,
+            title: `Rake ${rakeLabel}`,
             href: `/reconciliation/${rake.id}`,
         },
     ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Reconciliation – ${rake.rake_number}`} />
+            <Head title={`Reconciliation – ${rakeLabel}`} />
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-medium">
-                        Five-point reconciliation: Rake {rake.rake_number}
+                        Five-point reconciliation: Rake {rakeLabel}
                     </h2>
                     <div className="flex gap-2">
                         <Link href="/reconciliation">

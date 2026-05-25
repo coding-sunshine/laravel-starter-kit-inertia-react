@@ -104,13 +104,40 @@ final class PollLoadriteJob implements ShouldQueue
                     break;
                 }
 
+                // The poll window re-fetches a 6-hour lookback every cycle to
+                // catch late-published events. Without this guard we re-dispatch
+                // a Sync + Overload job for EVERY event in that window on every
+                // 30s poll — events already in loadrite_events get re-processed
+                // endlessly (insertOrIgnore dedupes the data but not the job
+                // dispatch), flooding Horizon/Redis at hundreds of jobs/sec.
+                // Only dispatch child jobs for events we have not stored yet.
+                $incomingIds = [];
                 foreach ($events as $event) {
-                    SyncLoadriteWeightJob::dispatch($event, $this->sidingId)
-                        ->onConnection('redis')
-                        ->onQueue('loadrite-sync');
-                    EvaluateOverloadAlertJob::dispatch($event, $this->sidingId)
-                        ->onConnection('redis')
-                        ->onQueue('loadrite-alerts');
+                    $id = $event['Id'] ?? null;
+                    if ($id !== null) {
+                        $incomingIds[] = (string) $id;
+                    }
+                }
+
+                $alreadyStored = $incomingIds === []
+                    ? []
+                    : DB::table('loadrite_events')
+                        ->where('siding_id', $this->sidingId)
+                        ->whereIn('event_id', $incomingIds)
+                        ->pluck('event_id')
+                        ->flip();
+
+                foreach ($events as $event) {
+                    $id = isset($event['Id']) ? (string) $event['Id'] : null;
+
+                    if ($id === null || ! isset($alreadyStored[$id])) {
+                        SyncLoadriteWeightJob::dispatch($event, $this->sidingId)
+                            ->onConnection('redis')
+                            ->onQueue('loadrite-sync');
+                        EvaluateOverloadAlertJob::dispatch($event, $this->sidingId)
+                            ->onConnection('redis')
+                            ->onQueue('loadrite-alerts');
+                    }
 
                     if (isset($event['Time']) && $event['Time'] > $lastTimestamp) {
                         $lastTimestamp = $event['Time'];

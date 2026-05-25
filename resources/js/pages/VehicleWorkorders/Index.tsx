@@ -270,7 +270,7 @@ export default function VehicleWorkordersIndex({
                             ) : null
                         ) : (
                             <Link href="/vehicle-workorders/create">
-                                <Button>Add Work Order</Button>
+                                <Button>Add vehicle</Button>
                             </Link>
                         )}
                     </div>

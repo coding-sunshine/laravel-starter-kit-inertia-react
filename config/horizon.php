@@ -114,12 +114,20 @@ return [
     */
 
     'trim' => [
-        'recent' => 60,
-        'pending' => 60,
-        'completed' => 60,
-        'recent_failed' => 10080,
-        'failed' => 10080,
-        'monitored' => 10080,
+        // Tightened from 60 -> 15 min. Per-job Horizon metadata
+        // (sharereport_horizon:<uuid>) is the dominant Redis consumer at this
+        // app's job volume; shorter retention keeps the key count bounded.
+        'recent' => 15,
+        'pending' => 15,
+        'completed' => 15,
+        // Failed-job metadata was the source of repeated Redis memory bloat
+        // (10+ GB) at this app's job volume. 7-day retention is excessive;
+        // 2-3 days is plenty for debugging. Combined with the Redis maxmemory
+        // cap + allkeys-lru eviction policy set on the server, this keeps
+        // Redis bounded.
+        'recent_failed' => 2880,
+        'failed' => 4320,
+        'monitored' => 2880,
     ],
 
     /*
@@ -134,7 +142,17 @@ return [
     */
 
     'silenced' => [
-        // App\Jobs\ExampleJob::class,
+        // High-frequency internal Loadrite jobs fan out per event (sync +
+        // overload-alert + broadcast) and per poll. Their completed-job
+        // records were the bulk of the sharereport_horizon:<uuid> key flood
+        // that repeatedly pushed Redis to its memory cap. Silencing keeps
+        // them OUT of the completed-jobs list (they still run, and failures
+        // are still recorded) — the dashboard does not need per-event rows.
+        App\Jobs\SyncLoadriteWeightJob::class,
+        App\Jobs\EvaluateOverloadAlertJob::class,
+        App\Jobs\PollLoadriteJob::class,
+        App\Events\LoadriteEventBroadcast::class,
+        Illuminate\Broadcasting\BroadcastEvent::class,
     ],
 
     'silenced_tags' => [
