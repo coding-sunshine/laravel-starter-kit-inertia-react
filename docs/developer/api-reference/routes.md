@@ -531,6 +531,55 @@ This document lists all available routes in the application.
 - `filename`: `mixed`
 
 
+## PasswordResetController
+
+**Controller**: `App\Http\Controllers\Api\V1\PasswordResetController`
+
+Guest mobile/API forgot-password flow (OTP). See [PasswordResetController](../backend/controllers/ApiV1PasswordResetController.md).
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `api/v1/auth/forgot-password` | api.v1.auth.forgot-password | api, throttle:password-reset-otp-send |
+| POST | `api/v1/auth/verify-reset-otp` | api.v1.auth.verify-reset-otp | api, throttle:password-reset-otp-verify |
+| POST | `api/v1/auth/reset-password` | api.v1.auth.reset-password | api, throttle:60,1 |
+
+### sendOtp
+
+**Route**: `api.v1.auth.forgot-password`
+
+**URI**: `api/v1/auth/forgot-password`
+
+**Methods**: POST
+
+**Body**: `email` (required)
+
+**Response**: `{ "message": "If the account exists, an OTP was sent." }`
+
+### verifyOtp
+
+**Route**: `api.v1.auth.verify-reset-otp`
+
+**URI**: `api/v1/auth/verify-reset-otp`
+
+**Methods**: POST
+
+**Body**: `email`, `otp` (6 digits)
+
+**Response**: `{ "data": { "reset_token": "..." }, "message": "..." }`
+
+### reset
+
+**Route**: `api.v1.auth.reset-password`
+
+**URI**: `api/v1/auth/reset-password`
+
+**Methods**: POST
+
+**Body**: `email`, `reset_token`, `password`, `password_confirmation`
+
+**Response**: `{ "message": "Password reset successful." }`
+
+
 ## UserController
 
 **Controller**: `App\Http\Controllers\Api\V1\UserController`

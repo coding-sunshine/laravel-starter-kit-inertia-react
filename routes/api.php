@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\Dashboard\MobileDashboardController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\IndentController;
+use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PowerPlantApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
 use App\Http\Controllers\Api\V1\RailwayReceiptImportPreviewController;
@@ -37,6 +38,14 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
 
     Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
     Route::post('auth/register', [AuthController::class, 'register'])->name('auth.register');
+    Route::post('auth/forgot-password', [PasswordResetController::class, 'sendOtp'])
+        ->middleware('throttle:password-reset-otp-send')
+        ->name('auth.forgot-password');
+    Route::post('auth/verify-reset-otp', [PasswordResetController::class, 'verifyOtp'])
+        ->middleware('throttle:password-reset-otp-verify')
+        ->name('auth.verify-reset-otp');
+    Route::post('auth/reset-password', [PasswordResetController::class, 'reset'])
+        ->name('auth.reset-password');
 
     Route::middleware(['auth:sanctum', 'feature:api_access'])->group(function (): void {
         Route::post('auth/refresh', [AuthController::class, 'refresh'])->name('auth.refresh');

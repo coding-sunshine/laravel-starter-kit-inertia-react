@@ -16,6 +16,9 @@ All Actions:
 |--------|---------|------------|
 | [CreateUser](./CreateUser.md) | N/A | ✅ |
 | [CreateUserEmailResetNotification](./CreateUserEmailResetNotification.md) | N/A | ✅ |
+| [SendPasswordResetOtp](./SendPasswordResetOtp.md) | API OTP forgot-password — send code | ✅ |
+| [VerifyPasswordResetOtp](./VerifyPasswordResetOtp.md) | API OTP forgot-password — verify code | ✅ |
+| [ResetPasswordWithOtp](./ResetPasswordWithOtp.md) | API OTP forgot-password — set password | ✅ |
 | [CreateUserEmailVerificationNotification](./CreateUserEmailVerificationNotification.md) | N/A | ✅ |
 | [CreateUserPassword](./CreateUserPassword.md) | N/A | ✅ |
 | [DeleteUser](./DeleteUser.md) | N/A | ✅ |

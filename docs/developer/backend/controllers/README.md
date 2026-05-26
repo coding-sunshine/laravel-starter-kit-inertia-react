@@ -82,6 +82,7 @@ All Controllers:
 | [VehicleWorkorderController](./vehicleworkordercontroller.md) | N/A | ✅ |
 | [MobileDashboardController](./mobiledashboardcontroller.md) | N/A | ✅ |
 | [AuthController](./authcontroller.md) | N/A | ✅ |
+| [PasswordResetController](./ApiV1PasswordResetController.md) | API OTP forgot-password | ✅ |
 | [IndentController](./indentcontroller.md) | N/A | ✅ |
 | [RailwayReceiptApiController](./railwayreceiptapicontroller.md) | N/A | ✅ |
 | [RailwayReceiptUploadController](./railwayreceiptuploadcontroller.md) | N/A | ✅ |
