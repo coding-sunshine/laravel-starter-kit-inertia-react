@@ -9,6 +9,7 @@ use App\Models\PasswordResetOtp;
 use App\Models\User;
 use App\Notifications\PasswordResetOtpNotification;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 final readonly class SendPasswordResetOtp
 {
@@ -19,7 +20,9 @@ final readonly class SendPasswordResetOtp
         $user = User::query()->where('email', $normalizedEmail)->first();
 
         if ($user === null) {
-            return;
+            throw ValidationException::withMessages([
+                'email' => [__('The email address is invalid.')],
+            ]);
         }
 
         PasswordResetOtp::query()

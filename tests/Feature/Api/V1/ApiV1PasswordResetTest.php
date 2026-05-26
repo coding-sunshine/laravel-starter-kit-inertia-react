@@ -29,7 +29,7 @@ function createPendingPasswordResetOtp(User $user, string $otp = '123456'): Pass
     ]);
 }
 
-test('forgot password sends otp for existing user with generic message', function (): void {
+test('forgot password sends otp for existing user', function (): void {
     Notification::fake();
 
     $user = User::factory()->withoutTwoFactor()->create([
@@ -42,7 +42,7 @@ test('forgot password sends otp for existing user with generic message', functio
 
     $response->assertOk()
         ->assertJson([
-            'message' => 'If the account exists, an OTP was sent.',
+            'message' => 'A verification code was sent to your email.',
         ]);
 
     Notification::assertSentTo($user, PasswordResetOtpNotification::class);
@@ -50,17 +50,15 @@ test('forgot password sends otp for existing user with generic message', functio
     expect(PasswordResetOtp::query()->where('email', $user->email)->count())->toBe(1);
 });
 
-test('forgot password returns generic message for unknown email', function (): void {
+test('forgot password returns validation error for unknown email', function (): void {
     Notification::fake();
 
     $response = postJson('/api/v1/auth/forgot-password', [
         'email' => 'unknown@example.com',
     ]);
 
-    $response->assertOk()
-        ->assertJson([
-            'message' => 'If the account exists, an OTP was sent.',
-        ]);
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['email' => 'The email address is invalid.']);
 
     Notification::assertNothingSent();
     expect(PasswordResetOtp::query()->count())->toBe(0);
@@ -81,7 +79,7 @@ test('verify otp returns reset token for valid code', function (): void {
     $response->assertOk()
         ->assertJsonStructure(['data' => ['reset_token'], 'message']);
 
-    expect(strlen((string) $response->json('data.reset_token')))->toBe(64);
+    expect(mb_strlen((string) $response->json('data.reset_token')))->toBe(64);
 
     $record = PasswordResetOtp::query()->where('email', $user->email)->first();
     expect($record?->status)->toBe(PasswordResetOtpStatus::Verified)
