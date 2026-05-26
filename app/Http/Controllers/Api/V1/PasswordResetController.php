@@ -23,7 +23,7 @@ final class PasswordResetController extends Controller
         $action->handle($request->string('email')->value());
 
         return response()->json([
-            'message' => __('If the account exists, an OTP was sent.'),
+            'message' => __('A verification code was sent to your email.'),
         ]);
     }
 

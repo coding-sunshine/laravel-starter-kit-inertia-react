@@ -535,7 +535,7 @@ This document lists all available routes in the application.
 
 **Controller**: `App\Http\Controllers\Api\V1\PasswordResetController`
 
-Guest mobile/API forgot-password flow (OTP). See [PasswordResetController](../backend/controllers/ApiV1PasswordResetController.md).
+Guest mobile/API forgot-password flow (OTP). See [Mobile password reset OTP API](./mobile-password-reset-otp-api.md) (full request/response reference) and [PasswordResetController](../backend/controllers/ApiV1PasswordResetController.md).
 
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
