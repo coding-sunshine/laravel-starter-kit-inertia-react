@@ -52,6 +52,56 @@
                 ]
             }
         },
+        "SendPasswordResetOtp": {
+            "documented": true,
+            "path": "./SendPasswordResetOtp.md",
+            "lastUpdated": "2026-05-25",
+            "relationships": {
+                "usedBy": [
+                    "PasswordResetController"
+                ],
+                "usesModels": [
+                    "PasswordResetOtp",
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "api.v1.auth.forgot-password"
+                ]
+            }
+        },
+        "VerifyPasswordResetOtp": {
+            "documented": true,
+            "path": "./VerifyPasswordResetOtp.md",
+            "lastUpdated": "2026-05-25",
+            "relationships": {
+                "usedBy": [
+                    "PasswordResetController"
+                ],
+                "usesModels": [
+                    "PasswordResetOtp"
+                ],
+                "relatedRoutes": [
+                    "api.v1.auth.verify-reset-otp"
+                ]
+            }
+        },
+        "ResetPasswordWithOtp": {
+            "documented": true,
+            "path": "./ResetPasswordWithOtp.md",
+            "lastUpdated": "2026-05-25",
+            "relationships": {
+                "usedBy": [
+                    "PasswordResetController"
+                ],
+                "usesModels": [
+                    "PasswordResetOtp",
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "api.v1.auth.reset-password"
+                ]
+            }
+        },
         "CreateUserEmailVerificationNotification": {
             "documented": true,
             "path": "./CreateUserEmailVerificationNotification.md",
@@ -2694,6 +2744,29 @@
                     "CreateSessionRequest"
                 ],
                 "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "PasswordResetController": {
+            "documented": true,
+            "path": "./ApiV1PasswordResetController.md",
+            "lastUpdated": "2026-05-25",
+            "relationships": {
+                "usesActions": [
+                    "SendPasswordResetOtp",
+                    "VerifyPasswordResetOtp",
+                    "ResetPasswordWithOtp"
+                ],
+                "usesFormRequests": [
+                    "SendPasswordResetOtpRequest",
+                    "VerifyPasswordResetOtpRequest",
+                    "ResetPasswordWithOtpRequest"
+                ],
+                "relatedRoutes": [
+                    "api.v1.auth.forgot-password",
+                    "api.v1.auth.verify-reset-otp",
+                    "api.v1.auth.reset-password"
+                ],
                 "rendersPages": []
             }
         },

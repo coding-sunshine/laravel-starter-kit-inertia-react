@@ -114,4 +114,21 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | API Password Reset OTP
+    |--------------------------------------------------------------------------
+    |
+    | Settings for the mobile/API forgot-password OTP flow.
+    |
+    */
+
+    'password_reset_otp' => [
+        'otp_length' => 6,
+        'otp_ttl_minutes' => 10,
+        'reset_token_ttl_minutes' => 30,
+        'max_attempts' => 5,
+        'send_throttle_seconds' => 60,
+    ],
+
 ];
