@@ -115,8 +115,16 @@ export function DispatchSummary({
             </CardHeader>
             <CardContent className="flex flex-1 flex-col space-y-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <Stat label="Mines Dispatch" value={totalMinesDispatch} />
-                    <Stat label="Siding Received" value={totalReceived} />
+                    <Stat
+                        label="Mines Dispatch"
+                        value={totalMinesDispatch}
+                        className="hidden"
+                    />
+                    <Stat
+                        label="Siding Received"
+                        value={totalReceived}
+                        className="hidden"
+                    />
                     <Stat label="Rail Dispatch" value={totalDispatched} />
                 </div>
 
@@ -157,9 +165,17 @@ export function DispatchSummary({
     );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({
+    label,
+    value,
+    className,
+}: {
+    label: string;
+    value: number;
+    className?: string;
+}) {
     return (
-        <div className="rounded-md border bg-card p-3">
+        <div className={cn('rounded-md border bg-card p-3', className)}>
             <p className="mb-1 text-xs font-medium text-muted-foreground">
                 {label}
             </p>
