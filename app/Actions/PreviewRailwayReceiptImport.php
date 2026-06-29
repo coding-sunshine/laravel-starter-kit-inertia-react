@@ -34,7 +34,7 @@ final readonly class PreviewRailwayReceiptImport
      *     rake_id: int,
      *     rake_number: string|null,
      *     rake_serial_number: string|null,
-     *     rr_format: 'et_rr'|'fois_printed',
+     *     rr_format: 'et_rr'|'et_rr_multipage'|'fois_printed',
      *     actual_weight_mt: float|null,
      *     chargeable_weight_mt: float,
      * }

@@ -179,7 +179,8 @@ final readonly class RrImportService
             $wagons = [];
         }
 
-        if ($format === RrParserService::RR_FORMAT_FOIS_PRINTED) {
+        if ($format === RrParserService::RR_FORMAT_FOIS_PRINTED
+            || $format === RrParserService::RR_FORMAT_ET_RR_MULTIPAGE) {
             $headerWagonCount = (int) ($parsed['wagon_count'] ?? 0);
             if ($headerWagonCount > 0 && $wagons !== [] && count($wagons) !== $headerWagonCount) {
                 throw new InvalidArgumentException(
