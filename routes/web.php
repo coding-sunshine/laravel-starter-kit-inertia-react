@@ -571,12 +571,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
     Route::patch('settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
 
-    // User Password (redirect to dashboard for all users)...
-    Route::get('settings/password', [UserPasswordController::class, 'edit'])
-        ->middleware('redirect.settings')
-        ->name('password.edit');
+    // User Password...
+    Route::get('settings/password', [UserPasswordController::class, 'edit'])->name('password.edit');
     Route::put('settings/password', [UserPasswordController::class, 'update'])
-        ->middleware(['throttle:6,1', 'redirect.settings'])
+        ->middleware('throttle:6,1')
         ->name('password.update');
 
     // Appearance (redirect to dashboard for all users)...

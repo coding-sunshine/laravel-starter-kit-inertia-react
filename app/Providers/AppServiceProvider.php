@@ -142,6 +142,7 @@ final class AppServiceProvider extends ServiceProvider
         PanConfiguration::allowedAnalytics([
             'settings-nav-profile',
             'settings-nav-password',
+            'settings-password-save',
             'settings-nav-two-factor',
             'settings-nav-appearance',
             'settings-nav-data-export',

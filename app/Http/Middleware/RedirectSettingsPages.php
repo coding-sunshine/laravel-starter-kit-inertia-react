@@ -13,7 +13,6 @@ use Symfony\Component\HttpFoundation\Response;
 final class RedirectSettingsPages
 {
     private const REDIRECT_PATHS = [
-        'settings/password',
         'settings/appearance',
         'settings/personal-data-export',
         'settings/two-factor',
