@@ -6,19 +6,23 @@ import { edit as editPassword } from '@/routes/password';
 import { edit } from '@/routes/user-profile';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
+import { KeyRound, UserRound } from 'lucide-react';
 import { type PropsWithChildren, useMemo } from 'react';
 
-const sidebarNavItems: (NavItem & { dataPan: string })[] = [
+const sidebarNavItems: (NavItem & {
+    dataPan: string;
+    icon: typeof UserRound;
+})[] = [
     {
         title: 'Profile',
         href: edit(),
-        icon: null,
+        icon: UserRound,
         dataPan: 'settings-nav-profile',
     },
     {
         title: 'Password',
         href: editPassword(),
-        icon: null,
+        icon: KeyRound,
         dataPan: 'settings-nav-password',
     },
 ];
@@ -38,28 +42,35 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">
                 <aside className="w-full max-w-xl lg:w-48">
-                    <nav className="flex flex-col space-y-1 space-x-0">
-                        {visibleNavItems.map((item) => (
-                            <Button
-                                key={
-                                    typeof item.href === 'string'
-                                        ? item.href
-                                        : item.href.url
-                                }
-                                size="sm"
-                                variant="ghost"
-                                asChild
-                                data-pan={item.dataPan}
-                                className={cn('w-full justify-start', {
-                                    'bg-muted':
-                                        (typeof item.href === 'string'
-                                            ? item.href
-                                            : item.href.url) === currentPath,
-                                })}
-                            >
-                                <Link href={item.href}>{item.title}</Link>
-                            </Button>
-                        ))}
+                    <nav className="flex flex-col gap-1">
+                        {visibleNavItems.map((item) => {
+                            const href =
+                                typeof item.href === 'string'
+                                    ? item.href
+                                    : item.href.url;
+                            const isActive = href === currentPath;
+                            const Icon = item.icon;
+
+                            return (
+                                <Button
+                                    key={href}
+                                    size="sm"
+                                    variant="ghost"
+                                    asChild
+                                    data-pan={item.dataPan}
+                                    className={cn(
+                                        'w-full justify-start gap-2',
+                                        isActive &&
+                                            'bg-muted font-medium text-foreground',
+                                    )}
+                                >
+                                    <Link href={item.href}>
+                                        <Icon className="size-4 shrink-0 text-muted-foreground" />
+                                        {item.title}
+                                    </Link>
+                                </Button>
+                            );
+                        })}
                     </nav>
                 </aside>
 
