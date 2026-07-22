@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Models\VehicleWorkorder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class UpdateVehicleWorkorderRequest extends FormRequest
 {
@@ -61,7 +62,7 @@ final class UpdateVehicleWorkorderRequest extends FormRequest
 
         return [
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'vehicle_no' => ['required', 'string', 'max:50'],
+            'vehicle_no' => ['required', 'string', 'max:50', Rule::unique('vehicle_workorders', 'vehicle_no')->ignore($this->route('vehicle_workorder'))],
             'rcd_pin_no' => ['required', 'string', 'max:50'],
             'transport_name' => ['required', 'string', 'max:255'],
             'wo_no' => ['nullable', 'string', 'max:100'],
