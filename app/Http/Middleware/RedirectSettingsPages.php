@@ -15,9 +15,7 @@ final class RedirectSettingsPages
     private const REDIRECT_PATHS = [
         'settings/appearance',
         'settings/personal-data-export',
-        'settings/two-factor',
         'settings/achievements',
-        'onboarding',
     ];
 
     public function handle(Request $request, Closure $next): Response|RedirectResponse
