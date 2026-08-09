@@ -29,7 +29,7 @@ it('WagonWeightUpdated is dispatched after SyncLoadriteWeightJob updates a wagon
         'Id' => 'broadcast-test-1',
         'Sequence' => '1',
         'Weight' => '50.0',
-        'Event' => 'Add',
+        'Event' => 'Short Total',
         'Time' => now()->format('Y-m-d H:i:s'),
     ];
 

@@ -357,7 +357,7 @@ final readonly class SyncLoadriteEvent
             ->where('wagon_loading.rake_id', $rakeId)
             ->where(function ($q) {
                 $q->whereNull('wagon_loading.loadrite_weight_mt')
-                    ->orWhereRaw('wagon_loading.loadrite_weight_mt::numeric = 0');
+                    ->orWhere('wagon_loading.loadrite_weight_mt', 0);
             })
             ->where('wagon_loading.loadrite_override', false)
             ->where(function ($q) {
