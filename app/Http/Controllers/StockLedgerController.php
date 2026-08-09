@@ -197,7 +197,7 @@ final class StockLedgerController extends Controller
                 'quantity_mt' => $quantity,
                 'opening_balance_mt' => $opening,
                 'closing_balance_mt' => $newBalance,
-                'reference_number' => 'UI-RCP-'.uniqid('', true),
+                'reference_number' => 'UI-RCP-'.Str::random(20),
                 'remarks' => $remarks,
                 'created_by' => $userId,
             ]);

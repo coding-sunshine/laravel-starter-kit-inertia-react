@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Seeders\Essential;
 
-use App\Imports\HistoricalRakeImport;
+use App\Services\HistoricalRakeImportService;
 use Illuminate\Database\Seeder;
-use Maatwebsite\Excel\Facades\Excel;
 
 final class HistoricalRakeSeeder extends Seeder
 {
@@ -25,9 +24,6 @@ final class HistoricalRakeSeeder extends Seeder
             return;
         }
 
-        Excel::import(
-            new HistoricalRakeImport(1), // siding_id
-            $file
-        );
+        app(HistoricalRakeImportService::class)->handle($file, sidingId: 1);
     }
 }

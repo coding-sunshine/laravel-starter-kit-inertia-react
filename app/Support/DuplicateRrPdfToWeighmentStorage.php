@@ -30,7 +30,7 @@ final readonly class DuplicateRrPdfToWeighmentStorage
             'rr-%d-%d-%s.pdf',
             $document->getKey(),
             $rakeId,
-            uniqid('', true),
+            Str::random(20),
         );
         $relativePath = $relativeDir.'/'.$filename;
 

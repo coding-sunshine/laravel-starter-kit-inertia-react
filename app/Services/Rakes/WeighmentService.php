@@ -79,8 +79,8 @@ final readonly class WeighmentService
 
         // Create wagon weight records (mock data)
         foreach ($rake->wagons as $wagon) {
-            $grossWeight = rand(50000, 65000) / 1000; // Random between 50-65 MT
-            $netWeight = $grossWeight - rand(15000, 25000) / 1000; // Subtract tare weight
+            $grossWeight = random_int(50000, 65000) / 1000; // Random between 50-65 MT
+            $netWeight = $grossWeight - random_int(15000, 25000) / 1000; // Subtract tare weight
 
             WagonWeight::create([
                 'weighment_id' => $weighment->id,

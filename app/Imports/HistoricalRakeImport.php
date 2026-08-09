@@ -63,8 +63,7 @@ final class HistoricalRakeImport implements ToCollection
             $headerRow = $rows[$headerIndex];
             $map = $this->buildColumnMap($headerRow);
 
-            echo "\nDetected Columns:\n";
-            print_r($map);
+            echo "\nDetected Columns:\n".implode(', ', array_keys($map))."\n";
 
             // ---------- Guard: skip tabs missing required columns ----------
             $requiredColumns = ['RAKE NO', 'R.R NUMBER', 'LOADING DATE'];

@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Database\Seeders\Essential;
 
 use App\Models\VehicleWorkorder;
+use App\Services\ExcelWorkbookReader;
 use Illuminate\Database\Seeder;
-use Maatwebsite\Excel\Facades\Excel;
-use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
-use Throwable;
 
 final class VehicleWorkorderSeeder extends Seeder
 {
@@ -18,8 +16,12 @@ final class VehicleWorkorderSeeder extends Seeder
         'dumka' => 'excel/dumka workload.ods',
     ];
 
+    private ExcelWorkbookReader $excel;
+
     public function run(): void
     {
+        $this->excel = app(ExcelWorkbookReader::class);
+
         $base = database_path();
         foreach (self::FILES as $name => $path) {
             if (! is_file($base.'/'.$path)) {
@@ -36,25 +38,7 @@ final class VehicleWorkorderSeeder extends Seeder
 
     private function parseDate(mixed $value): ?string
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-        if (is_numeric($value)) {
-            try {
-                $date = ExcelDate::excelToDateTimeObject((float) $value);
-
-                return $date->format('Y-m-d');
-            } catch (Throwable) {
-                return null;
-            }
-        }
-        if (is_string($value)) {
-            $parsed = strtotime(mb_trim($value));
-
-            return $parsed !== false ? date('Y-m-d', $parsed) : null;
-        }
-
-        return null;
+        return $this->excel->parseDate($value);
     }
 
     private function parseInteger(mixed $value): ?int
@@ -66,9 +50,31 @@ final class VehicleWorkorderSeeder extends Seeder
         return (int) $value;
     }
 
+    /**
+     * `vehicle_no` is globally unique; the source spreadsheets contain duplicate
+     * rows for the same plate, so upsert by `vehicle_no` instead of blind-inserting
+     * (which would violate the unique constraint). Rows without a plate are always
+     * inserted since the unique index allows multiple NULLs.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function upsertVehicleWorkorder(array $attributes): void
+    {
+        if ($attributes['vehicle_no'] === null) {
+            VehicleWorkorder::create($attributes);
+
+            return;
+        }
+
+        VehicleWorkorder::query()->updateOrCreate(
+            ['vehicle_no' => $attributes['vehicle_no']],
+            $attributes
+        );
+    }
+
     private function importPakur()
     {
-        $rows = Excel::toArray([], database_path('excel/pakur workload.ods'));
+        $rows = $this->excel->toArray(database_path('excel/pakur workload.ods'));
 
         foreach ($rows[0] as $index => $row) {
 
@@ -76,7 +82,7 @@ final class VehicleWorkorderSeeder extends Seeder
                 continue;
             }
 
-            VehicleWorkorder::create([
+            $this->upsertVehicleWorkorder([
                 'siding_id' => 1,
                 'vehicle_no' => $row[1] ?? null,
                 'rcd_pin_no' => $row[2] ?? null,
@@ -109,7 +115,7 @@ final class VehicleWorkorderSeeder extends Seeder
 
     private function importKurwa()
     {
-        $rows = Excel::toArray([], database_path('excel/kurwa workload.ods'));
+        $rows = $this->excel->toArray(database_path('excel/kurwa workload.ods'));
 
         foreach ($rows[0] as $index => $row) {
 
@@ -117,7 +123,7 @@ final class VehicleWorkorderSeeder extends Seeder
                 continue;
             }
 
-            VehicleWorkorder::create([
+            $this->upsertVehicleWorkorder([
                 'siding_id' => 2,
                 'vehicle_no' => $row[1] ?? null,
                 'rcd_pin_no' => $row[2] ?? null,
@@ -149,7 +155,7 @@ final class VehicleWorkorderSeeder extends Seeder
 
     private function importDumka()
     {
-        $rows = Excel::toArray([], database_path('excel/dumka workload.ods'));
+        $rows = $this->excel->toArray(database_path('excel/dumka workload.ods'));
 
         foreach ($rows[0] as $index => $row) {
 
@@ -157,7 +163,7 @@ final class VehicleWorkorderSeeder extends Seeder
                 continue;
             }
 
-            VehicleWorkorder::create([
+            $this->upsertVehicleWorkorder([
                 'siding_id' => 3,
                 'vehicle_no' => $row[1] ?? null,
                 'rcd_pin_no' => $row[2] ?? null,
