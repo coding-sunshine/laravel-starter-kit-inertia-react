@@ -8,8 +8,11 @@ use App\Actions\ManagerBrief\CollectSignals;
 use App\Actions\ManagerBrief\RankSignals;
 use App\Ai\Agents\ManagerBriefAgent;
 use App\DataTransferObjects\ManagerBrief\Payload;
+use App\DataTransferObjects\ManagerBrief\Signal;
 use App\Models\Siding;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Orchestrates the full Manager Brief pipeline for a given siding.
@@ -45,13 +48,39 @@ final readonly class BuildManagerBrief
         // Step 2: rank and take the top 15
         $top15 = $this->rank->handle($signals);
 
-        // Step 3: build context for the agent
-        $context = $this->buildContext($sidingId, $now);
+        // Step 3: reuse the previous synthesis when the ranked signals are
+        // unchanged — the scheduler refreshes hourly, but overnight the signal
+        // set is usually static and each skipped call preserves the free-tier
+        // OpenRouter quota (~50 requests/day shared with the chatbot).
+        $signalsHash = $this->signalsHash($top15);
+        $hashKey = "manager-brief:cards:{$sidingId}:{$signalsHash}";
 
-        // Step 4: call the LLM agent
-        $cards = $this->agent->synthesise($top15, $context);
+        /** @var ?list<\App\DataTransferObjects\ManagerBrief\ActionCard> $cards */
+        $cards = Cache::get($hashKey);
 
-        // Step 5: compose the Payload based on agent outcome
+        if ($cards === null) {
+            if ($this->dailyBudgetExhausted()) {
+                // Budget spent: fall back to the last successful synthesis
+                // (possibly stale) rather than burning further quota.
+                $cards = Cache::get("manager-brief:last-cards:{$sidingId}");
+
+                Log::notice('manager-brief: daily AI request budget exhausted', [
+                    'siding_id' => $sidingId,
+                    'served_stale' => $cards !== null,
+                ]);
+            } else {
+                $this->recordBudgetSpend();
+
+                $cards = $this->agent->synthesise($top15, $this->buildContext($sidingId, $now));
+
+                if ($cards !== null) {
+                    Cache::put($hashKey, $cards, CarbonImmutable::now()->addDay());
+                    Cache::put("manager-brief:last-cards:{$sidingId}", $cards, CarbonImmutable::now()->addWeek());
+                }
+            }
+        }
+
+        // Step 4: compose the Payload based on outcome
         if ($cards === null) {
             return new Payload(
                 actions: [],
@@ -71,6 +100,53 @@ final readonly class BuildManagerBrief
             aiStatus: 'ok',
             failedReason: null,
         );
+    }
+
+    private static function budgetKey(): string
+    {
+        return 'ai:auto-requests:'.CarbonImmutable::now()->format('Y-m-d');
+    }
+
+    /**
+     * Stable hash of the ranked signals, excluding volatile fields.
+     *
+     * recencyMinutes (and the derived actionability score) drift every run
+     * even when nothing operationally changed, so only type, severity,
+     * rs-at-stake and the payload participate in the hash.
+     *
+     * @param  list<Signal>  $top15
+     */
+    private function signalsHash(array $top15): string
+    {
+        return md5((string) json_encode(array_map(
+            fn (Signal $signal): array => [
+                $signal->type,
+                $signal->severity,
+                $signal->rsAtStake,
+                $signal->payload,
+            ],
+            $top15,
+        )));
+    }
+
+    /**
+     * True when today's automated AI request budget is spent.
+     */
+    private function dailyBudgetExhausted(): bool
+    {
+        $limit = (int) config('ai.daily_auto_request_limit', 40);
+
+        return $limit > 0 && (int) Cache::get(self::budgetKey(), 0) >= $limit;
+    }
+
+    private function recordBudgetSpend(): void
+    {
+        $key = self::budgetKey();
+
+        // add() seeds the counter with a TTL; increment() alone would create
+        // a key that never expires on some cache stores.
+        Cache::add($key, 0, CarbonImmutable::now()->addDay());
+        Cache::increment($key);
     }
 
     /**

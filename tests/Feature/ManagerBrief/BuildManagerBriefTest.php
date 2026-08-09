@@ -9,6 +9,7 @@ use App\Models\Siding;
 use App\Services\ForceMajeure\Contracts\DowntimePenaltyMatcherContract;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Prism\Prism\Enums\FinishReason;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Text\Response as TextResponse;
@@ -182,4 +183,78 @@ it('includes generated_at and model_used and siding_id in payload', function ():
     // Assert: ai_status is ok on a valid response
     expect($payload->aiStatus)->toBe('ok');
     expect($payload->failedReason)->toBeNull();
+});
+
+// ---------------------------------------------------------------------------
+// Quota guards: signal-hash reuse + daily auto-request budget
+// ---------------------------------------------------------------------------
+
+it('reuses cached cards without a second LLM call when signals are unchanged', function (): void {
+    $siding = Siding::factory()->create(['name' => 'Reuse Siding']);
+    $sidingId = (int) $siding->id;
+
+    app()->bind(DowntimePenaltyMatcherContract::class, fn () => makeEmptyMatcher());
+    $this->seedManagerBriefFixture($sidingId);
+
+    $fake = Prism::fake([makeBriefFakeResponse(makeValidCardsJson(2))]);
+
+    $orchestrator = app(BuildManagerBrief::class);
+    $first = $orchestrator->handle($sidingId);
+    $second = $orchestrator->handle($sidingId);
+
+    // Only one LLM call despite two runs — second served from the hash cache.
+    $fake->assertCallCount(1);
+    expect($first->aiStatus)->toBe('ok');
+    expect($second->aiStatus)->toBe('ok');
+    expect($second->actions)->toHaveCount(2);
+});
+
+it('serves last known cards without calling the LLM when the daily budget is exhausted', function (): void {
+    config()->set('ai.daily_auto_request_limit', 1);
+
+    $siding = Siding::factory()->create(['name' => 'Budget Siding']);
+    $sidingId = (int) $siding->id;
+
+    app()->bind(DowntimePenaltyMatcherContract::class, fn () => makeEmptyMatcher());
+    $this->seedManagerBriefFixture($sidingId);
+
+    $fake = Prism::fake([makeBriefFakeResponse(makeValidCardsJson(1))]);
+
+    // Pre-spend today's entire budget and seed a last-known synthesis.
+    Cache::put('ai:auto-requests:'.CarbonImmutable::now()->format('Y-m-d'), 1, 3600);
+    $staleCard = new ActionCard(
+        severity: 'high',
+        title: 'Stale but served',
+        why: 'Cached from an earlier successful run.',
+        rsAtStake: 100.0,
+        deepLink: '/dashboard',
+        deadline: null,
+    );
+    Cache::put("manager-brief:last-cards:{$sidingId}", [$staleCard], 3600);
+
+    $payload = app(BuildManagerBrief::class)->handle($sidingId);
+
+    $fake->assertCallCount(0);
+    expect($payload->aiStatus)->toBe('ok');
+    expect($payload->actions)->toHaveCount(1);
+    expect($payload->actions[0]->title)->toBe('Stale but served');
+});
+
+it('fails without calling the LLM when budget is exhausted and no last cards exist', function (): void {
+    config()->set('ai.daily_auto_request_limit', 1);
+
+    $siding = Siding::factory()->create(['name' => 'Budget Siding 2']);
+    $sidingId = (int) $siding->id;
+
+    app()->bind(DowntimePenaltyMatcherContract::class, fn () => makeEmptyMatcher());
+    $this->seedManagerBriefFixture($sidingId);
+
+    $fake = Prism::fake([makeBriefFakeResponse(makeValidCardsJson(1))]);
+
+    Cache::put('ai:auto-requests:'.CarbonImmutable::now()->format('Y-m-d'), 1, 3600);
+
+    $payload = app(BuildManagerBrief::class)->handle($sidingId);
+
+    $fake->assertCallCount(0);
+    expect($payload->aiStatus)->toBe('failed');
 });
