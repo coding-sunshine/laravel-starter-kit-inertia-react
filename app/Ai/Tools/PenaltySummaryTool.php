@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Ai\Tools;
 
-use App\Models\Penalty;
+use App\Models\PenaltyType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Contracts\Tool;
@@ -20,81 +20,60 @@ final class PenaltySummaryTool implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Query penalty data with filters for date range, penalty type, siding, status, and responsible party. Returns counts, totals, and breakdowns. Use this when users ask about penalties, penalty amounts, penalty trends, or penalty statistics.';
+        return 'Query RR penalty snapshot data with filters for date range, penalty type, and siding. Returns counts, totals, and breakdowns. Use this when users ask about penalties, penalty amounts, penalty trends, or penalty statistics.';
     }
 
     public function handle(Request $request): Stringable|string
     {
-        $query = Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $this->sidingIds));
+        $query = DB::table('rr_penalty_snapshots as rps')
+            ->join('penalty_types as pt', 'pt.code', '=', 'rps.penalty_code')
+            ->leftJoin('rakes as r', 'r.id', '=', 'rps.rake_id')
+            ->leftJoin('rr_documents as rd', 'rd.id', '=', 'rps.rr_document_id')
+            ->whereIn('r.siding_id', $this->sidingIds);
 
         if ($request['date_from'] ?? null) {
-            $query->where('penalty_date', '>=', $request['date_from']);
+            $query->whereDate('rd.rr_received_date', '>=', $request['date_from']);
         }
 
         if ($request['date_to'] ?? null) {
-            $query->where('penalty_date', '<=', $request['date_to']);
+            $query->whereDate('rd.rr_received_date', '<=', $request['date_to']);
         }
 
         if ($request['penalty_type'] ?? null) {
-            $query->where('penalty_type', $request['penalty_type']);
-        }
-
-        if ($request['status'] ?? null) {
-            $query->where('penalty_status', $request['status']);
-        }
-
-        if ($request['responsible_party'] ?? null) {
-            $query->where('responsible_party', $request['responsible_party']);
+            $query->where('rps.penalty_code', $request['penalty_type']);
         }
 
         $groupBy = $request['group_by'] ?? 'total';
 
         if ($groupBy === 'siding') {
             $results = (clone $query)
-                ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-                ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-                ->select('sidings.name as group_key', DB::raw('count(*) as count'), DB::raw('sum(penalty_amount) as total_amount'))
-                ->groupBy('sidings.name')
+                ->join('sidings as s', 's.id', '=', 'r.siding_id')
+                ->select('s.name as group_key', DB::raw('count(*) as count'), DB::raw('sum(rps.amount) as total_amount'))
+                ->groupBy('s.name')
                 ->orderByDesc('total_amount')
                 ->limit(20)
-                ->toBase()
                 ->get();
         } elseif ($groupBy === 'type') {
             $results = (clone $query)
-                ->select('penalty_type as group_key', DB::raw('count(*) as count'), DB::raw('sum(penalty_amount) as total_amount'))
-                ->groupBy('penalty_type')
+                ->select('rps.penalty_code as group_key', DB::raw('count(*) as count'), DB::raw('sum(rps.amount) as total_amount'))
+                ->groupBy('rps.penalty_code')
                 ->orderByDesc('total_amount')
                 ->limit(20)
-                ->toBase()
-                ->get();
-        } elseif ($groupBy === 'status') {
-            $results = (clone $query)
-                ->select('penalty_status as group_key', DB::raw('count(*) as count'), DB::raw('sum(penalty_amount) as total_amount'))
-                ->groupBy('penalty_status')
-                ->orderByDesc('total_amount')
-                ->toBase()
                 ->get();
         } elseif ($groupBy === 'month') {
+            $monthSql = DB::getDriverName() === 'pgsql'
+                ? "to_char(rd.rr_received_date, 'YYYY-MM')"
+                : "DATE_FORMAT(rd.rr_received_date, '%Y-%m')";
+
             $results = (clone $query)
-                ->select(DB::raw("to_char(penalty_date, 'YYYY-MM') as group_key"), DB::raw('count(*) as count'), DB::raw('sum(penalty_amount) as total_amount'))
+                ->select(DB::raw("{$monthSql} as group_key"), DB::raw('count(*) as count'), DB::raw('sum(rps.amount) as total_amount'))
                 ->groupBy('group_key')
                 ->orderBy('group_key')
                 ->limit(12)
-                ->toBase()
-                ->get();
-        } elseif ($groupBy === 'responsible_party') {
-            $results = (clone $query)
-                ->whereNotNull('responsible_party')
-                ->select('responsible_party as group_key', DB::raw('count(*) as count'), DB::raw('sum(penalty_amount) as total_amount'))
-                ->groupBy('responsible_party')
-                ->orderByDesc('total_amount')
-                ->limit(20)
-                ->toBase()
                 ->get();
         } else {
             $count = (clone $query)->count();
-            $total = (float) (clone $query)->sum('penalty_amount');
+            $total = (float) (clone $query)->sum('rps.amount');
             $avg = $count > 0 ? round($total / $count, 2) : 0;
 
             return json_encode([
@@ -119,13 +98,13 @@ final class PenaltySummaryTool implements Tool
      */
     public function schema(JsonSchema $schema): array
     {
+        $codes = PenaltyType::query()->pluck('code')->implode(', ');
+
         return [
             'date_from' => $schema->string()->description('Start date filter (YYYY-MM-DD). Defaults to all time if omitted.'),
             'date_to' => $schema->string()->description('End date filter (YYYY-MM-DD). Defaults to today if omitted.'),
-            'penalty_type' => $schema->string()->description('Filter by penalty type code (e.g. DEM, POL1, POLA, PLO, ULC, SPL, WMC, MCF).'),
-            'status' => $schema->string()->enum(['pending', 'incurred', 'waived', 'disputed'])->description('Filter by penalty status.'),
-            'responsible_party' => $schema->string()->description('Filter by responsible party name.'),
-            'group_by' => $schema->string()->enum(['total', 'siding', 'type', 'status', 'month', 'responsible_party'])->description('How to group results. Use "total" for a single summary. Defaults to "total".'),
+            'penalty_type' => $schema->string()->description("Filter by penalty type code (e.g. {$codes})."),
+            'group_by' => $schema->string()->enum(['total', 'siding', 'type', 'month'])->description('How to group results. Use "total" for a single summary. Defaults to "total".'),
         ];
     }
 }

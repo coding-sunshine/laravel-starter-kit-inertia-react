@@ -93,8 +93,10 @@ final class HistoricalDisputeTool implements Tool
      */
     public function schema(JsonSchema $schema): array
     {
+        $codes = PenaltyType::query()->pluck('code')->implode(', ');
+
         return [
-            'penalty_type' => $schema->string()->description('Filter by penalty type code (e.g. DEM, POL1).'),
+            'penalty_type' => $schema->string()->description("Filter by penalty type code (e.g. {$codes})."),
             'responsible_party' => $schema->string()->description('Filter by responsible party.'),
             'min_amount' => $schema->number()->description('Minimum penalty amount to match.'),
             'max_amount' => $schema->number()->description('Maximum penalty amount to match.'),

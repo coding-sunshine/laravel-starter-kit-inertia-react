@@ -1606,7 +1606,7 @@ final readonly class RunReportAction
             $snapshots = RrPenaltySnapshot::query()
                 ->whereIn('rr_document_id', $docIds)
                 ->whereNotNull('rr_document_id')
-                ->whereIn('penalty_code', ['POL1', 'POLA', 'PLO', 'PCLA', 'ENHC'])
+                ->whereIn('penalty_code', $this->penaltyTypeCodes())
                 ->get();
             /** @phpstan-ignore argument.type ($snapshots grouped by rr_document_id) */
             $penaltiesGrouped = $snapshots->groupBy(fn (RrPenaltySnapshot $p): int => (int) ($p->rr_document_id ?? 0));
@@ -1783,7 +1783,7 @@ final readonly class RunReportAction
             return null;
         }
 
-        foreach (['POL1', 'POLA', 'PLO', 'PCLA', 'ENHC'] as $code) {
+        foreach ($this->penaltyTypeCodes() as $code) {
             if (isset($codeRates[$code]) && is_finite($codeRates[$code])) {
                 return (float) $codeRates[$code];
             }
@@ -1796,6 +1796,26 @@ final readonly class RunReportAction
         }
 
         return null;
+    }
+
+    /**
+     * Penalty type codes, memoized per action run. Overload-specific codes
+     * come first so {@see pickPreferredOverloadPenaltyCodeRates} keeps its
+     * historical preference order regardless of table row order.
+     *
+     * @return list<string>
+     */
+    private function penaltyTypeCodes(): array
+    {
+        return once(function (): array {
+            $preferred = ['POL1', 'POLA', 'PLO', 'PCLA', 'ENHC'];
+            $codes = PenaltyType::query()->orderBy('id')->pluck('code')->all();
+
+            return array_values(array_unique([
+                ...array_intersect($preferred, $codes),
+                ...$codes,
+            ]));
+        });
     }
 
     private function extractPunitiveRateFromPenaltySnapshotMeta(?array $meta): ?float

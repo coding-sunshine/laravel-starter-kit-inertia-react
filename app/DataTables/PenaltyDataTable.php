@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\DataTables;
 
-use App\Models\Penalty;
+use App\Models\PenaltyType;
+use App\Models\RrPenaltySnapshot;
 use App\Models\Siding;
+use App\Support\PenaltyDateFilter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\Column;
 use Machour\DataTable\Filters\OperatorFilter;
@@ -17,66 +20,47 @@ final class PenaltyDataTable extends AbstractDataTable
 {
     public function __construct(
         public int $id,
-        public int $rake_id,
-        public string $penalty_type,
+        public ?int $rake_id,
+        public string $penalty_code,
+        public string $penalty_type_name,
         public string $penalty_amount,
-        public string $penalty_status,
         public string $penalty_date,
-        public ?string $responsible_party,
-        public ?string $root_cause,
-        public ?array $calculation_breakdown,
         public ?string $rake_number,
         public ?string $siding_name,
     ) {}
 
-    public static function fromModel(Penalty $model): self
+    public static function fromModel(RrPenaltySnapshot $model): self
     {
         return new self(
             id: $model->id,
             rake_id: $model->rake_id,
-            penalty_type: $model->penalty_type,
-            penalty_amount: (string) $model->penalty_amount,
-            penalty_status: $model->penalty_status,
-            penalty_date: $model->penalty_date?->format('Y-m-d') ?? '',
-            responsible_party: $model->responsible_party,
-            root_cause: $model->root_cause,
-            calculation_breakdown: $model->calculation_breakdown,
-            rake_number: $model->rake?->rake_number,
-            siding_name: $model->rake?->siding?->name,
+            penalty_code: $model->penalty_code,
+            penalty_type_name: (string) ($model->getAttribute('penalty_type_name') ?? $model->penalty_code),
+            penalty_amount: (string) $model->amount,
+            penalty_date: $model->getAttribute('penalty_date') !== null
+                ? Carbon::parse($model->getAttribute('penalty_date'))->format('Y-m-d')
+                : '',
+            rake_number: $model->getAttribute('rake_number'),
+            siding_name: $model->getAttribute('siding_name'),
         );
     }
 
     public static function tableColumns(): array
     {
+        $penaltyTypeOptions = PenaltyType::query()
+            ->orderBy('name')
+            ->get(['code', 'name'])
+            ->map(fn (PenaltyType $type): array => ['label' => $type->name, 'value' => $type->code])
+            ->values()
+            ->all();
+
         return [
             new Column(id: 'rake_number', label: 'Rake', type: 'text', sortable: false, filterable: false),
             new Column(id: 'siding_name', label: 'Siding', type: 'text', sortable: false, filterable: false),
-            new Column(id: 'penalty_type', label: 'Type', type: 'option', sortable: true, filterable: true, options: [
-                ['label' => 'DEM', 'value' => 'DEM'],
-                ['label' => 'POL1', 'value' => 'POL1'],
-                ['label' => 'POLA', 'value' => 'POLA'],
-                ['label' => 'PLO', 'value' => 'PLO'],
-                ['label' => 'ULC', 'value' => 'ULC'],
-                ['label' => 'SPL', 'value' => 'SPL'],
-                ['label' => 'WMC', 'value' => 'WMC'],
-                ['label' => 'MCF', 'value' => 'MCF'],
-            ]),
+            new Column(id: 'penalty_code', label: 'Type', type: 'option', sortable: true, filterable: true, options: $penaltyTypeOptions),
+            new Column(id: 'penalty_type_name', label: 'Type name', type: 'text', sortable: false, filterable: false),
             new Column(id: 'penalty_amount', label: 'Amount', type: 'number', sortable: true, filterable: false),
-            new Column(id: 'penalty_status', label: 'Status', type: 'option', sortable: true, filterable: true, options: [
-                ['label' => 'Pending', 'value' => 'pending'],
-                ['label' => 'Incurred', 'value' => 'incurred'],
-                ['label' => 'Disputed', 'value' => 'disputed'],
-                ['label' => 'Waived', 'value' => 'waived'],
-            ]),
             new Column(id: 'penalty_date', label: 'Date', type: 'date', sortable: true, filterable: true),
-            new Column(id: 'responsible_party', label: 'Responsible', type: 'option', sortable: true, filterable: true, options: [
-                ['label' => 'Railway', 'value' => 'railway'],
-                ['label' => 'Siding', 'value' => 'siding'],
-                ['label' => 'Transporter', 'value' => 'transporter'],
-                ['label' => 'Plant', 'value' => 'plant'],
-                ['label' => 'Other', 'value' => 'other'],
-            ]),
-            new Column(id: 'root_cause', label: 'Root Cause', type: 'text', sortable: false, filterable: false),
         ];
     }
 
@@ -85,16 +69,10 @@ final class PenaltyDataTable extends AbstractDataTable
         return [
             new QuickView(id: 'all', label: 'All', params: []),
             new QuickView(
-                id: 'pending',
-                label: 'Pending',
-                params: ['filter[penalty_status]' => 'eq:pending'],
-                icon: 'clock',
-            ),
-            new QuickView(
                 id: 'this_month',
                 label: 'This month',
                 params: [
-                    'filter[penalty_date]' => 'after:'.now()->startOfMonth()->toDateString(),
+                    'filter[penalty_date]' => 'gte:'.now()->startOfMonth()->toDateString(),
                 ],
                 icon: 'calendar',
             ),
@@ -108,9 +86,16 @@ final class PenaltyDataTable extends AbstractDataTable
             ? Siding::query()->pluck('id')->all()
             : ($user ? $user->accessibleSidings()->get()->pluck('id')->all() : []);
 
-        return Penalty::query()
-            ->with('rake.siding:id,name,code')
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+        return RrPenaltySnapshot::query()
+            ->select('rr_penalty_snapshots.*')
+            ->selectRaw('rakes.rake_number as rake_number, sidings.name as siding_name')
+            ->selectRaw('COALESCE(penalty_types.name, rr_penalty_snapshots.penalty_code) as penalty_type_name')
+            ->selectRaw(PenaltyDateFilter::DATE_EXPR.' as penalty_date')
+            ->leftJoin('rr_documents', 'rr_penalty_snapshots.rr_document_id', '=', 'rr_documents.id')
+            ->leftJoin('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->leftJoin('sidings', 'rakes.siding_id', '=', 'sidings.id')
+            ->leftJoin('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
+            ->whereIn('rakes.siding_id', $sidingIds);
     }
 
     public static function tableDefaultSort(): string
@@ -121,18 +106,16 @@ final class PenaltyDataTable extends AbstractDataTable
     public static function tableAllowedFilters(): array
     {
         return [
-            AllowedFilter::custom('penalty_type', new OperatorFilter('option')),
-            AllowedFilter::custom('penalty_status', new OperatorFilter('option')),
-            AllowedFilter::custom('penalty_date', new OperatorFilter('date')),
-            AllowedFilter::custom('responsible_party', new OperatorFilter('option')),
-            AllowedFilter::custom('rake_id', new OperatorFilter('number')),
-            AllowedFilter::callback('siding_id', fn ($query, $value) => $query->whereHas('rake', fn ($q) => $q->where('siding_id', $value))),
+            AllowedFilter::custom('penalty_code', new OperatorFilter('option')),
+            AllowedFilter::callback('penalty_date', fn (Builder $query, mixed $value) => PenaltyDateFilter::apply($query, $value)),
+            AllowedFilter::custom('rake_id', new OperatorFilter('number', 'rr_penalty_snapshots.rake_id')),
+            AllowedFilter::callback('siding_id', fn (Builder $query, mixed $value) => $query->where('rakes.siding_id', $value)),
         ];
     }
 
     public static function tableAllowedSorts(): array
     {
-        return ['penalty_type', 'penalty_amount', 'penalty_status', 'penalty_date', 'responsible_party'];
+        return ['penalty_code', 'penalty_amount', 'penalty_date'];
     }
 
     public static function tableFooter(\Illuminate\Support\Collection $items): array

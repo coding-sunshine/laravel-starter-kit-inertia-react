@@ -30,6 +30,8 @@ use App\Services\ForceMajeure\Contracts\DowntimePenaltyMatcherContract;
 use App\Services\ForceMajeure\DowntimePenaltyMatcher;
 use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
+use App\Services\Railway\Contracts\RrPdfTextExtractorContract;
+use App\Services\Railway\RrPdfTextExtractor;
 use App\Settings\SeoSettings;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse as FilamentLoginResponseContract;
 use Filament\Http\Controllers\RedirectToHomeController;
@@ -59,6 +61,8 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PaymentGatewayManager::class);
 
         $this->app->bind(DowntimePenaltyMatcherContract::class, DowntimePenaltyMatcher::class);
+
+        $this->app->bind(RrPdfTextExtractorContract::class, RrPdfTextExtractor::class);
 
         config(['filament-impersonate.redirect_to' => '/dashboard']);
 
@@ -210,6 +214,9 @@ final class AppServiceProvider extends ServiceProvider
             'penalty-analytics-tab',
             'penalty-index-charts',
             'penalty-drill-down',
+            'penalty-analytics-date-from',
+            'penalty-analytics-date-to',
+            'penalty-analytics-date-apply',
             'report-select-type',
             'report-generate',
             'report-download-csv',

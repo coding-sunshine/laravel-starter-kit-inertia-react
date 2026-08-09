@@ -39,7 +39,14 @@ final readonly class RrParserService
 
     private const WAGON_TABLE_TOTAL_PATTERNS = ['Total:', 'Grand Total', 'TOTAL'];
 
-    private const KNOWN_CHARGE_CODES = ['FREIGHT', 'OTC', 'POL1', 'POLA', 'DEM', 'GST', 'PCLA'];
+    private const KNOWN_CHARGE_CODES = ['FREIGHT', 'OTC', 'POL1', 'POL2', 'POLA', 'POL', 'DEM', 'GST', 'PCLA', 'DCLA', 'FAUC', 'FAOC', 'ENHC'];
+
+    /**
+     * Tokens the generic charge fallback must never treat as a charge code:
+     * table headers, units, and words seen in FOIS narrative text ("FOR 19",
+     * "RC 19", "WT 3699").
+     */
+    private const CHARGE_CODE_NOISE = ['RS', 'MT', 'KM', 'OR', 'NO', 'TO', 'DT', 'FOR', 'RC', 'WT', 'VIA', 'PER', 'PIN'];
 
     /**
      * Parse an RR PDF and return structured data in the format expected by RrImportService.
@@ -1296,6 +1303,28 @@ final readonly class RrParserService
             }
         }
 
+        // Generic fallback so unknown charge codes (e.g. new railway penalty
+        // codes) are captured instead of silently dropped. Callers truncate
+        // narrative tails before this point; the noise list guards the rest.
+        if (preg_match_all('/\b([A-Z]{2,6})\s+([\d,]+(?:\.\d+)?)\b/', $chargesText, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $code = $m[1];
+                if (isset($seen[$code]) || in_array($code, self::CHARGE_CODE_NOISE, true)) {
+                    continue;
+                }
+                $amount = (float) str_replace(',', '', $m[2]);
+                if ($amount < 1 || $amount > 999_999_999) {
+                    continue;
+                }
+                $charges[] = [
+                    'code' => $code,
+                    'name' => $this->chargeCodeToName($code),
+                    'amount' => $amount,
+                ];
+                $seen[$code] = true;
+            }
+        }
+
         return $charges;
     }
 
@@ -1329,11 +1358,17 @@ final readonly class RrParserService
         return match (mb_strtoupper($code)) {
             'FREIGHT' => 'Freight',
             'OTC' => 'Other Charges',
+            'POL' => 'Punitive Overloading',
             'POL1' => 'Punitive Overloading (Individual Wagon)',
+            'POL2' => 'Punitive Overloading Charge',
             'POLA' => 'Punitive Overloading (Average)',
             'DEM' => 'Demurrage',
             'GST' => 'GST',
-            'PCLA' => 'PCLA',
+            'PCLA' => 'Punitive Charges for Load Adjustment',
+            'DCLA' => 'Detention Charge For Load Adjustment',
+            'FAUC' => 'Freight Adjustment (Undercharge)',
+            'FAOC' => 'Freight Adjustment (Overcharge)',
+            'ENHC' => 'Engine Hire Charges',
             default => null,
         };
     }

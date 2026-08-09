@@ -3,27 +3,20 @@
 declare(strict_types=1);
 
 use App\Actions\BuildPenaltyChartDataAction;
-use App\Models\AppliedPenalty;
-use App\Models\Penalty;
 use App\Models\PenaltyType;
 use App\Models\Rake;
-use App\Models\RakeCharge;
+use App\Models\RrPenaltySnapshot;
 use App\Models\Siding;
 use Illuminate\Http\Request;
 
-it('byType aggregates from AppliedPenalty not Penalty', function (): void {
-    $type = PenaltyType::factory()->create(['code' => 'DEM', 'is_active' => true]);
+it('byType aggregates from rr_penalty_snapshots', function (): void {
+    PenaltyType::factory()->create(['code' => 'DEM', 'is_active' => true]);
     $rake = Rake::factory()->create();
-    $charge = RakeCharge::factory()->create(['rake_id' => $rake->id]);
-    AppliedPenalty::factory()->create([
-        'penalty_type_id' => $type->id,
+    RrPenaltySnapshot::factory()->create([
         'rake_id' => $rake->id,
-        'rake_charge_id' => $charge->id,
+        'penalty_code' => 'DEM',
         'amount' => 1000,
-        'meta' => ['source' => 'demurrage'],
     ]);
-    // Old Penalty record — must NOT appear in results
-    Penalty::factory()->create(['rake_id' => $rake->id, 'penalty_amount' => 99999]);
 
     $result = app(BuildPenaltyChartDataAction::class)->handle(new Request);
 
@@ -34,15 +27,11 @@ it('byType aggregates from AppliedPenalty not Penalty', function (): void {
 
 it('bySiding aggregates by siding name', function (): void {
     $siding = Siding::factory()->create(['name' => 'Dumka']);
-    $type = PenaltyType::factory()->create(['code' => 'DEM', 'is_active' => true]);
     $rake = Rake::factory()->create(['siding_id' => $siding->id]);
-    $charge = RakeCharge::factory()->create(['rake_id' => $rake->id]);
-    AppliedPenalty::factory()->create([
-        'penalty_type_id' => $type->id,
+    RrPenaltySnapshot::factory()->create([
         'rake_id' => $rake->id,
-        'rake_charge_id' => $charge->id,
+        'penalty_code' => 'DEM',
         'amount' => 5000,
-        'meta' => ['source' => 'demurrage'],
     ]);
 
     $result = app(BuildPenaltyChartDataAction::class)->handle(new Request);
@@ -55,4 +44,33 @@ it('monthlyTrend returns 12 months with zero-filled gaps', function (): void {
     $result = app(BuildPenaltyChartDataAction::class)->handle(new Request);
     expect($result['monthlyTrend'])->toHaveCount(12);
     expect($result['monthlyTrend'][0])->toHaveKeys(['month', 'total', 'count']);
+});
+
+it('honors filter[penalty_date] range and excludes rows outside it', function (): void {
+    $rake = Rake::factory()->create();
+    $inRange = RrPenaltySnapshot::factory()->create([
+        'rake_id' => $rake->id,
+        'penalty_code' => 'DEM',
+        'amount' => 1000,
+    ]);
+    $inRange->forceFill(['created_at' => '2026-01-15'])->save();
+    $outOfRange = RrPenaltySnapshot::factory()->create([
+        'rake_id' => $rake->id,
+        'penalty_code' => 'DEM',
+        'amount' => 2000,
+    ]);
+    $outOfRange->forceFill(['created_at' => '2025-01-15'])->save();
+
+    $request = Request::create('/', 'GET', [
+        'filter' => ['penalty_date' => 'between:2026-01-01,2026-01-31'],
+    ]);
+
+    $result = app(BuildPenaltyChartDataAction::class)->handle($request);
+
+    expect($result['byType'][0]['value'])->toBe(1000.0);
+
+    // sanity: both rows exist, only in-range one counted
+    expect(RrPenaltySnapshot::query()->count())->toBe(2);
+    expect($inRange->exists)->toBeTrue();
+    expect($outOfRange->exists)->toBeTrue();
 });

@@ -614,7 +614,8 @@
                     "railway-receipts.update",
                     "railway-receipts.destroy"
                 ]
-            }
+            },
+            "lastUpdated": "2026-08-09"
         },
         "ReconcileRakeAction": {
             "documented": true,
@@ -660,7 +661,7 @@
         "RunReportAction": {
             "documented": true,
             "path": "./runreportaction.md",
-            "lastUpdated": "2026-05-07",
+            "lastUpdated": "2026-08-09",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -919,7 +920,8 @@
                     "penalties.update",
                     "penalties.dispute-recommendation"
                 ]
-            }
+            },
+            "lastUpdated": "2026-08-09"
         },
         "CalculateSidingRiskScoresAction": {
             "documented": true,
@@ -2286,7 +2288,8 @@
                     "penalties/index",
                     "penalties/analytics"
                 ]
-            }
+            },
+            "lastUpdated": "2026-08-09"
         },
         "RrDocumentController": {
             "documented": true,

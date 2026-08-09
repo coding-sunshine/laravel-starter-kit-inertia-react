@@ -116,6 +116,45 @@ final readonly class RrImportService
         $this->assertRrUploadSlotAvailable($rake, null);
     }
 
+    public function resolveChargeType(string $code, ?string $name, float $amount): string
+    {
+        $normalizedCode = mb_strtoupper(mb_trim($code));
+        $normalizedName = mb_strtoupper(mb_trim((string) $name));
+
+        if ($this->isPenaltyCode($normalizedCode)) {
+            return 'PENALTY';
+        }
+
+        if (str_contains($normalizedCode, 'GST') || str_contains($normalizedName, 'GST')) {
+            return 'GST';
+        }
+
+        if (
+            $normalizedCode === 'FREIGHT'
+            || str_contains($normalizedCode, 'FRT')
+            || str_contains($normalizedName, 'FREIGHT')
+        ) {
+            return 'FREIGHT';
+        }
+
+        if ($normalizedCode === 'REBATE' || $amount < 0) {
+            return 'REBATE';
+        }
+
+        return 'OTHER_CHARGE';
+    }
+
+    public function isPenaltyCode(string $code): bool
+    {
+        $normalized = mb_strtoupper(mb_trim($code));
+
+        if (in_array($normalized, ['POL1', 'POLA', 'DEM'], true)) {
+            return true;
+        }
+
+        return PenaltyType::query()->where('code', $normalized)->exists();
+    }
+
     private function assertRrUploadSlotAvailable(Rake $rake, ?DiverrtDestination $diverrtDestination): void
     {
         if ($diverrtDestination !== null) {
@@ -739,45 +778,6 @@ final readonly class RrImportService
                 'remarks' => $isActual ? 'RR penalty aggregate' : 'Predicted penalty aggregate',
             ]
         );
-    }
-
-    private function resolveChargeType(string $code, ?string $name, float $amount): string
-    {
-        $normalizedCode = mb_strtoupper(mb_trim($code));
-        $normalizedName = mb_strtoupper(mb_trim((string) $name));
-
-        if ($this->isPenaltyCode($normalizedCode)) {
-            return 'PENALTY';
-        }
-
-        if (str_contains($normalizedCode, 'GST') || str_contains($normalizedName, 'GST')) {
-            return 'GST';
-        }
-
-        if (
-            $normalizedCode === 'FREIGHT'
-            || str_contains($normalizedCode, 'FRT')
-            || str_contains($normalizedName, 'FREIGHT')
-        ) {
-            return 'FREIGHT';
-        }
-
-        if ($normalizedCode === 'REBATE' || $amount < 0) {
-            return 'REBATE';
-        }
-
-        return 'OTHER_CHARGE';
-    }
-
-    private function isPenaltyCode(string $code): bool
-    {
-        $normalized = mb_strtoupper(mb_trim($code));
-
-        if (in_array($normalized, ['POL1', 'POLA', 'DEM'], true)) {
-            return true;
-        }
-
-        return PenaltyType::query()->where('code', $normalized)->exists();
     }
 
     /**

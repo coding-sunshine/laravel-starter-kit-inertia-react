@@ -49,13 +49,8 @@ final class PenaltyReconciliationResource extends Resource
             ])
             ->defaultSort('reconciled_at', 'desc')
             ->filters([
-                SelectFilter::make('penalty_code')->options([
-                    'DEM' => 'DEM',
-                    'PLO' => 'PLO',
-                    'POL1' => 'POL1',
-                    'POLA' => 'POLA',
-                    'ENHC' => 'ENHC',
-                ]),
+                SelectFilter::make('penalty_code')
+                    ->options(fn (): array => PenaltyType::query()->pluck('name', 'code')->all()),
                 TernaryFilter::make('dispute_candidate'),
             ]);
     }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Support\PenaltyDateFilter;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,23 +29,22 @@ final readonly class BuildPenaltyChartDataAction
     {
         $filters = $request->get('filter', []);
 
-        return isset($filters['created_at']);
+        return isset($filters['penalty_date']);
     }
 
-    private function baseQuery(bool $hasDateFilter, Request $request): \Illuminate\Database\Query\Builder
+    private function baseQuery(bool $hasDateFilter, Request $request): Builder
     {
-        $query = DB::table('applied_penalties')
-            ->join('penalty_types', 'applied_penalties.penalty_type_id', '=', 'penalty_types.id')
-            ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id');
+        $query = DB::table('rr_penalty_snapshots')
+            ->leftJoin('rr_documents', 'rr_penalty_snapshots.rr_document_id', '=', 'rr_documents.id')
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
+            ->leftJoin('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code');
 
         if (! $hasDateFilter) {
-            $query->where('applied_penalties.created_at', '>=', now()->startOfMonth()->subMonthsNoOverflow(11));
+            $query->whereRaw(PenaltyDateFilter::DATE_EXPR.' >= ?', [now()->startOfMonth()->subMonthsNoOverflow(11)]);
         } else {
             $filters = $request->get('filter', []);
-            if (isset($filters['created_at'])) {
-                $query->whereDate('applied_penalties.created_at', $filters['created_at']);
-            }
+            PenaltyDateFilter::apply($query, $filters['penalty_date']);
         }
 
         return $query;
@@ -55,8 +56,8 @@ final readonly class BuildPenaltyChartDataAction
     private function buildByType(bool $hasDateFilter, Request $request): array
     {
         $rows = $this->baseQuery($hasDateFilter, $request)
-            ->selectRaw('penalty_types.code as name, sum(applied_penalties.amount) as value, count(*) as count')
-            ->groupBy('penalty_types.code')
+            ->selectRaw('rr_penalty_snapshots.penalty_code as name, sum(rr_penalty_snapshots.amount) as value, count(*) as count')
+            ->groupBy('rr_penalty_snapshots.penalty_code')
             ->orderByDesc('value')
             ->get();
 
@@ -73,7 +74,7 @@ final readonly class BuildPenaltyChartDataAction
     private function buildBySiding(bool $hasDateFilter, Request $request): array
     {
         $rows = $this->baseQuery($hasDateFilter, $request)
-            ->selectRaw('sidings.name as name, sum(applied_penalties.amount) as total')
+            ->selectRaw('sidings.name as name, sum(rr_penalty_snapshots.amount) as total')
             ->groupBy('sidings.name')
             ->orderByDesc('total')
             ->limit(10)
@@ -91,14 +92,15 @@ final readonly class BuildPenaltyChartDataAction
     private function buildMonthlyTrend(bool $hasDateFilter, Request $request): array
     {
         $driver = DB::getDriverName();
+        $dateExpr = PenaltyDateFilter::DATE_EXPR;
         $yearMonthSql = match ($driver) {
-            'pgsql' => 'EXTRACT(YEAR FROM applied_penalties.created_at)::int as y, EXTRACT(MONTH FROM applied_penalties.created_at)::int as m',
-            'sqlite' => "CAST(strftime('%Y', applied_penalties.created_at) AS INTEGER) as y, CAST(strftime('%m', applied_penalties.created_at) AS INTEGER) as m",
-            default => 'YEAR(applied_penalties.created_at) as y, MONTH(applied_penalties.created_at) as m',
+            'pgsql' => "EXTRACT(YEAR FROM ({$dateExpr}))::int as y, EXTRACT(MONTH FROM ({$dateExpr}))::int as m",
+            'sqlite' => "CAST(strftime('%Y', {$dateExpr}) AS INTEGER) as y, CAST(strftime('%m', {$dateExpr}) AS INTEGER) as m",
+            default => "YEAR({$dateExpr}) as y, MONTH({$dateExpr}) as m",
         };
 
         $rows = $this->baseQuery($hasDateFilter, $request)
-            ->selectRaw("{$yearMonthSql}, sum(applied_penalties.amount) as total, count(*) as count")
+            ->selectRaw("{$yearMonthSql}, sum(rr_penalty_snapshots.amount) as total, count(*) as count")
             ->groupBy('y', 'm')
             ->orderBy('y')
             ->orderBy('m')

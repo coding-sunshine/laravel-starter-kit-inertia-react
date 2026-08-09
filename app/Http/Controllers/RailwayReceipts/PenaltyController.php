@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdatePenaltyRequest;
 use App\Models\Penalty;
 use App\Models\Siding;
+use App\Support\PenaltyDateFilter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,11 +52,11 @@ final class PenaltyController extends Controller
     {
         $sidingIds = $this->sidingIdsForUser($request);
 
-        $summaryCards = $this->buildAnalyticsSummary($sidingIds);
-        $byResponsibleParty = $this->buildByResponsibleParty($sidingIds);
-        $byType = $this->buildByType($sidingIds);
-        $bySiding = $this->buildBySiding($sidingIds);
-        $monthlyTrend = $this->buildMonthlyTrend($sidingIds);
+        $summaryCards = $this->buildAnalyticsSummary($sidingIds, $request);
+        $byResponsibleParty = $this->buildByResponsibleParty();
+        $byType = $this->buildByType($sidingIds, $request);
+        $bySiding = $this->buildBySiding($sidingIds, $request);
+        $monthlyTrend = $this->buildMonthlyTrend($sidingIds, $request);
         $topOffenders = $this->buildTopOffenders($sidingIds);
         $weekdayHeatmap = $this->buildWeekdayHeatmap($sidingIds);
         $rootCauseBreakdown = $this->buildRootCauseBreakdown($sidingIds);
@@ -124,10 +125,36 @@ final class PenaltyController extends Controller
     }
 
     /**
+     * Base query joining rr_penalty_snapshots to rr_documents/rakes/sidings/penalty_types,
+     * scoped to the given sidings, honoring `filter[penalty_date]` (same convention as
+     * PenaltyDataTable / BuildPenaltyChartDataAction) with a 12-month default window.
+     *
+     * @param  array<int>  $sidingIds
+     */
+    private function penaltySnapshotQuery(array $sidingIds, Request $request): \Illuminate\Database\Query\Builder
+    {
+        $query = DB::table('rr_penalty_snapshots')
+            ->leftJoin('rr_documents', 'rr_penalty_snapshots.rr_document_id', '=', 'rr_documents.id')
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
+            ->leftJoin('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
+            ->whereIn('rakes.siding_id', $sidingIds);
+
+        $filters = $request->get('filter', []);
+        if (isset($filters['penalty_date'])) {
+            PenaltyDateFilter::apply($query, $filters['penalty_date']);
+        } else {
+            $query->whereRaw(PenaltyDateFilter::DATE_EXPR.' >= ?', [now()->subMonths(12)]);
+        }
+
+        return $query;
+    }
+
+    /**
      * @param  array<int>  $sidingIds
      * @return array<string, mixed>
      */
-    private function buildAnalyticsSummary(array $sidingIds): array
+    private function buildAnalyticsSummary(array $sidingIds, Request $request): array
     {
         if ($sidingIds === []) {
             return [
@@ -141,85 +168,46 @@ final class PenaltyController extends Controller
             ];
         }
 
-        $baseQuery = fn () => Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subMonths(12));
+        $total = (int) $this->penaltySnapshotQuery($sidingIds, $request)->count();
+        $totalAmount = (float) $this->penaltySnapshotQuery($sidingIds, $request)->sum('rr_penalty_snapshots.amount');
 
-        $total = $baseQuery()->count();
-        $totalAmount = (float) $baseQuery()->sum('penalty_amount');
-
-        $byStatus = $baseQuery()
-            ->selectRaw('penalty_status, count(*) as count, sum(penalty_amount) as total')
-            ->groupBy('penalty_status')
-            ->get()
-            ->map(fn ($r): array => [
-                'status' => $r->penalty_status,
-                'count' => (int) $r->count,
-                'total' => (float) $r->total,
-            ])
-            ->values()
-            ->all();
-
-        $disputedCount = $baseQuery()->where('penalty_status', 'disputed')->count()
-            + $baseQuery()->whereNotNull('disputed_at')->count();
-        $waivedCount = $baseQuery()->where('penalty_status', 'waived')->count();
-        $disputeSuccessRate = $disputedCount > 0
-            ? round(($waivedCount / max(1, $disputedCount + $waivedCount)) * 100, 1)
-            : 0;
-
+        // Dispute/status workflow (by_status, disputed_count, waived_count, dispute_success_rate)
+        // has no equivalent on rr_penalty_snapshots — reported as empty/zero rather than fabricated.
         return [
             'total_penalties' => $total,
             'total_amount' => round($totalAmount, 2),
-            'by_status' => $byStatus,
-            'disputed_count' => $disputedCount,
-            'waived_count' => $waivedCount,
-            'dispute_success_rate' => $disputeSuccessRate,
+            'by_status' => [],
+            'disputed_count' => 0,
+            'waived_count' => 0,
+            'dispute_success_rate' => 0,
             'avg_penalty' => $total > 0 ? round($totalAmount / $total, 2) : 0,
         ];
     }
 
     /**
-     * @param  array<int>  $sidingIds
+     * responsible_party has no equivalent on rr_penalty_snapshots — the frontend already
+     * renders a helpful empty state for this list, so it's reported empty rather than faked.
+     *
      * @return array<int, array{name: string, value: float, count: int}>
      */
-    private function buildByResponsibleParty(array $sidingIds): array
+    private function buildByResponsibleParty(): array
     {
-        if ($sidingIds === []) {
-            return [];
-        }
-
-        return Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subMonths(12))
-            ->whereNotNull('responsible_party')
-            ->selectRaw('responsible_party as name, sum(penalty_amount) as value, count(*) as count')
-            ->groupBy('responsible_party')
-            ->orderByDesc('value')
-            ->get()
-            ->map(fn ($r): array => [
-                'name' => ucfirst((string) $r->name),
-                'value' => (float) $r->value,
-                'count' => (int) $r->count,
-            ])
-            ->values()
-            ->all();
+        return [];
     }
 
     /**
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, value: float, count: int}>
      */
-    private function buildByType(array $sidingIds): array
+    private function buildByType(array $sidingIds, Request $request): array
     {
         if ($sidingIds === []) {
             return [];
         }
 
-        return Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subMonths(12))
-            ->selectRaw('penalty_type as name, sum(penalty_amount) as value, count(*) as count')
-            ->groupBy('penalty_type')
+        return $this->penaltySnapshotQuery($sidingIds, $request)
+            ->selectRaw('rr_penalty_snapshots.penalty_code as name, sum(rr_penalty_snapshots.amount) as value, count(*) as count')
+            ->groupBy('rr_penalty_snapshots.penalty_code')
             ->orderByDesc('value')
             ->get()
             ->map(fn ($r): array => [
@@ -235,19 +223,15 @@ final class PenaltyController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, total: float, count: int, types: array<string, float>}>
      */
-    private function buildBySiding(array $sidingIds): array
+    private function buildBySiding(array $sidingIds, Request $request): array
     {
         if ($sidingIds === []) {
             return [];
         }
 
-        $rows = Penalty::query()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->where('penalty_date', '>=', now()->subMonths(12))
-            ->selectRaw('sidings.name as siding_name, penalties.penalty_type, sum(penalty_amount) as total, count(*) as count')
-            ->groupBy('sidings.name', 'penalties.penalty_type')
+        $rows = $this->penaltySnapshotQuery($sidingIds, $request)
+            ->selectRaw('sidings.name as siding_name, rr_penalty_snapshots.penalty_code, sum(rr_penalty_snapshots.amount) as total, count(*) as count')
+            ->groupBy('sidings.name', 'rr_penalty_snapshots.penalty_code')
             ->orderByDesc('total')
             ->get();
 
@@ -259,7 +243,7 @@ final class PenaltyController extends Controller
             }
             $grouped[$name]['total'] += (float) $row->total;
             $grouped[$name]['count'] += (int) $row->count;
-            $grouped[$name]['types'][$row->penalty_type] = (float) $row->total;
+            $grouped[$name]['types'][$row->penalty_code] = (float) $row->total;
         }
 
         usort($grouped, fn ($a, $b) => $b['total'] <=> $a['total']);
@@ -273,7 +257,7 @@ final class PenaltyController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{month: string, total: float, count: int}>
      */
-    private function buildMonthlyTrend(array $sidingIds): array
+    private function buildMonthlyTrend(array $sidingIds, Request $request): array
     {
         // Build all 12 months with zeros as baseline
         $months = [];
@@ -292,14 +276,15 @@ final class PenaltyController extends Controller
         }
 
         $driver = DB::getDriverName();
-        $yearMonthSql = $driver === 'pgsql'
-            ? 'EXTRACT(YEAR FROM penalty_date)::int as y, EXTRACT(MONTH FROM penalty_date)::int as m'
-            : 'YEAR(penalty_date) as y, MONTH(penalty_date) as m';
+        $dateExpr = PenaltyDateFilter::DATE_EXPR;
+        $yearMonthSql = match ($driver) {
+            'pgsql' => "EXTRACT(YEAR FROM ({$dateExpr}))::int as y, EXTRACT(MONTH FROM ({$dateExpr}))::int as m",
+            'sqlite' => "CAST(strftime('%Y', {$dateExpr}) AS INTEGER) as y, CAST(strftime('%m', {$dateExpr}) AS INTEGER) as m",
+            default => "YEAR({$dateExpr}) as y, MONTH({$dateExpr}) as m",
+        };
 
-        $rows = Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subMonths(12))
-            ->selectRaw("{$yearMonthSql}, sum(penalty_amount) as total, count(*) as count")
+        $rows = $this->penaltySnapshotQuery($sidingIds, $request)
+            ->selectRaw("{$yearMonthSql}, sum(rr_penalty_snapshots.amount) as total, count(*) as count")
             ->groupBy('y', 'm')
             ->get();
 
@@ -365,9 +350,11 @@ final class PenaltyController extends Controller
         }
 
         $driver = DB::getDriverName();
-        $dowSql = $driver === 'pgsql'
-            ? 'EXTRACT(DOW FROM penalty_date)::int as day'
-            : 'DAYOFWEEK(penalty_date) - 1 as day';
+        $dowSql = match ($driver) {
+            'pgsql' => 'EXTRACT(DOW FROM penalty_date)::int as day',
+            'sqlite' => "CAST(strftime('%w', penalty_date) AS INTEGER) as day",
+            default => 'DAYOFWEEK(penalty_date) - 1 as day',
+        };
 
         return Penalty::query()
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))

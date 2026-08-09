@@ -37,11 +37,11 @@ None (readonly class with no constructor).
 
 ### `handle` / `handlePaginated`
 
-| Parameter    | Type        | Description |
-|-------------|-------------|-------------|
-| `$key`      | `string`    | Report key (must be in `reportGenerateKeys()` for the grid, or other keys for delegated/legacy flows). |
-| `$sidingIds` | `int[]`     | Siding IDs the user may see; rows are restricted to rakes on these sidings. |
-| `$params`    | `array`     | Optional filters: `siding_id`, `date_from`, `date_to`, `rake_number`, `loader` (where applicable), `power_plant_id` (Rail Dispatch DPR), `penalty_stage` (`pre_rr` \| `post_rr`, **Penalty Report** only), `underload_threshold_percent` (0–100, **Underloading Report** / **Loader Performance** underload rule, default **1**), **`loader_id`** / **`loader_operator_id`** (**Loader Performance** POST; operator resolved to `loader_operator_name`), plus internal `grid_pagination`, `grid_offset`, `grid_limit`, `no_limit`, `limit`. |
+| Parameter    | Type     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$key`       | `string` | Report key (must be in `reportGenerateKeys()` for the grid, or other keys for delegated/legacy flows).                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `$sidingIds` | `int[]`  | Siding IDs the user may see; rows are restricted to rakes on these sidings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `$params`    | `array`  | Optional filters: `siding_id`, `date_from`, `date_to`, `rake_number`, `loader` (where applicable), `power_plant_id` (Rail Dispatch DPR), `penalty_stage` (`pre_rr` \| `post_rr`, **Penalty Report** only), `underload_threshold_percent` (0–100, **Underloading Report** / **Loader Performance** underload rule, default **1**), **`loader_id`** / **`loader_operator_id`** (**Loader Performance** POST; operator resolved to `loader_operator_name`), plus internal `grid_pagination`, `grid_offset`, `grid_limit`, `no_limit`, `limit`. |
 
 ### Rail Dispatch DPR (`rail_dispatch_dpr`)
 
@@ -80,6 +80,16 @@ None (readonly class with no constructor).
 - **Overload** / **underload** definitions match **`LoaderOverloadMetricsService`** (underload counts when shortfall as % of CC ≥ **`underload_threshold_percent`**, default **1**, clamped 0–100).
 - **Columns (export / API keys)**: **`Loader`**, **`Siding`**, **`Wagons`** (eligible wagon count), **`Overload`**, **`Underload`**, **`Avg MT`**, **`Dev MT`** (mean absolute load vs CC in MT), **`Accuracy`** (percentage string, e.g. **`100%`**, **`33.3%`**; **`—`** when no eligible wagons).
 
+### RR Wagon Details (`rr_wagon_details_report`, Coal Logestic Advance)
+
+- One row per `rr_wagon_snapshots` line joined to rake + RR (weights, chargeable allocation, normal/punitive rates).
+- Punitive rate per wagon is picked from `RrPenaltySnapshot` rows for the wagon's RR document via `punitiveRatePickFromMaps()`, matching by `wagon_number`, falling back to `wagon_sequence`, falling back to a whole-RR ("broad") bucket — see `punitiveRateMapsForRrSnapshots()`.
+- When a wagon/sequence/broad bucket has snapshots for multiple penalty codes, `pickPreferredOverloadPenaltyCodeRates()` prefers `penaltyTypeCodes()` order, else the first finite rate found.
+
+### Penalty type codes (`penaltyTypeCodes()`)
+
+Used by the RR Wagon Details punitive-rate lookup above. Sourced dynamically from the `penalty_types` table (`PenaltyType::query()->orderBy('id')->pluck('code')`) rather than a hardcoded list, memoized per action run via `once()`. A fixed preferred-order prefix — `POL1, POLA, PLO, PCLA, ENHC` — is placed first (intersected with what actually exists in `penalty_types`) so the historical preference order for picking an overload penalty rate holds regardless of table row order; all other configured codes follow.
+
 ## Return value
 
 - **`handle`**: `array<int, array<string, mixed>>` — list of associative row arrays (column labels as keys).
@@ -104,7 +114,7 @@ resolve(RunReportAction::class)->handle('rail_dispatch_dpr', $sidingIds, $params
 
 - **Controller**: `App\Http\Controllers\Reports\ReportsController`
 - **Routes**: `reports.index` (GET), `reports.generate` (POST)
-- **Models**: `RakeWagonWeighment`, `WagonLoading`, `Loader`, `LoaderOperator`, `RrDocument`, `Rake`, `RakeCharge`, `PowerPlant`, `DiverrtDestination`, and others per report key
+- **Models**: `RakeWagonWeighment`, `WagonLoading`, `Loader`, `LoaderOperator`, `RrDocument`, `Rake`, `RakeCharge`, `PowerPlant`, `DiverrtDestination`, `RrPenaltySnapshot`, `PenaltyType`, and others per report key
 
 ## Notes
 

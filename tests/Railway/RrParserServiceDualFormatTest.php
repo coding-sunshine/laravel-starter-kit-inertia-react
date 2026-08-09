@@ -172,6 +172,60 @@ TXT;
         ->not->toContain('DT');
 });
 
+test('FOIS charges capture all penalty codes including previously dropped ones', function (): void {
+    $penaltyLines = <<<'TXT'
+POL1 2025.92
+POL2 1500.00
+POLA 800.50
+PCLA 4200.00
+DCLA 9200.00
+FAUC 3100.00
+FAOC 250.00
+ENHC 7800.00
+TXT;
+    $text = str_replace('POL1 2025.92', $penaltyLines, rrMinimalFoisPrintedText());
+
+    $p = $this->parser->parseExtractedText($text);
+    $charges = array_column($p['charges'], 'amount', 'code');
+
+    expect($charges)->toHaveKeys(['POL1', 'POL2', 'POLA', 'PCLA', 'DCLA', 'FAUC', 'FAOC', 'ENHC'])
+        ->and($charges['POL2'])->toBe(1500.00)
+        ->and($charges['DCLA'])->toBe(9200.00)
+        ->and($charges['FAUC'])->toBe(3100.00)
+        ->and($charges['FAOC'])->toBe(250.00)
+        ->and($charges['ENHC'])->toBe(7800.00);
+});
+
+test('multipage ET-RR charges capture penalty codes in Other Charges block', function (): void {
+    $text = str_replace(
+        "GST      50.00\nOTC      25.00",
+        "GST      50.00\nOTC      25.00\nDCLA     9200.00\nENHC     7800.00\nPCLA     4200.00",
+        rrMinimalEtRrMultipageText()
+    );
+
+    $p = $this->parser->parseExtractedText($text);
+    $charges = array_column($p['charges'], 'amount', 'code');
+
+    expect($charges)->toHaveKeys(['GST', 'OTC', 'DCLA', 'ENHC', 'PCLA'])
+        ->and($charges['DCLA'])->toBe(9200.00)
+        ->and($charges['ENHC'])->toBe(7800.00);
+});
+
+test('generic fallback captures unknown future charge codes but skips noise tokens', function (): void {
+    $text = str_replace(
+        'POL1 2025.92',
+        "POL1 2025.92\nXYZC 1234.56\nWT 3699.88\nRS 500",
+        rrMinimalFoisPrintedText()
+    );
+
+    $p = $this->parser->parseExtractedText($text);
+    $codes = array_column($p['charges'], 'code');
+
+    expect($codes)->toContain('XYZC')
+        ->not->toContain('WT')
+        ->not->toContain('RS');
+});
+
 test('throws when PDF text is neither eT-RR nor FOIS printed', function (): void {
     expect(fn () => $this->parser->parseExtractedText('This is generic PDF noise without RR markers.'))
         ->toThrow(InvalidArgumentException::class);

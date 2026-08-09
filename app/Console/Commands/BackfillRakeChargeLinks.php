@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\AppliedPenalty;
 use App\Models\RakeCharge;
 use App\Models\RrDocument;
+use App\Services\Railway\RrImportService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,11 @@ final class BackfillRakeChargeLinks extends Command
     protected $signature = 'rake-charges:backfill-links {--dry-run : Show summary without persisting changes}';
 
     protected $description = 'Backfill rake_charge_id links for RR charges and penalty tables';
+
+    public function __construct(private readonly RrImportService $rrImportService)
+    {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -56,7 +62,7 @@ final class BackfillRakeChargeLinks extends Command
 
                     $totalsByType = [];
                     foreach ($document->rrCharges as $rrCharge) {
-                        $type = $this->resolveChargeType(
+                        $type = $this->rrImportService->resolveChargeType(
                             (string) $rrCharge->charge_code,
                             $rrCharge->charge_name,
                             (float) $rrCharge->amount
@@ -85,7 +91,7 @@ final class BackfillRakeChargeLinks extends Command
                         if ($rrCharge->rake_charge_id !== null) {
                             continue;
                         }
-                        $type = $this->resolveChargeType(
+                        $type = $this->rrImportService->resolveChargeType(
                             (string) $rrCharge->charge_code,
                             $rrCharge->charge_name,
                             (float) $rrCharge->amount
@@ -174,33 +180,5 @@ final class BackfillRakeChargeLinks extends Command
         }
 
         $this->line("Linked applied_penalties rows: {$updated}");
-    }
-
-    private function resolveChargeType(string $code, ?string $name, float $amount): string
-    {
-        $normalizedCode = mb_strtoupper(mb_trim($code));
-        $normalizedName = mb_strtoupper(mb_trim((string) $name));
-
-        if (in_array($normalizedCode, ['POL1', 'POLA', 'DEM'], true)) {
-            return 'PENALTY';
-        }
-
-        if (str_contains($normalizedCode, 'GST') || str_contains($normalizedName, 'GST')) {
-            return 'GST';
-        }
-
-        if (
-            $normalizedCode === 'FREIGHT'
-            || str_contains($normalizedCode, 'FRT')
-            || str_contains($normalizedName, 'FREIGHT')
-        ) {
-            return 'FREIGHT';
-        }
-
-        if ($normalizedCode === 'REBATE' || $amount < 0) {
-            return 'REBATE';
-        }
-
-        return 'OTHER_CHARGE';
     }
 }

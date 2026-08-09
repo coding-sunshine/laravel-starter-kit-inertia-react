@@ -193,7 +193,9 @@ final readonly class ProcessRrDocument
             - from_station_code (Station From code, e.g. BMGK, DUMK)
             - to_station_code (Station To code, e.g. PSPM, KPPS)
             - freight_total (total freight amount in rupees, number)
-            - charges: object with keys POL1, OTC, GST (amounts as numbers; use 0 if absent)
+            - charges: object keyed by every charge code printed in the charges section of the RR
+              (e.g. POL, POL1, POL2, POLA, PCLA, DCLA, FAUC, FAOC, ENHC, DEM, OTC, GST — include any
+              other code you see; amounts as numbers; omit codes not present)
 
             Wagon table (if present): wagons as array of objects, each with:
             - wagon_number, wagon_type, cc_mt, tare_mt, gross_mt, actual_mt, permissible_mt, over_weight_mt, chargeable_mt
@@ -262,11 +264,13 @@ final readonly class ProcessRrDocument
                     }
                     $charges = $parsed['charges'] ?? null;
                     if (is_array($charges)) {
-                        $charges = array_filter([
-                            'POL1' => isset($charges['POL1']) ? (float) $charges['POL1'] : null,
-                            'OTC' => isset($charges['OTC']) ? (float) $charges['OTC'] : null,
-                            'GST' => isset($charges['GST']) ? (float) $charges['GST'] : null,
-                        ], fn (?float $v): bool => $v !== null);
+                        $normalized = [];
+                        foreach ($charges as $code => $amount) {
+                            if (is_string($code) && is_numeric($amount) && (float) $amount > 0) {
+                                $normalized[mb_strtoupper(mb_trim($code))] = (float) $amount;
+                            }
+                        }
+                        $charges = $normalized;
                     }
 
                     return array_filter([
