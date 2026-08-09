@@ -587,7 +587,7 @@ Route::middleware('auth')->group(function (): void {
         ->middleware(['feature:personal_data_export', 'redirect.settings'])
         ->name('personal-data-export.edit');
     Route::post('settings/personal-data-export', PersonalDataExportController::class)
-        ->middleware(['feature:personal_data_export', 'throttle:3,1', 'redirect.settings'])
+        ->middleware(['feature:personal_data_export', 'throttle:3,1'])
         ->name('personal-data-export.store');
 
     // User Two-Factor Authentication (redirect to dashboard for all users)...

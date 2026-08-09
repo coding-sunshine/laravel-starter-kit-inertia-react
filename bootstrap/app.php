@@ -22,6 +22,8 @@ use App\Http\Middleware\ServeFavicon;
 use App\Http\Middleware\SetSidingContext;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\ThrottleTwoFactorManagement;
+use Essa\APIToolKit\Api\ApiResponse;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -72,10 +74,10 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             CacheResponse::class,
-            AutoPermissionMiddleware::class,
             ThrottleTwoFactorManagement::class,
             EnsureOnboardingComplete::class,
             EnsureTermsAccepted::class,
+            AutoPermissionMiddleware::class,
         ];
 
         $middleware->web(
@@ -93,6 +95,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Only the toolkit's problem+json unauthenticated format is wired up; the
+        // full APIToolKit::registerExceptionRenderers() also rewrites validation
+        // errors app-wide (breaking assertJsonValidationErrors() elsewhere).
+        $apiResponse = new class
+        {
+            use ApiResponse;
+        };
+
+        $exceptions->renderable(function (AuthenticationException $e, Request $request) use ($apiResponse) {
+            if ($request->expectsJson()) {
+                return $apiResponse->responseUnAuthenticated($e->getMessage());
+            }
+        });
+
         $exceptions->report(function (MartinPetricko\LaravelDatabaseMail\Exceptions\DatabaseMailException $e): void {
             MartinPetricko\LaravelDatabaseMail\Facades\LaravelDatabaseMail::logException($e);
         });
