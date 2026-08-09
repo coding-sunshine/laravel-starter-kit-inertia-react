@@ -1,41 +1,53 @@
 # StitchForceMajeureDisputesAction
 
-**Path:** `app/Actions/StitchForceMajeureDisputesAction.php`
+## Purpose
 
-**Purpose:** Cross-reference Loadrite `loadrite_downtime_events` with DEM reconciliations in `penalty_reconciliations` and flag `dispute_candidate = true` when total overlap with a rake's loading window exceeds 15 minutes.
+{One-line description of what this action does}
 
-## Invocation
+## Location
 
-| Caller | Frequency |
-|---|---|
-| `disputes:stitch-force-majeure` artisan command | Nightly via scheduler (03:00) |
-| Manual replay | Engineer-triggered when downtime corpus is back-filled |
+`app/Actions/StitchForceMajeureDisputesAction.php`
 
-## Inputs
+## Method Signature
 
-`handle(int $lookbackDays = 30): ForceMajeureStitchOutcome`
+```php
+public function handle({parameters}): {returnType}
+```
 
-## Outputs
+## Dependencies
 
-`ForceMajeureStitchOutcome` with `candidates`, `rakesScanned`, `downtimeEventsConsidered`.
+{List injected dependencies from constructor, or "None" if no dependencies}
 
-## Side effects
+## Parameters
 
-For each flagged reconciliation:
-- `dispute_candidate = true`
-- `notes->force_majeure` JSON populated with `overlap_minutes` and `reason` (the asserted contract).
-- `notes->force_majeure_detail` JSON populated with `reasons_all`, `event_ids`, `stitched_at` (extended metadata).
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| {param} | {type} | {description} |
 
-## Idempotency
+## Return Value
 
-Reconciliations already carrying `notes->force_majeure` are skipped via `whereNull('notes->force_majeure')`.
+{Description of what the method returns}
 
-## Telemetry
+## Usage Examples
 
-Structured log at level `info`, tag `penalty.force_majeure.stitched`. Fields: `rakes_scanned`, `events_considered`, `candidates_flagged`.
+### From Controller
 
-## Related
+```php
+app(StitchForceMajeureDisputesAction::class)->handle($params);
+```
 
-- Job: `App\Jobs\FetchLoadriteDowntimeJob` (populates the downtime cache)
-- Command: `disputes:stitch-force-majeure` (triggers this action)
-- Source spec: `docs/superpowers/specs/2026-04-30-loadrite-api-integration-design.md`
+### From Job/Command
+
+```php
+(new StitchForceMajeureDisputesAction($dependency))->handle($params);
+```
+
+## Related Components
+
+- **Controller**: `{RelatedController}` (if applicable)
+- **Route**: `{RouteName}` ({HttpMethod} {RoutePath}) (if applicable)
+- **Model**: `{RelatedModel}` (if applicable)
+
+## Notes
+
+{Any additional notes, edge cases, or important information}

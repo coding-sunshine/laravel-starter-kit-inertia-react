@@ -2,46 +2,38 @@
 
 ## Purpose
 
-Lightweight Inertia controller for siding attendants to capture rake **placement** and **release** times with a single tap. Designed for the Pakur siding workflow but works for any siding the user is authorised to access.
+{One-line description of what this controller handles}
 
 ## Location
 
-`app/Http/Controllers/Sidings/QuickPlacementController.php`
-
-## Routes
-
-| Method | URI | Name | Handler |
-|--------|-----|------|---------|
-| GET | `sidings/{siding}/quick-placement` | `sidings.quick-placement.show` | `show()` |
-| POST | `sidings/{siding}/quick-placement` | `sidings.quick-placement.store` | `store()` |
+`app/Http/Controllers/QuickPlacementController.php`
 
 ## Methods
 
-### `show(Siding $siding): Response`
+| Method | HTTP Method | Route | Purpose |
+|--------|------------|-------|---------|
+| {method} | {http} | `{route}` | {description} |
 
-Renders the `sidings/quick-placement` Inertia page with up to 50 most recent active rakes for the siding (no `dispatch_time`, ordered by `created_at desc`). Selected fields: `id`, `rake_number`, `placement_time`, `loading_end_time`.
+## Routes
 
-### `store(QuickPlacementRequest $request, Siding $siding): RedirectResponse`
+{List all routes handled by this controller}
 
-Stamps either `placement_time` or `loading_end_time` on the chosen rake.
+- `{routeName}`: `{http} {path}` - {description}
 
-- Validates input via `App\Http\Requests\Sidings\QuickPlacementRequest`.
-- `event` must be `placed` or `released`.
-- Defaults `occurred_at` to `now()` when not supplied.
-- Redirects back with a success flash.
+## Actions Used
 
-## Form Request
+{List Actions called by this controller}
 
-`App\Http\Requests\Sidings\QuickPlacementRequest` — validates `rake_id`, `event`, optional `occurred_at`, and authorises the user against the siding.
+- `{ActionName}` - {when/why it's used}
 
-## Inertia Page
+## Validation
 
-`resources/js/pages/sidings/quick-placement.tsx`
+{List Form Requests used for validation}
 
-## User Guide
+- `{FormRequestName}` - {what it validates}
 
-`docs/user-guide/sidings/quick-placement.md`
+## Related Components
 
-## Source Spec
-
-`docs/superpowers/specs/2026-05-01-penalty-savings-program-design.md` §6 (Pakur placement gap).
+- **Pages**: `{PageName}` (rendered by this controller)
+- **Actions**: `{ActionName}` (called by this controller)
+- **Routes**: `{routeName}` (defined in routes/web.php)

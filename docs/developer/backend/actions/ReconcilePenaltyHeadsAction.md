@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Joins predicted (`applied_penalties`) and billed (`rr_penalty_snapshots`) per `penalty_code` for a single rake and writes the result into one or more `penalty_reconciliations` rows. Idempotent — safe to run multiple times for the same rake. Returns a `ReconciliationOutcome` DTO summarising created, updated, and dispute-candidate rows.
+{One-line description of what this action does}
 
 ## Location
 
@@ -11,62 +11,43 @@ Joins predicted (`applied_penalties`) and billed (`rr_penalty_snapshots`) per `p
 ## Method Signature
 
 ```php
-public function handle(Rake $rake): ReconciliationOutcome
+public function handle({parameters}): {returnType}
 ```
 
 ## Dependencies
 
-None (no constructor; pulls data via Eloquent queries).
+{List injected dependencies from constructor, or "None" if no dependencies}
 
 ## Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$rake` | `App\Models\Rake` | Rake whose predicted and billed penalty heads should be reconciled. |
+| {param} | {type} | {description} |
 
 ## Return Value
 
-`App\Actions\ReconciliationOutcome` DTO containing:
+{Description of what the method returns}
 
-- `createdCodes: array<string>` — penalty codes inserted into `penalty_reconciliations`.
-- `updatedCodes: array<string>` — penalty codes whose reconciliation row was updated.
-- `disputeCandidateCodes: array<string>` — codes flagged for review (see Dispute rule below).
+## Usage Examples
 
-## Trigger Points
+### From Controller
 
-The Action is invoked indirectly through `ReconcilePenaltyHeadsJob` (Horizon `penalties` queue, dispatched with `WithoutOverlapping` middleware keyed by `rake_id` so concurrent dispatches for the same rake serialise).
+```php
+app(ReconcilePenaltyHeadsAction::class)->handle($params);
+```
 
-Two events fan into this job:
+### From Job/Command
 
-| Event | Listener | Source |
-|-------|----------|--------|
-| `AppliedPenaltyPersisted` | `App\Listeners\ReconcileOnAppliedPenalty` | Emitted by Actions that write to `applied_penalties` (e.g. `ApplyWeighmentPenaltiesAction`, `ApplyPloPenaltyAction`). |
-| `RrPenaltySnapshotsImported` | `App\Listeners\ReconcileOnRrImport` | Emitted after RR PDF import refreshes `rr_penalty_snapshots`. |
+```php
+(new ReconcilePenaltyHeadsAction($dependency))->handle($params);
+```
 
-## Side Effects
+## Related Components
 
-- Writes/updates rows in `penalty_reconciliations` (one per `(rake_id, penalty_code)`).
-- Sets `dispute_candidate = true` per umbrella spec §5.1 rule:
-  - `billed_amount > 0 AND predicted_amount IS NULL`, **OR**
-  - `billed_amount > predicted_amount × 1.15` (15% overshoot).
-- Stamps `reconciled_at = now()` on every touched row.
-- Wraps work in `DB::transaction()`.
+- **Controller**: `{RelatedController}` (if applicable)
+- **Route**: `{RouteName}` ({HttpMethod} {RoutePath}) (if applicable)
+- **Model**: `{RelatedModel}` (if applicable)
 
-## Idempotency
+## Notes
 
-Uses `updateOrCreate` keyed by `(rake_id, penalty_code)`. Re-running for the same rake recomputes amounts and rewrites only changed rows.
-
-## Tests
-
-`tests/Unit/Actions/ReconcilePenaltyHeadsActionTest.php` — 6 cases covering predicted-only, billed-only, matched within tolerance, billed-without-predicted dispute, >15% overshoot dispute, and idempotency on re-run.
-
-## Related Models
-
-- `App\Models\PenaltyReconciliation`
-- `App\Models\AppliedPenalty`
-- `App\Models\RrPenaltySnapshot`
-- `App\Models\Rake`
-
-## Source Spec
-
-`docs/superpowers/specs/2026-05-01-penalty-savings-program-design.md` §5.1.
+{Any additional notes, edge cases, or important information}

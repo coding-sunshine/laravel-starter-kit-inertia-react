@@ -170,7 +170,8 @@
             "path": "./UpdateUser.md",
             "relationships": {
                 "usedBy": [
-                    "UserPasswordController"
+                    "UserPasswordController",
+                    "UserProfileController"
                 ],
                 "usesModels": [
                     "User"
@@ -183,6 +184,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "user-profile.edit",
+                    "user-profile.update",
                     "password.edit",
                     "password.update",
                     "password.reset",
@@ -1154,8 +1157,8 @@
             }
         },
         "DeleteIndentAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./deleteindentaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -1180,8 +1183,8 @@
             }
         },
         "DeleteRrDocumentAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./deleterrdocumentaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1202,8 +1205,8 @@
             }
         },
         "DeleteStandaloneHistoricalWeighmentAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./deletestandalonehistoricalweighmentaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1224,8 +1227,8 @@
             }
         },
         "ImportSidingDispatchFromExcel": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./importsidingdispatchfromexcel.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1264,8 +1267,8 @@
             }
         },
         "SyncTxrUnfitFlagsToWagonsAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./synctxrunfitflagstowagonsaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -1343,8 +1346,8 @@
             }
         },
         "CreateIndentAndProvisionRakeAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./createindentandprovisionrakeaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1375,8 +1378,8 @@
             }
         },
         "ApplyPloPenaltyAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./applyplopenaltyaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -1390,8 +1393,8 @@
             }
         },
         "CalculatePloPenaltyAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./calculateplopenaltyaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1404,8 +1407,8 @@
             }
         },
         "FetchRakeWeighmentFromRailwayReceipt": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./fetchrakeweighmentfromrailwayreceipt.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -1435,8 +1438,8 @@
             }
         },
         "ForceMajeureStitchOutcome": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./forcemajeurestitchoutcome.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
@@ -1444,8 +1447,8 @@
             }
         },
         "GenerateLoadingRecommendationAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./generateloadingrecommendationaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1459,8 +1462,8 @@
             }
         },
         "LogLoadingOverride": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./logloadingoverride.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1476,8 +1479,8 @@
             }
         },
         "PloPenaltyResult": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./plopenaltyresult.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
@@ -1485,8 +1488,8 @@
             }
         },
         "ReconcilePenaltyHeadsAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./reconcilepenaltyheadsaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": {
@@ -1499,8 +1502,8 @@
             }
         },
         "ReconciliationOutcome": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./reconciliationoutcome.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
@@ -1508,8 +1511,8 @@
             }
         },
         "CommandPaletteResults": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./commandpaletteresults.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
@@ -1517,8 +1520,8 @@
             }
         },
         "SearchForCommandPaletteAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./searchforcommandpaletteaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1531,8 +1534,8 @@
             }
         },
         "StitchForceMajeureDisputesAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./stitchforcemajeuredisputesaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1542,8 +1545,8 @@
             }
         },
         "PreviewRailwayReceiptImport": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./previewrailwayreceiptimport.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1569,8 +1572,8 @@
             }
         },
         "DeduplicateVehicleWorkordersByVehicleNoAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./deduplicatevehicleworkordersbyvehiclenoaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1580,8 +1583,8 @@
             }
         },
         "ImportTransportWorkOrderRegistrationsFromExcelAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./importtransportworkorderregistrationsfromexcelaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1591,8 +1594,8 @@
             }
         },
         "ImportVehicleWorkordersFromVehiclesSpreadsheetAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./importvehicleworkordersfromvehiclesspreadsheetaction.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1626,8 +1629,8 @@
             }
         },
         "MapTransportRegistrationToVehicleWorkorderDefaults": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./maptransportregistrationtovehicleworkorderdefaults.md",
             "relationships": {
                 "usedBy": [
                     "VehicleWorkorderController"
@@ -1649,8 +1652,8 @@
             }
         },
         "RecalculateRakeWeighmentOverload": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./recalculaterakeweighmentoverload.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1671,8 +1674,8 @@
             }
         },
         "SyncLoadriteEvent": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./syncloadriteevent.md",
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
@@ -1684,8 +1687,8 @@
             }
         },
         "RecalculateDailyVehicleEntryRollups": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./recalculatedailyvehicleentryrollups.md",
             "relationships": {
                 "usedBy": [
                     "DailyVehicleEntryRollupAdminController"
@@ -1890,8 +1893,12 @@
             "documented": true,
             "path": "./UserProfileController.md",
             "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
+                "usesActions": [
+                    "UpdateUser"
+                ],
+                "usesFormRequests": [
+                    "UpdateUserRequest"
+                ],
                 "relatedRoutes": [
                     "user-profile.edit",
                     "user-profile.update"
@@ -3055,8 +3062,8 @@
             }
         },
         "AccountDeletionRequestController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./accountdeletionrequestcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3068,8 +3075,8 @@
             }
         },
         "CoalStockApproxDetailController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./coalstockapproxdetailcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3090,8 +3097,8 @@
             }
         },
         "RedirectAdminHomeController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./redirectadminhomecontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3100,8 +3107,8 @@
             }
         },
         "NotificationReadController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./notificationreadcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3110,8 +3117,8 @@
             }
         },
         "PreRrController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./prerrcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3120,8 +3127,8 @@
             }
         },
         "RakeDiverrtDestinationController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakediverrtdestinationcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3130,8 +3137,8 @@
             }
         },
         "RakeDiversionModeController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakediversionmodecontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3140,8 +3147,8 @@
             }
         },
         "RakePowerPlantReceiptController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakepowerplantreceiptcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3150,8 +3157,8 @@
             }
         },
         "RakeLoaderController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakeloadercontroller.md",
             "relationships": {
                 "usesActions": [
                     "GenerateLoadingRecommendationAction"
@@ -3165,8 +3172,8 @@
             }
         },
         "RakeWeighmentWorkflowApiController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakeweighmentworkflowapicontroller.md",
             "relationships": {
                 "usesActions": [
                     "FetchRakeWeighmentFromRailwayReceipt",
@@ -3183,8 +3190,8 @@
             }
         },
         "LoaderOperatorsController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./loaderoperatorscontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -3199,8 +3206,8 @@
             }
         },
         "RakeRrHubStateController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./rakerrhubstatecontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3209,8 +3216,8 @@
             }
         },
         "SidingPreIndentReportController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./sidingpreindentreportcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -3265,8 +3272,8 @@
             }
         },
         "LiveMonitorController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./livemonitorcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3281,8 +3288,8 @@
             }
         },
         "CommandPaletteSearchController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./commandpalettesearchcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3291,8 +3298,8 @@
             }
         },
         "QuickPlacementController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./quickplacementcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3303,8 +3310,8 @@
             }
         },
         "SidingMonitorController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./sidingmonitorcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3328,8 +3335,8 @@
             }
         },
         "ControlPanelV2Controller": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./controlpanelv2controller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3346,8 +3353,8 @@
             }
         },
         "ManagerBriefController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./managerbriefcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -3361,8 +3368,8 @@
             }
         },
         "TransportWorkOrderRegistrationController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./transportworkorderregistrationcontroller.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -3386,8 +3393,8 @@
             }
         },
         "DailySidingVehicleDispatchRollupAdminController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./dailysidingvehicledispatchrollupadmincontroller.md",
             "relationships": {
                 "usesActions": [
                     "RecalculateDailySidingVehicleDispatchRollups"
@@ -3403,8 +3410,8 @@
             }
         },
         "DailyVehicleEntryRollupAdminController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./dailyvehicleentryrollupadmincontroller.md",
             "relationships": {
                 "usesActions": [
                     "RecalculateDailyVehicleEntryRollups"
@@ -7159,9 +7166,9 @@
             }
         },
         "MasterData/DailyStockDetails/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/DailyStockDetails/Create.md",
             "relationships": {
                 "renderedBy": [
                     "CoalStockApproxDetailController"
@@ -7178,9 +7185,9 @@
             }
         },
         "MasterData/DailyStockDetails/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/DailyStockDetails/Edit.md",
             "relationships": {
                 "renderedBy": [
                     "CoalStockApproxDetailController"
@@ -7197,9 +7204,9 @@
             }
         },
         "MasterData/DailyStockDetails/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./MasterData/DailyStockDetails/Index.md",
             "relationships": {
                 "renderedBy": [
                     "CoalStockApproxDetailController"
@@ -7254,9 +7261,9 @@
             }
         },
         "rake-loader/loading": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./rake-loader/loading.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7267,9 +7274,9 @@
             }
         },
         "siding-pre-indent-reports/create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./siding-pre-indent-reports/create.md",
             "relationships": {
                 "renderedBy": [
                     "SidingPreIndentReportController"
@@ -7286,9 +7293,9 @@
             }
         },
         "siding-pre-indent-reports/edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./siding-pre-indent-reports/edit.md",
             "relationships": {
                 "renderedBy": [
                     "SidingPreIndentReportController"
@@ -7305,9 +7312,9 @@
             }
         },
         "siding-pre-indent-reports/index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./siding-pre-indent-reports/index.md",
             "relationships": {
                 "renderedBy": [
                     "SidingPreIndentReportController"
@@ -7324,9 +7331,9 @@
             }
         },
         "siding-pre-indent-reports/show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./siding-pre-indent-reports/show.md",
             "relationships": {
                 "renderedBy": [
                     "SidingPreIndentReportController"
@@ -7343,9 +7350,9 @@
             }
         },
         "control-room/index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./control-room/index.md",
             "relationships": {
                 "renderedBy": [
                     "LiveMonitorController"
@@ -7357,9 +7364,9 @@
             }
         },
         "control-room/show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./control-room/show.md",
             "relationships": {
                 "renderedBy": [
                     "LiveMonitorController"
@@ -7371,72 +7378,72 @@
             }
         },
         "dashboard/ExecutiveOverview": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/ExecutiveOverview.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "dashboard/LoaderOverloading": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/LoaderOverloading.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "dashboard/Operations": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/Operations.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "dashboard/PenaltyControl": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/PenaltyControl.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "dashboard/PowerPlant": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/PowerPlant.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "dashboard/RakePerformance": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/RakePerformance.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "dashboard/SidingOverview": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/SidingOverview.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "sidings/monitor": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./sidings/monitor.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7445,9 +7452,9 @@
             }
         },
         "sidings/quick-placement": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./sidings/quick-placement.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7457,9 +7464,9 @@
             }
         },
         "TransportWorkOrderRegistrations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./TransportWorkOrderRegistrations/Create.md",
             "relationships": {
                 "renderedBy": [
                     "TransportWorkOrderRegistrationController"
@@ -7475,9 +7482,9 @@
             }
         },
         "TransportWorkOrderRegistrations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./TransportWorkOrderRegistrations/Edit.md",
             "relationships": {
                 "renderedBy": [
                     "TransportWorkOrderRegistrationController"
@@ -7493,18 +7500,18 @@
             }
         },
         "VehicleWorkorders/TransportRegistrationsTable": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleWorkorders/TransportRegistrationsTable.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "control-panel-v2/index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./control-panel-v2/index.md",
             "relationships": {
                 "renderedBy": [
                     "ControlPanelV2Controller"
@@ -7518,9 +7525,9 @@
             }
         },
         "control-panel-v2/siding": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./control-panel-v2/siding.md",
             "relationships": {
                 "renderedBy": [
                     "ControlPanelV2Controller"
@@ -7534,18 +7541,18 @@
             }
         },
         "dashboard/date-wise-dispatch-section": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/date-wise-dispatch-section.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "dashboard/shared": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard/shared.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
@@ -7566,9 +7573,9 @@
             }
         },
         "DailySidingDispatchRollups/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./DailySidingDispatchRollups/Index.md",
             "relationships": {
                 "renderedBy": [
                     "DailySidingVehicleDispatchRollupAdminController"
@@ -7580,9 +7587,9 @@
             }
         },
         "DailyVehicleEntryRollups/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./DailyVehicleEntryRollups/Index.md",
             "relationships": {
                 "renderedBy": [
                     "DailyVehicleEntryRollupAdminController"
@@ -7594,9 +7601,9 @@
             }
         },
         "VehicleDispatch/dispatch-reconciliation-dialog": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./VehicleDispatch/dispatch-reconciliation-dialog.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []

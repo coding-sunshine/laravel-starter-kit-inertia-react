@@ -134,38 +134,38 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [MasterData/Sidings/Edit](./MasterData/Sidings/Edit.md) | master-data.sidings.index, master-data.sidings.create | ✅ |
 | [MasterData/Sidings/Show](./MasterData/Sidings/Show.md) | master-data.sidings.index, master-data.sidings.create | ✅ |
 | [VehicleWorkorders/Create](./VehicleWorkorders/Create.md) | vehicle-workorders.index, vehicle-workorders.export | ✅ |
-| MasterData/DailyStockDetails/Create | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
-| MasterData/DailyStockDetails/Edit | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
-| MasterData/DailyStockDetails/Index | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ❌ |
+| [MasterData/DailyStockDetails/Create](./MasterData/DailyStockDetails/Create.md) | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ✅ |
+| [MasterData/DailyStockDetails/Edit](./MasterData/DailyStockDetails/Edit.md) | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ✅ |
+| [MasterData/DailyStockDetails/Index](./MasterData/DailyStockDetails/Index.md) | master-data.daily-stock-details.index, master-data.daily-stock-details.export | ✅ |
 | [rake-loader/index](docs/developer/frontend/pages/rake-loader/index.md) | rake-loader.index, rake-loader.rakes.loading | ✅ |
 | [MasterData/StockLedger/Index](./MasterData/StockLedger/Index.md) | master-data.stock-ledger.index, master-data.stock-ledger.stock-report | ✅ |
 | [MasterData/StockLedger/stock-report-dialog](./MasterData/StockLedger/stock-report-dialog.md) | N/A | ✅ |
-| rake-loader/loading | rake-loader.index, rake-loader.rakes.loading | ❌ |
-| siding-pre-indent-reports/create | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
-| siding-pre-indent-reports/edit | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
-| siding-pre-indent-reports/index | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
-| siding-pre-indent-reports/show | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ❌ |
-| control-room/index | control-room.index, control-room.show | ❌ |
-| control-room/show | control-room.index, control-room.show | ❌ |
-| dashboard/ExecutiveOverview | N/A | ❌ |
-| dashboard/LoaderOverloading | N/A | ❌ |
-| dashboard/Operations | N/A | ❌ |
-| dashboard/PenaltyControl | N/A | ❌ |
-| dashboard/PowerPlant | N/A | ❌ |
-| dashboard/RakePerformance | N/A | ❌ |
-| dashboard/SidingOverview | N/A | ❌ |
-| sidings/monitor | sidings.monitor | ❌ |
-| sidings/quick-placement | sidings.quick-placement.show, sidings.quick-placement.store | ❌ |
-| TransportWorkOrderRegistrations/Create | vehicle-workorders.transport-registrations.create, vehicle-workorders.transport-registrations.store | ❌ |
-| TransportWorkOrderRegistrations/Edit | vehicle-workorders.transport-registrations.create, vehicle-workorders.transport-registrations.store | ❌ |
-| VehicleWorkorders/TransportRegistrationsTable | N/A | ❌ |
-| control-panel-v2/index | control-panel.index, control-panel.wagon-timeline | ❌ |
-| control-panel-v2/siding | control-panel.index, control-panel.wagon-timeline | ❌ |
-| dashboard/date-wise-dispatch-section | N/A | ❌ |
-| dashboard/shared | N/A | ❌ |
+| [rake-loader/loading](./rake-loader/loading.md) | rake-loader.index, rake-loader.rakes.loading | ✅ |
+| [siding-pre-indent-reports/create](./siding-pre-indent-reports/create.md) | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ✅ |
+| [siding-pre-indent-reports/edit](./siding-pre-indent-reports/edit.md) | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ✅ |
+| [siding-pre-indent-reports/index](./siding-pre-indent-reports/index.md) | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ✅ |
+| [siding-pre-indent-reports/show](./siding-pre-indent-reports/show.md) | siding-pre-indent-reports.index, siding-pre-indent-reports.create | ✅ |
+| [control-room/index](./control-room/index.md) | control-room.index, control-room.show | ✅ |
+| [control-room/show](./control-room/show.md) | control-room.index, control-room.show | ✅ |
+| [dashboard/ExecutiveOverview](./dashboard/ExecutiveOverview.md) | N/A | ✅ |
+| [dashboard/LoaderOverloading](./dashboard/LoaderOverloading.md) | N/A | ✅ |
+| [dashboard/Operations](./dashboard/Operations.md) | N/A | ✅ |
+| [dashboard/PenaltyControl](./dashboard/PenaltyControl.md) | N/A | ✅ |
+| [dashboard/PowerPlant](./dashboard/PowerPlant.md) | N/A | ✅ |
+| [dashboard/RakePerformance](./dashboard/RakePerformance.md) | N/A | ✅ |
+| [dashboard/SidingOverview](./dashboard/SidingOverview.md) | N/A | ✅ |
+| [sidings/monitor](./sidings/monitor.md) | sidings.monitor | ✅ |
+| [sidings/quick-placement](./sidings/quick-placement.md) | sidings.quick-placement.show, sidings.quick-placement.store | ✅ |
+| [TransportWorkOrderRegistrations/Create](./TransportWorkOrderRegistrations/Create.md) | vehicle-workorders.transport-registrations.create, vehicle-workorders.transport-registrations.store | ✅ |
+| [TransportWorkOrderRegistrations/Edit](./TransportWorkOrderRegistrations/Edit.md) | vehicle-workorders.transport-registrations.create, vehicle-workorders.transport-registrations.store | ✅ |
+| [VehicleWorkorders/TransportRegistrationsTable](./VehicleWorkorders/TransportRegistrationsTable.md) | N/A | ✅ |
+| [control-panel-v2/index](./control-panel-v2/index.md) | control-panel.index, control-panel.wagon-timeline | ✅ |
+| [control-panel-v2/siding](./control-panel-v2/siding.md) | control-panel.index, control-panel.wagon-timeline | ✅ |
+| [dashboard/date-wise-dispatch-section](./dashboard/date-wise-dispatch-section.md) | N/A | ✅ |
+| [dashboard/shared](./dashboard/shared.md) | N/A | ✅ |
 | [manager-brief/index](../frontend/pages/manager-brief.md) | manager-brief.index, manager-brief.refresh | ✅ |
-| DailySidingDispatchRollups/Index | daily-siding-dispatch-rollups.index, daily-siding-dispatch-rollups.recalculate | ❌ |
-| DailyVehicleEntryRollups/Index | daily-vehicle-entry-rollups.index, daily-vehicle-entry-rollups.recalculate | ❌ |
-| VehicleDispatch/dispatch-reconciliation-dialog | N/A | ❌ |
+| [DailySidingDispatchRollups/Index](./DailySidingDispatchRollups/Index.md) | daily-siding-dispatch-rollups.index, daily-siding-dispatch-rollups.recalculate | ✅ |
+| [DailyVehicleEntryRollups/Index](./DailyVehicleEntryRollups/Index.md) | daily-vehicle-entry-rollups.index, daily-vehicle-entry-rollups.recalculate | ✅ |
+| [VehicleDispatch/dispatch-reconciliation-dialog](./VehicleDispatch/dispatch-reconciliation-dialog.md) | N/A | ✅ |
 
 

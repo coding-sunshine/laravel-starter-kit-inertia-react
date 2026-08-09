@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Persists a Penal Loading Overcharge (PLO) `AppliedPenalty` row for a rake/weighment pair and emits `AppliedPenaltyPersisted` so downstream reconciliation can pick it up. Wraps `CalculatePloPenaltyAction` for the underlying compute.
+{One-line description of what this action does}
 
 ## Location
 
@@ -11,50 +11,43 @@ Persists a Penal Loading Overcharge (PLO) `AppliedPenalty` row for a rake/weighm
 ## Method Signature
 
 ```php
-public function handle(Rake $rake, RakeWeighment $weighment): ?AppliedPenalty
+public function handle({parameters}): {returnType}
 ```
-
-Returns the persisted `AppliedPenalty` model, or `null` when there is no shortfall (in which case any prior PLO row is removed — see Idempotency).
 
 ## Dependencies
 
-| Dependency | Type | Purpose |
-|------------|------|---------|
-| `$calculator` | `App\Actions\CalculatePloPenaltyAction` | Computes PLO shortfall and amount. |
+{List injected dependencies from constructor, or "None" if no dependencies}
 
 ## Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$rake` | `App\Models\Rake` | Rake the penalty applies to. |
-| `$weighment` | `App\Models\RakeWeighment` | Weighment that triggered the calculation. |
+| {param} | {type} | {description} |
 
-## Trigger Points
+## Return Value
 
-Invoked from `App\Importers\RakeWeighmentPdfImporter::importForRake()` immediately after `ApplyWeighmentPenaltiesAction`. Each fresh weighment import re-evaluates PLO.
+{Description of what the method returns}
 
-## Idempotency
+## Usage Examples
 
-`updateOrCreate` keyed by `(rake_id, penalty_type_id, meta->source = 'plo')`. Re-running for the same rake/weighment overwrites the prior PLO row in place. When the recomputed shortfall is zero (or otherwise non-applicable), any existing PLO row for the rake is removed so stale predictions don't linger.
+### From Controller
 
-## Side Effects
+```php
+app(ApplyPloPenaltyAction::class)->handle($params);
+```
 
-- Writes to `applied_penalties` (PLO row).
-- Recalculates the parent `RakeCharge` (`charge_type=PENALTY`, `is_actual_charges=false`) total to reflect the new PLO amount.
-- Emits `AppliedPenaltyPersisted` after the DB transaction commits, which feeds `ReconcilePenaltyHeadsJob` via `ReconcileOnAppliedPenalty`.
-- All writes wrapped in `DB::transaction()`.
+### From Job/Command
 
-## Tests
-
-`tests/Feature/Actions/ApplyPloPenaltyActionTest.php` — 4 cases (creates a PLO row when shortfall exists, updates the row on re-run, removes the row when shortfall drops to zero, emits `AppliedPenaltyPersisted` on success).
+```php
+(new ApplyPloPenaltyAction($dependency))->handle($params);
+```
 
 ## Related Components
 
-- **Action**: `CalculatePloPenaltyAction`
-- **Event**: `App\Events\AppliedPenaltyPersisted`
-- **Models**: `AppliedPenalty`, `PenaltyType`, `RakeCharge`, `Rake`, `RakeWeighment`
-- **Importer**: `App\Importers\RakeWeighmentPdfImporter`
+- **Controller**: `{RelatedController}` (if applicable)
+- **Route**: `{RouteName}` ({HttpMethod} {RoutePath}) (if applicable)
+- **Model**: `{RelatedModel}` (if applicable)
 
-## Source Spec
+## Notes
 
-`docs/superpowers/specs/2026-05-01-penalty-savings-program-design.md` §5.2.
+{Any additional notes, edge cases, or important information}
