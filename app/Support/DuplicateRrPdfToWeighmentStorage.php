@@ -6,6 +6,7 @@ namespace App\Support;
 
 use App\Models\RrDocument;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
