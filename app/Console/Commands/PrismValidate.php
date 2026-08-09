@@ -56,7 +56,7 @@ final class PrismValidate extends Command
         }
 
         if (! $defaultModel) {
-            $fallbackModel = config('prism.defaults.model', 'deepseek/deepseek-r1-0528:free');
+            $fallbackModel = config('prism.defaults.model', 'nvidia/nemotron-3-super-120b-a12b:free');
             $warnings[] = "No default model configured. Using \"{$fallbackModel}\" as fallback.";
         } else {
             $this->info("  ✓ Default model: {$defaultModel}");

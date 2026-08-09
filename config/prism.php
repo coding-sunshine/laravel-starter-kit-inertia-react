@@ -11,14 +11,14 @@ return [
     'request_timeout' => env('PRISM_REQUEST_TIMEOUT', 120), // The timeout for requests in seconds.
     'defaults' => [
         'provider' => env('PRISM_DEFAULT_PROVIDER', 'openrouter'),
-        // Using DeepSeek R1 0528 (free) - best free thinking model with performance on par with OpenAI o1
-        // Alternative free options: deepseek/deepseek-r1:free, tng/deepseek-r1t2-chimera:free
-        'model' => env('PRISM_DEFAULT_MODEL', 'deepseek/deepseek-r1-0528:free'),
+        // Nemotron 3 Super (free) - DeepSeek R1 free tier was retired by OpenRouter (2026-08).
+        // Alternative free options: google/gemma-4-31b-it:free, openai/gpt-oss-20b:free
+        'model' => env('PRISM_DEFAULT_MODEL', 'nvidia/nemotron-3-super-120b-a12b:free'),
         // Fast model for latency-sensitive operations (deferred props, briefings, insights)
         'fast_model' => env('PRISM_FAST_MODEL', 'openai/gpt-4o-mini'),
         // Provider-specific model defaults (used when provider doesn't match default)
         'models' => [
-            'openrouter' => env('PRISM_DEFAULT_MODEL', 'deepseek/deepseek-r1-0528:free'),
+            'openrouter' => env('PRISM_DEFAULT_MODEL', 'nvidia/nemotron-3-super-120b-a12b:free'),
             'openai' => env('PRISM_OPENAI_DEFAULT_MODEL', 'gpt-4o-mini'),
             'anthropic' => env('PRISM_ANTHROPIC_DEFAULT_MODEL', 'claude-3-5-sonnet-20241022'),
             'ollama' => env('PRISM_OLLAMA_DEFAULT_MODEL', 'llama3.2'),

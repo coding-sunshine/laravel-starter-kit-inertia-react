@@ -89,7 +89,7 @@ final readonly class ManagerBriefAgent
             $prompt = $this->buildPrompt($signals, $context);
 
             // Use defaultModel (config: prism.defaults.model — currently a free
-            // OpenRouter route, e.g. deepseek/deepseek-r1-0528:free) so manager
+            // OpenRouter route, e.g. nvidia/nemotron-3-super-120b-a12b:free) so manager
             // briefs do not incur paid LLM cost. fastModel is reserved for
             // latency-sensitive paid flows.
             $response = $this->prism

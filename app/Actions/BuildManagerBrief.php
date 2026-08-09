@@ -67,7 +67,7 @@ final readonly class BuildManagerBrief
             actions: $cards,
             generatedAt: $now,
             sidingId: $sidingId,
-            modelUsed: config('prism.defaults.model', 'deepseek/deepseek-r1-0528:free'),
+            modelUsed: config('prism.defaults.model', 'nvidia/nemotron-3-super-120b-a12b:free'),
             aiStatus: 'ok',
             failedReason: null,
         );
