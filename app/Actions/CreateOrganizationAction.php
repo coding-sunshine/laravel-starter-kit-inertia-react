@@ -22,13 +22,12 @@ final readonly class CreateOrganizationAction
             ]);
 
             $isDefault = $user->organizations()->count() === 0;
-            $organization->users()->attach($user->id, [
-                'is_default' => $isDefault,
-                'joined_at' => now(),
-                'invited_by' => null,
-            ]);
 
-            $user->assignRole('admin');
+            $organization->addMember($user, 'admin');
+
+            if ($isDefault) {
+                $organization->users()->updateExistingPivot($user->id, ['is_default' => true]);
+            }
 
             return $organization;
         });
