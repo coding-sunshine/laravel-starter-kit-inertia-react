@@ -146,7 +146,7 @@ export function TxrTable({ rake, disabled, onTxrHeaderSaved }: TxrTableProps) {
                             mode="single"
                             selected={datePart ? new Date(`${datePart}T00:00:00`) : undefined}
                             onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : '', timePart)}
-                            initialFocus
+                            autoFocus
                             disabled={disabled}
                         />
                     </div>

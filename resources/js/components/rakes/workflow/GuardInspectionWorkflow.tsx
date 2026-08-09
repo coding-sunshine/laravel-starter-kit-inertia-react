@@ -111,7 +111,7 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
                             mode="single"
                             selected={datePart ? new Date(datePart) : undefined}
                             onSelect={(d) => onChange(d ? d.toISOString().slice(0, 10) : '', timePart)}
-                            initialFocus
+                            autoFocus
                             disabled={disabled}
                         />
                     </div>

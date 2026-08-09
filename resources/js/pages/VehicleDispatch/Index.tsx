@@ -597,7 +597,7 @@ export default function VehicleDispatchIndex({
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
                                         <Calendar
-                                            initialFocus
+                                            autoFocus
                                             mode="range"
                                             defaultMonth={tempDateRange?.from}
                                             selected={tempDateRange}

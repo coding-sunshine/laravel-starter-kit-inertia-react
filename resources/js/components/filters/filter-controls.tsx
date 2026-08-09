@@ -444,7 +444,7 @@ export function DateFilter({
                 selected={date}
                 onSelect={handleDateChange}
                 numberOfMonths={1}
-                initialFocus
+                autoFocus
             />
         </div>
     );
