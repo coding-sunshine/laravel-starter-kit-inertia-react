@@ -23,7 +23,7 @@ beforeEach(function (): void {
 
     $this->user = User::factory()->withoutTwoFactor()->create(['onboarding_completed' => true]);
     $this->user->assignRole('admin');
-    $this->user->givePermissionTo('sections.transport.view');
+    $this->user->givePermissionTo(['sections.transport.create', 'sections.transport.update']);
     $this->user->sidings()->attach($this->siding->id, ['is_primary' => true]);
 });
 
