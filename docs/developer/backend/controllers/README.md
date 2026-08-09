@@ -77,12 +77,11 @@ All Controllers:
 | [TxrController](./txrcontroller.md) | N/A | ✅ |
 | [WagonUnfitController](./wagonunfitcontroller.md) | N/A | ✅ |
 | [GenerateDispatchReportController](./generatedispatchreportcontroller.md) | N/A | ✅ |
-| [DailySidingVehicleDispatchRollupAdminController](./dailysidingvehicledispatchrollupadmincontroller.md) | Super-admin daily siding dispatch rollup inspector | ✅ |
 | [VehicleDispatchController](./vehicledispatchcontroller.md) | N/A | ✅ |
 | [VehicleWorkorderController](./vehicleworkordercontroller.md) | N/A | ✅ |
 | [MobileDashboardController](./mobiledashboardcontroller.md) | N/A | ✅ |
 | [AuthController](./authcontroller.md) | N/A | ✅ |
-| [PasswordResetController](./ApiV1PasswordResetController.md) | API OTP forgot-password | ✅ |
+| [PasswordResetController](./ApiV1PasswordResetController.md) | N/A | ✅ |
 | [IndentController](./indentcontroller.md) | N/A | ✅ |
 | [RailwayReceiptApiController](./railwayreceiptapicontroller.md) | N/A | ✅ |
 | [RailwayReceiptUploadController](./railwayreceiptuploadcontroller.md) | N/A | ✅ |
@@ -125,5 +124,7 @@ All Controllers:
 | ControlPanelV2Controller | N/A | ❌ |
 | ManagerBriefController | N/A | ❌ |
 | TransportWorkOrderRegistrationController | N/A | ❌ |
+| DailySidingVehicleDispatchRollupAdminController | N/A | ❌ |
+| DailyVehicleEntryRollupAdminController | N/A | ❌ |
 
 

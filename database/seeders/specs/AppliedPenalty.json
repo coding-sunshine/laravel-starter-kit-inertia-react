@@ -3,22 +3,22 @@
     "table": "applied_penalties",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "penalty_type_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "wagon_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -43,7 +43,7 @@
             "default": null
         },
         "meta": {
-            "type": "json",
+            "type": "text",
             "nullable": true,
             "default": null
         },
@@ -63,7 +63,7 @@
             "default": null
         },
         "rake_charge_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         }

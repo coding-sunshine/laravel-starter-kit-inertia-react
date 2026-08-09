@@ -102,8 +102,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [road-dispatch/daily-vehicle-entries/vehicle-entry-table](./road-dispatch/daily-vehicle-entries/vehicle-entry-table.md) | N/A | ✅ |
 | [VehicleDispatch/DPRTab](./VehicleDispatch/DPRTab.md) | N/A | ✅ |
 | [VehicleDispatch/ImportPreviewCard](./VehicleDispatch/ImportPreviewCard.md) | N/A | ✅ |
-| [DailySidingDispatchRollups/Index](./DailySidingDispatchRollups/Index.md) | daily-siding-dispatch-rollups.index, daily-siding-dispatch-rollups.recalculate | ✅ |
-| [VehicleDispatch/Index](./VehicleDispatch/Index.md) | vehicle-dispatch.index, vehicle-dispatch.dpr-data | ✅ |
+| [VehicleDispatch/Index](./VehicleDispatch/Index.md) | vehicle-dispatch.index, vehicle-dispatch.reconciliation-report | ✅ |
 | [VehicleDispatch/MainDataTab](./VehicleDispatch/MainDataTab.md) | N/A | ✅ |
 | [VehicleDispatch/VehicleDispatchTable](./VehicleDispatch/VehicleDispatchTable.md) | N/A | ✅ |
 | [VehicleDispatch/VehicleDispatchTabs](./VehicleDispatch/VehicleDispatchTabs.md) | N/A | ✅ |
@@ -160,10 +159,13 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | TransportWorkOrderRegistrations/Create | vehicle-workorders.transport-registrations.create, vehicle-workorders.transport-registrations.store | ❌ |
 | TransportWorkOrderRegistrations/Edit | vehicle-workorders.transport-registrations.create, vehicle-workorders.transport-registrations.store | ❌ |
 | VehicleWorkorders/TransportRegistrationsTable | N/A | ❌ |
-| control-panel-v2/index | control-panel-v2.index, control-panel-v2.wagon-timeline | ❌ |
-| control-panel-v2/siding | control-panel-v2.index, control-panel-v2.wagon-timeline | ❌ |
+| control-panel-v2/index | control-panel.index, control-panel.wagon-timeline | ❌ |
+| control-panel-v2/siding | control-panel.index, control-panel.wagon-timeline | ❌ |
 | dashboard/date-wise-dispatch-section | N/A | ❌ |
 | dashboard/shared | N/A | ❌ |
 | [manager-brief/index](../frontend/pages/manager-brief.md) | manager-brief.index, manager-brief.refresh | ✅ |
+| DailySidingDispatchRollups/Index | daily-siding-dispatch-rollups.index, daily-siding-dispatch-rollups.recalculate | ❌ |
+| DailyVehicleEntryRollups/Index | daily-vehicle-entry-rollups.index, daily-vehicle-entry-rollups.recalculate | ❌ |
+| VehicleDispatch/dispatch-reconciliation-dialog | N/A | ❌ |
 
 

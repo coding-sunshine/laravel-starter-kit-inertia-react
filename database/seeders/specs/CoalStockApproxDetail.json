@@ -3,12 +3,12 @@
     "table": "coal_stock_approx_details",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },

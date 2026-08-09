@@ -3,7 +3,7 @@
     "table": "daily_siding_vehicle_dispatch_rollups",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -13,12 +13,12 @@
             "default": null
         },
         "siding_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "shift_number": {
-            "type": "int2",
+            "type": "integer",
             "nullable": true,
             "default": null
         },

@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-05-22",
+    "lastGenerated": "2026-08-09",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -57,15 +57,15 @@
             "path": "./SendPasswordResetOtp.md",
             "lastUpdated": "2026-05-25",
             "relationships": {
-                "usedBy": [
-                    "PasswordResetController"
-                ],
+                "usedBy": [],
                 "usesModels": [
                     "PasswordResetOtp",
                     "User"
                 ],
                 "relatedRoutes": [
-                    "api.v1.auth.forgot-password"
+                    "api.v1.auth.forgot-password",
+                    "api.v1.auth.verify-reset-otp",
+                    "api.v1.auth.reset-password"
                 ]
             }
         },
@@ -74,14 +74,14 @@
             "path": "./VerifyPasswordResetOtp.md",
             "lastUpdated": "2026-05-25",
             "relationships": {
-                "usedBy": [
-                    "PasswordResetController"
-                ],
+                "usedBy": [],
                 "usesModels": [
                     "PasswordResetOtp"
                 ],
                 "relatedRoutes": [
-                    "api.v1.auth.verify-reset-otp"
+                    "api.v1.auth.forgot-password",
+                    "api.v1.auth.verify-reset-otp",
+                    "api.v1.auth.reset-password"
                 ]
             }
         },
@@ -90,14 +90,14 @@
             "path": "./ResetPasswordWithOtp.md",
             "lastUpdated": "2026-05-25",
             "relationships": {
-                "usedBy": [
-                    "PasswordResetController"
-                ],
+                "usedBy": [],
                 "usesModels": [
                     "PasswordResetOtp",
                     "User"
                 ],
                 "relatedRoutes": [
+                    "api.v1.auth.forgot-password",
+                    "api.v1.auth.verify-reset-otp",
                     "api.v1.auth.reset-password"
                 ]
             }
@@ -843,12 +843,16 @@
             "documented": true,
             "path": "./recalculatedailysidingvehicledispatchrollups.md",
             "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "DailySidingVehicleDispatchRollup",
-                    "SidingVehicleDispatch"
+                "usedBy": [
+                    "DailySidingVehicleDispatchRollupAdminController"
                 ],
-                "relatedRoutes": []
+                "usesModels": [
+                    "DailySidingVehicleDispatchRollup"
+                ],
+                "relatedRoutes": [
+                    "daily-siding-dispatch-rollups.index",
+                    "daily-siding-dispatch-rollups.recalculate"
+                ]
             }
         },
         "GenerateDailyBriefingAction": {
@@ -1604,6 +1608,7 @@
                 "usedBy": [],
                 "usesModels": [
                     "LoadingOverride",
+                    "LoadriteAnomaly",
                     "LoadriteEvent",
                     "Rake",
                     "SidingPerformance"
@@ -1671,10 +1676,28 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
+                    "LoadriteAnomaly",
                     "Rake",
                     "WagonLoading"
                 ],
                 "relatedRoutes": []
+            }
+        },
+        "RecalculateDailyVehicleEntryRollups": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "DailyVehicleEntryRollupAdminController"
+                ],
+                "usesModels": [
+                    "DailyVehicleEntry",
+                    "DailyVehicleEntryRollup"
+                ],
+                "relatedRoutes": [
+                    "daily-vehicle-entry-rollups.index",
+                    "daily-vehicle-entry-rollups.recalculate"
+                ]
             }
         }
     },
@@ -2679,6 +2702,7 @@
                 ],
                 "relatedRoutes": [
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.reconciliation-report",
                     "vehicle-dispatch.dpr-data",
                     "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
@@ -2753,20 +2777,12 @@
             "lastUpdated": "2026-05-25",
             "relationships": {
                 "usesActions": [
+                    "ResetPasswordWithOtp",
                     "SendPasswordResetOtp",
-                    "VerifyPasswordResetOtp",
-                    "ResetPasswordWithOtp"
+                    "VerifyPasswordResetOtp"
                 ],
-                "usesFormRequests": [
-                    "SendPasswordResetOtpRequest",
-                    "VerifyPasswordResetOtpRequest",
-                    "ResetPasswordWithOtpRequest"
-                ],
-                "relatedRoutes": [
-                    "api.v1.auth.forgot-password",
-                    "api.v1.auth.verify-reset-otp",
-                    "api.v1.auth.reset-password"
-                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
                 "rendersPages": []
             }
         },
@@ -3318,10 +3334,10 @@
                 "usesActions": [],
                 "usesFormRequests": [],
                 "relatedRoutes": [
-                    "control-panel-v2.index",
-                    "control-panel-v2.wagon-timeline",
-                    "control-panel-v2.rake-replay",
-                    "control-panel-v2.show"
+                    "control-panel.index",
+                    "control-panel.wagon-timeline",
+                    "control-panel.rake-replay",
+                    "control-panel.show"
                 ],
                 "rendersPages": [
                     "control-panel-v2/index",
@@ -3366,6 +3382,40 @@
                 "rendersPages": [
                     "TransportWorkOrderRegistrations/Create",
                     "TransportWorkOrderRegistrations/Edit"
+                ]
+            }
+        },
+        "DailySidingVehicleDispatchRollupAdminController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "RecalculateDailySidingVehicleDispatchRollups"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "daily-siding-dispatch-rollups.index",
+                    "daily-siding-dispatch-rollups.recalculate"
+                ],
+                "rendersPages": [
+                    "DailySidingDispatchRollups/Index"
+                ]
+            }
+        },
+        "DailyVehicleEntryRollupAdminController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "RecalculateDailyVehicleEntryRollups"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "daily-vehicle-entry-rollups.index",
+                    "daily-vehicle-entry-rollups.recalculate"
+                ],
+                "rendersPages": [
+                    "DailyVehicleEntryRollups/Index"
                 ]
             }
         }
@@ -3470,6 +3520,9 @@
                     "data-table.saved-views.destroy",
                     "api.v1.auth.login",
                     "api.v1.auth.register",
+                    "api.v1.auth.forgot-password",
+                    "api.v1.auth.verify-reset-otp",
+                    "api.v1.auth.reset-password",
                     "api.v1.auth.refresh",
                     "api.v1.auth.logout",
                     "api.v1.auth.me.delete",
@@ -3551,10 +3604,10 @@
                     "dashboard",
                     "control-room.index",
                     "control-room.show",
-                    "control-panel-v2.index",
-                    "control-panel-v2.wagon-timeline",
-                    "control-panel-v2.rake-replay",
-                    "control-panel-v2.show",
+                    "control-panel.index",
+                    "control-panel.wagon-timeline",
+                    "control-panel.rake-replay",
+                    "control-panel.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
@@ -3562,6 +3615,7 @@
                     "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
+                    "dashboard.rake-performance.overload-trends",
                     "dashboard.loader-overload.loaders.index",
                     "dashboard.loader-overload.loaders.show",
                     "dashboard.loader-overload.operators.index",
@@ -3771,6 +3825,7 @@
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.reconciliation-report",
                     "vehicle-dispatch.dpr-data",
                     "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
@@ -3778,6 +3833,10 @@
                     "vehicle-dispatch.save",
                     "dispatch-reports.generate",
                     "vehicle-dispatch.dpr-export",
+                    "daily-siding-dispatch-rollups.index",
+                    "daily-siding-dispatch-rollups.recalculate",
+                    "daily-vehicle-entry-rollups.index",
+                    "daily-vehicle-entry-rollups.recalculate",
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
@@ -3873,7 +3932,8 @@
                     "dashboard.road-trip-summary",
                     "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
-                    "dashboard.rake-performance.rakes.show"
+                    "dashboard.rake-performance.rakes.show",
+                    "dashboard.rake-performance.overload-trends"
                 ]
             }
         },
@@ -4193,6 +4253,9 @@
                     "data-table.saved-views.destroy",
                     "api.v1.auth.login",
                     "api.v1.auth.register",
+                    "api.v1.auth.forgot-password",
+                    "api.v1.auth.verify-reset-otp",
+                    "api.v1.auth.reset-password",
                     "api.v1.auth.refresh",
                     "api.v1.auth.logout",
                     "api.v1.auth.me.delete",
@@ -4274,10 +4337,10 @@
                     "dashboard",
                     "control-room.index",
                     "control-room.show",
-                    "control-panel-v2.index",
-                    "control-panel-v2.wagon-timeline",
-                    "control-panel-v2.rake-replay",
-                    "control-panel-v2.show",
+                    "control-panel.index",
+                    "control-panel.wagon-timeline",
+                    "control-panel.rake-replay",
+                    "control-panel.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
@@ -4285,6 +4348,7 @@
                     "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
+                    "dashboard.rake-performance.overload-trends",
                     "dashboard.loader-overload.loaders.index",
                     "dashboard.loader-overload.loaders.show",
                     "dashboard.loader-overload.operators.index",
@@ -4494,6 +4558,7 @@
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.reconciliation-report",
                     "vehicle-dispatch.dpr-data",
                     "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
@@ -4501,6 +4566,10 @@
                     "vehicle-dispatch.save",
                     "dispatch-reports.generate",
                     "vehicle-dispatch.dpr-export",
+                    "daily-siding-dispatch-rollups.index",
+                    "daily-siding-dispatch-rollups.recalculate",
+                    "daily-vehicle-entry-rollups.index",
+                    "daily-vehicle-entry-rollups.recalculate",
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
@@ -4695,6 +4764,9 @@
                     "data-table.saved-views.destroy",
                     "api.v1.auth.login",
                     "api.v1.auth.register",
+                    "api.v1.auth.forgot-password",
+                    "api.v1.auth.verify-reset-otp",
+                    "api.v1.auth.reset-password",
                     "api.v1.auth.refresh",
                     "api.v1.auth.logout",
                     "api.v1.auth.me.delete",
@@ -4776,10 +4848,10 @@
                     "dashboard",
                     "control-room.index",
                     "control-room.show",
-                    "control-panel-v2.index",
-                    "control-panel-v2.wagon-timeline",
-                    "control-panel-v2.rake-replay",
-                    "control-panel-v2.show",
+                    "control-panel.index",
+                    "control-panel.wagon-timeline",
+                    "control-panel.rake-replay",
+                    "control-panel.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
@@ -4787,6 +4859,7 @@
                     "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
+                    "dashboard.rake-performance.overload-trends",
                     "dashboard.loader-overload.loaders.index",
                     "dashboard.loader-overload.loaders.show",
                     "dashboard.loader-overload.operators.index",
@@ -4996,6 +5069,7 @@
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.reconciliation-report",
                     "vehicle-dispatch.dpr-data",
                     "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
@@ -5003,6 +5077,10 @@
                     "vehicle-dispatch.save",
                     "dispatch-reports.generate",
                     "vehicle-dispatch.dpr-export",
+                    "daily-siding-dispatch-rollups.index",
+                    "daily-siding-dispatch-rollups.recalculate",
+                    "daily-vehicle-entry-rollups.index",
+                    "daily-vehicle-entry-rollups.recalculate",
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
@@ -5183,6 +5261,9 @@
                     "data-table.saved-views.destroy",
                     "api.v1.auth.login",
                     "api.v1.auth.register",
+                    "api.v1.auth.forgot-password",
+                    "api.v1.auth.verify-reset-otp",
+                    "api.v1.auth.reset-password",
                     "api.v1.auth.refresh",
                     "api.v1.auth.logout",
                     "api.v1.auth.me.delete",
@@ -5264,10 +5345,10 @@
                     "dashboard",
                     "control-room.index",
                     "control-room.show",
-                    "control-panel-v2.index",
-                    "control-panel-v2.wagon-timeline",
-                    "control-panel-v2.rake-replay",
-                    "control-panel-v2.show",
+                    "control-panel.index",
+                    "control-panel.wagon-timeline",
+                    "control-panel.rake-replay",
+                    "control-panel.show",
                     "dashboard.executive-yesterday-data",
                     "dashboard.executive-overview.export",
                     "dashboard.siding-performance-metrics",
@@ -5275,6 +5356,7 @@
                     "dashboard.section-data",
                     "dashboard.rake-performance.rakes.index",
                     "dashboard.rake-performance.rakes.show",
+                    "dashboard.rake-performance.overload-trends",
                     "dashboard.loader-overload.loaders.index",
                     "dashboard.loader-overload.loaders.show",
                     "dashboard.loader-overload.operators.index",
@@ -5484,6 +5566,7 @@
                     "siding-pre-indent-reports.update",
                     "siding-pre-indent-reports.destroy",
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.reconciliation-report",
                     "vehicle-dispatch.dpr-data",
                     "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
@@ -5491,6 +5574,10 @@
                     "vehicle-dispatch.save",
                     "dispatch-reports.generate",
                     "vehicle-dispatch.dpr-export",
+                    "daily-siding-dispatch-rollups.index",
+                    "daily-siding-dispatch-rollups.recalculate",
+                    "daily-vehicle-entry-rollups.index",
+                    "daily-vehicle-entry-rollups.recalculate",
                     "vehicle-workorders.index",
                     "vehicle-workorders.export",
                     "vehicle-workorders.export-transporters",
@@ -6540,6 +6627,7 @@
                 ],
                 "relatedRoutes": [
                     "vehicle-dispatch.index",
+                    "vehicle-dispatch.reconciliation-report",
                     "vehicle-dispatch.dpr-data",
                     "vehicle-dispatch.calendar-days",
                     "vehicle-dispatch.update",
@@ -7422,10 +7510,10 @@
                     "ControlPanelV2Controller"
                 ],
                 "relatedRoutes": [
-                    "control-panel-v2.index",
-                    "control-panel-v2.wagon-timeline",
-                    "control-panel-v2.rake-replay",
-                    "control-panel-v2.show"
+                    "control-panel.index",
+                    "control-panel.wagon-timeline",
+                    "control-panel.rake-replay",
+                    "control-panel.show"
                 ]
             }
         },
@@ -7438,10 +7526,10 @@
                     "ControlPanelV2Controller"
                 ],
                 "relatedRoutes": [
-                    "control-panel-v2.index",
-                    "control-panel-v2.wagon-timeline",
-                    "control-panel-v2.rake-replay",
-                    "control-panel-v2.show"
+                    "control-panel.index",
+                    "control-panel.wagon-timeline",
+                    "control-panel.rake-replay",
+                    "control-panel.show"
                 ]
             }
         },
@@ -7475,6 +7563,43 @@
                     "manager-brief.index",
                     "manager-brief.refresh"
                 ]
+            }
+        },
+        "DailySidingDispatchRollups/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "DailySidingVehicleDispatchRollupAdminController"
+                ],
+                "relatedRoutes": [
+                    "daily-siding-dispatch-rollups.index",
+                    "daily-siding-dispatch-rollups.recalculate"
+                ]
+            }
+        },
+        "DailyVehicleEntryRollups/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "DailyVehicleEntryRollupAdminController"
+                ],
+                "relatedRoutes": [
+                    "daily-vehicle-entry-rollups.index",
+                    "daily-vehicle-entry-rollups.recalculate"
+                ]
+            }
+        },
+        "VehicleDispatch/dispatch-reconciliation-dialog": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
             }
         }
     },

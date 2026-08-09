@@ -16,9 +16,9 @@ All Actions:
 |--------|---------|------------|
 | [CreateUser](./CreateUser.md) | N/A | ✅ |
 | [CreateUserEmailResetNotification](./CreateUserEmailResetNotification.md) | N/A | ✅ |
-| [SendPasswordResetOtp](./SendPasswordResetOtp.md) | API OTP forgot-password — send code | ✅ |
-| [VerifyPasswordResetOtp](./VerifyPasswordResetOtp.md) | API OTP forgot-password — verify code | ✅ |
-| [ResetPasswordWithOtp](./ResetPasswordWithOtp.md) | API OTP forgot-password — set password | ✅ |
+| [SendPasswordResetOtp](./SendPasswordResetOtp.md) | N/A | ✅ |
+| [VerifyPasswordResetOtp](./VerifyPasswordResetOtp.md) | N/A | ✅ |
+| [ResetPasswordWithOtp](./ResetPasswordWithOtp.md) | N/A | ✅ |
 | [CreateUserEmailVerificationNotification](./CreateUserEmailVerificationNotification.md) | N/A | ✅ |
 | [CreateUserPassword](./CreateUserPassword.md) | N/A | ✅ |
 | [DeleteUser](./DeleteUser.md) | N/A | ✅ |
@@ -64,6 +64,7 @@ All Actions:
 | [ResetUserPassword](./resetuserpassword.md) | N/A | ✅ |
 | [UpdateUserProfileInformation](./updateuserprofileinformation.md) | N/A | ✅ |
 | [AggregateSidingPerformance](./aggregatesidingperformance.md) | N/A | ✅ |
+| [RecalculateDailySidingVehicleDispatchRollups](./recalculatedailysidingvehicledispatchrollups.md) | N/A | ✅ |
 | [GenerateDailyBriefingAction](./generatedailybriefingaction.md) | N/A | ✅ |
 | [GeneratePenaltyInsightsAction](./generatepenaltyinsightsaction.md) | N/A | ✅ |
 | [BuildDispatchReportDprExport](./BuildDispatchReportDprExport.md) | N/A | ✅ |
@@ -71,7 +72,6 @@ All Actions:
 | [CalculateSidingRiskScoresAction](./CalculateSidingRiskScoresAction.md) | N/A | ✅ |
 | [ClassifyPenaltyRootCauseAction](./ClassifyPenaltyRootCauseAction.md) | N/A | ✅ |
 | [GeneratePenaltyPredictionsAction](./GeneratePenaltyPredictionsAction.md) | N/A | ✅ |
-| [RecalculateDailySidingVehicleDispatchRollups](./recalculatedailysidingvehicledispatchrollups.md) | Rebuild daily siding_vehicle_dispatch rollups | ✅ |
 | [RecommendDisputeAction](./RecommendDisputeAction.md) | N/A | ✅ |
 | [CreateUnloadFromArrival](./createunloadfromarrival.md) | N/A | ✅ |
 | [GenerateDispatchReport](./generatedispatchreport.md) | N/A | ✅ |
@@ -114,5 +114,6 @@ All Actions:
 | MapTransportRegistrationToVehicleWorkorderDefaults | N/A | ❌ |
 | RecalculateRakeWeighmentOverload | N/A | ❌ |
 | SyncLoadriteEvent | N/A | ❌ |
+| RecalculateDailyVehicleEntryRollups | N/A | ❌ |
 
 

@@ -3,12 +3,12 @@
     "table": "loader_performances",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "loader_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },

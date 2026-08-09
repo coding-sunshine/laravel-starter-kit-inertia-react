@@ -3,12 +3,12 @@
     "table": "penalty_predictions",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -23,7 +23,7 @@
             "default": null
         },
         "predicted_types": {
-            "type": "json",
+            "type": "text",
             "nullable": true,
             "default": null
         },
@@ -38,12 +38,12 @@
             "default": null
         },
         "factors": {
-            "type": "json",
+            "type": "text",
             "nullable": true,
             "default": null
         },
         "recommendations": {
-            "type": "json",
+            "type": "text",
             "nullable": true,
             "default": null
         },
