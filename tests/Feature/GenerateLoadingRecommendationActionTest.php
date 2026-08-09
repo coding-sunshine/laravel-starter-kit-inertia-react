@@ -8,12 +8,11 @@ use App\Services\PrismService;
 use Illuminate\Support\Facades\Cache;
 
 it('returns null when prism is unavailable', function (): void {
-    $prism = Mockery::mock(PrismService::class);
-    $prism->shouldReceive('isAvailable')->once()->andReturn(false);
+    config(['prism.providers.openrouter.api_key' => '']);
 
     $rake = Rake::factory()->create();
 
-    $action = new GenerateLoadingRecommendationAction($prism);
+    $action = new GenerateLoadingRecommendationAction(new PrismService);
     $result = $action->handle($rake);
 
     expect($result)->toBeNull();
@@ -25,10 +24,7 @@ it('returns cached result on second call', function (): void {
 
     Cache::put($cacheKey, 'Cached recommendation text', 21600);
 
-    $prism = Mockery::mock(PrismService::class);
-    $prism->shouldNotReceive('isAvailable');
-
-    $action = new GenerateLoadingRecommendationAction($prism);
+    $action = new GenerateLoadingRecommendationAction(new PrismService);
     $result = $action->handle($rake);
 
     expect($result)->toBe('Cached recommendation text');
@@ -40,21 +36,17 @@ it('returns null when cached value is unavailable sentinel', function (): void {
 
     Cache::put($cacheKey, '__unavailable__', 21600);
 
-    $prism = Mockery::mock(PrismService::class);
-    $prism->shouldNotReceive('isAvailable');
-
-    $action = new GenerateLoadingRecommendationAction($prism);
+    $action = new GenerateLoadingRecommendationAction(new PrismService);
 
     expect($action->handle($rake))->toBeNull();
 });
 
 it('returns null when rake has no siding', function (): void {
-    $rake = Rake::factory()->create(['siding_id' => null]);
+    // Not persisted: the `rakes.siding_id` column is NOT NULL in the schema,
+    // but handle() short-circuits on a null siding_id before touching the DB.
+    $rake = Rake::factory()->make(['siding_id' => null]);
 
-    $prism = Mockery::mock(PrismService::class);
-    $prism->shouldNotReceive('isAvailable');
-
-    $action = new GenerateLoadingRecommendationAction($prism);
+    $action = new GenerateLoadingRecommendationAction(new PrismService);
 
     expect($action->handle($rake))->toBeNull();
 });

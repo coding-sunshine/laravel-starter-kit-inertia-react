@@ -19,9 +19,10 @@ it('allows admin to access panel', function (): void {
     assert($test instanceof TestCase);
     actsAsFilamentAdmin($test);
 
+    // AdminPanelProvider sets homeUrl to the users list, so '/admin' redirects there.
     $response = $test->get('/admin');
 
-    $response->assertOk();
+    $response->assertRedirect('/admin/users');
 });
 
 it('allows super-admin to access panel', function (): void {
@@ -29,9 +30,10 @@ it('allows super-admin to access panel', function (): void {
     assert($test instanceof TestCase);
     actsAsFilamentAdmin($test, 'super-admin');
 
+    // AdminPanelProvider sets homeUrl to the users list, so '/admin' redirects there.
     $response = $test->get('/admin');
 
-    $response->assertOk();
+    $response->assertRedirect('/admin/users');
 });
 
 it('allows admin to open users list', function (): void {

@@ -3,15 +3,16 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use Spatie\Permission\Models\Role;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 test('all security headers are present on web responses', function (): void {
+    // '/' redirects guests to login (see routes/web.php); security headers must
+    // still be present on that redirect response, so don't assert 2xx here.
     $response = get('/');
 
-    $response->assertSuccessful();
     $response->assertHeader('Content-Security-Policy');
     $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -22,8 +23,9 @@ test('all security headers are present on web responses', function (): void {
 });
 
 test('all security headers are present on API responses', function (): void {
-    Role::query()->firstOrCreate(['name' => 'user']);
+    $this->seed(RolesAndPermissionsSeeder::class);
     $user = User::factory()->create();
+    $user->assignRole('super-admin');
 
     $response = actingAs($user, 'sanctum')->get('/api');
 
@@ -79,8 +81,9 @@ test('X-Frame-Options prevents clickjacking', function (): void {
 });
 
 test('security headers are present on authenticated web routes', function (): void {
-    Role::query()->firstOrCreate(['name' => 'user']);
+    $this->seed(RolesAndPermissionsSeeder::class);
     $user = User::factory()->create();
+    $user->assignRole('super-admin');
 
     $response = actingAs($user)->get(route('dashboard'));
 

@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 use App\Features\OnboardingFeature;
 use App\Models\User;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 use Laravel\Pennant\Feature;
+
+beforeEach(function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+});
 
 test('users without completed onboarding are redirected to onboarding page', function (): void {
     $user = User::factory()->needsOnboarding()->create();
@@ -18,6 +23,7 @@ test('users with completed onboarding can access dashboard', function (): void {
     $user = User::factory()->withoutTwoFactor()->create([
         'onboarding_completed' => true,
     ]);
+    $user->assignRole('super-admin');
 
     $this->actingAs($user)
         ->get(route('dashboard'))
@@ -67,6 +73,7 @@ test('logout is accessible without completing onboarding', function (): void {
 
 test('when onboarding feature is inactive user can access dashboard without completing onboarding', function (): void {
     $user = User::factory()->needsOnboarding()->create();
+    $user->assignRole('super-admin');
     Feature::for($user)->deactivate(OnboardingFeature::class);
 
     $this->actingAs($user)
