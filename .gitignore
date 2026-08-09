@@ -11,7 +11,9 @@
 /storage/pail
 /vendor
 .DS_Store
+.env
 .env.backup
+.env.production
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -35,3 +37,4 @@ yarn-error.log
 !public/**/*.png
 !docs/**/*.png
 config.bat
+live.md
