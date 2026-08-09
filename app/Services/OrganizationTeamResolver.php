@@ -9,20 +9,27 @@ use Spatie\Permission\Contracts\PermissionsTeamResolver;
 
 /**
  * Resolves the current organization (team) ID for Spatie Permission.
- * RRMMS uses only global roles (organization_id = 0); always return 0 so
- * getAllPermissions() / can() use global role assignments for sidebar and gates.
+ * Defaults to the global team (organization_id = 0) so getAllPermissions() /
+ * can() use global role assignments unless code explicitly switches the team
+ * (policies, actions, and Organization::addMember use a set/restore pattern).
  */
 final class OrganizationTeamResolver implements PermissionsTeamResolver
 {
     private const int GLOBAL_TEAM_ID = 0;
 
-    public function getPermissionsTeamId(): int
+    private int|string|null $teamId = null;
+
+    public function getPermissionsTeamId(): int|string
     {
-        return self::GLOBAL_TEAM_ID;
+        return $this->teamId ?? self::GLOBAL_TEAM_ID;
     }
 
     public function setPermissionsTeamId(int|string|Model|null $id): void
     {
-        // Tenant context is set by middleware/actions; no-op here.
+        if ($id instanceof Model) {
+            $id = $id->getKey();
+        }
+
+        $this->teamId = $id;
     }
 }

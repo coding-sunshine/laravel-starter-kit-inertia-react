@@ -60,7 +60,7 @@ final class ChangelogEntry extends Model
         return LogOptions::defaults()
             ->logOnly(['title', 'version', 'type', 'is_published', 'released_at'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs()
+            ->dontLogEmptyChanges()
             ->useLogName('changelog_entry');
     }
 

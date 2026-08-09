@@ -6,10 +6,11 @@ use App\Models\Organization;
 use App\Models\Siding;
 use App\Models\User;
 use App\Services\SidingContext;
-use Database\Seeders\Essential\RakeManagementRolePermissionSeeder;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
-    $this->seed(RakeManagementRolePermissionSeeder::class);
+    Role::findOrCreate('siding_operator');
+    Role::findOrCreate('super_admin');
     SidingContext::flush();
 });
 

@@ -115,7 +115,7 @@ final class HelpArticle extends Model implements HasMedia, Sortable
         return LogOptions::defaults()
             ->logOnly(['title', 'category', 'is_published', 'is_featured', 'order'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs()
+            ->dontLogEmptyChanges()
             ->useLogName('help_article');
     }
 
