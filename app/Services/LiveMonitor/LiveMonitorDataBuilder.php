@@ -214,7 +214,7 @@ final readonly class LiveMonitorDataBuilder
                     ->from('wagon_loading')
                     ->whereColumn('wagon_loading.rake_id', 'rakes.id')
                     ->whereNotNull('wagon_loading.loaded_quantity_mt')
-                    ->whereRaw('wagon_loading.loaded_quantity_mt::numeric > 0');
+                    ->where('wagon_loading.loaded_quantity_mt', '>', 0);
             })
             ->orderByRaw(
                 '(SELECT MAX(updated_at) FROM wagon_loading wl WHERE wl.rake_id = rakes.id) DESC',
@@ -445,11 +445,12 @@ final readonly class LiveMonitorDataBuilder
         //   1) Loadrite events: span between first and last bucket reading.
         //      Most accurate when Loadrite is active.
         //   2) Manual loading: span between first and last weight entry on
-        //      wagon_loading rows that have a recorded quantity. Uses created_at
-        //      (when the row was first written with a weight) — NOT updated_at,
-        //      which can shift on data backfills/reattributions weeks later.
-        //   3) Fallback: loading_start_time / placement_time. Only useful when
-        //      a rake is placed but loading hasn't started yet.
+        //      wagon_loading rows that have a recorded quantity. Requires the
+        //      explicit loading_time field — NOT created_at/updated_at, which
+        //      can shift on data backfills/reattributions weeks later, or sit
+        //      identical across every row (set once at rake placement).
+        //   3) Fallback: placement_time / loading_start_time — dwell time at
+        //      the siding, anchored from arrival when known.
         //
         // Mixing sources (e.g. min(loadrite, wagon_loading.updated_at)) produced
         // garbage windows like "566 hours" on rakes that actually loaded in
@@ -471,25 +472,26 @@ final readonly class LiveMonitorDataBuilder
             $withWeight = $loadings->filter(
                 fn ($l) => $l->loaded_quantity_mt !== null && (float) $l->loaded_quantity_mt > 0,
             );
-            // Prefer the explicit loading_time field on wagon_loading; it's the
-            // timestamp the operator recorded for that wagon's load. Falls back
-            // to updated_at if loading_time isn't set.
+            // Only the explicit loading_time field is trustworthy here; it's
+            // the timestamp the operator recorded for that wagon's load.
+            // updated_at is not used as a fallback — it can be identical
+            // across every row (set once at placement) or shift on backfills.
             $manualTimes = $withWeight
-                ->map(fn ($l) => $l->loading_time ?? $l->updated_at)
+                ->pluck('loading_time')
                 ->filter()
                 ->map(fn ($t) => CarbonImmutable::parse($t));
             if ($manualTimes->isNotEmpty()) {
                 $firstAt = $manualTimes->min();
                 $lastAt = $manualTimes->max();
                 $anchorLabel = 'first_wagon_loading';
-            } elseif ($rake->loading_start_time) {
-                $firstAt = CarbonImmutable::parse($rake->loading_start_time);
-                $lastAt = CarbonImmutable::now();
-                $anchorLabel = 'loading_start';
             } elseif ($rake->placement_time) {
                 $firstAt = CarbonImmutable::parse($rake->placement_time);
                 $lastAt = CarbonImmutable::now();
                 $anchorLabel = 'placement';
+            } elseif ($rake->loading_start_time) {
+                $firstAt = CarbonImmutable::parse($rake->loading_start_time);
+                $lastAt = CarbonImmutable::now();
+                $anchorLabel = 'loading_start';
             }
         }
 
