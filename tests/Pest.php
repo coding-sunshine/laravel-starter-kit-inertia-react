@@ -13,6 +13,10 @@ use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
+// Rector's scoped autoloader registers itself first when app/Rector/* is loaded,
+// which breaks Application::inferBasePath() — pin the base path explicitly.
+$_ENV['APP_BASE_PATH'] = dirname(__DIR__);
+
 pest()->extend(TestCase::class)
     ->beforeEach(function (): void {
         Str::createRandomStringsNormally();

@@ -17,6 +17,13 @@ final class SeedHelper
     private static ?SeedScenarioManager $scenarioManager = null;
 
     /**
+     * Models currently being seeded, to break belongsTo cycles (e.g. User <-> Organization).
+     *
+     * @var array<class-string<Model>, true>
+     */
+    private static array $seedingInProgress = [];
+
+    /**
      * Auto-seed a model and its relationships.
      *
      * @param  class-string<Model>  $modelClass
@@ -103,6 +110,24 @@ final class SeedHelper
      * @param  class-string<Model>  $modelClass
      */
     private static function seedRelationships(string $modelClass): void
+    {
+        if (isset(self::$seedingInProgress[$modelClass])) {
+            return;
+        }
+
+        self::$seedingInProgress[$modelClass] = true;
+
+        try {
+            self::seedBelongsToParents($modelClass);
+        } finally {
+            unset(self::$seedingInProgress[$modelClass]);
+        }
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     */
+    private static function seedBelongsToParents(string $modelClass): void
     {
         $model = new $modelClass;
         $reflection = new ReflectionClass($modelClass);
