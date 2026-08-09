@@ -23,7 +23,7 @@ test('authenticated user may delete registration media without transport update 
         ->withWorkOrderNo2('99/'.Str::uuid()->toString())
         ->create();
 
-    $fake = UploadedFile::fake()->create('pan-scan.pdf', 10, 'application/pdf');
+    $fake = UploadedFile::fake()->createWithContent('pan-scan.pdf', "%PDF-1.4\n%\xC2\xA4\xC2\xA4\xC2\xA4\xC2\xA4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
     $media = $registration->addMedia($fake->getRealPath())
         ->usingFileName($fake->hashName())
         ->toMediaCollection('pan_documents');

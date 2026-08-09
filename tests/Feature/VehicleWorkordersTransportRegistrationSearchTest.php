@@ -44,6 +44,7 @@ function vehicleWorkorderSearchUser(): User
         'onboarding_completed' => true,
     ]);
     $user->assignRole('admin');
+    $user->givePermissionTo(['sections.transport.view', 'sections.transport.update']);
 
     return $user;
 }

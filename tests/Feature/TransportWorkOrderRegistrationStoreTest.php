@@ -138,7 +138,9 @@ test('transport registration store creates record when siding matches derived le
     $user = transportRegistrationStoreUser();
     $user->sidings()->attach($sidings['dumk']->id, ['is_primary' => true]);
 
-    $wo2 = '66/'.Str::uuid()->toString();
+    // work_order_no_2 is validated with a character-restricted regex (digits, spaces, ./_-, D/P/K),
+    // so it can't hold a UUID's hex letters like the other tests in this file that never assert success.
+    $wo2 = '66/'.random_int(100000, 999999);
 
     $this->actingAs($user)
         ->post(route('vehicle-workorders.transport-registrations.store'), array_merge(transportRegistrationRequiredPayload(), [

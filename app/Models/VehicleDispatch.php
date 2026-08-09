@@ -9,13 +9,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 final class VehicleDispatch extends Model
 {
     use HasFactory;
-
-    /** PostgreSQL: calendar date of {@see $issued_on} for grouping and filters. */
-    public const ISSUED_ON_DATE_SQL = '(issued_on)::date';
 
     protected $table = 'siding_vehicle_dispatches';
 
@@ -49,6 +47,16 @@ final class VehicleDispatch extends Model
     ];
 
     /**
+     * Cross-database expression: calendar date of {@see $issued_on} for grouping and filters.
+     */
+    public static function issuedOnDateSql(string $issuedOnColumn = 'issued_on'): string
+    {
+        return DB::connection()->getDriverName() === 'pgsql'
+            ? "({$issuedOnColumn})::date"
+            : "date({$issuedOnColumn})";
+    }
+
+    /**
      * Derive shift from issued_on timestamp: 1st (00:00-08:00), 2nd (08:01-16:00), 3rd (16:01-23:59).
      */
     public static function shiftFromIssuedOn(?DateTimeInterface $issuedOn): ?string
@@ -73,18 +81,22 @@ final class VehicleDispatch extends Model
     }
 
     /**
-     * PostgreSQL expression: shift sort order 1–3 from {@see $shift} or {@see $issued_on} time buckets.
+     * Cross-database expression: shift sort order 1–3 from {@see $shift} or {@see $issued_on} time buckets.
      * Matches {@see shiftFromIssuedOn()} and {@see scopeForShift()}.
      */
     public static function shiftSortOrderSql(string $issuedOnColumn = 'issued_on'): string
     {
+        $timeExpr = DB::connection()->getDriverName() === 'pgsql'
+            ? "({$issuedOnColumn})::time"
+            : "time({$issuedOnColumn})";
+
         return <<<SQL
 CASE
     WHEN shift IN ('1st', '1', '1ST') THEN 1
     WHEN shift IN ('2nd', '2', '2ND') THEN 2
     WHEN shift IN ('3rd', '3', '3RD') THEN 3
-    WHEN ({$issuedOnColumn})::time >= TIME '00:00:00' AND ({$issuedOnColumn})::time <= TIME '08:00:00' THEN 1
-    WHEN ({$issuedOnColumn})::time > TIME '08:00:00' AND ({$issuedOnColumn})::time <= TIME '16:00:00' THEN 2
+    WHEN {$timeExpr} >= '00:00:00' AND {$timeExpr} <= '08:00:00' THEN 1
+    WHEN {$timeExpr} > '08:00:00' AND {$timeExpr} <= '16:00:00' THEN 2
     ELSE 3
 END
 SQL;
@@ -121,13 +133,15 @@ SQL;
             return $query;
         }
 
-        return $query->whereNotNull('issued_on')->where(function ($q) use ($shift): void {
+        $timeExpr = DB::connection()->getDriverName() === 'pgsql' ? '(issued_on)::time' : 'time(issued_on)';
+
+        return $query->whereNotNull('issued_on')->where(function ($q) use ($shift, $timeExpr): void {
             if ($shift === '1st') {
-                $q->whereRaw('(issued_on)::time >= ? AND (issued_on)::time <= ?', ['00:00:00', '08:00:00']);
+                $q->whereRaw("{$timeExpr} >= ? AND {$timeExpr} <= ?", ['00:00:00', '08:00:00']);
             } elseif ($shift === '2nd') {
-                $q->whereRaw('(issued_on)::time > ? AND (issued_on)::time <= ?', ['08:00:00', '16:00:00']);
+                $q->whereRaw("{$timeExpr} > ? AND {$timeExpr} <= ?", ['08:00:00', '16:00:00']);
             } else {
-                $q->whereRaw('(issued_on)::time > ?', ['16:00:00']);
+                $q->whereRaw("{$timeExpr} > ?", ['16:00:00']);
             }
         });
     }

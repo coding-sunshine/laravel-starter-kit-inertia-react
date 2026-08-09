@@ -41,7 +41,7 @@ test('authenticated user with siding access may delete vehicle workorder media w
         'tare_weight' => 10000,
     ]);
 
-    $fake = UploadedFile::fake()->create('rc-scan.pdf', 10, 'application/pdf');
+    $fake = UploadedFile::fake()->createWithContent('rc-scan.pdf', "%PDF-1.4\n%\xC2\xA4\xC2\xA4\xC2\xA4\xC2\xA4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
     $media = $workorder->addMedia($fake->getRealPath())
         ->usingFileName($fake->hashName())
         ->toMediaCollection('vehicle_rc');

@@ -145,7 +145,7 @@ test('overload trends only queries the requested period', function (): void {
 
     foreach ([$rakeToday, $rakeYesterday] as $rake) {
         attachRrWagonSnapshotsToRake($rake, [
-            ['pcc_weight_mt' => 100, 'loaded_weight_mt' => 110],
+            ['permissible_weight_mt' => 100, 'loaded_weight_mt' => 110],
         ]);
     }
 

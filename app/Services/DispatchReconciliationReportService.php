@@ -103,7 +103,7 @@ final readonly class DispatchReconciliationReportService
      */
     private function aggregateDispatches(int $sidingId, string $from, string $to): array
     {
-        $issuedOnDate = VehicleDispatch::ISSUED_ON_DATE_SQL;
+        $issuedOnDate = VehicleDispatch::issuedOnDateSql();
         $shiftOrder = VehicleDispatch::shiftSortOrderSql();
 
         $rows = VehicleDispatch::query()
@@ -140,7 +140,7 @@ final readonly class DispatchReconciliationReportService
         $rows = DailyVehicleEntry::query()
             ->where('siding_id', $sidingId)
             ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
-            ->whereBetween('entry_date', [$from, $to])
+            ->whereRaw('date(entry_date) between ? and ?', [$from, $to])
             ->groupBy('entry_date', 'shift')
             ->selectRaw(
                 'entry_date, shift, count(*) as received_trips, coalesce(sum(net_wt), 0) as received_qty, sum(case when status = ? then coalesce(net_wt, 0) else 0 end) as stock_updated_mt, sum(case when status != ? then coalesce(gross_wt, 0) else 0 end) as in_progress_gross_mt',

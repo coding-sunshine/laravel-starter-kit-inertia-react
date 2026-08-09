@@ -163,7 +163,7 @@ final class VehicleDispatchController extends Controller
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             ...$report,
-        ]);
+        ], 200, [], JSON_PRESERVE_ZERO_FRACTION);
     }
 
     /**

@@ -8,7 +8,9 @@ use App\Actions\DeduplicateVehicleWorkordersByVehicleNoAction;
 use App\Models\Organization;
 use App\Models\Siding;
 use App\Models\VehicleWorkorder;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use Tests\TestCase;
 
@@ -25,6 +27,14 @@ final class DeduplicateVehicleWorkordersByVehicleNoActionTest extends TestCase
         Siding::factory()->for($org)->create(['code' => 'DUMK', 'station_code' => 'DMK']);
 
         $sidingId = (int) Siding::query()->where('code', 'DUMK')->value('id');
+
+        // This action is meant to run before the `vehicle_no` unique constraint migration
+        // (see DeduplicateVehicleWorkordersByVehicleNoCommand). Drop it here to recreate the
+        // pre-migration state duplicates were cleaned up from; the transaction rollback
+        // between tests restores the constraint.
+        Schema::table('vehicle_workorders', function (Blueprint $table): void {
+            $table->dropUnique(['vehicle_no']);
+        });
 
         VehicleWorkorder::query()->create([
             'siding_id' => $sidingId,

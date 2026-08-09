@@ -397,7 +397,7 @@ final class ExecutiveDashboardController extends Controller
                 ],
             ),
             'data' => $data,
-        ]);
+        ], 200, [], JSON_PRESERVE_ZERO_FRACTION);
     }
 
     /**
