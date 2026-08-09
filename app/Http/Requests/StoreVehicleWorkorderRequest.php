@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class StoreVehicleWorkorderRequest extends FormRequest
 {
@@ -45,7 +46,7 @@ final class StoreVehicleWorkorderRequest extends FormRequest
 
         return [
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'vehicle_no' => ['required', 'string', 'max:50'],
+            'vehicle_no' => ['required', 'string', 'max:50', Rule::unique('vehicle_workorders', 'vehicle_no')],
             'rcd_pin_no' => ['required', 'string', 'max:50'],
             'transport_name' => ['required', 'string', 'max:255'],
             'wo_no' => ['nullable', 'string', 'max:100'],
