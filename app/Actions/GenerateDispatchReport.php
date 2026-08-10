@@ -64,6 +64,8 @@ final readonly class GenerateDispatchReport
                     'vw.vehicle_no',
                     'vw.transport_name as vwo_transport_name',
                     'vw.tare_weight as vwo_tare_weight',
+                    'vw.wo_no as vwo_wo_no',
+                    'vw.tyres as vwo_tyres',
                 ]);
 
             $query = VehicleDispatch::query()
@@ -93,7 +95,6 @@ final readonly class GenerateDispatchReport
                     'siding_vehicle_dispatches.issued_on',
                     'siding_vehicle_dispatches.truck_regd_no',
                     'siding_vehicle_dispatches.shift',
-                    'siding_vehicle_dispatches.serial_no',
                     'siding_vehicle_dispatches.mineral_weight',
                     DB::raw('COALESCE(dve.e_challan_no, siding_vehicle_dispatches.pass_no) as e_challan_no'),
                     'dve.transport_name',
@@ -104,7 +105,10 @@ final readonly class GenerateDispatchReport
                     'dve.trip_id_no',
                     'vwo.vwo_transport_name',
                     'vwo.vwo_tare_weight',
-                ]);
+                    'vwo.vwo_wo_no',
+                    'vwo.vwo_tyres',
+                ])
+                ->orderBy('siding_vehicle_dispatches.id');
 
             $rows = $query->get();
 
@@ -121,14 +125,32 @@ final readonly class GenerateDispatchReport
 
             $count = 0;
             $insertedData = [];
+            $fallbackEntries = $this->fallbackEntriesByTruckDate($rows);
+            $tripSequences = [];
 
             foreach ($rows as $row) {
-                $grossWt = $row->gross_wt !== null ? (float) $row->gross_wt : null;
-                $tareFromDve = $row->tare_wt !== null ? (float) $row->tare_wt : null;
+                $issuedOnDate = $this->normalizeIssuedOn($row->issued_on)?->format('Y-m-d');
+
+                // Only ~14% of daily vehicle entries carry an e-challan number, so the
+                // challan join leaves weighbridge and gross weight blank on most
+                // dispatches. Fall back to the same truck's entry that day.
+                $fallback = $row->gross_wt === null && $row->wb_no === null
+                    ? ($fallbackEntries[$this->truckDateKey($row->siding_id, $row->truck_regd_no, $issuedOnDate)] ?? null)
+                    : null;
+
+                $grossWt = $row->gross_wt ?? $fallback?->gross_wt;
+                $grossWt = $grossWt !== null ? (float) $grossWt : null;
+
+                $tareFromDve = $row->tare_wt ?? $fallback?->tare_wt;
+                $tareFromDve = $tareFromDve !== null ? (float) $tareFromDve : null;
                 $tareFromWorkorder = $row->vwo_tare_weight !== null ? (float) $row->vwo_tare_weight : null;
                 $tareWt = $tareFromDve ?? $tareFromWorkorder;
 
-                $dveTransport = $row->transport_name;
+                $reachedAtRaw = $row->reached_at ?? $fallback?->reached_at;
+                $wbNo = $row->wb_no ?? $fallback?->wb_no;
+                $tripIdNo = $row->trip_id_no ?? $fallback?->trip_id_no;
+
+                $dveTransport = $row->transport_name ?? $fallback?->transport_name;
                 $transportName = ($dveTransport !== null && $dveTransport !== '')
                     ? $dveTransport
                     : ($row->vwo_transport_name !== null && $row->vwo_transport_name !== ''
@@ -137,9 +159,11 @@ final readonly class GenerateDispatchReport
 
                 $mineralWt = $row->mineral_weight !== null ? (float) $row->mineral_weight : null;
 
+                // A workorder tare is a different weighing event from the gate gross,
+                // so subtracting them yields a bogus net. Only net out a same-source pair.
                 $netWt = null;
-                if ($grossWt !== null && $tareWt !== null) {
-                    $netWt = $grossWt - $tareWt;
+                if ($grossWt !== null && $tareFromDve !== null) {
+                    $netWt = $grossWt - $tareFromDve;
                 }
 
                 $coalTonVariation = null;
@@ -148,7 +172,7 @@ final readonly class GenerateDispatchReport
                 }
 
                 $issuedOn = $this->normalizeIssuedOn($row->issued_on);
-                $reachedAt = $row->reached_at ? Carbon::parse($row->reached_at) : null;
+                $reachedAt = $reachedAtRaw ? Carbon::parse($reachedAtRaw) : null;
                 $timeTakenTrip = null;
                 if ($issuedOn !== null && $reachedAt !== null && $reachedAt->greaterThanOrEqualTo($issuedOn)) {
                     $timeTakenTrip = (string) $issuedOn->diffInMinutes($reachedAt);
@@ -157,6 +181,10 @@ final readonly class GenerateDispatchReport
                 $eChallanNo = (string) $row->e_challan_no;
 
                 $dispatchId = (int) $row->dispatch_id;
+
+                // TRIPS is the nth run of this truck on this day, not the pass serial.
+                $tripKey = $this->truckDateKey($row->siding_id, $row->truck_regd_no, $issuedOnDate);
+                $tripSequences[$tripKey] = ($tripSequences[$tripKey] ?? 0) + 1;
 
                 $dispatchReportData = [
                     'vehicle_dispatch_id' => $dispatchId,
@@ -167,20 +195,20 @@ final readonly class GenerateDispatchReport
                     'truck_no' => $row->truck_regd_no,
                     'shift' => $row->shift,
                     'date' => $issuedOn?->format('Y-m-d'),
-                    'trips' => $row->serial_no,
-                    'wo_no' => null,
+                    'trips' => $tripSequences[$tripKey],
+                    'wo_no' => $row->vwo_wo_no,
                     'transport_name' => $transportName,
                     'mineral_wt' => $mineralWt,
                     'gross_wt_siding_rec_wt' => $grossWt,
                     'tare_wt' => $tareWt,
                     'net_wt_siding_rec_wt' => $netWt,
-                    'tyres' => null,
+                    'tyres' => $row->vwo_tyres,
                     'coal_ton_variation' => $coalTonVariation,
-                    'reached_datetime' => $row->reached_at,
+                    'reached_datetime' => $reachedAtRaw,
                     'time_taken_trip' => $timeTakenTrip,
                     'remarks' => null,
-                    'wb' => $row->wb_no,
-                    'trip_id_no' => $row->trip_id_no,
+                    'wb' => $wbNo,
+                    'trip_id_no' => $tripIdNo,
                 ];
 
                 DispatchReport::updateOrCreate(
@@ -199,6 +227,79 @@ final readonly class GenerateDispatchReport
 
             return $count;
         });
+    }
+
+    private function truckDateKey(mixed $sidingId, mixed $truckNo, ?string $date): string
+    {
+        return implode('|', [(string) $sidingId, mb_strtoupper(mb_trim((string) $truckNo)), (string) $date]);
+    }
+
+    /**
+     * Latest daily vehicle entry per siding + truck + date for the dispatches in scope,
+     * used when the e-challan join finds nothing.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $rows
+     * @return array<string, object>
+     */
+    private function fallbackEntriesByTruckDate($rows): array
+    {
+        $sidingIds = [];
+        $truckNos = [];
+        $dates = [];
+
+        foreach ($rows as $row) {
+            if ($row->gross_wt !== null && $row->wb_no !== null) {
+                continue;
+            }
+
+            $date = $this->normalizeIssuedOn($row->issued_on)?->format('Y-m-d');
+            $truckNo = mb_trim((string) $row->truck_regd_no);
+
+            if ($date === null || $truckNo === '') {
+                continue;
+            }
+
+            $sidingIds[(string) $row->siding_id] = $row->siding_id;
+            $truckNos[$truckNo] = $truckNo;
+            $dates[$date] = $date;
+        }
+
+        if ($truckNos === []) {
+            return [];
+        }
+
+        $entries = DB::table('daily_vehicle_entries')
+            ->whereIn('siding_id', array_values($sidingIds))
+            ->whereIn('vehicle_no', array_values($truckNos))
+            // `entry_date` is a date on Postgres but a datetime string on sqlite,
+            // so bound the range with whereDate and match the exact day in PHP.
+            ->whereDate('entry_date', '>=', min($dates))
+            ->whereDate('entry_date', '<=', max($dates))
+            ->orderBy('id')
+            ->get([
+                'siding_id',
+                'vehicle_no',
+                'entry_date',
+                'transport_name',
+                'gross_wt',
+                'tare_wt',
+                'reached_at',
+                'wb_no',
+                'trip_id_no',
+            ]);
+
+        $byKey = [];
+
+        foreach ($entries as $entry) {
+            $key = $this->truckDateKey(
+                $entry->siding_id,
+                $entry->vehicle_no,
+                mb_substr((string) $entry->entry_date, 0, 10)
+            );
+            $byKey[$key] = $entry;
+        }
+
+        return $byKey;
     }
 
     private function normalizeIssuedOn(mixed $issuedOn): ?Carbon

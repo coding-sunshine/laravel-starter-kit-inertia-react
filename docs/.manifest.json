@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-08-09",
+    "lastGenerated": "2026-08-10",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -834,7 +834,6 @@
                 "usedBy": [],
                 "usesModels": [
                     "CoalStock",
-                    "Penalty",
                     "Rake",
                     "Siding",
                     "SidingPerformance",
@@ -868,7 +867,6 @@
                     "User",
                     "Alert",
                     "Indent",
-                    "Penalty",
                     "Rake"
                 ],
                 "relatedRoutes": []
@@ -879,9 +877,7 @@
             "path": "./generatepenaltyinsightsaction.md",
             "relationships": {
                 "usedBy": [],
-                "usesModels": [
-                    "Penalty"
-                ],
+                "usesModels": [],
                 "relatedRoutes": [
                     "penalties.index",
                     "penalties.analytics",
@@ -930,7 +926,6 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
-                    "Penalty",
                     "Siding",
                     "SidingPerformance",
                     "SidingRiskScore"
@@ -957,7 +952,6 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [
-                    "Penalty",
                     "PenaltyPrediction",
                     "Siding"
                 ],
@@ -1615,6 +1609,7 @@
                     "LoadingOverride",
                     "LoadriteAnomaly",
                     "LoadriteEvent",
+                    "PenaltyReconciliation",
                     "Rake",
                     "SidingPerformance"
                 ],

@@ -2,7 +2,7 @@ import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
 import {
     formatCurrency,
     SectionHeader,
-} from '@/pages/dashboard/shared';
+} from '@/components/dashboard/shared';
 import { Train } from 'lucide-react';
 import { useMemo } from 'react';
 

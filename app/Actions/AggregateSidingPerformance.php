@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Models\CoalStock;
-use App\Models\Penalty;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\SidingPerformance;
 use App\Models\Wagon;
+use App\Support\BilledPenaltyQuery;
 use Carbon\CarbonImmutable;
 
 /**
@@ -53,12 +53,10 @@ final readonly class AggregateSidingPerformance
             ->whereDate('loading_end_time', $date)
             ->count();
 
-        $penalties = Penalty::query()
-            ->whereIn('rake_id', $rakeIds)
-            ->whereDate('penalty_date', $date);
-
-        $totalPenaltyAmount = (float) $penalties->sum('penalty_amount');
-        $penaltyIncidents = $penalties->count();
+        $totalPenaltyAmount = BilledPenaltyQuery::total(
+            BilledPenaltyQuery::between([$sidingId], $date, $date)
+        );
+        $penaltyIncidents = BilledPenaltyQuery::between([$sidingId], $date, $date)->count();
 
         $avgDemurrageHours = (int) round(
             (float) Rake::query()

@@ -1,4 +1,4 @@
-import { RakePerformanceSection } from '../dashboard';
+import { RakePerformanceSection } from '@/pages/dashboard';
 import type { DashboardFilters, SidingOption } from './types';
 
 interface Props {

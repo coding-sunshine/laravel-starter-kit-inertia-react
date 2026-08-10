@@ -25,6 +25,7 @@ namespace App\DataTransferObjects\ManagerBrief;
  *   - 'demurrage_turnaround_risk'  – average rake turnaround exceeding SLA (forecast)
  *   - 'pcc_drift'                  – wagon-type median load deviating from PCC (forecast)
  *   - 'data_quality_anomaly'       – open Loadrite anomaly count exceeds threshold (data quality)
+ *   - 'billing_variance'           – billed penalty exceeds prediction; variance is recoverable (recovery)
  *
  * Allowed `severity` values: 'critical', 'high', 'medium', 'low'.
  */

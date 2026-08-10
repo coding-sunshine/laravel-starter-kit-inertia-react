@@ -1,29 +1,29 @@
+import { cn } from '@/lib/utils';
 import {
     DashboardPenaltyBySidingChart,
     PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS,
     type PenaltyBySidingChartPeriodKey,
-} from '../dashboard';
-import { formatCurrency, SectionHeader } from './shared';
-import type {
-    PenaltyByTypePoint,
-    PenaltyBySidingPoint,
-    PenaltyControlRrCoverage,
-} from './types';
-import { formatPenaltyControlRrCoverageLabel } from './types';
-import { cn } from '@/lib/utils';
+} from '@/pages/dashboard';
 import { AlertTriangle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
     Bar,
-    BarChart as RechartsBarChart,
     CartesianGrid,
     Cell,
     LabelList,
+    BarChart as RechartsBarChart,
     ResponsiveContainer,
     Tooltip,
     XAxis,
     YAxis,
 } from 'recharts';
+import { formatCurrency, SectionHeader } from './shared';
+import type {
+    PenaltyBySidingPoint,
+    PenaltyByTypePoint,
+    PenaltyControlRrCoverage,
+} from './types';
+import { formatPenaltyControlRrCoverageLabel } from './types';
 
 interface ExecutiveYesterdayForPenalty {
     penaltyBySidingByPeriod?: Record<
@@ -66,44 +66,43 @@ function PenaltiesAndChargesChart({
 }) {
     const totalType = data.reduce((s, p) => s + p.value, 0);
     const barData = [...data].sort((a, b) => b.value - a.value);
-    const chartHeight = Math.min(
-        480,
-        Math.max(260, barData.length * 52 + 80),
-    );
+    const chartHeight = Math.min(480, Math.max(260, barData.length * 52 + 80));
 
     return (
         <div className="mt-4 space-y-4">
             {rrCoverageLabel ? (
-                <p className="text-xs text-muted-foreground">{rrCoverageLabel}</p>
+                <p className="text-xs text-muted-foreground">
+                    {rrCoverageLabel}
+                </p>
             ) : null}
             <p className="text-xs text-gray-600">
                 Total:{' '}
-                <span className="font-semibold tabular-nums text-gray-900">
+                <span className="font-semibold text-gray-900 tabular-nums">
                     {formatCurrency(totalType)}
                 </span>
             </p>
             <ResponsiveContainer width="100%" height={chartHeight}>
                 <RechartsBarChart
                     data={barData}
-                    margin={{ top: 28, right: 16, bottom: 8, left: 8 }}
+                    layout="vertical"
+                    margin={{ top: 8, right: 72, bottom: 8, left: 8 }}
                 >
                     <CartesianGrid
                         strokeDasharray="3 3"
                         strokeOpacity={0.25}
-                        vertical={false}
+                        horizontal={false}
                     />
                     <XAxis
+                        type="number"
+                        tick={{ fontSize: 11 }}
+                        tickFormatter={(v) => formatCurrency(v)}
+                    />
+                    <YAxis
                         dataKey="name"
                         type="category"
                         tick={{ fontSize: 11 }}
                         interval={0}
-                        height={48}
-                    />
-                    <YAxis
-                        type="number"
-                        tick={{ fontSize: 11 }}
-                        width={72}
-                        tickFormatter={(v) => formatCurrency(v)}
+                        width={220}
                     />
                     <Tooltip
                         formatter={(v: number | string | undefined) =>
@@ -113,7 +112,7 @@ function PenaltiesAndChargesChart({
                     <Bar
                         dataKey="value"
                         name="Amount"
-                        radius={[4, 4, 0, 0]}
+                        radius={[0, 4, 4, 0]}
                         barSize={28}
                         isAnimationActive
                     >
@@ -130,7 +129,7 @@ function PenaltiesAndChargesChart({
                         ))}
                         <LabelList
                             dataKey="value"
-                            position="top"
+                            position="right"
                             formatter={(v: unknown) =>
                                 formatCurrency(Number(v ?? 0))
                             }
@@ -156,7 +155,7 @@ function PenaltiesAndChargesChart({
                             }}
                         />
                         <span className="text-gray-700">{entry.name}</span>
-                        <span className="font-medium tabular-nums text-gray-800">
+                        <span className="font-medium text-gray-800 tabular-nums">
                             {formatCurrency(entry.value)}
                         </span>
                     </div>
@@ -206,7 +205,9 @@ export function PenaltyControl({
         }
 
         if (penaltyControlRrCoverage) {
-            return formatPenaltyControlRrCoverageLabel(penaltyControlRrCoverage);
+            return formatPenaltyControlRrCoverageLabel(
+                penaltyControlRrCoverage,
+            );
         }
 
         return undefined;

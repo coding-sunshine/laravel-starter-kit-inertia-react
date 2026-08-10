@@ -8,6 +8,7 @@ use App\DataTransferObjects\ManagerBrief\Signal;
 use App\Models\LoadingOverride;
 use App\Models\LoadriteAnomaly;
 use App\Models\LoadriteEvent;
+use App\Models\PenaltyReconciliation;
 use App\Models\Rake;
 use App\Models\SidingPerformance;
 use App\Services\ForceMajeure\Contracts\DowntimePenaltyMatcherContract;
@@ -36,6 +37,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Signal types emitted (data quality):
  *  12. data_quality_anomaly       – open anomaly count > 5 (unmappable wagon types, bogus timestamps, etc.)
+ *
+ * Signal types emitted (recovery):
+ *  13. billing_variance          – railway billed more than the system predicted; the gap is recoverable
  */
 final readonly class CollectSignals
 {
@@ -73,6 +77,7 @@ final readonly class CollectSignals
             $this->collectDemurrageTurnaroundRisk($sidingId),
             $this->collectPccDrift($sidingId),
             $this->collectDataQualityAnomaly($sidingId),
+            $this->collectBillingVariance($sidingId),
         );
     }
 
@@ -158,6 +163,8 @@ final readonly class CollectSignals
                     'rake_id' => $rakeId,
                     'rake_number' => (string) $rake->rake_number,
                     'overload_mt' => round($overloadMt, 3),
+                    'mt_to_remove' => round($overloadMt, 3),
+                    'rs_per_mt' => $rsPerMt,
                 ],
             );
         }
@@ -560,6 +567,64 @@ final readonly class CollectSignals
                     'rake_number' => (string) $rake->rake_number,
                     'hours_remaining' => max(0, (float) round($hoursToDeadline, 2)),
                     'hours_overdue' => (float) $hoursOverdue,
+                    'rs_per_hour' => $rsPerHour,
+                ],
+            );
+        }
+
+        return $signals;
+    }
+
+    /**
+     * Signal 13: billing_variance (recovery)
+     *
+     * Reconciled penalty heads where the railway billed more than the system
+     * predicted and the reconciliation was flagged as a dispute candidate. The
+     * variance is money already billed, so rs_at_stake is a hard recoverable
+     * figure, not an estimate. Top 3 by variance over the last 30 days.
+     *
+     * @return list<Signal>
+     */
+    private function collectBillingVariance(int $sidingId): array
+    {
+        $rows = PenaltyReconciliation::query()
+            ->join('rakes', 'rakes.id', '=', 'penalty_reconciliations.rake_id')
+            ->where('rakes.siding_id', $sidingId)
+            ->where('penalty_reconciliations.dispute_candidate', true)
+            ->where('penalty_reconciliations.variance', '>', 0)
+            ->where('penalty_reconciliations.reconciled_at', '>=', CarbonImmutable::now()->subDays(30))
+            ->orderByDesc('penalty_reconciliations.variance')
+            ->limit(3)
+            ->get([
+                'penalty_reconciliations.rake_id',
+                'penalty_reconciliations.penalty_code',
+                'penalty_reconciliations.predicted_amount',
+                'penalty_reconciliations.billed_amount',
+                'penalty_reconciliations.variance',
+                'penalty_reconciliations.reconciled_at',
+                'rakes.rake_number',
+            ]);
+
+        $signals = [];
+
+        foreach ($rows as $row) {
+            $recoverable = round((float) $row->variance, 2);
+
+            $signals[] = new Signal(
+                type: 'billing_variance',
+                severity: $recoverable >= 100000 ? 'high' : 'medium',
+                rsAtStake: $recoverable,
+                recencyMinutes: $row->reconciled_at !== null
+                    ? (int) round(now()->diffInMinutes($row->reconciled_at, true))
+                    : 0,
+                actionability: 0.7,
+                payload: [
+                    'rake_id' => (int) $row->rake_id,
+                    'rake_number' => (string) $row->rake_number,
+                    'penalty_code' => (string) $row->penalty_code,
+                    'predicted_rs' => round((float) $row->predicted_amount, 2),
+                    'billed_rs' => round((float) $row->billed_amount, 2),
+                    'recoverable_rs' => $recoverable,
                 ],
             );
         }

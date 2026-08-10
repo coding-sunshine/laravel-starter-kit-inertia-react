@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Ai\Agents\SidingRiskScoringAgent;
-use App\Models\Penalty;
 use App\Models\Siding;
 use App\Models\SidingPerformance;
 use App\Models\SidingRiskScore;
+use App\Support\BilledPenaltyQuery;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -88,29 +88,14 @@ final class CalculateSidingRiskScoresAction
     private function collectMetrics(array $sidingIds): array
     {
         // Last 30 days penalties by siding
-        $penaltiesThisMonth = Penalty::query()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->where('penalty_date', '>=', now()->subDays(30))
-            ->selectRaw('sidings.name, count(*) as count, sum(penalty_amount) as total')
-            ->groupBy('sidings.name')
-            ->get()
-            ->keyBy('name')
-            ->all();
+        $penaltiesThisMonth = collect(BilledPenaltyQuery::totalsBySiding(
+            BilledPenaltyQuery::between($sidingIds, now()->subDays(30))
+        ))->keyBy('siding')->all();
 
         // Previous 30 days for comparison
-        $penaltiesLastMonth = Penalty::query()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->where('penalty_date', '>=', now()->subDays(60))
-            ->where('penalty_date', '<', now()->subDays(30))
-            ->selectRaw('sidings.name, count(*) as count, sum(penalty_amount) as total')
-            ->groupBy('sidings.name')
-            ->get()
-            ->keyBy('name')
-            ->all();
+        $penaltiesLastMonth = collect(BilledPenaltyQuery::totalsBySiding(
+            BilledPenaltyQuery::between($sidingIds, now()->subDays(60), now()->subDays(31))
+        ))->keyBy('siding')->all();
 
         // Performance data (last 14 days)
         $performance = SidingPerformance::query()
@@ -142,12 +127,12 @@ final class CalculateSidingRiskScoresAction
             $metrics[] = [
                 'siding' => $siding->name,
                 'penalties_30d' => [
-                    'count' => $thisMonth ? (int) $thisMonth->count : 0,
-                    'total' => $thisMonth ? (float) $thisMonth->total : 0,
+                    'count' => (int) ($thisMonth['count'] ?? 0),
+                    'total' => (float) ($thisMonth['total'] ?? 0),
                 ],
                 'penalties_prev_30d' => [
-                    'count' => $lastMonth ? (int) $lastMonth->count : 0,
-                    'total' => $lastMonth ? (float) $lastMonth->total : 0,
+                    'count' => (int) ($lastMonth['count'] ?? 0),
+                    'total' => (float) ($lastMonth['total'] ?? 0),
                 ],
                 'performance_14d' => [
                     'rakes_processed' => $perf ? (int) $perf->rakes : 0,

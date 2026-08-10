@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Ai\Agents;
 
-use App\Ai\Tools\HistoricalDisputeTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\MaxTokens;
@@ -12,7 +11,6 @@ use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
 
 /**
@@ -22,7 +20,7 @@ use Laravel\Ai\Promptable;
 #[MaxTokens(2048)]
 #[Temperature(0.3)]
 #[Timeout(60)]
-final class DisputeAdvisorAgent implements Agent, HasStructuredOutput, HasTools
+final class DisputeAdvisorAgent implements Agent, HasStructuredOutput
 {
     use Promptable;
 
@@ -46,16 +44,6 @@ final class DisputeAdvisorAgent implements Agent, HasStructuredOutput, HasTools
             'estimated_success_probability' => $schema->number()->min(0)->required(),
             'reasoning' => $schema->string()->required(),
             'recommended_grounds' => $schema->array($schema->string())->required(),
-        ];
-    }
-
-    /**
-     * @return iterable<\Laravel\Ai\Contracts\Tool>
-     */
-    public function tools(): iterable
-    {
-        return [
-            new HistoricalDisputeTool,
         ];
     }
 }

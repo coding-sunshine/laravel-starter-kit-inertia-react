@@ -8,6 +8,7 @@ export interface ActionCard {
     rs_at_stake: number;
     deep_link: string;
     deadline: string | null;
+    prevention?: string | null;
 }
 
 export interface Operator {

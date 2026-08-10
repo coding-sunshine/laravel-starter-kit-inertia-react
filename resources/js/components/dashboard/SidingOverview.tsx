@@ -3,7 +3,7 @@ import {
     formatWeight,
     SectionHeader,
     SidingPerformanceSection,
-} from '../dashboard';
+} from '@/pages/dashboard';
 import {
     type DashboardFilters,
     type PenaltyControlRrCoverage,

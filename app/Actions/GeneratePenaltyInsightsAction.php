@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Models\Penalty;
 use App\Services\PrismService;
+use App\Support\BilledPenaltyQuery;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Prism\Prism\Schema\ArraySchema;
 use Prism\Prism\Schema\EnumSchema;
 use Prism\Prism\Schema\NumberSchema;
@@ -47,6 +47,16 @@ final readonly class GeneratePenaltyInsightsAction
         }
 
         $data = $this->aggregateData($sidingIds);
+
+        // Without billed penalties there is nothing to analyse; asking the model
+        // anyway is how this feature produced confident recommendations from an
+        // empty table for months.
+        if ($data['total_count'] === 0) {
+            Cache::put($cacheKey, '__unavailable__', 3600);
+
+            return null;
+        }
+
         $prompt = $this->buildPrompt($data);
 
         try {
@@ -101,7 +111,7 @@ final readonly class GeneratePenaltyInsightsAction
                             ),
                             new StringSchema(
                                 name: 'category',
-                                description: 'Category: root_cause, dispute_strategy, responsible_party, penalty_type, siding_hotspot',
+                                description: 'Category: penalty_type, siding_hotspot, concentration, timing, top_lever',
                             ),
                         ],
                         requiredFields: ['severity', 'title', 'description', 'estimated_savings_inr', 'category'],
@@ -118,148 +128,58 @@ final readonly class GeneratePenaltyInsightsAction
      */
     private function aggregateData(array $sidingIds): array
     {
-        $baseQuery = fn () => Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subMonths(3));
+        $from = Carbon::now()->subMonths(3)->startOfDay();
+        $rows = BilledPenaltyQuery::dated(BilledPenaltyQuery::between($sidingIds, $from));
 
-        // By type
-        $byType = $baseQuery()
-            ->selectRaw('penalty_type, count(*) as cnt, sum(penalty_amount) as total')
-            ->groupBy('penalty_type')
-            ->orderByDesc('total')
-            ->get()
-            ->map(fn ($r): array => [
-                'type' => $r->penalty_type,
-                'count' => (int) $r->cnt,
-                'total' => (float) $r->total,
-            ])
-            ->all();
+        $byType = BilledPenaltyQuery::totalsByType(BilledPenaltyQuery::between($sidingIds, $from));
+        $bySiding = array_slice(
+            BilledPenaltyQuery::totalsBySiding(BilledPenaltyQuery::between($sidingIds, $from)),
+            0,
+            5
+        );
+        $bySidingAndType = array_slice(
+            BilledPenaltyQuery::totalsBySidingAndType(BilledPenaltyQuery::between($sidingIds, $from)),
+            0,
+            10
+        );
 
-        // By responsible party
-        $byResponsible = $baseQuery()
-            ->whereNotNull('responsible_party')
-            ->selectRaw('responsible_party, count(*) as cnt, sum(penalty_amount) as total')
-            ->groupBy('responsible_party')
-            ->orderByDesc('total')
-            ->get()
-            ->map(fn ($r): array => [
-                'party' => $r->responsible_party,
-                'count' => (int) $r->cnt,
-                'total' => (float) $r->total,
-            ])
-            ->all();
+        $dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        $byDow = [];
+        $byMonth = [];
 
-        // By siding
-        $bySiding = $baseQuery()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->selectRaw('sidings.name, count(*) as cnt, sum(penalty_amount) as total')
-            ->groupBy('sidings.name')
-            ->orderByDesc('total')
-            ->limit(5)
-            ->get()
-            ->map(fn ($r): array => [
-                'siding' => $r->name,
-                'count' => (int) $r->cnt,
-                'total' => (float) $r->total,
-            ])
-            ->all();
+        foreach ($rows as $row) {
+            if ($row->penalty_date === null) {
+                continue;
+            }
 
-        // By day of week
-        $driver = DB::getDriverName();
-        $dowSql = $driver === 'pgsql'
-            ? 'EXTRACT(DOW FROM penalty_date)::int'
-            : 'DAYOFWEEK(penalty_date) - 1';
+            $date = Carbon::parse((string) $row->penalty_date);
+            $day = $dayNames[(int) $date->dayOfWeek];
+            $byDow[$day] = ($byDow[$day] ?? 0) + 1;
 
-        $byDow = $baseQuery()
-            ->selectRaw("{$dowSql} as dow, count(*) as cnt")
-            ->groupBy('dow')
-            ->orderByDesc('cnt')
-            ->get()
-            ->map(fn ($r): array => [
-                'day' => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][(int) $r->dow] ?? '?',
-                'count' => (int) $r->cnt,
-            ])
-            ->all();
-
-        // Monthly trend (last 3 months)
-        $monthTotals = [];
-        for ($i = 2; $i >= 0; $i--) {
-            $month = now()->subMonths($i);
-            $total = (float) Penalty::query()
-                ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereMonth('penalty_date', $month->month)
-                ->whereYear('penalty_date', $month->year)
-                ->sum('penalty_amount');
-            $monthTotals[] = [
-                'month' => $month->format('M Y'),
-                'total' => $total,
-            ];
+            $month = $date->format('M Y');
+            $byMonth[$month] = ($byMonth[$month] ?? 0) + (float) $row->amount;
         }
 
-        // Dispute outcomes
-        $disputed = $baseQuery()->where('penalty_status', 'disputed')->count();
-        $waived = $baseQuery()->where('penalty_status', 'waived')->count();
+        arsort($byDow);
 
-        // By root cause (top 10)
-        $like = $driver === 'pgsql' ? 'ILIKE' : 'LIKE';
-        $caseSql = "CASE
-            WHEN root_cause {$like} '%equipment%' OR root_cause {$like} '%breakdown%' THEN 'Equipment Failure'
-            WHEN root_cause {$like} '%labour%' OR root_cause {$like} '%crew%' THEN 'Labour Shortage'
-            WHEN root_cause {$like} '%weather%' OR root_cause {$like} '%rain%' OR root_cause {$like} '%fog%' THEN 'Weather/Environmental'
-            WHEN root_cause {$like} '%communication%' OR root_cause {$like} '%miscommuni%' THEN 'Communication Gap'
-            WHEN root_cause {$like} '%scheduling%' THEN 'Scheduling Error'
-            WHEN root_cause {$like} '%documentation%' OR root_cause {$like} '%paperwork%' THEN 'Documentation Delay'
-            WHEN root_cause {$like} '%infrastructure%' OR root_cause {$like} '%track%' THEN 'Infrastructure Issue'
-            WHEN root_cause {$like} '%operational%' OR root_cause {$like} '%shunting%' THEN 'Operational Delay'
-            ELSE 'Other'
-        END";
-
-        $byRootCause = $baseQuery()
-            ->whereNotNull('root_cause')
-            ->where('root_cause', '!=', '')
-            ->selectRaw("{$caseSql} as cause, count(*) as cnt, sum(penalty_amount) as total")
-            ->groupBy('cause')
-            ->orderByDesc('total')
-            ->limit(10)
-            ->get()
-            ->map(fn ($r): array => [
-                'cause' => (string) $r->cause,
-                'count' => (int) $r->cnt,
-                'total' => (float) $r->total,
-            ])
-            ->all();
-
-        // Average resolution days
-        $diffSql = $driver === 'pgsql'
-            ? 'AVG(EXTRACT(EPOCH FROM (resolved_at - disputed_at)) / 86400)'
-            : 'AVG(DATEDIFF(resolved_at, disputed_at))';
-
-        $avgResolutionDays = (float) $baseQuery()
-            ->whereNotNull('disputed_at')
-            ->whereNotNull('resolved_at')
-            ->selectRaw("{$diffSql} as avg_days")
-            ->value('avg_days');
-
-        // Undisputed penalties (never challenged)
-        $undisputed = $baseQuery()
-            ->whereIn('penalty_status', ['incurred', 'pending'])
-            ->whereNull('disputed_at')
-            ->selectRaw('count(*) as cnt, sum(penalty_amount) as total')
-            ->first();
+        $monthTotals = [];
+        for ($i = 2; $i >= 0; $i--) {
+            $label = Carbon::now()->subMonths($i)->format('M Y');
+            $monthTotals[] = ['month' => $label, 'total' => round($byMonth[$label] ?? 0.0, 2)];
+        }
 
         return [
+            'total_count' => $rows->count(),
+            'total_amount' => round((float) $rows->sum('amount'), 2),
             'by_type' => $byType,
-            'by_responsible' => $byResponsible,
             'by_siding' => $bySiding,
-            'by_day_of_week' => $byDow,
+            'by_siding_and_type' => $bySidingAndType,
+            'by_day_of_week' => array_map(
+                fn (string $day, int $count): array => ['day' => $day, 'count' => $count],
+                array_keys($byDow),
+                array_values($byDow)
+            ),
             'monthly_trend' => $monthTotals,
-            'disputed' => $disputed,
-            'waived' => $waived,
-            'by_root_cause' => $byRootCause,
-            'avg_resolution_days' => round($avgResolutionDays, 1),
-            'undisputed_count' => (int) ($undisputed->cnt ?? 0),
-            'undisputed_amount' => (float) ($undisputed->total ?? 0),
         ];
     }
 
@@ -276,14 +196,16 @@ final readonly class GeneratePenaltyInsightsAction
         Penalty data:
         {$json}
 
-        Focus your analysis on these cost-saving opportunities:
-        1. ROOT CAUSES: Which root causes are preventable? What is the projected savings from reducing equipment failures, labour issues, or scheduling errors?
-        2. DISPUTE STRATEGY: There are {$data['undisputed_count']} undisputed penalties worth ₹{$data['undisputed_amount']}. Should more be contested? What is the projected savings based on current dispute success rate?
-        3. RESPONSIBLE PARTY PATTERNS: Which parties cause the most expensive penalties? What accountability measures would reduce costs?
-        4. PENALTY TYPE TRENDS: Which types are growing? What specific operational changes would reduce them?
-        5. SIDING HOTSPOTS: Which sidings need intervention? What would bringing the worst siding to median performance save?
+        These are penalties actually billed on RRs over the last 3 months: {$data['total_count']} charges worth ₹{$data['total_amount']}.
 
-        Be specific with numbers, percentages, and projected ₹ savings. Every recommendation must include a savings estimate.
+        Focus your analysis on these cost-saving opportunities:
+        1. PENALTY TYPE TRENDS: Which types dominate and which are growing month over month? What specific operational change at loading or placement would reduce each?
+        2. SIDING HOTSPOTS: Which sidings need intervention? What would bringing the worst siding to the median siding's rate per charge save over a year?
+        3. TYPE-BY-SIDING CONCENTRATION: Where is one penalty type concentrated in one siding? Those are the cheapest to fix because one local change removes the whole cluster.
+        4. TIMING: Do charges cluster on particular weekdays? If so, name the shift or staffing change that addresses it.
+        5. THE SINGLE BIGGEST LEVER: If the team could only do one thing next month, what is it and what does it save?
+
+        Be specific with numbers, percentages, and projected ₹ savings. Every recommendation must include a savings estimate derived from the figures above — do not invent data that is not in the JSON. Do not comment on disputes, waivers or responsible parties: that data is not tracked here.
         PROMPT;
     }
 }

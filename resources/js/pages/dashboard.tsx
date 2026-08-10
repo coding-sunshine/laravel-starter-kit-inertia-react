@@ -41,13 +41,13 @@ import AppLayout from '@/layouts/app-layout';
 import { JsonFetchError, laravelJsonFetch } from '@/lib/laravel-json-fetch';
 import { EXECUTIVE_SIDING_BAR_CHART_COLORS } from '@/lib/dashboard-siding-chart-colors';
 import { cn } from '@/lib/utils';
-import { ExecutiveOverview } from '@/pages/dashboard/ExecutiveOverview';
-import { LoaderOverloading } from '@/pages/dashboard/LoaderOverloading';
-import { Operations } from '@/pages/dashboard/Operations';
-import { PenaltyControl } from '@/pages/dashboard/PenaltyControl';
-import { PowerPlant } from '@/pages/dashboard/PowerPlant';
-import { RakePerformance } from '@/pages/dashboard/RakePerformance';
-import { SidingOverview } from '@/pages/dashboard/SidingOverview';
+import { ExecutiveOverview } from '@/components/dashboard/ExecutiveOverview';
+import { LoaderOverloading } from '@/components/dashboard/LoaderOverloading';
+import { Operations } from '@/components/dashboard/Operations';
+import { PenaltyControl } from '@/components/dashboard/PenaltyControl';
+import { PowerPlant } from '@/components/dashboard/PowerPlant';
+import { RakePerformance } from '@/components/dashboard/RakePerformance';
+import { SidingOverview } from '@/components/dashboard/SidingOverview';
 import {
     DEFAULT_LIVE_RAKE_WORKFLOW_STEPS,
     formatCurrency,
@@ -55,7 +55,7 @@ import {
     formatWeight,
     SectionHeader,
     SIDING_ACCENT,
-} from '@/pages/dashboard/shared';
+} from '@/components/dashboard/shared';
 import type {
     DashboardFilters,
     DispatchSummaryByPeriod,
@@ -63,12 +63,12 @@ import type {
     SidingPerformanceMetricsPenaltyRow,
     SidingPerformanceMetricsRakeRow,
     SidingPerformanceMetricsResponse,
-} from '@/pages/dashboard/types';
+} from '@/components/dashboard/types';
 import {
     deriveSidingPerformanceChartStateFromDashboardFilters,
     sidingPerformanceChartMatchesDashboard,
     sidingPerformanceSpQueryForChart,
-} from '@/pages/dashboard/types';
+} from '@/components/dashboard/types';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
@@ -116,7 +116,7 @@ export {
     formatWeight,
     SectionHeader,
     SIDING_ACCENT,
-} from '@/pages/dashboard/shared';
+} from '@/components/dashboard/shared';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },

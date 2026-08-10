@@ -6,10 +6,10 @@ namespace App\Actions;
 
 use App\Models\Alert;
 use App\Models\Indent;
-use App\Models\Penalty;
 use App\Models\Rake;
 use App\Models\User;
 use App\Services\PrismService;
+use App\Support\BilledPenaltyQuery;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -72,27 +72,10 @@ final readonly class GenerateDailyBriefingAction
             ->whereDate('loading_end_time', $yesterday)
             ->count();
 
-        $penaltiesToday = Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereDate('penalty_date', $yesterday)
-            ->count();
-
-        $penaltyAmount = (float) Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereDate('penalty_date', $yesterday)
-            ->sum('penalty_amount');
-
-        $thisMonthTotal = (float) Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereMonth('penalty_date', now()->month)
-            ->whereYear('penalty_date', now()->year)
-            ->sum('penalty_amount');
-
-        $lastMonthTotal = (float) Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereMonth('penalty_date', now()->subMonth()->month)
-            ->whereYear('penalty_date', now()->subMonth()->year)
-            ->sum('penalty_amount');
+        $penaltiesToday = BilledPenaltyQuery::between($sidingIds, $yesterday, $yesterday)->count();
+        $penaltyAmount = BilledPenaltyQuery::total(BilledPenaltyQuery::between($sidingIds, $yesterday, $yesterday));
+        $thisMonthTotal = BilledPenaltyQuery::total(BilledPenaltyQuery::forMonth($sidingIds, now()));
+        $lastMonthTotal = BilledPenaltyQuery::total(BilledPenaltyQuery::forMonth($sidingIds, now()->subMonth()));
 
         $pendingIndents = Indent::query()
             ->whereIn('siding_id', $sidingIds)

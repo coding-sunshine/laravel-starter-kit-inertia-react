@@ -142,6 +142,12 @@ final readonly class ManagerBriefAgent
         - rs_at_stake: estimated revenue-share at risk as a non-negative number
         - deep_link: a relative path inside the app the manager should navigate to (MUST start with /)
         - deadline: ISO 8601 datetime string or null if no hard deadline
+        - prevention: ONE physical step that stops the charge from being billed, naming the rupees it saves
+
+        Rules for rs_at_stake and prevention:
+        - Never invent a rupee figure. Use the rs_at_stake on the signal, or arithmetic on the numbers in its payload (rs_per_mt, rs_per_hour, mt_to_remove, hours_remaining, recoverable_rs).
+        - prevention must be an instruction someone on the ground can carry out this shift — "strip 2.4 MT from wagon 14 before the RR is raised, saves ₹2,400" — not advice like "monitor closely" or "review the process".
+        - When the signal is billing_variance, the money is already billed: prevention is the recovery step (raise a dispute for the named penalty head with the recoverable amount).
 
         Deep-link rubric — use these paths as guidance:
         - operator_anomaly          → /dashboard?section=loader-overload&operator={operator_name_from_payload}
@@ -156,11 +162,12 @@ final readonly class ManagerBriefAgent
         - demurrage_turnaround_risk → /dashboard?section=rake-operations
         - pcc_drift                 → /master-data/sidings
         - data_quality_anomaly      → /admin/loadrite-anomalies
+        - billing_variance          → /penalties
 
         Forecast signal types (operator_recurring_risk, penalty_trajectory, demurrage_turnaround_risk, pcc_drift) project future risk from historical patterns — narrate with hedges like "projected", "trending", or "if pattern continues".
 
         Return ONLY a valid JSON array. No markdown fences, no commentary. Example structure:
-        [{"severity":"high","title":"Example action","why":"Because X is happening.","rs_at_stake":120.5,"deep_link":"/dashboard","deadline":null}]
+        [{"severity":"high","title":"Example action","why":"Because X is happening.","rs_at_stake":120.5,"deep_link":"/dashboard","deadline":null,"prevention":"Do Y before Z, saves ₹120."}]
         PROMPT;
     }
 
@@ -295,6 +302,12 @@ final readonly class ManagerBriefAgent
             return null;
         }
 
+        $prevention = $item['prevention'] ?? null;
+
+        if ($prevention !== null && ! is_string($prevention)) {
+            return null;
+        }
+
         return new ActionCard(
             severity: $severity,
             title: $title,
@@ -302,6 +315,7 @@ final readonly class ManagerBriefAgent
             rsAtStake: (float) $rsAtStake,
             deepLink: $deepLink,
             deadline: $deadline,
+            prevention: $prevention === '' ? null : $prevention,
         );
     }
 

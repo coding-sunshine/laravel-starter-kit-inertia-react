@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Ai\Agents;
 
 use App\Ai\Tools\AlertsTool;
-use App\Ai\Tools\DisputeAnalysisTool;
 use App\Ai\Tools\HelpArticleSearchTool;
 use App\Ai\Tools\IndentStatusTool;
 use App\Ai\Tools\PenaltySummaryTool;
@@ -80,7 +79,6 @@ final class ChatbotAgent implements Agent, Conversational, HasMiddleware, HasToo
             new RakeStatusTool($this->sidingIds),
             new SidingPerformanceTool($this->sidingIds),
             new AlertsTool($this->sidingIds),
-            new DisputeAnalysisTool($this->sidingIds),
             new IndentStatusTool($this->sidingIds),
             new PredictionsTool($this->sidingIds),
         ];

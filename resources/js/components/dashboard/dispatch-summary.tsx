@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import type {
     DispatchSummaryByPeriod,
     DispatchSummaryPeriodKey,
-} from '@/pages/dashboard/types';
+} from '@/components/dashboard/types';
 import { Truck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 

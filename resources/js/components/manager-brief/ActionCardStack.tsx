@@ -106,6 +106,11 @@ export function ActionCardStack({ actions, aiStatus }: Props) {
                             <p className="text-xs font-medium opacity-70">
                                 {formatRs(card.rs_at_stake)} at stake
                             </p>
+                            {card.prevention && (
+                                <p className="text-xs font-semibold opacity-90">
+                                    Do now: {card.prevention}
+                                </p>
+                            )}
                         </div>
                     </button>
                 );

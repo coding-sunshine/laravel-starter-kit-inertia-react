@@ -6,11 +6,11 @@ namespace App\Ai;
 
 use App\Models\Alert;
 use App\Models\Indent;
-use App\Models\Penalty;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\SidingPerformance;
 use App\Models\User;
+use App\Support\BilledPenaltyQuery;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -73,10 +73,6 @@ final class ChatContextBuilder
             $worstSiding = $this->highestPenaltySiding($sidingIds);
             if ($worstSiding !== '') {
                 $parts[] = 'Highest penalty siding this month: '.$worstSiding;
-            }
-            $disputes = $this->recentDisputeOutcomes($sidingIds);
-            if ($disputes !== '') {
-                $parts[] = 'Recent dispute outcomes: '.$disputes;
             }
         }
 
@@ -150,27 +146,17 @@ final class ChatContextBuilder
 
     private function penaltiesThisMonthSummary(array $sidingIds): string
     {
-        $total = Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereMonth('penalty_date', now()->month)
-            ->whereYear('penalty_date', now()->year)
-            ->sum('penalty_amount');
-
-        $count = Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereMonth('penalty_date', now()->month)
-            ->whereYear('penalty_date', now()->year)
-            ->count();
+        $count = BilledPenaltyQuery::forMonth($sidingIds, now())->count();
 
         if ($count === 0) {
             return 'none';
         }
 
-        $totalFloat = (float) $total;
+        $total = BilledPenaltyQuery::total(BilledPenaltyQuery::forMonth($sidingIds, now()));
 
         return count($sidingIds) > 1
-            ? "{$count} penalties, total ₹".number_format($totalFloat, 2)
-            : "{$count} penalties, ₹".number_format($totalFloat, 2);
+            ? "{$count} penalties, total ₹".number_format($total, 2)
+            : "{$count} penalties, ₹".number_format($total, 2);
     }
 
     private function indentsSummary(array $sidingIds): string
@@ -254,30 +240,15 @@ final class ChatContextBuilder
      */
     private function penaltyBreakdownBySiding(array $sidingIds): string
     {
-        $rows = Penalty::query()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereMonth('penalty_date', now()->month)
-            ->whereYear('penalty_date', now()->year)
-            ->select(
-                'sidings.name as siding_name',
-                'penalties.penalty_type',
-                DB::raw('count(*) as cnt'),
-                DB::raw('sum(penalty_amount) as total')
-            )
-            ->groupBy('sidings.name', 'penalties.penalty_type')
-            ->orderByDesc('total')
-            ->toBase()
-            ->get();
+        $rows = BilledPenaltyQuery::totalsBySidingAndType(BilledPenaltyQuery::forMonth($sidingIds, now()));
 
-        if ($rows->isEmpty()) {
+        if ($rows === []) {
             return '';
         }
 
         $bySiding = [];
         foreach ($rows as $row) {
-            $bySiding[$row->siding_name][] = "{$row->cnt} {$row->penalty_type} (₹".number_format((float) $row->total, 0).')';
+            $bySiding[$row['siding']][] = "{$row['count']} {$row['type']} (₹".number_format($row['total'], 0).')';
         }
 
         $segments = [];
@@ -295,17 +266,8 @@ final class ChatContextBuilder
      */
     private function penaltyTrendDirection(array $sidingIds): string
     {
-        $thisMonth = (float) Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereMonth('penalty_date', now()->month)
-            ->whereYear('penalty_date', now()->year)
-            ->sum('penalty_amount');
-
-        $lastMonth = (float) Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereMonth('penalty_date', now()->subMonth()->month)
-            ->whereYear('penalty_date', now()->subMonth()->year)
-            ->sum('penalty_amount');
+        $thisMonth = BilledPenaltyQuery::total(BilledPenaltyQuery::forMonth($sidingIds, now()));
+        $lastMonth = BilledPenaltyQuery::total(BilledPenaltyQuery::forMonth($sidingIds, now()->subMonth()));
 
         if ($lastMonth <= 0 && $thisMonth <= 0) {
             return '';
@@ -327,21 +289,13 @@ final class ChatContextBuilder
      */
     private function topPenaltyType(array $sidingIds): string
     {
-        $top = Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereMonth('penalty_date', now()->month)
-            ->whereYear('penalty_date', now()->year)
-            ->selectRaw('penalty_type, count(*) as cnt, sum(penalty_amount) as total')
-            ->groupBy('penalty_type')
-            ->orderByDesc('total')
-            ->toBase()
-            ->first();
+        $top = BilledPenaltyQuery::totalsByType(BilledPenaltyQuery::forMonth($sidingIds, now()))[0] ?? null;
 
-        if (! $top) {
+        if ($top === null) {
             return '';
         }
 
-        return "{$top->penalty_type} ({$top->cnt} incidents, ₹".number_format((float) $top->total, 0).')';
+        return "{$top['type']} ({$top['count']} incidents, ₹".number_format($top['total'], 0).')';
     }
 
     /**
@@ -351,52 +305,13 @@ final class ChatContextBuilder
      */
     private function highestPenaltySiding(array $sidingIds): string
     {
-        $top = Penalty::query()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereMonth('penalty_date', now()->month)
-            ->whereYear('penalty_date', now()->year)
-            ->selectRaw('sidings.name, count(*) as cnt, sum(penalty_amount) as total')
-            ->groupBy('sidings.name')
-            ->orderByDesc('total')
-            ->toBase()
-            ->first();
+        $top = BilledPenaltyQuery::totalsBySiding(BilledPenaltyQuery::forMonth($sidingIds, now()))[0] ?? null;
 
-        if (! $top) {
+        if ($top === null) {
             return '';
         }
 
-        return "{$top->name} ({$top->cnt} penalties, ₹".number_format((float) $top->total, 0).')';
-    }
-
-    /**
-     * Recent dispute outcomes (last 90 days).
-     *
-     * @param  array<int>  $sidingIds
-     */
-    private function recentDisputeOutcomes(array $sidingIds): string
-    {
-        $disputed = Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subDays(90))
-            ->where('penalty_status', 'disputed')
-            ->count();
-
-        $waived = Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subDays(90))
-            ->where('penalty_status', 'waived')
-            ->count();
-
-        $total = $disputed + $waived;
-        if ($total === 0) {
-            return '';
-        }
-
-        $successRate = round($waived / $total * 100, 0);
-
-        return "{$waived} waived out of {$total} disputed ({$successRate}% success rate)";
+        return "{$top['siding']} ({$top['count']} penalties, ₹".number_format($top['total'], 0).')';
     }
 
     /**

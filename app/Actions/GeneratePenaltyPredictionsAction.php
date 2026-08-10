@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Ai\Agents\PenaltyPredictionAgent;
-use App\Models\Penalty;
 use App\Models\PenaltyPrediction;
 use App\Models\Siding;
-use Illuminate\Support\Facades\DB;
+use App\Support\BilledPenaltyQuery;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -88,93 +88,47 @@ final class GeneratePenaltyPredictionsAction
      */
     private function collectHistoricalData(array $sidingIds): array
     {
-        $baseQuery = fn () => Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subDays(90));
+        $from = Carbon::now()->subDays(90)->startOfDay();
+        $rows = BilledPenaltyQuery::dated(BilledPenaltyQuery::between($sidingIds, $from));
 
-        $totalPenalties = $baseQuery()->count();
-        if ($totalPenalties === 0) {
+        if ($rows->isEmpty()) {
             return [];
         }
 
-        // Weekly trend (last 12 weeks)
-        $weeklyTrend = $baseQuery()
-            ->selectRaw("date_trunc('week', penalty_date)::date as week_start, count(*) as count, sum(penalty_amount) as total")
-            ->groupBy('week_start')
-            ->orderBy('week_start')
-            ->get()
-            ->map(fn ($r): array => [
-                'week' => $r->week_start,
-                'count' => (int) $r->count,
-                'total' => (float) $r->total,
-            ])
-            ->all();
+        $weekly = [];
+        $dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        $dayOfWeekCounts = array_fill_keys($dayNames, 0);
 
-        // By siding
-        $bySiding = $baseQuery()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->selectRaw('sidings.name, count(*) as count, sum(penalty_amount) as total, avg(penalty_amount) as avg_amount')
-            ->groupBy('sidings.name')
-            ->orderByDesc('total')
-            ->get()
-            ->map(fn ($r): array => [
-                'siding' => $r->name,
-                'count' => (int) $r->count,
-                'total' => (float) $r->total,
-                'average' => round((float) $r->avg_amount, 2),
-            ])
-            ->all();
+        foreach ($rows as $row) {
+            if ($row->penalty_date === null) {
+                continue;
+            }
 
-        // By type and siding
-        $byTypeSiding = $baseQuery()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->selectRaw('sidings.name as siding, penalty_type, count(*) as count')
-            ->groupBy('sidings.name', 'penalty_type')
-            ->get()
-            ->map(fn ($r): array => [
-                'siding' => $r->siding,
-                'type' => $r->penalty_type,
-                'count' => (int) $r->count,
-            ])
-            ->all();
+            $date = Carbon::parse((string) $row->penalty_date);
+            $week = $date->copy()->startOfWeek()->toDateString();
+            $weekly[$week] ??= ['week' => $week, 'count' => 0, 'total' => 0.0];
+            $weekly[$week]['count']++;
+            $weekly[$week]['total'] += (float) $row->amount;
 
-        // Day of week pattern
-        $dowSql = DB::getDriverName() === 'pgsql'
-            ? 'EXTRACT(DOW FROM penalty_date)::int'
-            : 'DAYOFWEEK(penalty_date) - 1';
+            $dayOfWeekCounts[$dayNames[(int) $date->dayOfWeek]]++;
+        }
 
-        $dayOfWeek = $baseQuery()
-            ->selectRaw("{$dowSql} as dow, count(*) as count")
-            ->groupBy('dow')
-            ->orderBy('dow')
-            ->get()
-            ->map(fn ($r): array => [
-                'day' => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][(int) $r->dow] ?? '?',
-                'count' => (int) $r->count,
-            ])
-            ->all();
+        ksort($weekly);
 
-        // Recent root causes
-        $rootCauses = $baseQuery()
-            ->whereNotNull('root_cause')
-            ->where('root_cause', '!=', '')
-            ->where('penalty_date', '>=', now()->subDays(30))
-            ->selectRaw('root_cause, count(*) as count')
-            ->groupBy('root_cause')
-            ->orderByDesc('count')
-            ->limit(10)
-            ->pluck('count', 'root_cause')
-            ->all();
+        foreach ($weekly as $week => $bucket) {
+            $weekly[$week]['total'] = round($bucket['total'], 2);
+        }
 
         return [
-            'total_penalties_90d' => $totalPenalties,
-            'weekly_trend' => $weeklyTrend,
-            'by_siding' => $bySiding,
-            'by_type_siding' => $byTypeSiding,
-            'day_of_week_pattern' => $dayOfWeek,
-            'recent_root_causes' => $rootCauses,
+            'total_penalties_90d' => $rows->count(),
+            'weekly_trend' => array_values($weekly),
+            'by_siding' => BilledPenaltyQuery::totalsBySiding(BilledPenaltyQuery::between($sidingIds, $from)),
+            'by_type_siding' => BilledPenaltyQuery::totalsBySidingAndType(BilledPenaltyQuery::between($sidingIds, $from)),
+            'day_of_week_pattern' => array_map(
+                fn (string $day, int $count): array => ['day' => $day, 'count' => $count],
+                array_keys($dayOfWeekCounts),
+                array_values($dayOfWeekCounts)
+            ),
         ];
     }
 
@@ -206,8 +160,10 @@ final class GeneratePenaltyPredictionsAction
         Consider:
         - Is the weekly penalty trend increasing or decreasing for this siding?
         - What day of week is it? Are penalties more common on certain days?
-        - What root causes have been recurring recently?
+        - Which penalty types recur at this siding specifically (by_type_siding)?
         - How does this siding compare to others?
+
+        Every figure you state must come from the data above. Dispute status, root cause and responsible party are not tracked; do not refer to them.
         PROMPT;
     }
 }

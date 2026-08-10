@@ -1,4 +1,4 @@
-import { PowerPlantDispatchSection } from '../dashboard';
+import { PowerPlantDispatchSection } from '@/pages/dashboard';
 import type { PowerPlantDispatchItem } from './types';
 
 interface Props {
