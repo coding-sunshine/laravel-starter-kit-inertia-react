@@ -11,6 +11,13 @@ final class RakeWagonWeighment extends Model
 {
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
+    /**
+     * Real BOXN-class wagons carry 55-80 MT. Rows below this hold a garbage
+     * capacity (2.00 MT has been seen), and net minus such a capacity would
+     * invent an overload of the whole wagon load.
+     */
+    public const MIN_PLAUSIBLE_CC_MT = 40.0;
+
     protected $fillable = [
         'rake_weighment_id',
         'wagon_id',
@@ -60,7 +67,7 @@ final class RakeWagonWeighment extends Model
             ? (float) $this->cc_capacity_mt
             : ($this->wagon?->pcc_weight_mt !== null ? (float) $this->wagon->pcc_weight_mt : null);
 
-        if ($net !== null && $capacity !== null && $capacity > 0.0) {
+        if ($net !== null && $capacity !== null && $capacity >= self::MIN_PLAUSIBLE_CC_MT) {
             return round(max(0.0, $net - $capacity), 2);
         }
 

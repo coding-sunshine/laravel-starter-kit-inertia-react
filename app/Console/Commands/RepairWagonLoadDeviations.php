@@ -20,6 +20,7 @@ final class RepairWagonLoadDeviations extends Command
     protected $signature = 'weighments:repair-load-deviations
                             {--dry-run : Report what would change, write nothing}
                             {--tolerance=0.05 : MT difference above which a stored value is treated as wrong}
+                            {--min-cc= : Skip rows whose CC capacity is below this (defaults to the model floor)}
                             {--recalculate : Re-apply weighment penalties for the affected rakes}';
 
     protected $description = 'Recompute wagon over/under load from net weight and CC capacity where the stored values disagree.';
@@ -28,6 +29,9 @@ final class RepairWagonLoadDeviations extends Command
     {
         $isDryRun = (bool) $this->option('dry-run');
         $tolerance = (float) $this->option('tolerance');
+        $minCc = $this->option('min-cc') !== null
+            ? (float) $this->option('min-cc')
+            : RakeWagonWeighment::MIN_PLAUSIBLE_CC_MT;
 
         $repaired = 0;
         $affectedWeighmentIds = [];
@@ -35,7 +39,7 @@ final class RepairWagonLoadDeviations extends Command
         RakeWagonWeighment::query()
             ->whereNotNull('net_weight_mt')
             ->whereNotNull('cc_capacity_mt')
-            ->where('cc_capacity_mt', '>', 0)
+            ->where('cc_capacity_mt', '>=', $minCc)
             ->chunkById(500, function ($rows) use (&$repaired, &$affectedWeighmentIds, $isDryRun, $tolerance): void {
                 foreach ($rows as $row) {
                     $net = (float) $row->net_weight_mt;
