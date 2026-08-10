@@ -112,3 +112,30 @@ it('recalculates the parent RakeCharge total when applied', function (): void {
 
     expect((float) $charge->amount)->toBeGreaterThanOrEqual(37700.00);
 });
+
+it('recalculates the parent RakeCharge total when the penalty no longer applies', function (): void {
+    $rake = Rake::factory()->create(['commodity_grade' => 'G2']);
+    $wagons = Wagon::factory()->count(58)->create();
+    $weighment = RakeWeighment::factory()->for($rake)->create();
+    foreach ($wagons as $w) {
+        RakeWagonWeighment::factory()->for($weighment, 'rakeWeighment')->create([
+            'wagon_id' => $w->id,
+            'cc_capacity_mt' => 70.0,
+            'net_weight_mt' => 60.0,
+        ]);
+    }
+
+    $this->action->handle($rake, $weighment);
+
+    // Weighment corrected: every wagon now loaded to its chargeable weight.
+    $weighment->rakeWagonWeighments()->update(['net_weight_mt' => 66.5]);
+    $this->action->handle($rake, $weighment->fresh());
+
+    $charge = RakeCharge::query()
+        ->where('rake_id', $rake->id)
+        ->where('charge_type', 'PENALTY')
+        ->where('is_actual_charges', false)
+        ->sole();
+
+    expect((float) $charge->amount)->toBe(0.0);
+});

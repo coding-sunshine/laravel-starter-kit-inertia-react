@@ -39,28 +39,36 @@ final readonly class ApplyWeighmentPenaltiesAction
             ...$this->buildPolaPenaltyRows($rake, $weighment, $wagonWeighments, $penaltyTypes),
         ];
 
-        if ($penaltyRows === []) {
-            return;
-        }
-
+        // Runs even when there is nothing to charge: a weighment corrected down
+        // to zero overload must clear the penalties its earlier version wrote.
         DB::transaction(function () use ($rake, $penaltyRows): void {
             AppliedPenalty::query()
                 ->where('rake_id', $rake->id)
                 ->where('meta->source', 'weighment')
                 ->delete();
 
-            $canonicalPenaltyCharge = RakeCharge::query()->firstOrCreate(
-                [
-                    'rake_id' => $rake->id,
-                    'charge_type' => 'PENALTY',
-                    'is_actual_charges' => false,
-                ],
-                [
-                    'amount' => 0,
-                    'data_source' => 'predicted_penalty',
-                    'remarks' => 'Predicted penalty aggregate',
-                ],
-            );
+            $canonicalPenaltyCharge = $penaltyRows === []
+                ? RakeCharge::query()
+                    ->where('rake_id', $rake->id)
+                    ->where('charge_type', 'PENALTY')
+                    ->where('is_actual_charges', false)
+                    ->first()
+                : RakeCharge::query()->firstOrCreate(
+                    [
+                        'rake_id' => $rake->id,
+                        'charge_type' => 'PENALTY',
+                        'is_actual_charges' => false,
+                    ],
+                    [
+                        'amount' => 0,
+                        'data_source' => 'predicted_penalty',
+                        'remarks' => 'Predicted penalty aggregate',
+                    ],
+                );
+
+            if ($canonicalPenaltyCharge === null) {
+                return;
+            }
 
             foreach ($penaltyRows as $row) {
                 $row['rake_charge_id'] = $canonicalPenaltyCharge->id;
@@ -74,17 +82,14 @@ final readonly class ApplyWeighmentPenaltiesAction
             $canonicalPenaltyCharge->update(['amount' => round((float) $total, 2)]);
         });
 
-        $totalAmount = (float) array_sum(array_map(static fn (array $row): float => (float) ($row['amount'] ?? 0), $penaltyRows));
-        $byCode = [];
-        foreach ($penaltyRows as $row) {
-            $code = (string) ($row['meta']['source_code'] ?? '');
-            if ($code === '' && isset($row['penalty_type_id'])) {
-                $code = ''; // filled below from loaded types when possible
-            }
-            $byCode[$code] = (float) ($byCode[$code] ?? 0) + (float) ($row['amount'] ?? 0);
+        if ($penaltyRows === []) {
+            DB::afterCommit(fn () => AppliedPenaltyPersisted::dispatch($rake, 'weighment'));
+
+            return;
         }
 
-        // Best-effort: map penalty_type_id back to code for breakdown
+        $totalAmount = (float) array_sum(array_map(static fn (array $row): float => (float) ($row['amount'] ?? 0), $penaltyRows));
+
         $typeById = $penaltyTypes->mapWithKeys(static fn (PenaltyType $pt): array => [(int) $pt->id => (string) $pt->code])->all();
         $breakdown = [];
         foreach ($penaltyRows as $row) {
@@ -135,7 +140,7 @@ final readonly class ApplyWeighmentPenaltiesAction
         $rows = [];
 
         foreach ($wagonWeighments as $row) {
-            $excessMt = (float) ($row->over_load_mt ?? 0.0);
+            $excessMt = $row->effectiveOverloadMt();
 
             if ($excessMt <= 0.0) {
                 continue;
@@ -159,6 +164,7 @@ final readonly class ApplyWeighmentPenaltiesAction
                     'rake_weighment_id' => $weighment->id,
                     'rake_wagon_weighment_id' => $row->id,
                     'overload_mt' => $excessMt,
+                    'stored_overload_mt' => $row->over_load_mt !== null ? (float) $row->over_load_mt : null,
                 ],
             ];
         }

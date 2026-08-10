@@ -78,10 +78,25 @@ final readonly class ApplyPloPenaltyAction
 
     private function removeExistingPlo(Rake $rake): void
     {
-        AppliedPenalty::query()
+        $deleted = AppliedPenalty::query()
             ->where('rake_id', $rake->id)
             ->where('meta->source', 'plo')
             ->delete();
+
+        if ($deleted === 0) {
+            return;
+        }
+
+        // The aggregate charge still carries the removed PLO amount otherwise.
+        $charge = RakeCharge::query()
+            ->where('rake_id', $rake->id)
+            ->where('charge_type', 'PENALTY')
+            ->where('is_actual_charges', false)
+            ->first();
+
+        if ($charge !== null) {
+            $this->recalculateChargeTotal($charge);
+        }
     }
 
     private function recalculateChargeTotal(RakeCharge $charge): void

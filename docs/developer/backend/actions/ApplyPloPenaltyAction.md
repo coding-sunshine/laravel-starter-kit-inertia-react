@@ -20,9 +20,9 @@ public function handle({parameters}): {returnType}
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| {param} | {type} | {description} |
+| Parameter | Type   | Description   |
+| --------- | ------ | ------------- |
+| {param}   | {type} | {description} |
 
 ## Return Value
 
@@ -50,4 +50,4 @@ app(ApplyPloPenaltyAction::class)->handle($params);
 
 ## Notes
 
-{Any additional notes, edge cases, or important information}
+- When the PLO penalty no longer applies, the existing `applied_penalties` row is deleted **and** the parent `rake_charges` PENALTY aggregate is recalculated, so the aggregate does not keep the removed amount.
