@@ -7,10 +7,11 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * FAOC (freight adjustment overcharge) prints in the RR's "Rebates" column and
- * is subtracted from Total Freight, but earlier imports matched its generated
- * name "Freight Adjustment (Overcharge)" and classified it as FREIGHT, which
- * inflated basic freight. Move the amount out of the FREIGHT aggregate and into
- * a REBATE aggregate.
+ * is subtracted from Total Freight, but earlier imports added it to the rake
+ * total instead: rows whose charge name was filled in landed in FREIGHT (the
+ * name "Freight Adjustment (Overcharge)" matched the freight check), and rows
+ * imported without a name landed in OTHER_CHARGE. Move the amount out of
+ * whichever aggregate received it and into a REBATE aggregate.
  */
 return new class extends Migration
 {
@@ -23,6 +24,7 @@ return new class extends Migration
             ->select([
                 'rc.id as rr_charge_id',
                 'rc.amount',
+                'rc.charge_name',
                 'd.rake_id',
                 'd.diverrt_destination_id',
             ])
@@ -53,7 +55,11 @@ return new class extends Migration
                     fn ($q) => $q->where('diverrt_destination_id', $line->diverrt_destination_id),
                 );
 
-            $scoped('FREIGHT')->decrement('amount', $amount);
+            $sourceType = str_contains(mb_strtoupper((string) $line->charge_name), 'FREIGHT')
+                ? 'FREIGHT'
+                : 'OTHER_CHARGE';
+
+            $scoped($sourceType)->decrement('amount', $amount);
 
             $rebateId = $scoped('REBATE')->value('id');
 
@@ -79,7 +85,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        // One-way data correction: once FAOC is folded back into the FREIGHT
-        // total it cannot be told apart from basic freight again.
+        // One-way data correction: once FAOC is folded back into the freight or
+        // other-charge total it cannot be told apart from them again.
     }
 };
