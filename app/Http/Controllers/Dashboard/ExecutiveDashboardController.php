@@ -40,6 +40,7 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -1090,11 +1091,24 @@ final class ExecutiveDashboardController extends Controller
 
         $totalRakes = (int) array_sum($rakesByState);
 
-        $penaltiesThisMonth = AppliedPenalty::query()
+        // Predicted penalties are superseded once the RR arrives, so count the
+        // actual snapshot for those rakes instead of both (which double-counted).
+        $predictedThisMonth = AppliedPenalty::query()
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->whereNotExists(fn (QueryBuilder $q) => $q->select(DB::raw(1))
+                ->from('rr_penalty_snapshots')
+                ->whereColumn('rr_penalty_snapshots.rake_id', 'applied_penalties.rake_id'))
+            ->sum('amount');
+
+        $actualThisMonth = RrPenaltySnapshot::query()
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->sum('amount');
+
+        $penaltiesThisMonth = (float) $predictedThisMonth + (float) $actualThisMonth;
 
         $indentsPending = Indent::query()
             ->whereIn('siding_id', $sidingIds)

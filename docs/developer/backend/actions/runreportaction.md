@@ -53,6 +53,7 @@ None (readonly class with no constructor).
 ### Penalty Report (`penalty_report`, Coal Logestic Core)
 
 - Same merge as **`penalty_register`**: **`AppliedPenalty`** (Pre-RR) + **`RrPenaltySnapshot`** (Post-RR), filtered by rake **`loading_date`**, siding, rake number.
+- **`AppliedPenalty`** rows are excluded for any rake that already has **`rr_penalty_snapshots`** — the actual RR penalty supersedes the prediction, and listing both double-counted the rake in rows and totals.
 - Column names match the Coal Logestic spec (e.g. **Penalty Amount**, **Overload Qty**, **Delay Time**, **Stage (Pre/Post RR)**).
 - Optional **`penalty_stage`**: `pre_rr` or `post_rr` to filter one stream.
 
