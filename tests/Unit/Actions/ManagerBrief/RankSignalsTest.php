@@ -87,3 +87,29 @@ it('breaks ties by recency', function (): void {
         ->and($result[0])->toBe($signalEarlier)  // recency 30 → first
         ->and($result[1])->toBe($signalLater);   // recency 59 → second
 });
+
+it('caps signals per type so one detector cannot fill the brief', function (): void {
+    $drift = array_map(
+        fn (int $i): Signal => makeSignal(['type' => 'pcc_drift', 'rs_at_stake' => 1_000_000.0 - $i]),
+        range(1, 17),
+    );
+    $other = makeSignal(['type' => 'demurrage_risk', 'rs_at_stake' => 10.0]);
+
+    $result = (new RankSignals)->handle([...$drift, $other]);
+
+    // Only the cap's worth of drift signals rank ahead of the other type;
+    // the rest are backfill after every distinct type has had its turn.
+    $beforeOther = array_slice($result, 0, 3);
+
+    expect(array_filter($beforeOther, fn (Signal $s): bool => $s->type === 'pcc_drift'))->toHaveCount(3)
+        ->and($result[3])->toBe($other);
+});
+
+it('ranks zero-rupee signals on a severity notional instead of dropping them', function (): void {
+    $compliance = makeSignal(['type' => 'data_quality_anomaly', 'severity' => 'high', 'rs_at_stake' => 0.0]);
+    $tiny = makeSignal(['type' => 'demurrage_risk', 'rs_at_stake' => 1.0]);
+
+    $result = (new RankSignals)->handle([$tiny, $compliance]);
+
+    expect($result[0])->toBe($compliance);
+});

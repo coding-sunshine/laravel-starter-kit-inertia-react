@@ -118,7 +118,7 @@ final readonly class BuildManagerBrief
      */
     private function signalsHash(array $top15): string
     {
-        return md5((string) json_encode(array_map(
+        return hash('xxh128', (string) json_encode(array_map(
             fn (Signal $signal): array => [
                 $signal->type,
                 $signal->severity,
