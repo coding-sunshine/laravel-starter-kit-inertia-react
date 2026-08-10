@@ -74,3 +74,11 @@ it('does not emit RrPenaltySnapshotsImported when no penalty rows are written', 
 
     Event::assertNotDispatched(RrPenaltySnapshotsImported::class);
 });
+
+it('classifies FAOC as a rebate rather than an added other charge', function (): void {
+    $service = resolve(RrImportService::class);
+
+    expect($service->resolveChargeType('FAOC', 'Freight Adjustment (Overcharge)', 25324.0))->toBe('REBATE')
+        ->and($service->resolveChargeType('FAUC', 'Freight Adjustment (Undercharge)', 1715.0))->toBe('PENALTY')
+        ->and($service->resolveChargeType('OTC', 'Other Charges', 82300.0))->toBe('OTHER_CHARGE');
+});

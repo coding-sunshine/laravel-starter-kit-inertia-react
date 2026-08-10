@@ -129,16 +129,21 @@ final readonly class RrImportService
             return 'GST';
         }
 
+        // Checked before FREIGHT: FAOC's name is "Freight Adjustment
+        // (Overcharge)", which the name match below would otherwise bucket as
+        // basic freight. FAOC prints in the RR's "Rebates" column and is
+        // subtracted from Total Freight, unlike FAUC which is an undercharge
+        // the railway collects.
+        if ($normalizedCode === 'REBATE' || $normalizedCode === 'FAOC' || $amount < 0) {
+            return 'REBATE';
+        }
+
         if (
             $normalizedCode === 'FREIGHT'
             || str_contains($normalizedCode, 'FRT')
             || str_contains($normalizedName, 'FREIGHT')
         ) {
             return 'FREIGHT';
-        }
-
-        if ($normalizedCode === 'REBATE' || $amount < 0) {
-            return 'REBATE';
         }
 
         return 'OTHER_CHARGE';
@@ -148,7 +153,11 @@ final readonly class RrImportService
     {
         $normalized = mb_strtoupper(mb_trim($code));
 
-        if (in_array($normalized, ['POL1', 'POLA', 'DEM'], true)) {
+        // FAUC is listed here as well as in `penalty_types` because its name,
+        // "Freight Adjustment (Undercharge)", would otherwise fall through to
+        // the FREIGHT name match in `resolveChargeType()` on an environment
+        // whose penalty types have not been seeded.
+        if (in_array($normalized, ['POL1', 'POLA', 'DEM', 'FAUC'], true)) {
             return true;
         }
 

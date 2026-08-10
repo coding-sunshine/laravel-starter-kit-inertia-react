@@ -3517,7 +3517,8 @@ final readonly class RunReportAction
             $penaltyAmount = (float) ($chargeScope?->firstWhere('charge_type', 'PENALTY')?->amount ?? 0.0);
             $gstAmount = (float) ($chargeScope?->firstWhere('charge_type', 'GST')?->amount ?? 0.0);
             $otherChargesAmount = (float) ($chargeScope?->firstWhere('charge_type', 'OTHER_CHARGE')?->amount ?? 0.0);
-            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount;
+            $rebateAmount = (float) ($chargeScope?->firstWhere('charge_type', 'REBATE')?->amount ?? 0.0);
+            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount - abs($rebateAmount);
 
             return [
                 'Rake No' => $r->rake?->rake_number,
@@ -3625,7 +3626,8 @@ final readonly class RunReportAction
             $penaltyAmount = (float) ($chargeScope?->firstWhere('charge_type', 'PENALTY')?->amount ?? 0.0);
             $gstAmount = (float) ($chargeScope?->firstWhere('charge_type', 'GST')?->amount ?? 0.0);
             $otherChargesAmount = (float) ($chargeScope?->firstWhere('charge_type', 'OTHER_CHARGE')?->amount ?? 0.0);
-            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount;
+            $rebateAmount = (float) ($chargeScope?->firstWhere('charge_type', 'REBATE')?->amount ?? 0.0);
+            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount - abs($rebateAmount);
 
             $rowHighlight = null;
             if ($rake instanceof Rake && (
