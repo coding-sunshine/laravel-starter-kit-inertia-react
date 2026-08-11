@@ -3492,6 +3492,29 @@ final readonly class RunReportAction
     }
 
     /**
+     * Total the actual charges of one type within an already-scoped charge collection.
+     *
+     * A rake carries one row per charge code, so a single type can appear more
+     * than once (two penalty codes, several other-charge codes). Summing avoids
+     * reporting only the first row of the group.
+     *
+     * @param  ?Collection<int, RakeCharge>  $charges
+     * @param  bool  $magnitude  Sum absolute values, for types stored with either sign.
+     */
+    private function sumChargeAmounts(?Collection $charges, string $type, bool $magnitude = false): float
+    {
+        if ($charges === null) {
+            return 0.0;
+        }
+
+        return (float) $charges
+            ->where('charge_type', $type)
+            ->sum(fn (RakeCharge $charge): float => $magnitude
+                ? abs((float) $charge->amount)
+                : (float) $charge->amount);
+    }
+
+    /**
      * @param  array<int>  $sidingIds
      * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
      * @return array<int, array<string, mixed>>
@@ -3524,12 +3547,14 @@ final readonly class RunReportAction
                         && (int) $charge->diverrt_destination_id === (int) $r->diverrt_destination_id;
                 });
 
-            $freight = (float) ($chargeScope?->firstWhere('charge_type', 'FREIGHT')?->amount ?? 0.0);
-            $penaltyAmount = (float) ($chargeScope?->firstWhere('charge_type', 'PENALTY')?->amount ?? 0.0);
-            $gstAmount = (float) ($chargeScope?->firstWhere('charge_type', 'GST')?->amount ?? 0.0);
-            $otherChargesAmount = (float) ($chargeScope?->firstWhere('charge_type', 'OTHER_CHARGE')?->amount ?? 0.0);
-            $rebateAmount = (float) ($chargeScope?->firstWhere('charge_type', 'REBATE')?->amount ?? 0.0);
-            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount - abs($rebateAmount);
+            $freight = $this->sumChargeAmounts($chargeScope, 'FREIGHT');
+            $penaltyAmount = $this->sumChargeAmounts($chargeScope, 'PENALTY');
+            $gstAmount = $this->sumChargeAmounts($chargeScope, 'GST');
+            $otherChargesAmount = $this->sumChargeAmounts($chargeScope, 'OTHER_CHARGE');
+            // Rebate rows arrive with either sign (FAOC is positive, generic
+            // negative charges are classified as rebates), so sum magnitudes.
+            $rebateAmount = $this->sumChargeAmounts($chargeScope, 'REBATE', magnitude: true);
+            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount - $rebateAmount;
 
             return [
                 'Rake No' => $r->rake?->rake_number,
@@ -3542,7 +3567,7 @@ final readonly class RunReportAction
                 'Penalty Amount' => round($penaltyAmount, 2),
                 'GST Amount' => round($gstAmount, 2),
                 'Other Charges Amount' => round($otherChargesAmount, 2),
-                'Rebate Amount' => round(abs($rebateAmount), 2),
+                'Rebate Amount' => round($rebateAmount, 2),
                 'Total Amount' => round($total, 2),
             ];
         })->values()->all();
@@ -3634,12 +3659,14 @@ final readonly class RunReportAction
                         && (int) $charge->diverrt_destination_id === (int) $r->diverrt_destination_id;
                 });
 
-            $freight = (float) ($chargeScope?->firstWhere('charge_type', 'FREIGHT')?->amount ?? 0.0);
-            $penaltyAmount = (float) ($chargeScope?->firstWhere('charge_type', 'PENALTY')?->amount ?? 0.0);
-            $gstAmount = (float) ($chargeScope?->firstWhere('charge_type', 'GST')?->amount ?? 0.0);
-            $otherChargesAmount = (float) ($chargeScope?->firstWhere('charge_type', 'OTHER_CHARGE')?->amount ?? 0.0);
-            $rebateAmount = (float) ($chargeScope?->firstWhere('charge_type', 'REBATE')?->amount ?? 0.0);
-            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount - abs($rebateAmount);
+            $freight = $this->sumChargeAmounts($chargeScope, 'FREIGHT');
+            $penaltyAmount = $this->sumChargeAmounts($chargeScope, 'PENALTY');
+            $gstAmount = $this->sumChargeAmounts($chargeScope, 'GST');
+            $otherChargesAmount = $this->sumChargeAmounts($chargeScope, 'OTHER_CHARGE');
+            // Rebate rows arrive with either sign (FAOC is positive, generic
+            // negative charges are classified as rebates), so sum magnitudes.
+            $rebateAmount = $this->sumChargeAmounts($chargeScope, 'REBATE', magnitude: true);
+            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount - $rebateAmount;
 
             $rowHighlight = null;
             if ($rake instanceof Rake && (
@@ -3673,7 +3700,7 @@ final readonly class RunReportAction
                 'Penalty Amount' => round($penaltyAmount, 2),
                 'GST Amount' => round($gstAmount, 2),
                 'Other Charges Amount' => round($otherChargesAmount, 2),
-                'Rebate Amount' => round(abs($rebateAmount), 2),
+                'Rebate Amount' => round($rebateAmount, 2),
                 'Total Amount' => round($total, 2),
                 'Remarks' => $remarks,
                 '_row_highlight' => $rowHighlight,
