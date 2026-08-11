@@ -1191,7 +1191,10 @@ final readonly class RunReportAction
             'rch.rake_id as rake_id,'.
             ' SUM(CASE WHEN rch.charge_type = \'FREIGHT\' THEN rch.amount ELSE 0 END) as amt_freight,'.
             ' SUM(CASE WHEN rch.charge_type = \'GST\' THEN rch.amount ELSE 0 END) as amt_gst,'.
-            ' SUM(rch.amount) as amt_total'
+            ' SUM(CASE WHEN rch.charge_type = \'REBATE\' THEN ABS(rch.amount) ELSE 0 END) as amt_rebate,'.
+            // Rebates (FAOC) print in the RR's "Rebates" column and reduce the
+            // amount payable, so they are subtracted regardless of stored sign.
+            ' SUM(CASE WHEN rch.charge_type = \'REBATE\' THEN -ABS(rch.amount) ELSE rch.amount END) as amt_total'
         );
 
         $primaryDoc = DB::table('rr_documents')
@@ -1246,6 +1249,7 @@ final readonly class RunReportAction
                 ' sa.total_snapshot_underload_mt,'.
                 ' ch.amt_freight,'.
                 ' ch.amt_gst,'.
+                ' ch.amt_rebate,'.
                 ' ch.amt_total'
             );
     }
@@ -1331,6 +1335,7 @@ final readonly class RunReportAction
                 ),
                 'Freight' => $roundMoney($row->amt_freight ?? null),
                 'GST' => $roundMoney($row->amt_gst ?? null),
+                'Rebate' => $roundMoney($row->amt_rebate ?? null),
                 'Total Amount' => $roundMoney($row->amt_total ?? null),
                 'Remarks' => $remarks,
                 '_rake_id' => $rk,
@@ -1389,7 +1394,9 @@ final readonly class RunReportAction
                 'rake_id, diverrt_destination_id,'.
                 ' SUM(CASE WHEN charge_type = \'FREIGHT\' THEN amount ELSE 0 END) AS basic_freight,'.
                 ' SUM(CASE WHEN charge_type = \'OTHER_CHARGE\' THEN amount ELSE 0 END) AS other_charges,'.
-                ' SUM(CASE WHEN charge_type = \'GST\' THEN amount ELSE 0 END) AS gst'
+                ' SUM(CASE WHEN charge_type = \'GST\' THEN amount ELSE 0 END) AS gst,'.
+                // Rebates (FAOC) reduce Total Freight regardless of stored sign.
+                ' SUM(CASE WHEN charge_type = \'REBATE\' THEN ABS(amount) ELSE 0 END) AS rebate'
             )
             ->groupBy('rake_id', 'diverrt_destination_id');
 
@@ -1413,7 +1420,7 @@ final readonly class RunReportAction
                 'rr.id AS rr_document_id, rr.rr_number, r.rake_number,'.
                 ' rr.from_station_code, rr.to_station_code, rr.distance_km,'.
                 ' rr.rr_weight_mt, sn.snapshot_net_sum_mt,'.
-                ' ch.basic_freight, ch.other_charges, ch.gst'
+                ' ch.basic_freight, ch.other_charges, ch.gst, ch.rebate'
             );
 
         if (! empty($params['siding_id'])) {
@@ -1472,16 +1479,19 @@ final readonly class RunReportAction
             $basicRaw = $row->basic_freight ?? null;
             $otherRaw = $row->other_charges ?? null;
             $gstRaw = $row->gst ?? null;
-            $hasChargeRow = $basicRaw !== null || $otherRaw !== null || $gstRaw !== null;
+            $rebateRaw = $row->rebate ?? null;
+            $hasChargeRow = $basicRaw !== null || $otherRaw !== null || $gstRaw !== null || $rebateRaw !== null;
 
             $basic = $roundMoney($basicRaw !== null ? $basicRaw : null);
             $other = $roundMoney($otherRaw !== null ? $otherRaw : null);
             $gst = $roundMoney($gstRaw !== null ? $gstRaw : null);
+            $rebate = $roundMoney($rebateRaw !== null ? $rebateRaw : null);
 
             $totalFreight = null;
             if ($hasChargeRow) {
                 $totalFreight = round(
-                    (float) ($basicRaw ?? 0) + (float) ($otherRaw ?? 0) + (float) ($gstRaw ?? 0),
+                    (float) ($basicRaw ?? 0) + (float) ($otherRaw ?? 0) + (float) ($gstRaw ?? 0)
+                        - (float) ($rebateRaw ?? 0),
                     2,
                 );
             }
@@ -1500,6 +1510,7 @@ final readonly class RunReportAction
                 'Basic Freight' => $basic,
                 'Other Charges' => $other,
                 'GST' => $gst,
+                'Rebate' => $rebate,
                 'Total Freight' => $totalFreight,
                 '_rr_document_id' => (int) $row->rr_document_id,
             ];
@@ -3531,6 +3542,7 @@ final readonly class RunReportAction
                 'Penalty Amount' => round($penaltyAmount, 2),
                 'GST Amount' => round($gstAmount, 2),
                 'Other Charges Amount' => round($otherChargesAmount, 2),
+                'Rebate Amount' => round(abs($rebateAmount), 2),
                 'Total Amount' => round($total, 2),
             ];
         })->values()->all();
@@ -3661,6 +3673,7 @@ final readonly class RunReportAction
                 'Penalty Amount' => round($penaltyAmount, 2),
                 'GST Amount' => round($gstAmount, 2),
                 'Other Charges Amount' => round($otherChargesAmount, 2),
+                'Rebate Amount' => round(abs($rebateAmount), 2),
                 'Total Amount' => round($total, 2),
                 'Remarks' => $remarks,
                 '_row_highlight' => $rowHighlight,
