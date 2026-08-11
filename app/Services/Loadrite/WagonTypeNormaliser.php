@@ -53,6 +53,12 @@ final readonly class WagonTypeNormaliser
         }
 
         // Step 2: Levenshtein — pick best only if strictly lower than next-best.
+        // Short or letterless tokens are operator mis-keys ("0", "2", "11342");
+        // a distance-2 budget would match them to a real type by accident.
+        if (mb_strlen($stripped) < 3 || preg_match('/[A-Za-z]/', $stripped) !== 1) {
+            return null;
+        }
+
         $distances = [];
 
         foreach ($catalog as $canonical) {

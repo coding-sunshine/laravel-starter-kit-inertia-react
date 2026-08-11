@@ -130,3 +130,11 @@ it('keeps a capacity token that is part of the type itself', function (): void {
     expect((new WagonTypeNormaliser)->normalise('BOXNHL25T'))->toBe('BOXNHL25T')
         ->and((new WagonTypeNormaliser)->normalise('BOXNHL25T 70T'))->toBe('BOXNHL25T');
 });
+
+it('does not fuzzy-match letterless or very short operator mis-keys', function (): void {
+    makeNormaliser(['BOXNG', 'G']);
+
+    expect((new WagonTypeNormaliser)->normalise('0'))->toBeNull()
+        ->and((new WagonTypeNormaliser)->normalise('11342'))->toBeNull()
+        ->and((new WagonTypeNormaliser)->normalise('G'))->toBe('G');
+});

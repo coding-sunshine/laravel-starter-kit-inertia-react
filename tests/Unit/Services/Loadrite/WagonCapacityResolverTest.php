@@ -37,3 +37,13 @@ it('returns tare alongside CC from the official table', function (): void {
         ->and($r['tare'])->toBe(20.60)
         ->and($r['type'])->toBe('BOXNHL');
 });
+
+it('resolves the official capacity when handed a full catalog type', function (): void {
+    config(['loadrite.wagon_cc' => ['BOBRNHSM1' => ['cc' => 65.00, 'tare' => 24.00]]]);
+
+    $result = (new WagonCapacityResolver)->resolve(null, 'BOBRNHSM1');
+
+    expect($result['cc'])->toBe(65.00)
+        ->and($result['type'])->toBe('BOBRNHSM1')
+        ->and($result['source'])->toBe('full-type');
+});

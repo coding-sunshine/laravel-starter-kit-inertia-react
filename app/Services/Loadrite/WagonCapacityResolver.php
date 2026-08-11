@@ -47,12 +47,17 @@ final class WagonCapacityResolver
             }
         }
 
-        // 2. Fall back to the keyed type abbreviation.
+        // 2. Fall back to the keyed type abbreviation, or to the keyed value
+        //    itself when it is already a full catalog type — WagonTypeNormaliser
+        //    returns either form depending on what the operator keyed.
         if ($type === null && $this->isUsableTypeAbbreviation($typeAbbr)) {
             $mapped = $this->typeByAbbreviation($typeAbbr);
             if ($mapped !== null) {
                 $type = $mapped;
                 $source = 'type-abbreviation';
+            } elseif ($this->officialCapacity($typeAbbr)['cc'] !== null) {
+                $type = $typeAbbr;
+                $source = 'full-type';
             }
         }
 
