@@ -31,7 +31,7 @@ final readonly class WagonTypeNormaliser
             return null;
         }
 
-        $stripped = $this->strip($raw);
+        $stripped = $this->strip($this->withoutCapacitySuffix($raw));
 
         if ($stripped === '') {
             return null;
@@ -101,6 +101,21 @@ final readonly class WagonTypeNormaliser
         $abbreviations = array_keys((array) config('loadrite.type_abbreviations', []));
 
         return array_values(array_unique(array_merge($fullTypes, $abbreviations)));
+    }
+
+    /**
+     * Drop a trailing carrying-capacity token from an operator-keyed type.
+     *
+     * Loadrite operators key the type together with the CC — `BOBRNHSM1 65T`,
+     * `BOXNS 70.70T`, `BOXNHL25T 70T`. The capacity is already resolved from
+     * the official table, so it only defeats catalog matching here.
+     *
+     * A separator before the number is required so that the `25T` inside
+     * `BOXNHL25T` (part of the type itself) is left alone.
+     */
+    private function withoutCapacitySuffix(string $value): string
+    {
+        return (string) preg_replace('/[\s\-_]+\d+(?:\.\d+)?\s*T$/i', '', mb_trim($value));
     }
 
     /**

@@ -115,3 +115,18 @@ it('returns null when two catalog entries tie on levenshtein distance', function
 
     expect((new WagonTypeNormaliser)->normalise('ABCDX'))->toBeNull();
 });
+
+it('drops the carrying-capacity suffix operators key alongside the type', function (): void {
+    makeNormaliser(['BOBRNHSM1', 'BOXNS', 'BOXNLW']);
+
+    expect((new WagonTypeNormaliser)->normalise('BOBRNHSM1 65T'))->toBe('BOBRNHSM1')
+        ->and((new WagonTypeNormaliser)->normalise('BOXNS 70.70T'))->toBe('BOXNS')
+        ->and((new WagonTypeNormaliser)->normalise('BOXNLW 70 T'))->toBe('BOXNLW');
+});
+
+it('keeps a capacity token that is part of the type itself', function (): void {
+    makeNormaliser(['BOXNHL', 'BOXNHL25T']);
+
+    expect((new WagonTypeNormaliser)->normalise('BOXNHL25T'))->toBe('BOXNHL25T')
+        ->and((new WagonTypeNormaliser)->normalise('BOXNHL25T 70T'))->toBe('BOXNHL25T');
+});

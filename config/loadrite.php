@@ -106,5 +106,9 @@ return [
         'NM1' => 'BOBRNM1',
         'NM2' => 'BOBRNM1',
         'RM1' => 'BOBRM1',
+        // Operator mis-key seen at Dumka/Pakur: keyed "BORNM1 65T". The 65 T
+        // capacity rules out BOXNM1 (68 T), so it is the BOBRN variant. Listed
+        // explicitly because the Levenshtein fallback ties it between the two.
+        'BORNM1' => 'BOBRNM1',
     ],
 ];
