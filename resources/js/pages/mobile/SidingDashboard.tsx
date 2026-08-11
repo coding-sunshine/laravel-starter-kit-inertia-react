@@ -20,7 +20,10 @@ interface SidingWithId {
  * Current stock updates live via broadcast when ledger changes (daily entries, unloads, etc.).
  */
 export default function SidingDashboard() {
-    const { props } = usePage<{ siding?: SidingWithId; metrics?: { current_stock_mt?: number; [key: string]: unknown } }>();
+    const { props } = usePage<{
+        siding?: SidingWithId;
+        metrics?: Record<string, number | undefined>;
+    }>();
     const { siding, metrics } = props;
 
     const [liveStockMt, setLiveStockMt] = useState<number | null>(null);
@@ -243,8 +246,8 @@ export default function SidingDashboard() {
             </MobileSafeArea>
 
             <BottomNavigation
-                activeTab="dashboard"
-                tabs={[
+                activeId="dashboard"
+                items={[
                     {
                         id: 'dashboard',
                         label: 'Dashboard',

@@ -3,6 +3,7 @@
  * Handles bottom navigation spacing and touch-friendly layout
  */
 
+import { cn } from '@/lib/utils';
 import { ReactNode } from 'react';
 
 interface MobileLayoutProps {
@@ -40,10 +41,12 @@ export function MobileLayout({
  */
 export function MobileFullWidthContainer({
     children,
+    className,
 }: {
     children: ReactNode;
+    className?: string;
 }) {
-    return <div className="w-full bg-white">{children}</div>;
+    return <div className={cn('w-full bg-white', className)}>{children}</div>;
 }
 
 /**
@@ -101,13 +104,20 @@ export function MobileCard({
     children,
     header,
     footer,
+    className,
 }: {
     children: ReactNode;
     header?: ReactNode;
     footer?: ReactNode;
+    className?: string;
 }) {
     return (
-        <div className="mb-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div
+            className={cn(
+                'mb-4 overflow-hidden rounded-lg border border-gray-200 bg-white',
+                className,
+            )}
+        >
             {header && (
                 <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
                     {header}

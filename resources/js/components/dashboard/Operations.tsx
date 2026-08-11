@@ -1,4 +1,5 @@
 import { DEFAULT_LIVE_RAKE_WORKFLOW_STEPS, formatRakeSequenceBySiding, SectionHeader, SIDING_ACCENT } from './shared';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
 import type {
     CoalTransportReportData,
     DailyRakeDetailsData,
@@ -301,7 +302,7 @@ export function Operations({
                                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                                     <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                    <Tooltip formatter={(v: number | undefined) => `Vehicles: ${v ?? 0}`} />
+                                    <Tooltip formatter={numericTooltipFormatter((v) => `Vehicles: ${v}`)} />
                                     <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={24} isAnimationActive />
                                 </RechartsBarChart>
                             </ResponsiveContainer>
@@ -321,7 +322,7 @@ export function Operations({
                                         <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                         <XAxis dataKey="shift_label" tick={{ fontSize: 11 }} />
                                         <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                        <Tooltip formatter={(v: number | undefined) => `Vehicles: ${v ?? 0}`} />
+                                        <Tooltip formatter={numericTooltipFormatter((v) => `Vehicles: ${v}`)} />
                                         <Legend />
                                         {sidingKeys.map((sidingName, i) => (
                                             <Bar

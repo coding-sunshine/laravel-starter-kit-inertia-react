@@ -23,7 +23,7 @@ export interface EmptyWeighmentEntry {
   reached_at: string;
   created_at: string;
   status: 'draft' | 'completed';
-  inline_submitted_at: string | null;
+  inline_submitted_at?: string | null;
 }
 
 const numberInputNoSpinner =

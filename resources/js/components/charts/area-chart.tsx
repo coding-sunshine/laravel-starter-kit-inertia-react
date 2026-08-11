@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils';
 import {
     Area,
-    AreaChart as RechartsAreaChart,
     CartesianGrid,
+    type DataKey,
     Line,
+    AreaChart as RechartsAreaChart,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -78,7 +79,7 @@ export function AreaChart<T extends Record<string, unknown>>({
                         className="stroke-border/50"
                     />
                     <XAxis
-                        dataKey={xKey}
+                        dataKey={xKey as DataKey<T>}
                         tick={{ fontSize: 11 }}
                         className="fill-muted-foreground"
                         tickLine={false}
@@ -110,23 +111,36 @@ export function AreaChart<T extends Record<string, unknown>>({
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number, name: string) => [
+                        formatter={(value, name) => [
                             formatTooltip
-                                ? formatTooltip(value)
-                                : value.toLocaleString(),
+                                ? formatTooltip(Number(value))
+                                : Number(value).toLocaleString(),
                             name === yKey
                                 ? (yLabel ?? yKey)
-                                : (secondaryLabel ?? name),
+                                : (secondaryLabel ?? String(name)),
                         ]}
                     />
                     <Area
                         type="monotone"
-                        dataKey={yKey}
+                        dataKey={yKey as DataKey<T>}
                         stroke={color}
                         strokeWidth={2}
                         fill={`url(#${gradientId})`}
-                        dot={animated ? { r: 3, fill: color, strokeWidth: 0 } : false}
-                        activeDot={animated ? { r: 5, fill: color, strokeWidth: 2, stroke: 'var(--card)' } : undefined}
+                        dot={
+                            animated
+                                ? { r: 3, fill: color, strokeWidth: 0 }
+                                : false
+                        }
+                        activeDot={
+                            animated
+                                ? {
+                                      r: 5,
+                                      fill: color,
+                                      strokeWidth: 2,
+                                      stroke: 'var(--card)',
+                                  }
+                                : undefined
+                        }
                         isAnimationActive={animated}
                         animationDuration={550}
                         animationEasing="ease-out"

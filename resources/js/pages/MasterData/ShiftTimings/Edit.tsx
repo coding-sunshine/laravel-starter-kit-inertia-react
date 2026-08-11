@@ -54,10 +54,10 @@ export default function Edit({ siding }: Props) {
   }
 
   function setShiftTime(index: number, field: 'start_time' | 'end_time', value: string) {
-    setData('shifts', (prev) => {
-      const next = prev.map((s, i) => (i === index ? { ...s, [field]: value } : s));
-      return next;
-    });
+    setData(
+      'shifts',
+      data.shifts.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
+    );
   }
 
   return (

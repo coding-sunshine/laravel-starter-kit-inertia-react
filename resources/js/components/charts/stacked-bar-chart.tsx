@@ -3,6 +3,7 @@ import {
     Bar,
     BarChart as RechartsBarChart,
     CartesianGrid,
+    type DataKey,
     Legend,
     ResponsiveContainer,
     Tooltip,
@@ -84,7 +85,7 @@ export function StackedBarChart<T extends Record<string, unknown>>({
                             />
                             <YAxis
                                 type="category"
-                                dataKey={xKey}
+                                dataKey={xKey as DataKey<T>}
                                 tick={{ fontSize: 12 }}
                                 className="fill-muted-foreground"
                                 tickLine={false}
@@ -95,7 +96,7 @@ export function StackedBarChart<T extends Record<string, unknown>>({
                     ) : (
                         <>
                             <XAxis
-                                dataKey={xKey}
+                                dataKey={xKey as DataKey<T>}
                                 tick={{ fontSize: 12 }}
                                 className="fill-muted-foreground"
                                 tickLine={false}
@@ -129,15 +130,15 @@ export function StackedBarChart<T extends Record<string, unknown>>({
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number, name: string) => [
+                        formatter={(value, name) => [
                             formatTooltip
-                                ? formatTooltip(value)
-                                : value.toLocaleString(),
-                            stackLabels?.[name] ?? name,
+                                ? formatTooltip(Number(value))
+                                : Number(value).toLocaleString(),
+                            stackLabels?.[String(name)] ?? String(name),
                         ]}
                     />
                     <Legend
-                        formatter={(value: string) => stackLabels?.[value] ?? value}
+                        formatter={(value) => stackLabels?.[String(value)] ?? String(value)}
                         wrapperStyle={{ fontSize: 12 }}
                     />
                     {stackKeys.map((key, i) => (

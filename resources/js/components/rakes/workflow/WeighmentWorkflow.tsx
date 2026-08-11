@@ -22,14 +22,14 @@ interface WeighmentRecord {
     isPendingDocument?: boolean;
     wagonWeights?: Array<{
         wagon_id: number;
-        gross_weight_mt: number;
-        net_weight_mt: number;
+        gross_weight_mt: string | number | null;
+        net_weight_mt: string | number | null;
         wagon: {
             id: number;
             wagon_number: string;
             wagon_sequence: number;
             pcc_weight_mt?: string | number | null;
-        };
+        } | null;
     }>;
 }
 
@@ -59,6 +59,7 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
         total_net_weight_mt: '',
         from_station: '',
         to_station: '',
+        priority_number: '',
     });
 
     const editManualForm = useForm({

@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import type { PageProps } from '@inertiajs/core';
 import TransportRegistrationsTable, {
     type PaginatedTransportRegistrations,
 } from '@/pages/VehicleWorkorders/TransportRegistrationsTable';
@@ -174,7 +175,7 @@ export default function VehicleWorkordersIndex({
     transportNames = [],
     filters,
 }: Props) {
-    const { flash } = usePage<Props & { flash?: { success?: string } }>().props;
+    const { flash } = usePage<Props & PageProps & { flash?: { success?: string } }>().props;
     const [localFilters, setLocalFilters] = useState<Filters>(filters);
 
     useEffect(() => {

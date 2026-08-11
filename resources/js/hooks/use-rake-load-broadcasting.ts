@@ -155,7 +155,7 @@ export function useRakeLoadBroadcasting(
         // Cleanup function
         return () => {
             if (channelRef.current) {
-                window.Echo.leaveChannel(`rake-load.${rakeId}`);
+                window.Echo?.leaveChannel(`rake-load.${rakeId}`);
                 channelRef.current = null;
             }
         };
@@ -164,7 +164,7 @@ export function useRakeLoadBroadcasting(
     // Function to manually reconnect if needed
     const reconnect = () => {
         if (channelRef.current) {
-            window.Echo.leaveChannel(`rake-load.${rakeId}`);
+            window.Echo?.leaveChannel(`rake-load.${rakeId}`);
         }
         
         if (window.Echo) {

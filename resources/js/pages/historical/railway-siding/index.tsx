@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import HistoricalRakeTable from '@/components/historical/historical-rake-table';
+import type { HistoricalRake } from '@/components/historical/historical-rake-row';
 
 function getCsrfHeaders(): Record<string, string> {
   const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
@@ -24,28 +25,6 @@ function getCsrfHeaders(): Record<string, string> {
 interface Siding {
   id: number;
   name: string;
-}
-
-interface HistoricalRake {
-  id: number;
-  siding_id: number;
-  siding_name?: string | null;
-  rake_number: number | string | null;
-  priority_number: number | null;
-  rr_number: number | string | null;
-  wagon_count: number | null;
-  loaded_weight_mt: string | number | null;
-  under_load_mt: string | number | null;
-  over_load_mt: string | number | null;
-  overload_wagon_count: number | null;
-  detention_hours: string | number | null;
-  shunting_hours: string | number | null;
-  total_amount_rs: string | number | null;
-  destination: string | null;
-  pakur_imwb_period: string | null;
-  loading_date: string | null;
-  data_source?: string | null;
-  remarks: string | null;
 }
 
 interface PaginationLink {
@@ -330,10 +309,7 @@ export default function HistoricalRailwaySidingIndex({
               }}
               onRakeDeleted={(id) => {
                 setEditingId((prev) => (prev === id ? null : prev));
-                router.reload({
-                  only: ['rakes'],
-                  preserveScroll: true,
-                });
+                router.reload({ only: ['rakes'] });
               }}
               onAddRow={async () => {
                 const payload = {

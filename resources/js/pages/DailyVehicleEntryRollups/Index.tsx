@@ -98,8 +98,9 @@ export default function DailyVehicleEntryRollupsIndex({
     filters,
     flash,
 }: Props) {
-    const pageProps = usePage<{ errors?: Record<string, string | string[]> }>().props;
-    const rawDateError = pageProps.errors?.date;
+    const rawDateError = (
+        usePage().props.errors as Record<string, string | string[] | undefined>
+    ).date;
     const dateError =
         typeof rawDateError === 'string'
             ? rawDateError

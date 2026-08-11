@@ -155,6 +155,7 @@ export interface PowerPlantSidingBreakdown {
 }
 
 export interface PowerPlantDispatchItem {
+    [key: string]: unknown;
     name: string;
     rakes: number;
     weight_mt: number;

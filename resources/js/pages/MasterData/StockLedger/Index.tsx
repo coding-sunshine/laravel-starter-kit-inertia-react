@@ -86,7 +86,7 @@ export default function Index({
   });
 
   useEffect(() => {
-    filterForm.reset({
+    filterForm.setData({
       siding_id: filters.siding_id ? String(filters.siding_id) : ALL_SIDINGS,
       rake_number: filters.rake_number ?? '',
       from: filters.from ?? '',

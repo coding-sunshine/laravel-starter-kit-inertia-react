@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
 import {
     Dialog,
     DialogContent,
@@ -834,13 +835,12 @@ export function LoaderOverloadDashboardSection({
                                                     allowDecimals={false}
                                                 />
                                                 <Tooltip
-                                                    formatter={(
-                                                        v: number | undefined,
-                                                        name?: string,
-                                                    ) => [
-                                                        `${v ?? 0} wagons`,
-                                                        name ?? '',
-                                                    ]}
+                                                    formatter={numericTooltipFormatter(
+                                                        (v, name) => [
+                                                            `${v} wagons`,
+                                                            name,
+                                                        ],
+                                                    )}
                                                 />
                                                 <Legend />
                                                 <Bar
@@ -897,13 +897,12 @@ export function LoaderOverloadDashboardSection({
                                                     allowDecimals={false}
                                                 />
                                                 <Tooltip
-                                                    formatter={(
-                                                        v: number | undefined,
-                                                        name?: string,
-                                                    ) => [
-                                                        `${v ?? 0} wagons`,
-                                                        name ?? '',
-                                                    ]}
+                                                    formatter={numericTooltipFormatter(
+                                                        (v, name) => [
+                                                            `${v} wagons`,
+                                                            name,
+                                                        ],
+                                                    )}
                                                 />
                                                 <Legend />
                                                 <ReferenceLine

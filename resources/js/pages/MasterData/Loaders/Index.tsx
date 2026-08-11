@@ -62,6 +62,7 @@ interface SidingOption {
 }
 
 interface LoaderOperatorPayload {
+    [key: string]: string | number | boolean | null;
     name: string;
     is_active: boolean;
     siding_id: number | null;

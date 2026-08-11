@@ -156,7 +156,7 @@ function buildOverviewData(
 ): OverviewData {
     const rrDetails = doc.rr_details as Record<string, unknown> | null;
     const snapshotWagons =
-        (doc as Record<string, unknown>).wagon_snapshots as Wagon[] | undefined;
+        doc.wagon_snapshots as Wagon[] | undefined;
     const rakeWagons = doc.rake?.wagons ?? [];
     const legacyWagons = (rrDetails?.wagons as unknown[] | null) ?? [];
     const totalWagons =
@@ -209,7 +209,7 @@ function buildOverviewData(
 function buildWagonsData(doc: RrDocument): WagonRow[] {
     // 1) Prefer RR wagon snapshots (what the RR says)
     const snapshotWagons =
-        (doc as Record<string, unknown>).wagon_snapshots as
+        doc.wagon_snapshots as
             | Wagon[]
             | undefined;
     if (snapshotWagons && snapshotWagons.length > 0) {
@@ -291,14 +291,12 @@ function buildWagonsData(doc: RrDocument): WagonRow[] {
 
 /** Charges stored on this RR document only (`rr_charges` + parsed PDF legacy), not rake ledger rows. */
 function buildChargesData(doc: RrDocument): ChargeRow[] {
-    const rrCharges =
-        (doc as Record<string, unknown>).rr_charges ??
-        (doc as Record<string, unknown>).rrCharges;
+    const rrCharges = doc.rr_charges;
 
     if (Array.isArray(rrCharges) && rrCharges.length > 0) {
-        return rrCharges.map((c: Record<string, unknown>) => ({
-            chargeCode: String(c.charge_code ?? c.chargeCode ?? ''),
-            chargeName: String(c.charge_name ?? c.chargeName ?? c.charge_code ?? c.chargeCode ?? ''),
+        return rrCharges.map((c) => ({
+            chargeCode: c.charge_code,
+            chargeName: c.charge_name ?? c.charge_code,
             amount: `₹${Number(c.amount ?? 0).toLocaleString('en-IN')}`,
         }));
     }
@@ -327,7 +325,7 @@ function buildChargesData(doc: RrDocument): ChargeRow[] {
 /** Penalties stored as snapshots on this RR only (`rr_penalty_snapshots`), not operational `applied_penalties`. */
 function buildPenaltiesData(doc: RrDocument): PenaltyRow[] {
     const penaltySnapshots =
-        (doc as Record<string, unknown>).penalty_snapshots as
+        doc.penalty_snapshots as
             | {
                   penalty_code: string;
                   amount: string | number;

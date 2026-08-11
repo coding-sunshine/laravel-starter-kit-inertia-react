@@ -68,10 +68,11 @@ export function PieChart<T extends Record<string, unknown>>({
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number) => [
+                        formatter={(value, name) => [
                             formatTooltip
-                                ? formatTooltip(value)
-                                : value.toLocaleString(),
+                                ? formatTooltip(Number(value))
+                                : Number(value).toLocaleString(),
+                            name,
                         ]}
                     />
                     {showLegend && (

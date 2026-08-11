@@ -70,7 +70,7 @@ export default function RoadDispatchUnloadsShow({ unload, lastGrossWeight }: Pro
     const [tareOpen, setTareOpen] = useState(false);
 
     useEffect(() => {
-        const echo = (window as { Echo?: { private: (ch: string) => { listen: (ev: string, cb: () => void) => void } } }).Echo;
+        const echo = (window as { Echo?: { private: (ch: string) => { listen: (ev: string, cb: () => void) => void; stopListening: (ev: string) => void } } }).Echo;
         if (echo) {
             const channel = echo.private(`unload.${unload.id}`);
             channel.listen('.step.updated', () => router.reload());

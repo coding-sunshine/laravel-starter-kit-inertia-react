@@ -230,12 +230,19 @@ export default function ImportPreviewCard({
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-2 text-sm text-gray-900">
-                                                    {row.siding &&
-                                                    typeof row.siding ===
-                                                        'object' &&
-                                                    row.siding.name
-                                                        ? `${row.siding.name} (${row.siding.code})`
-                                                        : '-'}
+                                                    {(() => {
+                                                        const siding =
+                                                            row.siding as
+                                                                | {
+                                                                      name?: string;
+                                                                      code?: string;
+                                                                  }
+                                                                | null
+                                                                | undefined;
+                                                        return siding?.name
+                                                            ? `${siding.name} (${siding.code})`
+                                                            : '-';
+                                                    })()}
                                                 </td>
                                                 <td className="px-4 py-2 text-sm text-gray-900">
                                                     {String(row.shift ?? '-')}

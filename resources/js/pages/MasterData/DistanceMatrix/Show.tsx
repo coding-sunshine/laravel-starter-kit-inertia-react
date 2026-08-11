@@ -41,7 +41,7 @@ export default function Show({ distance }: Props) {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">
-              {distance.powerPlant ? distance.powerPlant.name : '-'} to{' '}
+              {distance.power_plant ? distance.power_plant.name : '-'} to{' '}
               {distance.siding ? distance.siding.name : '-'}
             </h1>
             <p className="text-muted-foreground">Distance matrix entry details</p>

@@ -5,27 +5,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertTriangle, CheckCircle, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface WagonLoading {
-    id: number;
+    id?: number;
     wagon_id: number;
     loaded_quantity_mt: string;
-    wagon: {
-        id: number;
+    wagon?: {
         wagon_number: string;
         wagon_sequence: number;
-    };
+    } | null;
 }
 
 interface WeighmentRecord {
     wagonWeights?: Array<{
         wagon_id: number;
-        gross_weight_mt: number;
-        net_weight_mt: number;
+        gross_weight_mt: string | number | null;
+        net_weight_mt: string | number | null;
         wagon: {
             id: number;
             wagon_number: string;
             wagon_sequence: number;
-            pcc_weight_mt?: number | null;
-        };
+            pcc_weight_mt?: string | number | null;
+        } | null;
     }>;
 }
 
@@ -83,8 +82,8 @@ export function ComparisonWorkflow({ rake, disabled }: ComparisonWorkflowProps) 
 
             if (!loading) {
                 return {
-                    wagon_number: weighment.wagon.wagon_number,
-                    wagon_sequence: weighment.wagon.wagon_sequence,
+                    wagon_number: weighment.wagon?.wagon_number ?? '',
+                    wagon_sequence: weighment.wagon?.wagon_sequence ?? 0,
                     loader_qty_mt: null,
                     inmotion_qty_mt: inmotionQty,
                     difference_mt: null,
@@ -99,8 +98,8 @@ export function ComparisonWorkflow({ rake, disabled }: ComparisonWorkflowProps) 
                 difference > 0 ? 'OVER' : difference < 0 ? 'UNDER' : 'OK';
 
             return {
-                wagon_number: weighment.wagon.wagon_number,
-                wagon_sequence: weighment.wagon.wagon_sequence,
+                wagon_number: weighment.wagon?.wagon_number ?? '',
+                wagon_sequence: weighment.wagon?.wagon_sequence ?? 0,
                 loader_qty_mt: loaderQty,
                 inmotion_qty_mt: inmotionQty,
                 difference_mt: difference,

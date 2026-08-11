@@ -1,8 +1,18 @@
-import { router } from '@inertiajs/react';
-import { useCallback, useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -11,8 +21,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { FileBarChart, RefreshCw } from 'lucide-react';
+import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
+import { FileBarChart, RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import type { DispatchReport } from './Index';
 import type { Filters } from './types';
 
@@ -33,13 +45,17 @@ interface DprPaginatorPayload {
 function formatDecimal(value: number | string | null): string {
     if (value === null || value === undefined) return '—';
     const n = typeof value === 'string' ? parseFloat(value) : value;
-    return Number.isNaN(n) ? '—' : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    return Number.isNaN(n)
+        ? '—'
+        : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
 function formatDveDecimal(value: number | string | null | undefined): string {
     if (value === null || value === undefined) return 'N/A';
     const n = typeof value === 'string' ? parseFloat(value) : value;
-    return Number.isNaN(n) ? 'N/A' : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    return Number.isNaN(n)
+        ? 'N/A'
+        : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
 function formatDveDateTime(value: string | null | undefined): string {
@@ -61,15 +77,20 @@ function buildDprQueryString(filters: Filters, page: number): string {
     const qs = new URLSearchParams();
     if (filters.date_from) qs.set('date_from', filters.date_from);
     if (filters.date_to) qs.set('date_to', filters.date_to);
-    if (filters.date && !filters.date_from && !filters.date_to) qs.set('date', filters.date);
+    if (filters.date && !filters.date_from && !filters.date_to)
+        qs.set('date', filters.date);
     qs.set('page', String(page));
     return qs.toString();
 }
 
 export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
     const [isGenerating, setIsGenerating] = useState(false);
-    const [generationMode, setGenerationMode] = useState<'sync' | 'queue'>('sync');
-    const [pagination, setPagination] = useState<DprPaginatorPayload | null>(null);
+    const [generationMode, setGenerationMode] = useState<'sync' | 'queue'>(
+        'sync',
+    );
+    const [pagination, setPagination] = useState<DprPaginatorPayload | null>(
+        null,
+    );
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -78,15 +99,20 @@ export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
             setLoading(true);
             setFetchError(null);
             try {
-                const res = await fetch(`/vehicle-dispatch/dpr-data?${buildDprQueryString(filters, page)}`, {
-                    credentials: 'same-origin',
-                    headers: {
-                        Accept: 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
+                const res = await fetch(
+                    `/vehicle-dispatch/dpr-data?${buildDprQueryString(filters, page)}`,
+                    {
+                        credentials: 'same-origin',
+                        headers: {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
                     },
-                });
+                );
                 if (res.status === 401 || res.status === 403) {
-                    setFetchError('You do not have permission to load DPR data.');
+                    setFetchError(
+                        'You do not have permission to load DPR data.',
+                    );
                     setPagination(null);
                     return;
                 }
@@ -113,8 +139,8 @@ export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
 
     const handleGenerate = () => {
         setIsGenerating(true);
-        const payload: Record<string, unknown> = {
-            _filters: filters,
+        const payload = {
+            _filters: { ...filters },
             mode: generationMode,
         };
         router.post('/dispatch-reports/generate', payload, {
@@ -153,36 +179,46 @@ export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
                             )}
                             {!loading && total > 0 && (
                                 <span className="text-sm font-normal text-muted-foreground">
-                                    · {total} {total === 1 ? 'row' : 'rows'} total (paginated)
+                                    · {total} {total === 1 ? 'row' : 'rows'}{' '}
+                                    total (paginated)
                                 </span>
                             )}
                         </CardTitle>
                         <CardDescription>
-                            Built from mine dispatch; weighbridge fields fill when daily vehicle entries exist,
-                            otherwise they show N/A. Data loads when you open this tab. Click Generate DPR to rebuild
-                            from dispatches.
+                            Built from mine dispatch; weighbridge fields fill
+                            when daily vehicle entries exist, otherwise they
+                            show N/A. Data loads when you open this tab. Click
+                            Generate DPR to rebuild from dispatches.
                         </CardDescription>
                     </div>
-                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:flex-wrap">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                         <Button
                             onClick={handleGenerate}
                             disabled={isGenerating}
                             data-pan="vehicle-dispatch-generate-dpr"
                         >
-                            <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                            <RefreshCw
+                                className={`mr-2 h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`}
+                            />
                             {isGenerating ? 'Generating...' : 'Generate DPR'}
                         </Button>
                         <div className="w-full sm:w-56">
                             <Select
                                 value={generationMode}
-                                onValueChange={(value: 'sync' | 'queue') => setGenerationMode(value)}
+                                onValueChange={(value: 'sync' | 'queue') =>
+                                    setGenerationMode(value)
+                                }
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Generation mode" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="sync">Generate now (Sync)</SelectItem>
-                                    <SelectItem value="queue">Generate in background (Queue)</SelectItem>
+                                    <SelectItem value="sync">
+                                        Generate now (Sync)
+                                    </SelectItem>
+                                    <SelectItem value="queue">
+                                        Generate in background (Queue)
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -209,27 +245,31 @@ export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
                 )}
 
                 {loading && (
-                    <div className="flex justify-center py-12 text-sm text-muted-foreground">Loading DPR…</div>
+                    <div className="flex justify-center py-12 text-sm text-muted-foreground">
+                        Loading DPR…
+                    </div>
                 )}
 
                 {!loading && rows.length === 0 && !fetchError && (
                     <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                        <FileBarChart className="h-12 w-12 mb-4 opacity-50" />
+                        <FileBarChart className="mb-4 h-12 w-12 opacity-50" />
                         <p className="text-sm">No DPR records yet.</p>
-                        <p className="text-xs mt-2">
-                            Click &quot;Generate DPR&quot; to build rows from dispatches (weighbridge data when
-                            available).
+                        <p className="mt-2 text-xs">
+                            Click &quot;Generate DPR&quot; to build rows from
+                            dispatches (weighbridge data when available).
                         </p>
                     </div>
                 )}
 
                 {!loading && rows.length > 0 && (
                     <>
-                        <div className="rounded-md border overflow-x-auto">
+                        <div className="overflow-x-auto rounded-md border">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-12">SL NO</TableHead>
+                                        <TableHead className="w-12">
+                                            SL NO
+                                        </TableHead>
                                         <TableHead>REF</TableHead>
                                         <TableHead>E CHALLAN NO</TableHead>
                                         <TableHead>ISSUED ON</TableHead>
@@ -245,7 +285,9 @@ export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
                                         <TableHead>NET WT</TableHead>
                                         <TableHead>TYRES</TableHead>
                                         <TableHead>COAL TON VAR</TableHead>
-                                        <TableHead>REACHED DATE & TIME</TableHead>
+                                        <TableHead>
+                                            REACHED DATE & TIME
+                                        </TableHead>
                                         <TableHead>WB</TableHead>
                                         <TableHead>TRIP ID NO</TableHead>
                                         <TableHead>SIDING</TableHead>
@@ -254,29 +296,83 @@ export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
                                 <TableBody>
                                     {rows.map((row) => (
                                         <TableRow key={row.id}>
-                                            <TableCell className="font-medium">{row.id}</TableCell>
-                                            <TableCell>{row.ref_no ?? '—'}</TableCell>
-                                            <TableCell>{row.e_challan_no ?? '—'}</TableCell>
-                                            <TableCell>
-                                                {row.issued_on ? format(new Date(row.issued_on), 'dd MMM yyyy') : '—'}
+                                            <TableCell className="font-medium">
+                                                {row.id}
                                             </TableCell>
-                                            <TableCell>{row.truck_no ?? '—'}</TableCell>
-                                            <TableCell>{row.shift ?? '—'}</TableCell>
                                             <TableCell>
-                                                {row.date ? format(new Date(row.date), 'dd MMM yyyy') : '—'}
+                                                {row.ref_no ?? '—'}
                                             </TableCell>
-                                            <TableCell>{row.trips ?? '—'}</TableCell>
-                                            <TableCell>{row.wo_no ?? '—'}</TableCell>
-                                            <TableCell>{dveText(row.transport_name)}</TableCell>
-                                            <TableCell>{formatDecimal(row.mineral_wt)}</TableCell>
-                                            <TableCell>{formatDveDecimal(row.gross_wt_siding_rec_wt)}</TableCell>
-                                            <TableCell>{formatDveDecimal(row.tare_wt)}</TableCell>
-                                            <TableCell>{formatDveDecimal(row.net_wt_siding_rec_wt)}</TableCell>
-                                            <TableCell>{row.tyres ?? '—'}</TableCell>
-                                            <TableCell>{formatDveDecimal(row.coal_ton_variation)}</TableCell>
-                                            <TableCell>{formatDveDateTime(row.reached_datetime)}</TableCell>
-                                            <TableCell>{dveText(row.wb)}</TableCell>
-                                            <TableCell>{dveText(row.trip_id_no)}</TableCell>
+                                            <TableCell>
+                                                {row.e_challan_no ?? '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.issued_on
+                                                    ? format(
+                                                          new Date(
+                                                              row.issued_on,
+                                                          ),
+                                                          'dd MMM yyyy',
+                                                      )
+                                                    : '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.truck_no ?? '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.shift ?? '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.date
+                                                    ? format(
+                                                          new Date(row.date),
+                                                          'dd MMM yyyy',
+                                                      )
+                                                    : '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.trips ?? '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.wo_no ?? '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {dveText(row.transport_name)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDecimal(row.mineral_wt)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDveDecimal(
+                                                    row.gross_wt_siding_rec_wt,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDveDecimal(row.tare_wt)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDveDecimal(
+                                                    row.net_wt_siding_rec_wt,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.tyres ?? '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDveDecimal(
+                                                    row.coal_ton_variation,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDveDateTime(
+                                                    row.reached_datetime,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {dveText(row.wb)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {dveText(row.trip_id_no)}
+                                            </TableCell>
                                             <TableCell>
                                                 {row.siding
                                                     ? `${row.siding.name} (${row.siding.code})`
@@ -292,8 +388,11 @@ export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
                             <div className="flex justify-center">
                                 <div className="flex flex-wrap gap-2">
                                     {pagination.links.map((link, index) => {
-                                        const pageMatch = link.url?.match(/[?&]page=(\d+)/);
-                                        const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : null;
+                                        const pageMatch =
+                                            link.url?.match(/[?&]page=(\d+)/);
+                                        const pageNumber = pageMatch
+                                            ? parseInt(pageMatch[1], 10)
+                                            : null;
 
                                         return (
                                             <button
@@ -301,16 +400,21 @@ export default function DPRTab({ filters, flashSuccess }: DPRTabProps) {
                                                 type="button"
                                                 onClick={() => {
                                                     if (pageNumber !== null) {
-                                                        void loadPage(pageNumber);
+                                                        void loadPage(
+                                                            pageNumber,
+                                                        );
                                                     }
                                                 }}
-                                                disabled={!link.url || pageNumber === null}
-                                                className={`px-3 py-2 rounded text-sm ${
+                                                disabled={
+                                                    !link.url ||
+                                                    pageNumber === null
+                                                }
+                                                className={`rounded px-3 py-2 text-sm ${
                                                     link.active
                                                         ? 'bg-primary text-primary-foreground'
                                                         : link.url
                                                           ? 'bg-muted hover:bg-muted/80'
-                                                          : 'bg-muted/50 text-muted-foreground cursor-not-allowed'
+                                                          : 'cursor-not-allowed bg-muted/50 text-muted-foreground'
                                                 }`}
                                             >
                                                 {link.label

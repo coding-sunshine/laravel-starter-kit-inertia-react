@@ -36,7 +36,8 @@ export class IndexedDBManager {
      */
     async init(): Promise<void> {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            // `indexedDB` below is shadowed by the singleton exported from this module.
+            const request = globalThis.indexedDB.open(DB_NAME, DB_VERSION);
 
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {

@@ -3,7 +3,7 @@ import './echo';
 
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CookieConsentBanner } from './components/cookie-consent-banner';
 import { initializeTheme } from './hooks/use-appearance';
@@ -17,7 +17,8 @@ createInertiaApp({
             `./pages/${name}.tsx`,
             import.meta.glob('./pages/**/*.tsx'),
         ).then((module) => {
-            const Page = module.default;
+            const Page = (module as { default: ComponentType })
+                .default;
             return function PageWithCookieBanner(
                 props: Record<string, unknown>,
             ): ReactNode {

@@ -51,7 +51,7 @@ interface LoaderOption {
     code: string;
 }
 
-interface WagonLoadingRecord {
+export interface WagonLoadingRecord {
     id?: number;
     wagon_id: number;
     wagon?: {
@@ -59,9 +59,9 @@ interface WagonLoadingRecord {
         wagon_sequence: number;
         wagon_type?: string | null;
         pcc_weight_mt?: string | null;
-    };
+    } | null;
     loader_id?: number | null;
-    loader?: { loader_name: string; code: string };
+    loader?: { loader_name: string; code: string } | null;
     loader_operator_name?: string | null;
     loaded_quantity_mt: string;
     loading_time?: string | null;

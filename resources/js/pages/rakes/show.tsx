@@ -1,4 +1,9 @@
 import InputError from '@/components/input-error';
+import { RakeTimelineChip } from '@/components/rake/rake-timeline-chip';
+import { EditWagonsDialog } from '@/components/rakes/EditWagonsDialog';
+import { WagonOverviewDialog } from '@/components/rakes/WagonOverviewDialog';
+import { RakeWorkflow } from '@/components/rakes/workflow/RakeWorkflow';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -7,22 +12,23 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import { postFormDataExpectJson } from '@/lib/laravel-json-fetch';
 import { parseLaravel422ResponseBody } from '@/lib/laravel-validation-errors';
 import { parseSafeReturnTo } from '@/lib/safe-return-url';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Edit, Flag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Clock, FileText, Scale, Train, Edit, Trash2, Flag } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { RakeWorkflow } from '@/components/rakes/workflow/RakeWorkflow';
-import { WagonOverviewDialog } from '@/components/rakes/WagonOverviewDialog';
-import { EditWagonsDialog } from '@/components/rakes/EditWagonsDialog';
-import { RakeTimelineChip } from '@/components/rake/rake-timeline-chip';
 
 interface Siding {
     id: number;
@@ -132,8 +138,17 @@ interface AppliedPenaltyRecord {
     amount: string | number;
     quantity?: string | number | null;
     wagon_id?: number | null;
-    penalty_type?: { id: number; code: string; name: string; calculation_type: string };
-    wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
+    penalty_type?: {
+        id: number;
+        code: string;
+        name: string;
+        calculation_type: string;
+    };
+    wagon?: {
+        id: number;
+        wagon_number: string;
+        overload_weight_mt?: string | number | null;
+    };
 }
 
 interface RakeChargeRecord {
@@ -295,7 +310,10 @@ function formatRemainingWithSeconds(totalSeconds: number): string {
     return `${min}m ${sec}s`;
 }
 
-function formatDemurrageTime(elapsedMinutes: number, freeTimeMinutes: number): string {
+function formatDemurrageTime(
+    elapsedMinutes: number,
+    freeTimeMinutes: number,
+): string {
     if (elapsedMinutes <= freeTimeMinutes) return '0h 0m';
     const extraMinutes = elapsedMinutes - freeTimeMinutes;
     const h = Math.floor(extraMinutes / 60);
@@ -303,99 +321,13 @@ function formatDemurrageTime(elapsedMinutes: number, freeTimeMinutes: number): s
     return `${h}h ${min}m`;
 }
 
-function LoadingTimerCard({ load }: { load: RakeLoad }) {
-    const [elapsedSeconds, setElapsedSeconds] = useState(() =>
-        Math.floor((Date.now() - new Date(load.placement_time).getTime()) / 1000)
-    );
-    
-    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-    const remainingSeconds = Math.max(0, (load.free_time_minutes * 60) - elapsedSeconds);
-    const remainingMinutes = Math.ceil(remainingSeconds / 60);
-    const isOverFreeTime = elapsedSeconds > (load.free_time_minutes * 60);
-    const isLast30Minutes = !isOverFreeTime && remainingMinutes <= 30;
-    const demurrageTime = formatDemurrageTime(elapsedMinutes, load.free_time_minutes);
-
-    useEffect(() => {
-        if (load.status === 'completed') return;
-        const interval = setInterval(() => {
-            setElapsedSeconds(
-                Math.floor((Date.now() - new Date(load.placement_time).getTime()) / 1000)
-            );
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [load.placement_time, load.status]);
-
-    return (
-        <Card
-            className={
-                load.status === 'completed'
-                    ? 'border-green-500'
-                    : isOverFreeTime
-                    ? 'border-orange-500'
-                    : isLast30Minutes
-                    ? 'border-red-500'
-                    : 'border-blue-500'
-            }
-        >
-            <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-1">
-                    <Clock className="size-4" />
-                    Loading Timer
-                </CardDescription>
-                <CardTitle
-                    className={
-                        'text-lg ' +
-                        (load.status === 'completed'
-                            ? 'text-green-600 dark:text-green-400'
-                            : isOverFreeTime
-                            ? 'text-orange-600 dark:text-orange-400'
-                            : isLast30Minutes
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-blue-600 dark:text-blue-400')
-                    }
-                >
-                    {load.status === 'completed'
-                        ? 'Completed'
-                        : isOverFreeTime
-                        ? 'Demurrage Time'
-                        : formatRemainingWithSeconds(remainingSeconds) + ' remaining'}
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground space-y-1">
-                <p>Started: {new Date(load.placement_time).toLocaleString()}</p>
-                <p>Free time: {load.free_time_minutes} minutes</p>
-                {load.status === 'completed' && (
-                    <p className="text-green-600">Loading completed successfully</p>
-                )}
-                {load.status !== 'completed' && (
-                    <>
-                        <p className={isOverFreeTime ? 'text-orange-600' : isLast30Minutes ? 'text-red-600' : ''}>
-                            {isOverFreeTime ? 'Free time exceeded' : isLast30Minutes ? '⚠️ Less than 30 minutes!' : `Time remaining: ${formatRemainingWithSeconds(remainingSeconds)}`}
-                        </p>
-                        {isLast30Minutes && (
-                            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
-                                <div className="font-medium text-sm">⚠️ Warning: Less than 30 minutes remaining!</div>
-                                <div className="text-xs mt-1">Complete loading soon to avoid demurrage charges</div>
-                            </div>
-                        )}
-                        {isOverFreeTime && (
-                            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-orange-700">
-                                <div className="font-medium">Demurrage: {demurrageTime}</div>
-                                <div className="text-xs">Extra charges apply</div>
-                            </div>
-                        )}
-                        <p>Total elapsed: {formatRemainingWithSeconds(elapsedSeconds)}</p>
-                    </>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
-
-function getUnfitWagonInfo(wagons: Wagon[]): { count: number; numbers: string } {
-    const unfitWagons = wagons.filter(wagon => wagon.is_unfit);
+function getUnfitWagonInfo(wagons: Wagon[]): {
+    count: number;
+    numbers: string;
+} {
+    const unfitWagons = wagons.filter((wagon) => wagon.is_unfit);
     const count = unfitWagons.length;
-    const numbers = unfitWagons.map(wagon => wagon.wagon_number).join(', ');
+    const numbers = unfitWagons.map((wagon) => wagon.wagon_number).join(', ');
     return { count, numbers };
 }
 
@@ -418,8 +350,11 @@ function WagonLoadingForm({ rake }: { rake: RakeData }) {
     };
 
     // Get unloaded wagons
-    const unloadedWagons = rake.wagons.filter(wagon => 
-        !rake.wagonLoadings?.some(loading => loading.wagon_id === wagon.id)
+    const unloadedWagons = rake.wagons.filter(
+        (wagon) =>
+            !rake.wagonLoadings?.some(
+                (loading) => loading.wagon_id === wagon.id,
+            ),
     );
 
     return (
@@ -437,7 +372,8 @@ function WagonLoadingForm({ rake }: { rake: RakeData }) {
                     <option value="">Select a wagon</option>
                     {unloadedWagons.map((wagon) => (
                         <option key={wagon.id} value={wagon.id}>
-                            {wagon.wagon_number} (Position {wagon.wagon_sequence})
+                            {wagon.wagon_number} (Position{' '}
+                            {wagon.wagon_sequence})
                         </option>
                     ))}
                 </select>
@@ -471,17 +407,15 @@ function WagonLoadingForm({ rake }: { rake: RakeData }) {
                     step="0.01"
                     min="0"
                     value={data.loaded_quantity_mt}
-                    onChange={(e) => setData('loaded_quantity_mt', e.target.value)}
+                    onChange={(e) =>
+                        setData('loaded_quantity_mt', e.target.value)
+                    }
                     required
                 />
                 <InputError message={errors?.loaded_quantity_mt} />
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => reset()}
-                >
+                <Button type="button" variant="outline" onClick={() => reset()}>
                     Cancel
                 </Button>
                 <Button type="submit" disabled={processing}>
@@ -526,13 +460,17 @@ function GuardInspectionForm({ rake }: { rake: RakeData }) {
                 <InputError message={errors?.inspection_time} />
             </div>
             <div>
-                <Label htmlFor="movement_permission_time">Movement Permission Time</Label>
+                <Label htmlFor="movement_permission_time">
+                    Movement Permission Time
+                </Label>
                 <Input
                     id="movement_permission_time"
                     name="movement_permission_time"
                     type="datetime-local"
                     value={data.movement_permission_time}
-                    onChange={(e) => setData('movement_permission_time', e.target.value)}
+                    onChange={(e) =>
+                        setData('movement_permission_time', e.target.value)
+                    }
                     required
                 />
                 <InputError message={errors?.movement_permission_time} />
@@ -561,11 +499,7 @@ function GuardInspectionForm({ rake }: { rake: RakeData }) {
                 <InputError message={errors?.remarks} />
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => reset()}
-                >
+                <Button type="button" variant="outline" onClick={() => reset()}>
                     Cancel
                 </Button>
                 <Button type="submit" disabled={processing}>
@@ -580,7 +514,10 @@ function InMotionWeighmentForm({ rake }: { rake: RakeData }) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const { data, setData, post, processing, reset } = useForm({
         train_speed_kmph: '',
-        wagon_weights: [] as Array<{ wagon_id: number; gross_weight_mt: string }>,
+        wagon_weights: [] as Array<{
+            wagon_id: number;
+            gross_weight_mt: string;
+        }>,
     });
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -594,7 +531,9 @@ function InMotionWeighmentForm({ rake }: { rake: RakeData }) {
     };
 
     const handleWagonWeightChange = (wagonId: number, weight: string) => {
-        const newWeights = data.wagon_weights.filter(w => w.wagon_id !== wagonId);
+        const newWeights = data.wagon_weights.filter(
+            (w) => w.wagon_id !== wagonId,
+        );
         if (weight) {
             newWeights.push({ wagon_id: wagonId, gross_weight_mt: weight });
         }
@@ -604,7 +543,9 @@ function InMotionWeighmentForm({ rake }: { rake: RakeData }) {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <Label htmlFor="train_speed_kmph">Train Speed (km/h) - Must be 5-7 km/h</Label>
+                <Label htmlFor="train_speed_kmph">
+                    Train Speed (km/h) - Must be 5-7 km/h
+                </Label>
                 <Input
                     id="train_speed_kmph"
                     name="train_speed_kmph"
@@ -613,18 +554,20 @@ function InMotionWeighmentForm({ rake }: { rake: RakeData }) {
                     min="5"
                     max="7"
                     value={data.train_speed_kmph}
-                    onChange={(e) => setData('train_speed_kmph', e.target.value)}
+                    onChange={(e) =>
+                        setData('train_speed_kmph', e.target.value)
+                    }
                     required
                 />
                 <InputError message={errors?.train_speed_kmph} />
             </div>
-            
+
             <div>
                 <Label>Wagon Weights (MT)</Label>
-                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                <div className="max-h-60 space-y-2 overflow-y-auto rounded-lg border p-3">
                     {rake.wagons.map((wagon) => (
                         <div key={wagon.id} className="flex items-center gap-3">
-                            <span className="text-sm font-medium w-24">
+                            <span className="w-24 text-sm font-medium">
                                 {wagon.wagon_number}
                             </span>
                             <Input
@@ -632,13 +575,22 @@ function InMotionWeighmentForm({ rake }: { rake: RakeData }) {
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                value={data.wagon_weights.find(w => w.wagon_id === wagon.id)?.gross_weight_mt || ''}
-                                onChange={(e) => handleWagonWeightChange(wagon.id, e.target.value)}
+                                value={
+                                    data.wagon_weights.find(
+                                        (w) => w.wagon_id === wagon.id,
+                                    )?.gross_weight_mt || ''
+                                }
+                                onChange={(e) =>
+                                    handleWagonWeightChange(
+                                        wagon.id,
+                                        e.target.value,
+                                    )
+                                }
                                 className="flex-1"
                                 required
                             />
                             {wagon.pcc_weight_mt && (
-                                <span className="text-xs text-muted-foreground w-20">
+                                <span className="w-20 text-xs text-muted-foreground">
                                     PCC: {wagon.pcc_weight_mt} MT
                                 </span>
                             )}
@@ -647,13 +599,9 @@ function InMotionWeighmentForm({ rake }: { rake: RakeData }) {
                 </div>
                 <InputError message={errors?.wagon_weights} />
             </div>
-            
+
             <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => reset()}
-                >
+                <Button type="button" variant="outline" onClick={() => reset()}>
                     Cancel
                 </Button>
                 <Button type="submit" disabled={processing}>
@@ -674,7 +622,7 @@ function TxrEndForm({ rake }: { rake: RakeData }) {
         e.preventDefault();
         const formData = new FormData();
         formData.append('remarks', data.remarks);
-        
+
         post(`/rakes/${rake.id}/txr/end`, {
             forceFormData: true,
             preserveScroll: true,
@@ -700,11 +648,7 @@ function TxrEndForm({ rake }: { rake: RakeData }) {
                 <InputError message={errors?.remarks} />
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => reset()}
-                >
+                <Button type="button" variant="outline" onClick={() => reset()}>
                     Cancel
                 </Button>
                 <Button type="submit" disabled={processing}>
@@ -718,8 +662,12 @@ function TxrEndForm({ rake }: { rake: RakeData }) {
 function TxrEditForm({ rake }: { rake: RakeData }) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const { data, setData, put, processing, reset } = useForm({
-        inspection_time: rake.txr?.inspection_time ? new Date(rake.txr.inspection_time).toISOString().slice(0, 16) : '',
-        inspection_end_time: rake.txr?.inspection_end_time ? new Date(rake.txr.inspection_end_time).toISOString().slice(0, 16) : '',
+        inspection_time: rake.txr?.inspection_time
+            ? new Date(rake.txr.inspection_time).toISOString().slice(0, 16)
+            : '',
+        inspection_end_time: rake.txr?.inspection_end_time
+            ? new Date(rake.txr.inspection_end_time).toISOString().slice(0, 16)
+            : '',
         status: rake.txr?.status || 'completed',
         remarks: rake.txr?.remarks || '',
     });
@@ -755,7 +703,9 @@ function TxrEditForm({ rake }: { rake: RakeData }) {
                     name="inspection_end_time"
                     type="datetime-local"
                     value={data.inspection_end_time}
-                    onChange={(e) => setData('inspection_end_time', e.target.value)}
+                    onChange={(e) =>
+                        setData('inspection_end_time', e.target.value)
+                    }
                 />
                 <InputError message={errors?.inspection_end_time} />
             </div>
@@ -789,11 +739,7 @@ function TxrEditForm({ rake }: { rake: RakeData }) {
                 <InputError message={errors?.remarks} />
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => reset()}
-                >
+                <Button type="button" variant="outline" onClick={() => reset()}>
                     Cancel
                 </Button>
                 <Button type="submit" disabled={processing}>
@@ -803,7 +749,6 @@ function TxrEditForm({ rake }: { rake: RakeData }) {
         </form>
     );
 }
-
 
 export default function RakesShow({
     rake,
@@ -848,9 +793,9 @@ export default function RakesShow({
     const [editData, setEditData] = useState<RakeEditFormData>(() =>
         buildRakeEditFormData(rake),
     );
-    const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>(
-        {},
-    );
+    const [editFieldErrors, setEditFieldErrors] = useState<
+        Record<string, string>
+    >({});
     const [editFormBanner, setEditFormBanner] = useState<string | null>(null);
     const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -903,7 +848,8 @@ export default function RakesShow({
     }, [selectedWagon]);
 
     const displayRakeNumber = rake.rake_serial_number || rake.rake_number;
-    const showRakeNumberFallback = !rake.rake_serial_number && !!rake.rake_number;
+    const showRakeNumberFallback =
+        !rake.rake_serial_number && !!rake.rake_number;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Rakes', href: '/rakes', interactive: false },
@@ -918,12 +864,13 @@ export default function RakesShow({
     const isCritical =
         demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 0;
     const missingWagonNumberCount = wagons.filter(
-        (wagon) => (wagon.wagon_number ?? '').trim().length <= 4
+        (wagon) => (wagon.wagon_number ?? '').trim().length <= 4,
     ).length;
     const missingWagonTypeCount = wagons.filter(
-        (wagon) => (wagon.wagon_type ?? '').trim() === ''
+        (wagon) => (wagon.wagon_type ?? '').trim() === '',
     ).length;
-    const hasWagonDataGaps = missingWagonNumberCount > 0 || missingWagonTypeCount > 0;
+    const hasWagonDataGaps =
+        missingWagonNumberCount > 0 || missingWagonTypeCount > 0;
 
     const rakeForWorkflow = useMemo(
         () => ({ ...rake, wagons }),
@@ -943,14 +890,20 @@ export default function RakesShow({
         const predicted = (rake.rakeCharges ?? []).find(
             (c) => c.charge_type === 'PENALTY' && !c.is_actual_charges,
         );
-        return (predicted?.appliedPenalties ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+        return (predicted?.appliedPenalties ?? []).reduce(
+            (sum, row) => sum + Number(row.amount ?? 0),
+            0,
+        );
     }, [rake.rakeCharges]);
 
     const actualPenaltyAmount = useMemo((): number => {
         const actual = (rake.rakeCharges ?? []).find(
             (c) => c.charge_type === 'PENALTY' && c.is_actual_charges,
         );
-        return (actual?.rrPenaltySnapshots ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+        return (actual?.rrPenaltySnapshots ?? []).reduce(
+            (sum, row) => sum + Number(row.amount ?? 0),
+            0,
+        );
     }, [rake.rakeCharges]);
 
     const templateDownloadError = page.props.errors?.template;
@@ -998,9 +951,7 @@ export default function RakesShow({
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <WagonOverviewDialog
-                            wagons={wagons}
-                        />
+                        <WagonOverviewDialog wagons={wagons} />
                         <EditWagonsDialog
                             wagons={wagons}
                             rakeId={rake.id}
@@ -1008,9 +959,26 @@ export default function RakesShow({
                                 setWagons((prev) =>
                                     prev.map((wagon) =>
                                         wagon.id === updatedWagon.id
-                                            ? { ...wagon, ...updatedWagon }
-                                            : wagon
-                                    )
+                                            ? {
+                                                  ...wagon,
+                                                  ...updatedWagon,
+                                                  tare_weight_mt:
+                                                      updatedWagon.tare_weight_mt !=
+                                                      null
+                                                          ? String(
+                                                                updatedWagon.tare_weight_mt,
+                                                            )
+                                                          : null,
+                                                  pcc_weight_mt:
+                                                      updatedWagon.pcc_weight_mt !=
+                                                      null
+                                                          ? String(
+                                                                updatedWagon.pcc_weight_mt,
+                                                            )
+                                                          : null,
+                                              }
+                                            : wagon,
+                                    ),
                                 )
                             }
                         />
@@ -1037,11 +1005,15 @@ export default function RakesShow({
                                         setEditSubmitting(true);
                                         try {
                                             const fd = new FormData();
-                                            appendRakeEditFormData(editData, fd);
+                                            appendRakeEditFormData(
+                                                editData,
+                                                fd,
+                                            );
                                             fd.append('_method', 'PUT');
-                                            const result = await postFormDataExpectJson<{
-                                                redirect?: string;
-                                            }>(`/rakes/${rake.id}`, fd);
+                                            const result =
+                                                await postFormDataExpectJson<{
+                                                    redirect?: string;
+                                                }>(`/rakes/${rake.id}`, fd);
                                             if (!result.ok) {
                                                 if (result.status === 422) {
                                                     const { fields, banner } =
@@ -1072,7 +1044,7 @@ export default function RakesShow({
                                             }
 
                                             setEditRakeOpen(false);
-                                            router.reload({ preserveScroll: true });
+                                            router.reload();
                                         } finally {
                                             setEditSubmitting(false);
                                         }
@@ -1082,13 +1054,15 @@ export default function RakesShow({
                                         <div
                                             id="rake-edit-form-server-errors"
                                             role="alert"
-                                            className="bg-destructive/10 text-destructive sm:col-span-2 rounded-md border border-destructive/30 px-3 py-2 text-sm whitespace-pre-wrap"
+                                            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm whitespace-pre-wrap text-destructive sm:col-span-2"
                                         >
                                             {editFormBanner}
                                         </div>
                                     ) : null}
                                     <div>
-                                        <Label htmlFor="rake_number">Rake sequence</Label>
+                                        <Label htmlFor="rake_number">
+                                            Rake sequence
+                                        </Label>
                                         <Input
                                             id="rake_number"
                                             value={editData.rake_number}
@@ -1099,10 +1073,14 @@ export default function RakesShow({
                                                 }))
                                             }
                                         />
-                                        <InputError message={editErr('rake_number')} />
+                                        <InputError
+                                            message={editErr('rake_number')}
+                                        />
                                     </div>
                                     <div>
-                                        <Label htmlFor="rake_serial_number">Rake number *</Label>
+                                        <Label htmlFor="rake_serial_number">
+                                            Rake number *
+                                        </Label>
                                         <Input
                                             id="rake_serial_number"
                                             name="rake_serial_number"
@@ -1115,10 +1093,16 @@ export default function RakesShow({
                                                 }))
                                             }
                                         />
-                                        <InputError message={editErr('rake_serial_number')} />
+                                        <InputError
+                                            message={editErr(
+                                                'rake_serial_number',
+                                            )}
+                                        />
                                     </div>
                                     <div>
-                                        <Label htmlFor="rake_type">Rake Type</Label>
+                                        <Label htmlFor="rake_type">
+                                            Rake Type
+                                        </Label>
                                         <Input
                                             id="rake_type"
                                             value={editData.rake_type}
@@ -1129,10 +1113,14 @@ export default function RakesShow({
                                                 }))
                                             }
                                         />
-                                        <InputError message={editErr('rake_type')} />
+                                        <InputError
+                                            message={editErr('rake_type')}
+                                        />
                                     </div>
                                     <div>
-                                        <Label htmlFor="dispatch_time">Dispatch Time</Label>
+                                        <Label htmlFor="dispatch_time">
+                                            Dispatch Time
+                                        </Label>
                                         <Input
                                             id="dispatch_time"
                                             type="datetime-local"
@@ -1140,11 +1128,14 @@ export default function RakesShow({
                                             onChange={(e) =>
                                                 setEditData((d) => ({
                                                     ...d,
-                                                    dispatch_time: e.target.value,
+                                                    dispatch_time:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
-                                        <InputError message={editErr('dispatch_time')} />
+                                        <InputError
+                                            message={editErr('dispatch_time')}
+                                        />
                                     </div>
                                     <div>
                                         <Label htmlFor="status">Status</Label>
@@ -1159,21 +1150,45 @@ export default function RakesShow({
                                             }
                                             className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         >
-                                            <option value="pending">Pending</option>
-                                            <option value="txr_in_progress">TXR In Progress</option>
-                                            <option value="txr_completed">TXR Completed</option>
-                                            <option value="loading">Loading</option>
-                                            <option value="loading_completed">Loading Completed</option>
-                                            <option value="guard_approved">Guard Approved</option>
-                                            <option value="guard_rejected">Guard Rejected</option>
-                                            <option value="weighment_completed">Weighment Completed</option>
-                                            <option value="rr_generated">RR Generated</option>
-                                            <option value="closed">Closed</option>
+                                            <option value="pending">
+                                                Pending
+                                            </option>
+                                            <option value="txr_in_progress">
+                                                TXR In Progress
+                                            </option>
+                                            <option value="txr_completed">
+                                                TXR Completed
+                                            </option>
+                                            <option value="loading">
+                                                Loading
+                                            </option>
+                                            <option value="loading_completed">
+                                                Loading Completed
+                                            </option>
+                                            <option value="guard_approved">
+                                                Guard Approved
+                                            </option>
+                                            <option value="guard_rejected">
+                                                Guard Rejected
+                                            </option>
+                                            <option value="weighment_completed">
+                                                Weighment Completed
+                                            </option>
+                                            <option value="rr_generated">
+                                                RR Generated
+                                            </option>
+                                            <option value="closed">
+                                                Closed
+                                            </option>
                                         </select>
-                                        <InputError message={editErr('status')} />
+                                        <InputError
+                                            message={editErr('status')}
+                                        />
                                     </div>
                                     <div>
-                                        <Label htmlFor="rr_expected_date">RR Expected Date</Label>
+                                        <Label htmlFor="rr_expected_date">
+                                            RR Expected Date
+                                        </Label>
                                         <Input
                                             id="rr_expected_date"
                                             type="date"
@@ -1181,14 +1196,21 @@ export default function RakesShow({
                                             onChange={(e) =>
                                                 setEditData((d) => ({
                                                     ...d,
-                                                    rr_expected_date: e.target.value,
+                                                    rr_expected_date:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
-                                        <InputError message={editErr('rr_expected_date')} />
+                                        <InputError
+                                            message={editErr(
+                                                'rr_expected_date',
+                                            )}
+                                        />
                                     </div>
                                     <div>
-                                        <Label htmlFor="placement_time">Placement Date</Label>
+                                        <Label htmlFor="placement_time">
+                                            Placement Date
+                                        </Label>
                                         <Input
                                             id="placement_time"
                                             type="date"
@@ -1196,14 +1218,19 @@ export default function RakesShow({
                                             onChange={(e) =>
                                                 setEditData((d) => ({
                                                     ...d,
-                                                    placement_time: e.target.value,
+                                                    placement_time:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
-                                        <InputError message={editErr('placement_time')} />
+                                        <InputError
+                                            message={editErr('placement_time')}
+                                        />
                                     </div>
                                     <div>
-                                        <Label htmlFor="loading_date">Loading date</Label>
+                                        <Label htmlFor="loading_date">
+                                            Loading date
+                                        </Label>
                                         <Input
                                             id="loading_date"
                                             name="loading_date"
@@ -1212,11 +1239,14 @@ export default function RakesShow({
                                             onChange={(e) =>
                                                 setEditData((d) => ({
                                                     ...d,
-                                                    loading_date: e.target.value,
+                                                    loading_date:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
-                                        <InputError message={editErr('loading_date')} />
+                                        <InputError
+                                            message={editErr('loading_date')}
+                                        />
                                     </div>
                                     <div className="sm:col-span-2">
                                         <Label htmlFor="destination_code">
@@ -1229,19 +1259,27 @@ export default function RakesShow({
                                             onChange={(e) =>
                                                 setEditData((d) => ({
                                                     ...d,
-                                                    destination_code: e.target.value,
+                                                    destination_code:
+                                                        e.target.value,
                                                 }))
                                             }
                                             className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         >
                                             <option value="">— None —</option>
                                             {powerPlants.map((p) => (
-                                                <option key={p.code} value={p.code}>
+                                                <option
+                                                    key={p.code}
+                                                    value={p.code}
+                                                >
                                                     {p.name} ({p.code})
                                                 </option>
                                             ))}
                                         </select>
-                                        <InputError message={editErr('destination_code')} />
+                                        <InputError
+                                            message={editErr(
+                                                'destination_code',
+                                            )}
+                                        />
                                     </div>
                                     <div className="sm:col-span-2">
                                         <Label htmlFor="remarks">Remarks</Label>
@@ -1257,19 +1295,28 @@ export default function RakesShow({
                                             rows={3}
                                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         />
-                                        <InputError message={editErr('remarks')} />
+                                        <InputError
+                                            message={editErr('remarks')}
+                                        />
                                     </div>
-                                    <div className="sm:col-span-2 flex justify-end gap-2">
+                                    <div className="flex justify-end gap-2 sm:col-span-2">
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            onClick={() => handleEditRakeOpenChange(false)}
+                                            onClick={() =>
+                                                handleEditRakeOpenChange(false)
+                                            }
                                             disabled={editSubmitting}
                                         >
                                             Cancel
                                         </Button>
-                                        <Button type="submit" disabled={editSubmitting}>
-                                            {editSubmitting ? 'Saving...' : 'Save'}
+                                        <Button
+                                            type="submit"
+                                            disabled={editSubmitting}
+                                        >
+                                            {editSubmitting
+                                                ? 'Saving...'
+                                                : 'Save'}
                                         </Button>
                                     </div>
                                 </form>
@@ -1322,7 +1369,9 @@ export default function RakesShow({
                                 Destination
                             </CardDescription>
                             <CardTitle className="text-sm font-semibold">
-                                {rake.destination ?? rake.destination_code ?? '—'}
+                                {rake.destination ??
+                                    rake.destination_code ??
+                                    '—'}
                             </CardTitle>
                         </CardHeader>
                     </Card>
@@ -1332,7 +1381,9 @@ export default function RakesShow({
                                 Coal (MT)
                             </CardDescription>
                             <CardTitle className="text-sm font-semibold tabular-nums">
-                                {latestWeighmentTotalMt !== null ? latestWeighmentTotalMt.toFixed(2) : '—'}
+                                {latestWeighmentTotalMt !== null
+                                    ? latestWeighmentTotalMt.toFixed(2)
+                                    : '—'}
                             </CardTitle>
                         </CardHeader>
                     </Card>
@@ -1373,33 +1424,67 @@ export default function RakesShow({
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b text-left text-xs font-medium text-muted-foreground">
-                                            <th scope="col" className="px-3 py-2 font-medium">Head</th>
-                                            <th scope="col" className="px-3 py-2 text-right font-medium">Predicted</th>
-                                            <th scope="col" className="px-3 py-2 text-right font-medium">Billed</th>
-                                            <th scope="col" className="px-3 py-2 text-right font-medium">Variance</th>
-                                            <th scope="col" className="px-3 py-2 text-center font-medium">Dispute</th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 font-medium"
+                                            >
+                                                Head
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 text-right font-medium"
+                                            >
+                                                Predicted
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 text-right font-medium"
+                                            >
+                                                Billed
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 text-right font-medium"
+                                            >
+                                                Variance
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 text-center font-medium"
+                                            >
+                                                Dispute
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {reconciliations.map((r) => (
                                             <tr
                                                 key={r.penalty_code}
-                                                className="border-b last:border-b-0 transition-colors hover:bg-muted/40"
+                                                className="border-b transition-colors last:border-b-0 hover:bg-muted/40"
                                             >
                                                 <td className="px-3 py-2">
-                                                    <Badge variant="secondary" className="font-mono text-[11px]">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="font-mono text-[11px]"
+                                                    >
                                                         {r.penalty_code}
                                                     </Badge>
                                                 </td>
                                                 <td className="px-3 py-2 text-right tabular-nums">
-                                                    ₹{r.predicted_amount.toLocaleString('en-IN')}
+                                                    ₹
+                                                    {r.predicted_amount.toLocaleString(
+                                                        'en-IN',
+                                                    )}
                                                 </td>
                                                 <td className="px-3 py-2 text-right tabular-nums">
-                                                    ₹{r.billed_amount.toLocaleString('en-IN')}
+                                                    ₹
+                                                    {r.billed_amount.toLocaleString(
+                                                        'en-IN',
+                                                    )}
                                                 </td>
                                                 <td
                                                     className={
-                                                        'px-3 py-2 text-right tabular-nums font-medium ' +
+                                                        'px-3 py-2 text-right font-medium tabular-nums ' +
                                                         (r.variance > 0
                                                             ? 'text-destructive'
                                                             : r.variance < 0
@@ -1407,8 +1492,13 @@ export default function RakesShow({
                                                               : 'text-muted-foreground')
                                                     }
                                                 >
-                                                    {r.variance >= 0 ? '+' : ''}₹{r.variance.toLocaleString('en-IN')}
-                                                    {r.variance_pct !== null && (
+                                                    {r.variance >= 0 ? '+' : ''}
+                                                    ₹
+                                                    {r.variance.toLocaleString(
+                                                        'en-IN',
+                                                    )}
+                                                    {r.variance_pct !==
+                                                        null && (
                                                         <span className="ml-1 text-[11px] opacity-70">
                                                             ({r.variance_pct}%)
                                                         </span>
@@ -1421,11 +1511,21 @@ export default function RakesShow({
                                                             title="Flagged as dispute candidate"
                                                             aria-label="Dispute candidate"
                                                         >
-                                                            <Flag className="h-3.5 w-3.5" aria-hidden="true" />
-                                                            <span className="text-xs font-medium">Yes</span>
+                                                            <Flag
+                                                                className="h-3.5 w-3.5"
+                                                                aria-hidden="true"
+                                                            />
+                                                            <span className="text-xs font-medium">
+                                                                Yes
+                                                            </span>
                                                         </span>
                                                     ) : (
-                                                        <span className="text-muted-foreground" aria-label="Not a dispute candidate">—</span>
+                                                        <span
+                                                            className="text-muted-foreground"
+                                                            aria-label="Not a dispute candidate"
+                                                        >
+                                                            —
+                                                        </span>
                                                     )}
                                                 </td>
                                             </tr>

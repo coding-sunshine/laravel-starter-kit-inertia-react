@@ -13,8 +13,10 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
 import { analytics } from '@/routes/penalties';
 import { type BreadcrumbItem } from '@/types';
+import type { PageProps } from '@inertiajs/core';
 import { Deferred, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
@@ -61,6 +63,8 @@ interface NameValueCount {
     name: string;
     value: number;
     count: number;
+    /** Chart wrappers accept `Record<string, unknown>[]`. */
+    [key: string]: unknown;
 }
 
 interface SidingBreakdown {
@@ -249,7 +253,7 @@ function typeLineColor(type: string): string {
 }
 
 function AiInsightsCard() {
-    const { aiInsights } = usePage<Props>().props;
+    const { aiInsights } = usePage<Props & PageProps>().props;
 
     if (!aiInsights || aiInsights.length === 0) {
         return (
@@ -814,10 +818,12 @@ export default function PenaltyAnalytics({
                                                 borderRadius: 8,
                                                 fontSize: 12,
                                             }}
-                                            formatter={(
-                                                value: number,
-                                                name: string,
-                                            ) => [formatCurrency(value), name]}
+                                            formatter={numericTooltipFormatter(
+                                                (value, name) => [
+                                                    formatCurrency(value),
+                                                    name,
+                                                ],
+                                            )}
                                         />
                                         <Legend
                                             wrapperStyle={{ fontSize: 12 }}

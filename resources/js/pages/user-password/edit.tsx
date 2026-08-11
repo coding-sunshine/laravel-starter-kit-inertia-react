@@ -111,7 +111,8 @@ export default function Password() {
     const passwordInputRef = useRef<HTMLInputElement>(null);
     const currentPasswordInputRef = useRef<HTMLInputElement>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const statusMessage = flash?.status ?? successMessage;
+    const statusMessage =
+        typeof flash?.status === 'string' ? flash.status : successMessage;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

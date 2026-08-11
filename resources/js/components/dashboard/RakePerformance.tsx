@@ -7,7 +7,10 @@ interface Props {
     allSidingIds: number[];
     filteredSidings: SidingOption[];
     onRakePenaltyScopeChange: (scope: 'all' | 'with_penalties') => void;
-    navigateToLoaderTrends: (loaderId: number, loaderName: string) => void;
+    navigateToLoaderTrends: (
+        loaderId: number,
+        rakeUnderloadThresholdPercent: number,
+    ) => void;
 }
 
 export function RakePerformance({

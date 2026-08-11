@@ -1,3 +1,4 @@
+import type { PageProps } from '@inertiajs/core';
 import { usePage } from '@inertiajs/react';
 
 interface HoneypotData {
@@ -7,7 +8,7 @@ interface HoneypotData {
     encryptedValidFrom: string;
 }
 
-interface SharedProps {
+interface SharedProps extends PageProps {
     honeypot: HoneypotData | null;
 }
 
@@ -17,7 +18,7 @@ interface SharedProps {
  * Only renders when honeypot is enabled and data is available from shared props.
  */
 function HoneypotFields() {
-    const { honeypot } = usePage().props as SharedProps;
+    const { honeypot } = usePage<SharedProps>().props;
 
     if (!honeypot?.enabled) {
         return null;

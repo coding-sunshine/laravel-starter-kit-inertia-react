@@ -39,6 +39,9 @@ export default function Edit({ distance, powerPlants, sidings }: Props) {
     distance_km: String(distance.distance_km),
   });
 
+  // `combination` is a form-level uniqueness error the controller adds; it is not a field key.
+  const combinationError = (errors as Record<string, string | undefined>).combination;
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     put(`/master-data/distance-matrix/${distance.id}`);
@@ -60,8 +63,8 @@ export default function Edit({ distance, powerPlants, sidings }: Props) {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {errors.combination && (
-                <p className="text-sm text-red-600">{errors.combination}</p>
+              {combinationError && (
+                <p className="text-sm text-red-600">{combinationError}</p>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
 import {
     DashboardPenaltyBySidingChart,
     PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS,
@@ -105,9 +106,7 @@ function PenaltiesAndChargesChart({
                         width={220}
                     />
                     <Tooltip
-                        formatter={(v: number | string | undefined) =>
-                            formatCurrency(Number(v ?? 0))
-                        }
+                        formatter={numericTooltipFormatter((v) => formatCurrency(v))}
                     />
                     <Bar
                         dataKey="value"

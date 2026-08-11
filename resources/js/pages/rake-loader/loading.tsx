@@ -3,7 +3,10 @@ import { ManagerClearanceModal } from '@/components/loading/ManagerClearanceModa
 import { PccStatusPills } from '@/components/loading/PccStatusPills';
 import { PenaltyIntelligencePanel } from '@/components/loading/PenaltyIntelligencePanel';
 import { LoadingTimesForm } from '@/components/rakes/workflow/LoadingTimesForm';
-import { WagonLoadingWorkflow } from '@/components/rakes/workflow/WagonLoadingWorkflow';
+import {
+    WagonLoadingWorkflow,
+    type WagonLoadingRecord,
+} from '@/components/rakes/workflow/WagonLoadingWorkflow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,23 +27,6 @@ type Wagon = {
     wagon_type?: string | null;
     pcc_weight_mt?: string | null;
     is_unfit?: boolean;
-};
-
-type WagonLoadingRecord = {
-    id?: number;
-    wagon_id: number;
-    wagon?: {
-        wagon_number: string;
-        wagon_sequence: number;
-        wagon_type?: string | null;
-        pcc_weight_mt?: string | null;
-    } | null;
-    loader_id?: number | null;
-    loader?: { loader_name: string; code: string } | null;
-    loader_operator_name?: string | null;
-    loaded_quantity_mt: string;
-    loading_time?: string | null;
-    remarks?: string | null;
 };
 
 type RakeHydrated = {

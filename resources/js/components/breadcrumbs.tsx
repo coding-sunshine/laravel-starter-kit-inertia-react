@@ -23,10 +23,7 @@ export function Breadcrumbs({
                         {breadcrumbs.map((item, index) => {
                             const isLast = index === breadcrumbs.length - 1;
                             const isPlain = item.interactive === false;
-                            const keyHref =
-                                typeof item.href === 'string'
-                                    ? item.href
-                                    : item.href.url;
+                            const keyHref = item.href;
                             return (
                                 <Fragment key={`${index}-${keyHref}`}>
                                     <BreadcrumbItem>

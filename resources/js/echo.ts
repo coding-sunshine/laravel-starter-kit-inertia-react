@@ -13,7 +13,7 @@ import Pusher from 'pusher-js';
 
 declare global {
     interface Window {
-        Echo?: Echo;
+        Echo?: Echo<"reverb">;
         Pusher?: typeof Pusher;
     }
 }

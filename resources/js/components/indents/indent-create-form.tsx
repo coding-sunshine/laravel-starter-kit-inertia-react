@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import type { InertiaFormProps } from '@inertiajs/react';
 import { router, useForm } from '@inertiajs/react';
 import { FileText, Plus } from 'lucide-react';
+import type { ReactElement } from 'react';
 import { useLayoutEffect, useMemo, useState } from 'react';
 
 export interface SidingOption {
@@ -174,7 +175,9 @@ function fieldsFromPrefill(
         expected_loading_date: prefill.expected_loading_date ?? '',
         demanded_stock: prefill.demanded_stock ?? '',
         total_units:
-            prefill.total_units !== undefined ? String(prefill.total_units) : '',
+            prefill.total_units !== undefined
+                ? String(prefill.total_units)
+                : '',
         target_quantity_mt:
             prefill.target_quantity_mt !== undefined
                 ? String(prefill.target_quantity_mt)
@@ -190,8 +193,8 @@ function fieldsFromPrefill(
 }
 
 const selectClassName = cn(
-    'border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none',
-    'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+    'h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none',
+    'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
     'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
 );
 
@@ -229,7 +232,7 @@ function IndentCreateFormFields({
                 <div
                     id="indent-create-form-server-errors"
                     role="alert"
-                    className="bg-destructive/10 text-destructive mb-4 rounded-md border border-destructive/30 px-3 py-2 text-sm whitespace-pre-wrap"
+                    className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm whitespace-pre-wrap text-destructive"
                 >
                     {serverErrorBanner}
                 </div>
@@ -238,9 +241,10 @@ function IndentCreateFormFields({
                 <CardHeader>
                     <CardTitle className="text-base">Rake details</CardTitle>
                     <CardDescription>
-                        Siding, rake sequence, optional rake number, stock and quantities,
-                        destination, and e-demand date. Required fields are marked with *.
-                        A linked rake is created right after saving.
+                        Siding, rake sequence, optional rake number, stock and
+                        quantities, destination, and e-demand date. Required
+                        fields are marked with *. A linked rake is created right
+                        after saving.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -282,7 +286,7 @@ function IndentCreateFormFields({
                     <div className="grid gap-2">
                         <Label htmlFor="rake_serial_number">
                             Rake number{' '}
-                            <span className="text-muted-foreground font-normal">
+                            <span className="font-normal text-muted-foreground">
                                 (optional)
                             </span>
                         </Label>
@@ -439,8 +443,12 @@ function IndentCreateFormFields({
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">Railway references</CardTitle>
-                    <CardDescription>e-Demand reference ID and FNR</CardDescription>
+                    <CardTitle className="text-base">
+                        Railway references
+                    </CardTitle>
+                    <CardDescription>
+                        e-Demand reference ID and FNR
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
@@ -483,7 +491,9 @@ function IndentCreateFormFields({
                             : 'indents-create-submit'
                     }
                 >
-                    {form.processing || isSubmitting ? 'Saving…' : 'Create e-demand'}
+                    {form.processing || isSubmitting
+                        ? 'Saving…'
+                        : 'Create e-demand'}
                 </Button>
                 <Button
                     type="button"
@@ -531,7 +541,7 @@ function IndentCreateFormWithFetch({
     variant,
     onCancel,
     onSubmitSuccess,
-}: IndentCreateFormProps): JSX.Element {
+}: IndentCreateFormProps): ReactElement {
     const form = useForm<FormFields>(() =>
         fieldsFromPrefill(prefill, stagedPdfFile),
     );
@@ -542,8 +552,8 @@ function IndentCreateFormWithFetch({
     const [formErrorBanner, setFormErrorBanner] = useState<string | null>(null);
 
     useLayoutEffect(() => {
-        const hasFieldErr = INDENT_FORM_SCROLL_ORDER.some(
-            (k) => Boolean(fetchFieldErrors[k]),
+        const hasFieldErr = INDENT_FORM_SCROLL_ORDER.some((k) =>
+            Boolean(fetchFieldErrors[k]),
         );
         if (!hasFieldErr && !formErrorBanner) {
             return;
@@ -552,12 +562,10 @@ function IndentCreateFormWithFetch({
         requestAnimationFrame(() => {
             for (const key of INDENT_FORM_SCROLL_ORDER) {
                 if (fetchFieldErrors[key]) {
-                    document
-                        .getElementById(String(key))
-                        ?.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'nearest',
-                        });
+                    document.getElementById(String(key))?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                    });
 
                     return;
                 }
@@ -638,8 +646,8 @@ function IndentCreateFormWithFetch({
                         Create e-demand
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Enter e-demand details. A linked rake will be created automatically
-                        after saving.
+                        Enter e-demand details. A linked rake will be created
+                        automatically after saving.
                     </p>
                 </div>
                 <Button

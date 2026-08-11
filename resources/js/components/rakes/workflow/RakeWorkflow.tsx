@@ -1,25 +1,37 @@
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { TxrWorkflow } from './TxrWorkflow';
-import { WagonLoadingWorkflow } from './WagonLoadingWorkflow';
-import { GuardInspectionWorkflow } from './GuardInspectionWorkflow';
-import { WeighmentWorkflow } from './WeighmentWorkflow';
-import { PowerPlantReceiptWorkflow } from './PowerPlantReceiptWorkflow';
-import { ComparisonWorkflow } from './ComparisonWorkflow';
-import { RrDocumentWorkflow } from './RrDocumentWorkflow';
-import { PenaltiesWorkflow } from './PenaltiesWorkflow';
-import { LoadingTimesForm } from './LoadingTimesForm';
-import { useState, useEffect } from 'react';
-import { Check } from 'lucide-react';
-import { useForm, usePage } from '@inertiajs/react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import InputError from '@/components/input-error';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { usePage } from '@inertiajs/react';
+import { Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ComparisonWorkflow } from './ComparisonWorkflow';
+import { GuardInspectionWorkflow } from './GuardInspectionWorkflow';
+import { LoadingTimesForm } from './LoadingTimesForm';
+import { PenaltiesWorkflow } from './PenaltiesWorkflow';
+import { PowerPlantReceiptWorkflow } from './PowerPlantReceiptWorkflow';
+import { RrDocumentWorkflow } from './RrDocumentWorkflow';
+import { TxrWorkflow } from './TxrWorkflow';
+import {
+    WagonLoadingWorkflow,
+    type WagonLoadingRecord,
+} from './WagonLoadingWorkflow';
+import { WeighmentWorkflow } from './WeighmentWorkflow';
 
 interface RakeData {
     id: number;
+    rake_number: string;
     state: string;
     loading_start_time?: string | null;
     loading_end_time?: string | null;
@@ -43,7 +55,11 @@ interface RakeData {
         wagon_unfit_logs?: Array<{
             id?: number;
             wagon_id: number;
-            wagon?: { wagon_number: string; wagon_sequence: number; wagon_type?: string | null };
+            wagon?: {
+                wagon_number: string;
+                wagon_sequence: number;
+                wagon_type?: string | null;
+            };
             reason?: string | null;
             marking_method?: string | null;
             marked_at?: string | null;
@@ -51,33 +67,18 @@ interface RakeData {
         wagonUnfitLogs?: Array<{
             id?: number;
             wagon_id: number;
-            wagon?: { wagon_number: string; wagon_sequence: number; wagon_type?: string | null };
+            wagon?: {
+                wagon_number: string;
+                wagon_sequence: number;
+                wagon_type?: string | null;
+            };
             reason?: string | null;
             reason_unfit?: string | null;
             marking_method?: string | null;
             marked_at?: string | null;
         }>;
     } | null;
-    wagonLoadings?: Array<{
-        id: number;
-        wagon_id: number;
-        loaded_quantity_mt: string;
-        loader_operator_name?: string | null;
-        loading_time?: string | null;
-        remarks?: string | null;
-        wagon: {
-            id: number;
-            wagon_number: string;
-            wagon_sequence: number;
-            wagon_type?: string | null;
-            pcc_weight_mt?: string | null;
-        };
-        loader?: {
-            id: number;
-            loader_name: string;
-            code: string;
-        };
-    }>;
+    wagonLoadings?: WagonLoadingRecord[];
     loaderOperatorOptions?: string[];
     guardInspections?: Array<{
         id: number;
@@ -89,21 +90,21 @@ interface RakeData {
     weighments?: Array<{
         id: number;
         weighment_time: string;
-        total_weight_mt: string;
+        total_weight_mt: string | number | null;
         status: string | null;
-        train_speed_kmph: number;
+        train_speed_kmph: string | number | null;
         attempt_no: number;
         isPendingDocument?: boolean;
         wagonWeights?: Array<{
             wagon_id: number;
-            gross_weight_mt: number;
-            net_weight_mt: number;
+            gross_weight_mt: string | number | null;
+            net_weight_mt: string | number | null;
             wagon: {
                 id: number;
                 wagon_number: string;
                 wagon_sequence: number;
                 pcc_weight_mt?: string | number | null;
-            };
+            } | null;
         }>;
     }>;
     is_diverted?: boolean;
@@ -143,8 +144,17 @@ interface RakeData {
         amount: string | number;
         quantity?: string | number | null;
         wagon_id?: number | null;
-        penalty_type?: { id: number; code: string; name: string; calculation_type: string };
-        wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
+        penalty_type?: {
+            id: number;
+            code: string;
+            name: string;
+            calculation_type: string;
+        };
+        wagon?: {
+            id: number;
+            wagon_number: string;
+            overload_weight_mt?: string | number | null;
+        };
     }>;
     siding?: {
         name?: string;
@@ -209,13 +219,16 @@ function mergeTxrAfterHeaderSave(
 ): NonNullable<RakeData['txr']> {
     const prevLogs = prev?.wagonUnfitLogs;
     const incomingLogs = incoming.wagonUnfitLogs ?? incoming.wagon_unfit_logs;
-    const wagonUnfitLogs = Array.isArray(incomingLogs) ? incomingLogs : (prevLogs ?? []);
+    const wagonUnfitLogs = Array.isArray(incomingLogs)
+        ? incomingLogs
+        : (prevLogs ?? []);
 
     return {
         ...(prev ?? {}),
         id: Number(incoming.id),
         inspection_time: String(incoming.inspection_time ?? ''),
-        inspection_end_time: (incoming.inspection_end_time as string | null | undefined) ?? null,
+        inspection_end_time:
+            (incoming.inspection_end_time as string | null | undefined) ?? null,
         status: String(incoming.status ?? 'in_progress'),
         remarks: (incoming.remarks as string | null) ?? null,
         handwritten_note_url:
@@ -234,7 +247,9 @@ export function RakeWorkflow({
     const { auth } = usePage().props as { auth?: { can_bypass?: boolean } };
     const isSuperAdmin = auth?.can_bypass === true;
     const [rakeData, setRakeData] = useState(rake);
-    const [preRrEstimate, setPreRrEstimate] = useState<PreRrEstimate | null>(null);
+    const [preRrEstimate, setPreRrEstimate] = useState<PreRrEstimate | null>(
+        null,
+    );
     const [preRrLoading, setPreRrLoading] = useState(false);
 
     useEffect(() => {
@@ -268,17 +283,18 @@ export function RakeWorkflow({
 
     // Workflow step completion checks — TXR checklist reflects saved start/end times (not only status=completed)
     const isTxrTimesRecorded =
-        Boolean(rakeData.txr?.inspection_time) && Boolean(rakeData.txr?.inspection_end_time);
+        Boolean(rakeData.txr?.inspection_time) &&
+        Boolean(rakeData.txr?.inspection_end_time);
     const wagonLoadings = rakeData.wagonLoadings ?? [];
     const positivelyLoadedWagonIds = new Set(
         wagonLoadings
-            .filter(l => Number(l.loaded_quantity_mt) > 0)
-            .map(l => l.wagon_id),
+            .filter((l) => Number(l.loaded_quantity_mt) > 0)
+            .map((l) => l.wagon_id),
     );
-    const fitWagons = rakeData.wagons.filter(w => !w.is_unfit);
+    const fitWagons = rakeData.wagons.filter((w) => !w.is_unfit);
     const isWagonLoadingCompleted =
         fitWagons.length > 0 &&
-        fitWagons.every(w => positivelyLoadedWagonIds.has(w.id));
+        fitWagons.every((w) => positivelyLoadedWagonIds.has(w.id));
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
     const isWeighmentCompleted = (rakeData.weighments?.length ?? 0) > 0;
     const isComparisonStepCompleted =
@@ -293,7 +309,9 @@ export function RakeWorkflow({
         if (legs.length === 0) {
             return docs.some((d) => d.diverrt_destination_id == null);
         }
-        return legs.every((leg) => docs.some((d) => d.diverrt_destination_id === leg.id));
+        return legs.every((leg) =>
+            docs.some((d) => d.diverrt_destination_id === leg.id),
+        );
     })();
 
     const progressSteps: Array<{
@@ -317,25 +335,29 @@ export function RakeWorkflow({
         {
             id: 'weighment',
             label: 'Inmotion weighment',
-            description: 'A rake weighment record exists (manual net or imported slip).',
+            description:
+                'A rake weighment record exists (manual net or imported slip).',
             status: isWeighmentCompleted ? 'completed' : 'pending',
         },
         {
             id: 'loading',
             label: 'Loader weighment',
-            description: 'All fit wagons have loader quantity recorded (unfit rows are optional).',
+            description:
+                'All fit wagons have loader quantity recorded (unfit rows are optional).',
             status: isWagonLoadingCompleted ? 'completed' : 'pending',
         },
         {
             id: 'comparison',
             label: 'Loader vs weighment',
-            description: 'Inmotion weighment and loader quantities are both recorded for comparison.',
+            description:
+                'Inmotion weighment and loader quantities are both recorded for comparison.',
             status: isComparisonStepCompleted ? 'completed' : 'pending',
         },
         {
             id: 'txr',
             label: 'TXR',
-            description: 'Train Examination Report: start and end inspection times saved.',
+            description:
+                'Train Examination Report: start and end inspection times saved.',
             status: isTxrTimesRecorded ? 'completed' : 'pending',
         },
         {
@@ -366,7 +388,7 @@ export function RakeWorkflow({
     return (
         <div className="space-y-4">
             {/* Inline high-level progress checklist */}
-            <div className="rounded-lg border bg-card p-4 space-y-3">
+            <div className="space-y-3 rounded-lg border bg-card p-4">
                 <p className="text-xs font-medium text-muted-foreground">
                     Overall progress
                 </p>
@@ -375,7 +397,10 @@ export function RakeWorkflow({
                         const isCompleted = step.status === 'completed';
 
                         return (
-                            <li key={step.id} className="flex items-start gap-3">
+                            <li
+                                key={step.id}
+                                className="flex items-start gap-3"
+                            >
                                 <div
                                     className={
                                         'mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-[0.65rem] ' +
@@ -416,17 +441,26 @@ export function RakeWorkflow({
                 <AccordionItem value="weighment">
                     <AccordionTrigger disabled={disableWeighment}>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">1. Inmotion weighment</span>
+                            <span className="font-medium">
+                                1. Inmotion weighment
+                            </span>
                             {isWeighmentCompleted && (
-                                <span className="text-green-600 text-sm">✓ Completed</span>
+                                <span className="text-sm text-green-600">
+                                    ✓ Completed
+                                </span>
                             )}
                             {disableWeighment && !isWeighmentCompleted && (
-                                <span className="text-gray-400 text-sm">🔒 Locked</span>
+                                <span className="text-sm text-gray-400">
+                                    🔒 Locked
+                                </span>
                             )}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <WeighmentWorkflow rake={rakeData} disabled={disableWeighment} />
+                        <WeighmentWorkflow
+                            rake={rakeData}
+                            disabled={disableWeighment}
+                        />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -434,14 +468,22 @@ export function RakeWorkflow({
                 <AccordionItem value="wagon-loading">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">2. Loader weighment</span>
+                            <span className="font-medium">
+                                2. Loader weighment
+                            </span>
                             {isWagonLoadingCompleted && (
-                                <span className="text-green-600 text-sm">✓ Completed</span>
+                                <span className="text-sm text-green-600">
+                                    ✓ Completed
+                                </span>
                             )}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <LoadingTimesForm rakeId={rakeData.id} loadingStart={rakeData.loading_start_time} loadingEnd={rakeData.loading_end_time} />
+                        <LoadingTimesForm
+                            rakeId={rakeData.id}
+                            loadingStart={rakeData.loading_start_time}
+                            loadingEnd={rakeData.loading_end_time}
+                        />
                         <div className="mt-4">
                             <WagonLoadingWorkflow
                                 rake={rakeData}
@@ -461,9 +503,13 @@ export function RakeWorkflow({
                 <AccordionItem value="comparison">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">3. Loader vs weighment</span>
+                            <span className="font-medium">
+                                3. Loader vs weighment
+                            </span>
                             {isComparisonStepCompleted && (
-                                <span className="text-green-600 text-sm">✓ Ready</span>
+                                <span className="text-sm text-green-600">
+                                    ✓ Ready
+                                </span>
                             )}
                         </div>
                     </AccordionTrigger>
@@ -476,15 +522,24 @@ export function RakeWorkflow({
                 <AccordionItem value="txr">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">4. TXR - Train Examination Report</span>
+                            <span className="font-medium">
+                                4. TXR - Train Examination Report
+                            </span>
                             {isTxrTimesRecorded && (
-                                <span className="text-green-600 text-sm">✓ Completed</span>
+                                <span className="text-sm text-green-600">
+                                    ✓ Completed
+                                </span>
                             )}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
                         <TxrWorkflow
-                            rake={rakeData}
+                            rake={{
+                                ...rakeData,
+                                txr: rakeData.txr
+                                    ? { ...rakeData.txr, rake_id: rakeData.id }
+                                    : null,
+                            }}
                             disabled={false}
                             onTxrHeaderSaved={(incoming) => {
                                 setRakeData((prev) => ({
@@ -500,7 +555,11 @@ export function RakeWorkflow({
                                     ...new Set(
                                         logs
                                             .map((l) => Number(l.wagon_id))
-                                            .filter((id) => Number.isFinite(id) && id > 0),
+                                            .filter(
+                                                (id) =>
+                                                    Number.isFinite(id) &&
+                                                    id > 0,
+                                            ),
                                     ),
                                 ];
                                 onUnfitWagonIdsSynced?.(unfitIds);
@@ -509,7 +568,10 @@ export function RakeWorkflow({
                                     return {
                                         ...prev,
                                         txr: prev.txr
-                                            ? { ...prev.txr, wagonUnfitLogs: logs }
+                                            ? {
+                                                  ...prev.txr,
+                                                  wagonUnfitLogs: logs,
+                                              }
                                             : null,
                                         wagons: prev.wagons.map((w) => ({
                                             ...w,
@@ -521,7 +583,12 @@ export function RakeWorkflow({
                             onTxrNoteUploaded={(url) =>
                                 setRakeData((prev) => ({
                                     ...prev,
-                                    txr: prev.txr ? { ...prev.txr, handwritten_note_url: url } : null,
+                                    txr: prev.txr
+                                        ? {
+                                              ...prev.txr,
+                                              handwritten_note_url: url,
+                                          }
+                                        : null,
                                 }))
                             }
                         />
@@ -532,19 +599,35 @@ export function RakeWorkflow({
                 <AccordionItem value="guard-inspection">
                     <AccordionTrigger disabled={disableGuardInspection}>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">5. Guard Inspection</span>
+                            <span className="font-medium">
+                                5. Guard Inspection
+                            </span>
                             {isGuardApproved !== undefined && (
-                                <span className={isGuardApproved ? "text-green-600 text-sm" : "text-red-600 text-sm"}>
-                                    {isGuardApproved ? "✓ Approved" : "✗ Rejected"}
+                                <span
+                                    className={
+                                        isGuardApproved
+                                            ? 'text-sm text-green-600'
+                                            : 'text-sm text-red-600'
+                                    }
+                                >
+                                    {isGuardApproved
+                                        ? '✓ Approved'
+                                        : '✗ Rejected'}
                                 </span>
                             )}
-                            {disableGuardInspection && isGuardApproved === undefined && (
-                                <span className="text-gray-400 text-sm">🔒 Locked</span>
-                            )}
+                            {disableGuardInspection &&
+                                isGuardApproved === undefined && (
+                                    <span className="text-sm text-gray-400">
+                                        🔒 Locked
+                                    </span>
+                                )}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <GuardInspectionWorkflow rake={rakeData} disabled={disableGuardInspection} />
+                        <GuardInspectionWorkflow
+                            rake={rakeData}
+                            disabled={disableGuardInspection}
+                        />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -552,9 +635,13 @@ export function RakeWorkflow({
                 <AccordionItem value="power-plant-receipt">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">6. Power Plant Receipt</span>
+                            <span className="font-medium">
+                                6. Power Plant Receipt
+                            </span>
                             {hasPowerPlantReceipt && (
-                                <span className="text-green-600 text-sm">✓ Recorded</span>
+                                <span className="text-sm text-green-600">
+                                    ✓ Recorded
+                                </span>
                             )}
                         </div>
                     </AccordionTrigger>
@@ -571,17 +658,26 @@ export function RakeWorkflow({
                 <AccordionItem value="rr-document">
                     <AccordionTrigger disabled={disableRrDocument}>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">7. Railway Receipt (RR) Document</span>
+                            <span className="font-medium">
+                                7. Railway Receipt (RR) Document
+                            </span>
                             {hasRrDocument && (
-                                <span className="text-green-600 text-sm">✓ Created</span>
+                                <span className="text-sm text-green-600">
+                                    ✓ Created
+                                </span>
                             )}
                             {disableRrDocument && !hasRrDocument && (
-                                <span className="text-gray-400 text-sm">🔒 Locked</span>
+                                <span className="text-sm text-gray-400">
+                                    🔒 Locked
+                                </span>
                             )}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <RrDocumentWorkflow rake={rakeData} disabled={disableRrDocument} />
+                        <RrDocumentWorkflow
+                            rake={rakeData}
+                            disabled={disableRrDocument}
+                        />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -591,7 +687,9 @@ export function RakeWorkflow({
                         <div className="flex items-center gap-2 text-left">
                             <span className="font-medium">8. Penalties</span>
                             {disablePenalties && (
-                                <span className="text-gray-400 text-sm">🔒 Locked</span>
+                                <span className="text-sm text-gray-400">
+                                    🔒 Locked
+                                </span>
                             )}
                         </div>
                     </AccordionTrigger>
@@ -607,57 +705,143 @@ export function RakeWorkflow({
                     <AccordionItem value="pre-rr">
                         <AccordionTrigger>
                             <div className="flex items-center gap-2 text-left">
-                                <span className="font-medium">9. PRE-RR (Estimated Freight)</span>
+                                <span className="font-medium">
+                                    9. PRE-RR (Estimated Freight)
+                                </span>
                             </div>
                         </AccordionTrigger>
                         <AccordionContent>
                             {preRrLoading ? (
-                                <div className="text-sm text-muted-foreground">Loading PRE-RR estimate...</div>
+                                <div className="text-sm text-muted-foreground">
+                                    Loading PRE-RR estimate...
+                                </div>
                             ) : preRrEstimate === null ? (
                                 <div className="text-sm text-muted-foreground">
-                                    PRE-RR estimate is not available for this rake yet.
+                                    PRE-RR estimate is not available for this
+                                    rake yet.
                                 </div>
                             ) : (
                                 <div className="space-y-2 text-sm">
-                                    <div>Class Code: <span className="font-medium">{preRrEstimate.classCode}</span></div>
-                                    <div>Distance: <span className="font-medium">{preRrEstimate.distanceKm ?? '-'}</span> km</div>
-                                    <div>Actual Loaded Weight: <span className="font-medium">{preRrEstimate.actualLoadedWeightMt ?? '-'}</span> MT</div>
-                                    <div>Sum PCC Weight: <span className="font-medium">{preRrEstimate.sumPccWeightMt ?? '-'}</span> MT</div>
-                                    <div>Chargeable Weight: <span className="font-medium">{preRrEstimate.chargeableWeightMt ?? '-'}</span> MT</div>
-                                    <div>Rate: <span className="font-medium">{preRrEstimate.ratePerMt ?? '-'}</span> Rs/MT</div>
-                                    <div>Freight: <span className="font-medium">{preRrEstimate.freightAmount ?? '-'}</span></div>
-                                    <div>Other Charges: <span className="font-medium">{preRrEstimate.otherCharges ?? 0}</span></div>
-                                    <div>Penalty Total: <span className="font-medium">₹{preRrEstimate.penaltyAmount ?? 0}</span></div>
+                                    <div>
+                                        Class Code:{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.classCode}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        Distance:{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.distanceKm ?? '-'}
+                                        </span>{' '}
+                                        km
+                                    </div>
+                                    <div>
+                                        Actual Loaded Weight:{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.actualLoadedWeightMt ??
+                                                '-'}
+                                        </span>{' '}
+                                        MT
+                                    </div>
+                                    <div>
+                                        Sum PCC Weight:{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.sumPccWeightMt ??
+                                                '-'}
+                                        </span>{' '}
+                                        MT
+                                    </div>
+                                    <div>
+                                        Chargeable Weight:{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.chargeableWeightMt ??
+                                                '-'}
+                                        </span>{' '}
+                                        MT
+                                    </div>
+                                    <div>
+                                        Rate:{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.ratePerMt ?? '-'}
+                                        </span>{' '}
+                                        Rs/MT
+                                    </div>
+                                    <div>
+                                        Freight:{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.freightAmount ?? '-'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        Other Charges:{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.otherCharges ?? 0}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        Penalty Total:{' '}
+                                        <span className="font-medium">
+                                            ₹{preRrEstimate.penaltyAmount ?? 0}
+                                        </span>
+                                    </div>
                                     {preRrEstimate.penalties.length > 0 && (
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Type</TableHead>
                                                     <TableHead>Wagon</TableHead>
-                                                    <TableHead>Amount</TableHead>
-                                                    <TableHead>Breakdown</TableHead>
+                                                    <TableHead>
+                                                        Amount
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Breakdown
+                                                    </TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {preRrEstimate.penalties.map((p, idx) => (
-                                                    <TableRow key={idx}>
-                                                        <TableCell>
-                                                            <Badge variant="outline">{p.code}</Badge>
-                                                            <span className="ml-1 text-xs text-muted-foreground">{p.name}</span>
-                                                        </TableCell>
-                                                        <TableCell>{p.wagonNumber ?? 'Rake'}</TableCell>
-                                                        <TableCell className="font-medium">₹{p.amount.toFixed(2)}</TableCell>
-                                                        <TableCell className="text-xs text-muted-foreground">{p.breakdown}</TableCell>
-                                                    </TableRow>
-                                                ))}
+                                                {preRrEstimate.penalties.map(
+                                                    (p, idx) => (
+                                                        <TableRow key={idx}>
+                                                            <TableCell>
+                                                                <Badge variant="outline">
+                                                                    {p.code}
+                                                                </Badge>
+                                                                <span className="ml-1 text-xs text-muted-foreground">
+                                                                    {p.name}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {p.wagonNumber ??
+                                                                    'Rake'}
+                                                            </TableCell>
+                                                            <TableCell className="font-medium">
+                                                                ₹
+                                                                {p.amount.toFixed(
+                                                                    2,
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-muted-foreground">
+                                                                {p.breakdown}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ),
+                                                )}
                                             </TableBody>
                                         </Table>
                                     )}
-                                    <div>GST ({preRrEstimate.gstPercent}%): <span className="font-medium">{preRrEstimate.gstAmount ?? '-'}</span></div>
-                                    <div className="pt-1 text-base font-semibold">
-                                        Estimated Total: {preRrEstimate.totalAmount ?? '-'}
+                                    <div>
+                                        GST ({preRrEstimate.gstPercent}%):{' '}
+                                        <span className="font-medium">
+                                            {preRrEstimate.gstAmount ?? '-'}
+                                        </span>
                                     </div>
-                                    <div className="text-xs text-muted-foreground">{preRrEstimate.formula}</div>
+                                    <div className="pt-1 text-base font-semibold">
+                                        Estimated Total:{' '}
+                                        {preRrEstimate.totalAmount ?? '-'}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {preRrEstimate.formula}
+                                    </div>
                                     {preRrEstimate.warnings.length > 0 && (
                                         <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300">
                                             {preRrEstimate.warnings.join(' ')}

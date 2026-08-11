@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import {
     Bar,
     CartesianGrid,
+    type DataKey,
     ComposedChart as RechartsComposedChart,
     Legend,
     Line,
@@ -54,7 +55,7 @@ export function ComposedChart<T extends Record<string, unknown>>({
                         className="stroke-border/50"
                     />
                     <XAxis
-                        dataKey={xKey}
+                        dataKey={xKey as DataKey<T>}
                         tick={{ fontSize: 11 }}
                         className="fill-muted-foreground"
                         tickLine={false}
@@ -86,17 +87,17 @@ export function ComposedChart<T extends Record<string, unknown>>({
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number, name: string) => [
+                        formatter={(value, name) => [
                             formatTooltip
-                                ? formatTooltip(value, name)
-                                : value.toLocaleString(),
+                                ? formatTooltip(Number(value), String(name))
+                                : Number(value).toLocaleString(),
                             name === barKey
                                 ? (barLabel ?? barKey)
                                 : (lineLabel ?? lineKey),
                         ]}
                     />
                     <Legend
-                        formatter={(value: string) =>
+                        formatter={(value) =>
                             value === barKey
                                 ? (barLabel ?? barKey)
                                 : (lineLabel ?? lineKey)
@@ -104,7 +105,7 @@ export function ComposedChart<T extends Record<string, unknown>>({
                         wrapperStyle={{ fontSize: 12 }}
                     />
                     <Bar
-                        dataKey={barKey}
+                        dataKey={barKey as DataKey<T>}
                         fill={barColor}
                         radius={[4, 4, 0, 0]}
                         barSize={20}
@@ -112,7 +113,7 @@ export function ComposedChart<T extends Record<string, unknown>>({
                     />
                     <Line
                         type="monotone"
-                        dataKey={lineKey}
+                        dataKey={lineKey as DataKey<T>}
                         stroke={lineColor}
                         strokeWidth={2.5}
                         dot={{ r: 3, fill: lineColor, strokeWidth: 0 }}

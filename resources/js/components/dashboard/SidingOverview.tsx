@@ -1,3 +1,4 @@
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
 import {
     formatCurrency,
     formatWeight,
@@ -156,13 +157,10 @@ export function SidingOverview({
                                     tickFormatter={(v) => formatCurrency(v)}
                                 />
                                 <Tooltip
-                                    formatter={(
-                                        v: number | string | undefined,
-                                        name: string | undefined,
-                                    ) => [
-                                        formatCurrency(Number(v ?? 0)),
-                                        name ?? '',
-                                    ]}
+                                    formatter={numericTooltipFormatter((v, name) => [
+                                        formatCurrency(v),
+                                        name,
+                                    ])}
                                 />
                                 <Legend
                                     layout="horizontal"
@@ -248,18 +246,12 @@ export function SidingOverview({
                                                 width={36}
                                             />
                                             <Tooltip
-                                                formatter={(
-                                                    value:
-                                                        | number
-                                                        | string
-                                                        | undefined,
-                                                    name:
-                                                        | string
-                                                        | undefined,
-                                                ) => [
-                                                    String(value ?? 0),
-                                                    name ?? '',
-                                                ]}
+                                                formatter={numericTooltipFormatter(
+                                                    (value, name) => [
+                                                        String(value),
+                                                        name,
+                                                    ],
+                                                )}
                                                 labelFormatter={(
                                                     _label,
                                                     payload,
@@ -368,24 +360,21 @@ export function SidingOverview({
                                                         )}
                                                     </Pie>
                                                     <Tooltip
-                                                        formatter={(
-                                                            v:
-                                                                | number
-                                                                | undefined,
-                                                            _: unknown,
-                                                            props: {
-                                                                payload?: {
-                                                                    weightMt: number;
-                                                                };
-                                                            },
-                                                        ) => [
-                                                            `${v ?? 0}%`,
-                                                            formatWeight(
-                                                                props.payload
-                                                                    ?.weightMt ??
-                                                                    0,
-                                                            ),
-                                                        ]}
+                                                        formatter={numericTooltipFormatter(
+                                                            (v, _name, item) => [
+                                                                `${v}%`,
+                                                                formatWeight(
+                                                                    (
+                                                                        item.payload as
+                                                                            | {
+                                                                                  weightMt?: number;
+                                                                              }
+                                                                            | undefined
+                                                                    )?.weightMt ??
+                                                                        0,
+                                                                ),
+                                                            ],
+                                                        )}
                                                     />
                                                     <Legend
                                                         layout="horizontal"

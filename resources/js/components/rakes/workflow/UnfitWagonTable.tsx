@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
-import InputError from '@/components/input-error';
 import { Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 
@@ -287,7 +286,6 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                 placeholder="Reason for unfit"
                                                 disabled={rowDisabled}
                                             />
-                                            <InputError message={null} />
                                         </TableCell>
                                         <TableCell>
                                             <Input
@@ -298,7 +296,6 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                 placeholder="Marked by"
                                                 disabled={rowDisabled}
                                             />
-                                            <InputError message={null} />
                                         </TableCell>
                                         <TableCell>
                                             <select
@@ -316,7 +313,6 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                     </option>
                                                 ))}
                                             </select>
-                                            <InputError message={null} />
                                         </TableCell>
                                         <TableCell>
                                             <Input
@@ -327,7 +323,6 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                 }
                                                 disabled={rowDisabled}
                                             />
-                                            <InputError message={null} />
                                         </TableCell>
                                         <TableCell>
                                             <Button

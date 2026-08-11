@@ -1,5 +1,7 @@
 /* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+import type { EmptyWeighmentEntry } from './vehicle-entry-row';
 import ShiftLockOverlay from '@/components/ShiftLockOverlay';
+import type { PageProps } from '@inertiajs/core';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -96,21 +98,6 @@ function formatCountdown(totalSeconds: number): string {
     const ss = String(s % 60).padStart(2, '0');
     const hh = Math.floor(s / 3600);
     return hh > 0 ? `${hh}:${mm}:${ss}` : `${Number(mm)}:${ss}`;
-}
-
-interface EmptyWeighmentEntry {
-    id: number;
-    siding_id: number;
-    siding?: { id: number; name: string };
-    entry_date: string;
-    shift: number;
-    vehicle_no: string | null;
-    transport_name: string | null;
-    tare_wt_two: number | null;
-    reached_at: string;
-    created_at: string;
-    status: 'draft' | 'completed';
-    inline_submitted_at?: string | null;
 }
 
 interface Siding {
@@ -210,7 +197,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
     timeEditableShift = null,
     shiftGraceEndsAtIso = null,
 }: Props) {
-    const page = usePage<InertiaAuthPageProps>();
+    const page = usePage<InertiaAuthPageProps & PageProps>();
     const canCreate = useCan('sections.railway_siding_empty_weighment.create');
     const canUpdate = useCan('sections.railway_siding_empty_weighment.update');
     const canDelete = useCan('sections.railway_siding_empty_weighment.delete');
@@ -348,7 +335,10 @@ export default function RailwaySidingEmptyWeighmentIndex({
             });
 
             if (secondsLeft <= 0) {
-                router.reload({ preserveState: false, preserveScroll: true });
+                router.visit(window.location.href, {
+                    preserveState: false,
+                    preserveScroll: true,
+                });
             }
         };
 
@@ -598,9 +588,10 @@ export default function RailwaySidingEmptyWeighmentIndex({
             return prev.filter((e) => e.id !== id);
         });
         if (!isLocalOnly && removedShift !== undefined) {
+            const shift = removedShift;
             setShiftSummaryState((s) => ({
                 ...s,
-                [removedShift]: Math.max(0, (s[removedShift] ?? 0) - 1),
+                [shift]: Math.max(0, (s[shift] ?? 0) - 1),
             }));
         }
     }, []);
@@ -731,10 +722,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
                 shiftLock={shiftLock}
                 canBypass={canBypassShiftLock}
                 onUnlock={() => {
-                    router.reload({
-                        preserveState: true,
-                        preserveScroll: true,
-                    });
+                    router.reload();
                 }}
             />
 

@@ -22,10 +22,14 @@ import {
 import { useCan } from '@/hooks/use-can';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import type { PageProps } from '@inertiajs/core';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar, Download, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { nowTo12hParts, sheetDateAnd12hToReachedAtLocalString } from './reached-at-time';
+import {
+    nowTo12hParts,
+    sheetDateAnd12hToReachedAtLocalString,
+} from './reached-at-time';
 import ShiftReportDialog from './shift-report-dialog';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
@@ -156,7 +160,10 @@ function buildLocalDraftEntry(
         gross_wt: null,
         tare_wt: null,
         tare_wt_two: null,
-        reached_at: sheetDateAnd12hToReachedAtLocalString(entryDate, nowTo12hParts()),
+        reached_at: sheetDateAnd12hToReachedAtLocalString(
+            entryDate,
+            nowTo12hParts(),
+        ),
         wb_no: null,
         d_challan_no: null,
         challan_mode: 'online',
@@ -206,6 +213,7 @@ interface Props {
     allowedShifts?: number[];
     /** When true, user only sees their assigned shift; hide shift/siding switchers. */
     restrictToAssignedShift?: boolean;
+    showCreatedByColumn?: boolean;
     canBypassShiftLock?: boolean;
     shiftLock?: {
         isLocked: boolean;
@@ -232,7 +240,7 @@ interface InertiaAuthPageProps {
 }
 
 function draftCreatorFromAuth(
-    user: InertiaAuthPageProps['auth']['user'],
+    user: NonNullable<InertiaAuthPageProps['auth']>['user'],
 ): { id: number; name: string } | null {
     if (user?.id == null || user.name == null || user.name === '') {
         return null;
@@ -258,7 +266,7 @@ export default function DailyVehicleEntriesIndex({
     shiftGraceEndsAtIso = null,
     shiftReportSidings = [],
 }: Props) {
-    const page = usePage<InertiaAuthPageProps>();
+    const page = usePage<InertiaAuthPageProps & PageProps>();
     const canCreate = useCan('sections.railway_siding_record_data.create');
     const canUpdate = useCan('sections.railway_siding_record_data.update');
     const canDelete = useCan('sections.railway_siding_record_data.delete');
@@ -418,7 +426,10 @@ export default function DailyVehicleEntriesIndex({
             });
 
             if (secondsLeft <= 0) {
-                router.reload({ preserveState: false, preserveScroll: true });
+                router.visit(window.location.href, {
+                    preserveState: false,
+                    preserveScroll: true,
+                });
             }
         };
 
@@ -572,6 +583,7 @@ export default function DailyVehicleEntriesIndex({
             selectedDate,
             activeShiftState,
             userId,
+            draftCreatorFromAuth(page.props.auth?.user),
         );
         setEntries((prev) => [...prev, draft]);
         setPlainRowsAfterLastEntry(PLAIN_ROWS_AFTER_ADD_FIVE);
@@ -606,7 +618,9 @@ export default function DailyVehicleEntriesIndex({
                 sidings.find((s) => s.id === targetSidingId) ?? sidings[0];
             const userId = page.props.auth?.user?.id ?? 0;
             const creator = draftCreatorFromAuth(page.props.auth?.user);
-            const newDraftId = shouldAutoAddDraft ? localDraftIdRef.current - 1 : null;
+            const newDraftId = shouldAutoAddDraft
+                ? localDraftIdRef.current - 1
+                : null;
 
             setEntries((prev) => {
                 if (!prev.some((e) => e.id === replaceId)) {
@@ -623,7 +637,11 @@ export default function DailyVehicleEntriesIndex({
                         : e,
                 );
 
-                if (!shouldAutoAddDraft || siding == null || newDraftId == null) {
+                if (
+                    !shouldAutoAddDraft ||
+                    siding == null ||
+                    newDraftId == null
+                ) {
                     return next;
                 }
 
@@ -653,7 +671,10 @@ export default function DailyVehicleEntriesIndex({
                 const focusSelector = `[data-field="e_challan_no"][data-entry-id="${newDraftId}"]`;
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
-                        const el = document.querySelector<HTMLInputElement>(focusSelector);
+                        const el =
+                            document.querySelector<HTMLInputElement>(
+                                focusSelector,
+                            );
                         el?.focus();
                         el?.select?.();
                     });
@@ -682,9 +703,10 @@ export default function DailyVehicleEntriesIndex({
             return prev.filter((e) => e.id !== id);
         });
         if (!isLocalOnly && removedShift !== undefined) {
+            const shift = removedShift;
             setShiftSummaryState((s) => ({
                 ...s,
-                [removedShift]: Math.max(0, (s[removedShift] ?? 0) - 1),
+                [shift]: Math.max(0, (s[shift] ?? 0) - 1),
             }));
         }
     }, []);
@@ -778,13 +800,11 @@ export default function DailyVehicleEntriesIndex({
                 },
             );
 
-            const data = (await res.json().catch(() => null)) as
-                | {
-                      now?: string;
-                      rows?: { hour: string; label: string; count: number }[];
-                      message?: string;
-                  }
-                | null;
+            const data = (await res.json().catch(() => null)) as {
+                now?: string;
+                rows?: { hour: string; label: string; count: number }[];
+                message?: string;
+            } | null;
 
             if (!res.ok) {
                 setHourlyError(
@@ -826,10 +846,7 @@ export default function DailyVehicleEntriesIndex({
                 shiftLock={shiftLock}
                 canBypass={canBypassShiftLock}
                 onUnlock={() => {
-                    router.reload({
-                        preserveState: true,
-                        preserveScroll: true,
-                    });
+                    router.reload();
                 }}
             />
 
@@ -931,9 +948,7 @@ export default function DailyVehicleEntriesIndex({
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() =>
-                                            setShiftReportOpen(true)
-                                        }
+                                        onClick={() => setShiftReportOpen(true)}
                                         className="flex items-center gap-2"
                                         data-pan="daily-vehicle-entries-shift-report"
                                     >
@@ -948,8 +963,7 @@ export default function DailyVehicleEntriesIndex({
                                     Your shift:{' '}
                                     {(() => {
                                         const s = sidings.find(
-                                            (x) =>
-                                                x.id === effectiveSidingId,
+                                            (x) => x.id === effectiveSidingId,
                                         );
                                         return s != null
                                             ? sidingDisplayLabel(s)
@@ -984,9 +998,7 @@ export default function DailyVehicleEntriesIndex({
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() =>
-                                            setShiftReportOpen(true)
-                                        }
+                                        onClick={() => setShiftReportOpen(true)}
                                         className="flex items-center gap-2"
                                         data-pan="daily-vehicle-entries-shift-report"
                                     >
@@ -1057,7 +1069,8 @@ export default function DailyVehicleEntriesIndex({
                                                     : shift === 2
                                                       ? '2ND'
                                                       : '3RD'}
-                                                : {shiftSummaryState[shift] || 0}
+                                                :{' '}
+                                                {shiftSummaryState[shift] || 0}
                                             </Badge>
                                         ))}
                                     </div>

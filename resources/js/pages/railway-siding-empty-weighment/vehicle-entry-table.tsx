@@ -10,22 +10,9 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import VehicleEntryRow from './vehicle-entry-row';
-
-interface EmptyWeighmentEntry {
-  id: number;
-  siding_id: number;
-  siding?: { id: number; name: string };
-  entry_date: string;
-  shift: number;
-  vehicle_no: string | null;
-  transport_name: string | null;
-  tare_wt_two: number | null;
-  reached_at: string;
-  created_at: string;
-  status: 'draft' | 'completed';
-  inline_submitted_at?: string | null;
-}
+import VehicleEntryRow, {
+  type EmptyWeighmentEntry,
+} from './vehicle-entry-row';
 
 interface VehicleEntryTableProps {
   entries: EmptyWeighmentEntry[];

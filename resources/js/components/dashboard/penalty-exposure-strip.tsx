@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { ShieldCheck, TrendingDown, TrendingUp } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
@@ -76,7 +77,7 @@ export function PenaltyExposureStrip({ data }: { data: PenaltySummary }) {
                                         isAnimationActive={false}
                                     />
                                     <Tooltip
-                                        formatter={(v: number) => inr.format(v)}
+                                        formatter={numericTooltipFormatter((v) => inr.format(v))}
                                         contentStyle={{
                                             background: '#022c22',
                                             border: '1px solid rgba(16,185,129,0.3)',

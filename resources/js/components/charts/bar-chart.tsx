@@ -3,6 +3,7 @@ import {
     Bar,
     BarChart as RechartsBarChart,
     CartesianGrid,
+    type DataKey,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -69,7 +70,7 @@ export function BarChart<T extends Record<string, unknown>>({
                             />
                             <YAxis
                                 type="category"
-                                dataKey={xKey}
+                                dataKey={xKey as DataKey<T>}
                                 tick={{ fontSize: 12 }}
                                 className="fill-muted-foreground"
                                 tickLine={false}
@@ -80,7 +81,7 @@ export function BarChart<T extends Record<string, unknown>>({
                     ) : (
                         <>
                             <XAxis
-                                dataKey={xKey}
+                                dataKey={xKey as DataKey<T>}
                                 tick={{ fontSize: 12 }}
                                 className="fill-muted-foreground"
                                 tickLine={false}
@@ -114,15 +115,15 @@ export function BarChart<T extends Record<string, unknown>>({
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number) => [
+                        formatter={(value) => [
                             formatTooltip
-                                ? formatTooltip(value)
-                                : value.toLocaleString(),
+                                ? formatTooltip(Number(value))
+                                : Number(value).toLocaleString(),
                             yLabel ?? yKey,
                         ]}
                     />
                     <Bar
-                        dataKey={yKey}
+                        dataKey={yKey as DataKey<T>}
                         fill={color}
                         radius={[6, 6, 0, 0]}
                         barSize={barSize}

@@ -2,29 +2,8 @@ import React from 'react';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import HistoricalRakeRow from '@/components/historical/historical-rake-row';
+import type { HistoricalRake } from '@/components/historical/historical-rake-row';
 import { useCan } from '@/hooks/use-can';
-
-interface HistoricalRake {
-  id: number;
-  siding_id: number;
-  siding_name?: string | null;
-  rake_number: number | null;
-  priority_number: number | null;
-  rr_number: number | null;
-  wagon_count: number | null;
-  loaded_weight_mt: string | number | null;
-  under_load_mt: string | number | null;
-  over_load_mt: string | number | null;
-  overload_wagon_count: number | null;
-  detention_hours: string | number | null;
-  shunting_hours: string | number | null;
-  total_amount_rs: string | number | null;
-  destination: string | null;
-  pakur_imwb_period: string | null;
-  loading_date: string | null;
-  remarks: string | null;
-  data_source?: string | null;
-}
 
 interface HistoricalRakeTableProps {
   rakes: HistoricalRake[];

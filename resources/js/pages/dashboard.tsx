@@ -1,4 +1,5 @@
 import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
 import {
     RakePerformanceOverloadTrends,
     type RpOverloadTrendsPeriod,
@@ -59,6 +60,8 @@ import {
 import type {
     DashboardFilters,
     DispatchSummaryByPeriod,
+    LiveRakeStatusRow,
+    PowerPlantDispatchItem,
     SidingPerformanceChartUiPeriod,
     SidingPerformanceMetricsPenaltyRow,
     SidingPerformanceMetricsRakeRow,
@@ -368,32 +371,6 @@ interface LoaderOverloadTrends {
 interface PowerPlantSidingBreakdown {
     rakes: number;
     weight_mt: number;
-}
-
-interface PowerPlantDispatchItem {
-    [key: string]: unknown;
-    name: string;
-    rakes: number;
-    weight_mt: number;
-    sidings: Record<string, PowerPlantSidingBreakdown>;
-}
-
-interface DashboardFilters {
-    period: string;
-    from: string;
-    to: string;
-    siding_ids: number[];
-    power_plant: string | null;
-    rake_number: string | null;
-    loader_id: number | null;
-    loader_operator: string | null;
-    /** Minimum shortfall % of CC to count as underload on loader trends (default 1; URL `underload_threshold`). */
-    underload_threshold: number;
-    shift: string | null;
-    penalty_type: number | null;
-    rake_penalty_scope?: 'all' | 'with_penalties';
-    daily_rake_date?: string;
-    coal_transport_date?: string;
 }
 
 /**
@@ -906,7 +883,7 @@ interface DashboardAlert {
     risk: string;
 }
 
-interface LiveRakeStatusRow {
+interface TruckReceiptHour {
     hour: string;
     label: string;
     count: number;
@@ -1570,9 +1547,9 @@ export function DashboardPenaltyBySidingChart({
                                 tick={{ fontSize: 11 }}
                             />
                             <Tooltip
-                                formatter={(v: number | string | undefined) =>
-                                    formatCurrency(Number(v ?? 0))
-                                }
+                                formatter={numericTooltipFormatter((v) =>
+                                    formatCurrency(v),
+                                )}
                             />
                             <Bar
                                 dataKey="total"
@@ -3778,9 +3755,9 @@ export function SidingPerformanceSection({
                                 tick={{ fontSize: 12 }}
                             />
                             <Tooltip
-                                formatter={(
-                                    value: number | string | undefined,
-                                ) => Number(value ?? 0).toLocaleString()}
+                                formatter={numericTooltipFormatter((value) =>
+                                    value.toLocaleString(),
+                                )}
                             />
                             <Bar
                                 dataKey="rakes"
@@ -3847,9 +3824,9 @@ export function SidingPerformanceSection({
                                 tickFormatter={(v) => formatCurrency(v)}
                             />
                             <Tooltip
-                                formatter={(
-                                    value: number | string | undefined,
-                                ) => formatCurrency(Number(value ?? 0))}
+                                formatter={numericTooltipFormatter((value) =>
+                                    formatCurrency(value),
+                                )}
                             />
                             <Bar
                                 dataKey="penalty_amount"
@@ -5298,7 +5275,7 @@ function RakesPerPowerPlantExecutiveChart({
                                 domain={isEmpty ? [0, 'auto'] : undefined}
                             />
                             <Tooltip
-                                formatter={(v: number | undefined) => {
+                                formatter={numericTooltipFormatter((v) => {
                                     if (isEmpty) {
                                         return [
                                             'No dispatch data for this period',
@@ -5308,11 +5285,11 @@ function RakesPerPowerPlantExecutiveChart({
 
                                     return valueKind === 'qty'
                                         ? [
-                                              `${(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`,
+                                              `${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`,
                                               'Qty',
                                           ]
-                                        : [v ?? 0, 'Rakes'];
-                                }}
+                                        : [v, 'Rakes'];
+                                })}
                             />
                             <Bar
                                 dataKey={dataKey}
@@ -5599,9 +5576,9 @@ export function PowerPlantDispatchSection({
                                     domain={[0, 'auto']}
                                 />
                                 <Tooltip
-                                    formatter={(v: number | undefined) =>
-                                        `${v ?? 0} rakes`
-                                    }
+                                    formatter={numericTooltipFormatter(
+                                        (v) => `${v} rakes`,
+                                    )}
                                 />
                                 <Bar
                                     dataKey="rakes"

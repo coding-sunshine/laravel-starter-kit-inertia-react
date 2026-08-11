@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import {
+    type DataKey,
     Legend,
     PolarAngleAxis,
     PolarGrid,
@@ -50,7 +51,7 @@ export function RadarChart<T extends Record<string, unknown>>({
                 >
                     <PolarGrid className="stroke-border/50" />
                     <PolarAngleAxis
-                        dataKey={axisKey}
+                        dataKey={axisKey as DataKey<T>}
                         tick={{ fontSize: 11 }}
                         className="fill-muted-foreground"
                     />
@@ -66,13 +67,13 @@ export function RadarChart<T extends Record<string, unknown>>({
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number, name: string) => [
-                            formatTooltip ? formatTooltip(value) : value.toLocaleString(),
-                            radarLabels?.[name] ?? name,
+                        formatter={(value, name) => [
+                            formatTooltip ? formatTooltip(Number(value)) : Number(value).toLocaleString(),
+                            radarLabels?.[String(name)] ?? String(name),
                         ]}
                     />
                     <Legend
-                        formatter={(value: string) => radarLabels?.[value] ?? value}
+                        formatter={(value) => radarLabels?.[String(value)] ?? String(value)}
                         wrapperStyle={{ fontSize: 12 }}
                     />
                     {radarKeys.map((key, i) => (

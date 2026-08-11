@@ -563,7 +563,7 @@ export default function RailwayReceiptsIndex({
         try {
             await postRailwayReceiptImport(fnrPreview.rake_id, fnrPendingFile, null);
             closeFnrFlow();
-            router.reload({ only: ['tableData'], preserveScroll: true });
+            router.reload({ only: ['tableData'] });
         } catch (err) {
             setFnrFlowError(messageFromFetchError(err));
         } finally {

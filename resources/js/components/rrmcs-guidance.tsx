@@ -23,7 +23,7 @@ export function RrmcsGuidance({
         <Alert variant="default" className={cn('py-4', className)}>
             <Info className="size-4" />
             <AlertTitle className="font-medium">{title}</AlertTitle>
-            <AlertDescription asChild>
+            <AlertDescription>
                 <div className="mt-2 space-y-3 text-sm text-muted-foreground">
                     <p>
                         <span className="font-medium text-foreground/90">

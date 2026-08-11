@@ -1,4 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import type { FormDataConvertible, PageProps } from '@inertiajs/core';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
@@ -44,7 +45,7 @@ interface Props {
     import_target_date?: string;
     vehicle_dispatch_import_skipped?: number | null;
     vehicle_dispatch_import_total_rows?: number | null;
-    flash?: { success?: string };
+    flash?: { success?: string; import_errors?: string[] };
     tab?: string;
     reconciliationReportSidings?: Array<{
         id: number;
@@ -91,7 +92,7 @@ export default function VehicleDispatchIndex({
     tab = 'main-data',
     reconciliationReportSidings = [],
 }: Props) {
-    const pageProps = usePage<Props>().props;
+    const pageProps = usePage<Props & PageProps>().props;
     const showReconciliationReport = reconciliationReportSidings.length > 0;
     const [reconciliationOpen, setReconciliationOpen] = useState(false);
     const [searchFilters, setSearchFilters] = useState<Filters>(() => filters);
@@ -140,7 +141,7 @@ export default function VehicleDispatchIndex({
         (tab === 'dpr' ? 'dpr' : 'main-data') as VehicleDispatchTabValue
     );
     const [dprExportSidingId, setDprExportSidingId] = useState<string>('all');
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const prevFiltersRef = useRef<Filters>(filters);
     const [calendarDaysByMonth, setCalendarDaysByMonth] = useState<Record<string, string[]>>({});
     const [calendarLoadingCount, setCalendarLoadingCount] = useState(0);
@@ -376,7 +377,7 @@ export default function VehicleDispatchIndex({
             { data: importData, target_date: targetDate },
             {
                 onSuccess: (page) => {
-                    const p = page.props as Props;
+                    const p = page.props as unknown as Props;
                     const preview = Array.isArray(p.preview_data) ? p.preview_data : [];
                     const totalRows = p.vehicle_dispatch_import_total_rows;
                     setImportData('');
@@ -414,7 +415,7 @@ export default function VehicleDispatchIndex({
 
         router.post(
             '/vehicle-dispatch/save',
-            { data: previewData, target_date: targetDate },
+            { data: previewData as unknown as FormDataConvertible, target_date: targetDate },
             {
                 onSuccess: (page) => {
                     setImportSuccess(

@@ -5,13 +5,13 @@ import { Save, Pencil, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCan } from '@/hooks/use-can';
 
-interface HistoricalRake {
+export interface HistoricalRake {
   id: number;
   siding_id: number;
   siding_name?: string | null;
-  rake_number: number | null;
+  rake_number: number | string | null;
   priority_number: number | null;
-  rr_number: number | null;
+  rr_number: number | string | null;
   wagon_count: number | null;
   loaded_weight_mt: string | number | null;
   under_load_mt: string | number | null;

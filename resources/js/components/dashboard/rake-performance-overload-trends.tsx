@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
 import {
     Select,
     SelectContent,
@@ -382,10 +383,10 @@ export function RakePerformanceOverloadTrends({
                                     domain={[0, 'auto']}
                                 />
                                 <Tooltip
-                                    formatter={(
-                                        v: number | string | undefined,
-                                        name: string | undefined,
-                                    ) => [formatPct(v), name ?? '']}
+                                    formatter={numericTooltipFormatter((v, name) => [
+                                        formatPct(v),
+                                        name,
+                                    ])}
                                 />
                                 <Legend
                                     layout="horizontal"
