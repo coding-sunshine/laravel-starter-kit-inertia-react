@@ -14,6 +14,9 @@ use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 final readonly class DailyVehicleEntryService
 {
@@ -359,8 +362,8 @@ final readonly class DailyVehicleEntryService
         $newWeight = round($grossWt - $tareWt, 2);
         $delta = round($newWeight - $oldWeight, 2);
 
-        // nothing changed
-        if ($delta === 0) {
+        // nothing changed (float, so strict int compare would never match)
+        if (abs($delta) < 0.005) {
             return;
         }
 
@@ -414,11 +417,8 @@ final readonly class DailyVehicleEntryService
         $filename = "{$siding->name}_{$date}_AllShifts.xlsx";
         $filepath = storage_path("app/public/{$filename}");
 
-        $handle = fopen($filepath, 'w');
-
-        // Create HTML table that Excel can open
-        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.$filename.'</title></head><body>';
-        $html .= '<table border="1">';
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
 
         // Get entries for all shifts
         $shift1Entries = $this->getEntriesForExport($date, $siding->id, 1, $entryType, $createdByUserId);
@@ -427,53 +427,43 @@ final readonly class DailyVehicleEntryService
 
         $maxRows = max(count($shift1Entries), count($shift2Entries), count($shift3Entries));
 
-        // Write shift headers (Row 1)
-        $html .= '<tr>';
+        $headers = ['SL NO', 'E CHALLAN NO', 'VEHICLE NO', 'GROSS WT', 'TARE WT', 'REACHED AT', 'WB NO', 'D-CHALLAN NO', 'CHALLAN MODE', 'STATUS'];
+        $headerCount = count($headers);
+
+        // Row 1: shift headers merged over each 10-column block
         $shiftNames = ['1ST SHIFT', '2ND SHIFT', '3RD SHIFT'];
         for ($i = 0; $i < 3; $i++) {
-            $html .= '<td colspan="10" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">'.$shiftNames[$i].'</td>';
+            $startCol = $i * $headerCount + 1;
+            $sheet->setCellValue([$startCol, 1], $shiftNames[$i]);
+            $sheet->mergeCells([$startCol, 1, $startCol + $headerCount - 1, 1]);
+            $sheet->getStyle([$startCol, 1])->getFont()->setBold(true);
+            $sheet->getStyle([$startCol, 1])->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         }
-        $html .= '</tr>';
 
-        // Write column headers (Row 2)
-        $headers = ['SL NO', 'E CHALLAN NO', 'VEHICLE NO', 'GROSS WT', 'TARE WT', 'REACHED AT', 'WB NO', 'D-CHALLAN NO', 'CHALLAN MODE', 'STATUS'];
-        $html .= '<tr>';
+        // Row 2: column headers repeated per shift
         for ($i = 0; $i < 3; $i++) {
-            foreach ($headers as $header) {
-                $html .= '<td style="font-weight:bold; background-color:#e0e0e0; border:1px solid #ccc;">'.$header.'</td>';
+            foreach ($headers as $j => $header) {
+                $col = $i * $headerCount + $j + 1;
+                $sheet->setCellValue([$col, 2], $header);
+                $sheet->getStyle([$col, 2])->getFont()->setBold(true);
             }
         }
-        $html .= '</tr>';
 
-        // Write data rows
+        // Data rows
         for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++) {
-            $html .= '<tr>';
-
-            // Shift 1 data
-            $shift1Data = $this->getShiftData($shift1Entries, $rowIndex);
-            foreach ($shift1Data as $cell) {
-                $html .= '<td style="border:1px solid #ccc;">'.$cell.'</td>';
+            $excelRow = $rowIndex + 3;
+            $cells = array_merge(
+                $this->getShiftData($shift1Entries, $rowIndex),
+                $this->getShiftData($shift2Entries, $rowIndex),
+                $this->getShiftData($shift3Entries, $rowIndex),
+            );
+            foreach ($cells as $j => $cell) {
+                $sheet->setCellValue([$j + 1, $excelRow], $cell);
             }
-
-            // Shift 2 data
-            $shift2Data = $this->getShiftData($shift2Entries, $rowIndex);
-            foreach ($shift2Data as $cell) {
-                $html .= '<td style="border:1px solid #ccc;">'.$cell.'</td>';
-            }
-
-            // Shift 3 data
-            $shift3Data = $this->getShiftData($shift3Entries, $rowIndex);
-            foreach ($shift3Data as $cell) {
-                $html .= '<td style="border:1px solid #ccc;">'.$cell.'</td>';
-            }
-
-            $html .= '</tr>';
         }
 
-        $html .= '</table></body></html>';
-
-        fwrite($handle, $html);
-        fclose($handle);
+        (new Xlsx($spreadsheet))->save($filepath);
+        $spreadsheet->disconnectWorksheets();
 
         return $filepath;
     }
@@ -483,26 +473,24 @@ final readonly class DailyVehicleEntryService
         $filename = "{$siding->name}_{$date}_Shift{$shift}.xlsx";
         $filepath = storage_path("app/public/{$filename}");
 
-        $handle = fopen($filepath, 'w');
-
-        // Create HTML table that Excel can open
-        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.$filename.'</title></head><body>';
-        $html .= '<table border="1">';
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
 
         $entries = $this->getEntriesForExport($date, $siding->id, $shift, $entryType, $createdByUserId);
 
-        // Write title row
-        $html .= '<tr><td colspan="10" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">SHIFT '.$shift.' - '.$date.' - '.$siding->name.'</td></tr>';
-
-        // Write headers
         $headers = ['SL NO', 'E CHALLAN NO', 'VEHICLE NO', 'GROSS WT', 'TARE WT', 'REACHED AT', 'WB NO', 'D-CHALLAN NO', 'CHALLAN MODE', 'STATUS'];
-        $html .= '<tr>';
-        foreach ($headers as $header) {
-            $html .= '<td style="font-weight:bold; background-color:#e0e0e0; border:1px solid #ccc;">'.$header.'</td>';
-        }
-        $html .= '</tr>';
 
-        // Write data
+        // Title row merged across all columns
+        $sheet->setCellValue([1, 1], "SHIFT {$shift} - {$date} - {$siding->name}");
+        $sheet->mergeCells([1, 1, count($headers), 1]);
+        $sheet->getStyle([1, 1])->getFont()->setBold(true);
+        $sheet->getStyle([1, 1])->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        foreach ($headers as $j => $header) {
+            $sheet->setCellValue([$j + 1, 2], $header);
+            $sheet->getStyle([$j + 1, 2])->getFont()->setBold(true);
+        }
+
         foreach ($entries as $index => $entry) {
             $row = [
                 $index + 1, // SL NO
@@ -516,18 +504,13 @@ final readonly class DailyVehicleEntryService
                 $entry->challan_mode ?? '',
                 $entry->status ?? '',
             ];
-
-            $html .= '<tr>';
-            foreach ($row as $cell) {
-                $html .= '<td style="border:1px solid #ccc;">'.$cell.'</td>';
+            foreach ($row as $j => $cell) {
+                $sheet->setCellValue([$j + 1, $index + 3], $cell);
             }
-            $html .= '</tr>';
         }
 
-        $html .= '</table></body></html>';
-
-        fwrite($handle, $html);
-        fclose($handle);
+        (new Xlsx($spreadsheet))->save($filepath);
+        $spreadsheet->disconnectWorksheets();
 
         return $filepath;
     }

@@ -103,7 +103,8 @@ final class RrDocument extends Model implements HasMedia
 
     /**
      * Actual / net weight for UI lists: sum of wagon snapshot loaded weights (parsed ACTL per wagon), with
-     * fallback to header ACTL {@see actualWeightMtFromDetails} when snapshots are missing or have no loads.
+     * fallback to header ACTL {@see actualWeightMtFromDetails} when snapshots are missing or have no loads,
+     * then to the sender/RR weight ({@see $rr_weight_mt}) when actual weight is absent or zero.
      */
     public function actualWeightMtForListing(): ?string
     {
@@ -119,11 +120,20 @@ final class RrDocument extends Model implements HasMedia
             $sum += (float) $row->loaded_weight_mt;
         }
 
-        if ($hasLoaded) {
+        if ($hasLoaded && $sum > 0) {
             return (string) round($sum, 4);
         }
 
-        return $this->actualWeightMtFromDetails();
+        $fromDetails = $this->actualWeightMtFromDetails();
+        if ($fromDetails !== null && (float) $fromDetails > 0) {
+            return $fromDetails;
+        }
+
+        if ($this->rr_weight_mt !== null && is_numeric($this->rr_weight_mt) && (float) $this->rr_weight_mt > 0) {
+            return (string) round((float) $this->rr_weight_mt, 4);
+        }
+
+        return $fromDetails;
     }
 
     protected function casts(): array

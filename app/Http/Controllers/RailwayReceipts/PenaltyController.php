@@ -57,16 +57,16 @@ final class PenaltyController extends Controller
         $byType = $this->buildByType($sidingIds, $request);
         $bySiding = $this->buildBySiding($sidingIds, $request);
         $monthlyTrend = $this->buildMonthlyTrend($sidingIds, $request);
-        $topOffenders = $this->buildTopOffenders($sidingIds);
-        $weekdayHeatmap = $this->buildWeekdayHeatmap($sidingIds);
+        $topOffenders = $this->buildTopOffenders($sidingIds, $request);
+        $weekdayHeatmap = $this->buildWeekdayHeatmap($sidingIds, $request);
         $rootCauseBreakdown = $this->buildRootCauseBreakdown($sidingIds);
         $disputeAnalysis = $this->buildDisputeAnalysis($sidingIds);
         $penaltyTypeTrend = $this->buildPenaltyTypeTrend($sidingIds);
         $costSavingOpportunities = $this->buildCostSavingOpportunities($sidingIds);
         $responsiblePartyDetail = $this->buildResponsiblePartyDetail($sidingIds);
-        $byOperator = $this->buildByOperator($sidingIds);
-        $byShift = $this->buildByShift($sidingIds);
-        $byWagonType = $this->buildByWagonType($sidingIds);
+        $byOperator = $this->buildByOperator($sidingIds, $request);
+        $byShift = $this->buildByShift($sidingIds, $request);
+        $byWagonType = $this->buildByWagonType($sidingIds, $request);
         $operatorLeaderboard = $this->buildOperatorLeaderboard($sidingIds);
 
         $sidings = Siding::query()
@@ -305,7 +305,7 @@ final class PenaltyController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{rake_number: string, siding_name: string, total: float, count: int, types: string}>
      */
-    private function buildTopOffenders(array $sidingIds): array
+    private function buildTopOffenders(array $sidingIds, Request $request): array
     {
         if ($sidingIds === []) {
             return [];
@@ -313,15 +313,11 @@ final class PenaltyController extends Controller
 
         $driver = DB::getDriverName();
         $groupConcatSql = $driver === 'pgsql'
-            ? "STRING_AGG(DISTINCT penalties.penalty_type, ',')"
-            : 'GROUP_CONCAT(DISTINCT penalties.penalty_type)';
+            ? "STRING_AGG(DISTINCT rr_penalty_snapshots.penalty_code, ',')"
+            : 'GROUP_CONCAT(DISTINCT rr_penalty_snapshots.penalty_code)';
 
-        return Penalty::query()
-            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
-            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->where('penalty_date', '>=', now()->subMonths(12))
-            ->selectRaw("rakes.rake_number, sidings.name as siding_name, sum(penalty_amount) as total, count(*) as count, {$groupConcatSql} as types")
+        return $this->penaltySnapshotQuery($sidingIds, $request)
+            ->selectRaw("rakes.rake_number, sidings.name as siding_name, sum(rr_penalty_snapshots.amount) as total, count(*) as count, {$groupConcatSql} as types")
             ->groupBy('rakes.rake_number', 'sidings.name')
             ->orderByDesc('total')
             ->limit(10)
@@ -343,23 +339,22 @@ final class PenaltyController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{day: int, count: int, total: float}>
      */
-    private function buildWeekdayHeatmap(array $sidingIds): array
+    private function buildWeekdayHeatmap(array $sidingIds, Request $request): array
     {
         if ($sidingIds === []) {
             return [];
         }
 
         $driver = DB::getDriverName();
+        $dateExpr = PenaltyDateFilter::DATE_EXPR;
         $dowSql = match ($driver) {
-            'pgsql' => 'EXTRACT(DOW FROM penalty_date)::int as day',
-            'sqlite' => "CAST(strftime('%w', penalty_date) AS INTEGER) as day",
-            default => 'DAYOFWEEK(penalty_date) - 1 as day',
+            'pgsql' => "EXTRACT(DOW FROM ({$dateExpr}))::int as day",
+            'sqlite' => "CAST(strftime('%w', {$dateExpr}) AS INTEGER) as day",
+            default => "DAYOFWEEK({$dateExpr}) - 1 as day",
         };
 
-        return Penalty::query()
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->where('penalty_date', '>=', now()->subMonths(12))
-            ->selectRaw("{$dowSql}, count(*) as count, sum(penalty_amount) as total")
+        return $this->penaltySnapshotQuery($sidingIds, $request)
+            ->selectRaw("{$dowSql}, count(*) as count, sum(rr_penalty_snapshots.amount) as total")
             ->groupBy('day')
             ->orderBy('day')
             ->get()
@@ -694,18 +689,21 @@ final class PenaltyController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array<string, mixed>>
      */
-    private function buildByOperator(array $sidingIds): array
+    private function buildByOperator(array $sidingIds, Request $request): array
     {
-        $rows = DB::table('wagon_loading as wl')
-            ->join('rakes', 'rakes.id', '=', 'wl.rake_id')
-            ->join('penalties', 'penalties.rake_id', '=', 'rakes.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereNull('penalties.deleted_at')
+        // Wagon-level snapshots attribute to the operator who loaded that wagon
+        // (wagon_loading is unique per rake+wagon, so amounts are not duplicated).
+        // Preventability is not tracked on rr_penalty_snapshots — reported as 0.
+        $rows = $this->penaltySnapshotQuery($sidingIds, $request)
+            ->join('wagons', function ($join): void {
+                $join->on('wagons.rake_id', '=', 'rr_penalty_snapshots.rake_id')
+                    ->on('wagons.wagon_number', '=', 'rr_penalty_snapshots.wagon_number');
+            })
+            ->join('wagon_loading as wl', 'wl.wagon_id', '=', 'wagons.id')
             ->select(
                 'wl.loader_operator_name as operator',
-                DB::raw('COUNT(DISTINCT penalties.id) as penalty_count'),
-                DB::raw('SUM(penalties.penalty_amount) as total_amount'),
-                DB::raw('SUM(CASE WHEN penalties.is_preventable THEN 1 ELSE 0 END) as preventable_count'),
+                DB::raw('COUNT(DISTINCT rr_penalty_snapshots.id) as penalty_count'),
+                DB::raw('SUM(rr_penalty_snapshots.amount) as total_amount'),
             )
             ->groupBy('wl.loader_operator_name')
             ->orderByDesc('total_amount')
@@ -716,10 +714,8 @@ final class PenaltyController extends Controller
             'operator' => $r->operator ?: 'Unknown',
             'penaltyCount' => (int) $r->penalty_count,
             'totalAmount' => (float) $r->total_amount,
-            'preventableCount' => (int) $r->preventable_count,
-            'preventablePct' => $r->penalty_count > 0
-                ? round(($r->preventable_count / $r->penalty_count) * 100, 1)
-                : 0,
+            'preventableCount' => 0,
+            'preventablePct' => 0,
         ])->values()->all();
     }
 
@@ -727,13 +723,14 @@ final class PenaltyController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array<string, mixed>>
      */
-    private function buildByShift(array $sidingIds): array
+    private function buildByShift(array $sidingIds, Request $request): array
     {
-        $rows = DB::table('wagon_loading as wl')
-            ->join('rakes', 'rakes.id', '=', 'wl.rake_id')
-            ->join('penalties', 'penalties.rake_id', '=', 'rakes.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereNull('penalties.deleted_at')
+        $rows = $this->penaltySnapshotQuery($sidingIds, $request)
+            ->join('wagons', function ($join): void {
+                $join->on('wagons.rake_id', '=', 'rr_penalty_snapshots.rake_id')
+                    ->on('wagons.wagon_number', '=', 'rr_penalty_snapshots.wagon_number');
+            })
+            ->join('wagon_loading as wl', 'wl.wagon_id', '=', 'wagons.id')
             ->whereNotNull('wl.loading_time')
             ->select(
                 DB::raw("CASE
@@ -741,9 +738,8 @@ final class PenaltyController extends Controller
                 WHEN EXTRACT(HOUR FROM wl.loading_time) >= 14 AND EXTRACT(HOUR FROM wl.loading_time) < 22 THEN '2nd Shift'
                 ELSE '3rd Shift'
             END as shift"),
-                DB::raw('COUNT(DISTINCT penalties.id) as penalty_count'),
-                DB::raw('SUM(penalties.penalty_amount) as total_amount'),
-                DB::raw('SUM(CASE WHEN penalties.is_preventable THEN 1 ELSE 0 END) as preventable_count'),
+                DB::raw('COUNT(DISTINCT rr_penalty_snapshots.id) as penalty_count'),
+                DB::raw('SUM(rr_penalty_snapshots.amount) as total_amount'),
             )
             ->groupBy('shift')
             ->orderBy('shift')
@@ -756,7 +752,7 @@ final class PenaltyController extends Controller
                 'shift' => $r->shift,
                 'penaltyCount' => (int) $r->penalty_count,
                 'totalAmount' => (float) $r->total_amount,
-                'preventableCount' => (int) $r->preventable_count,
+                'preventableCount' => 0,
             ])->values()->all();
     }
 
@@ -764,17 +760,17 @@ final class PenaltyController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array<string, mixed>>
      */
-    private function buildByWagonType(array $sidingIds): array
+    private function buildByWagonType(array $sidingIds, Request $request): array
     {
-        $rows = DB::table('wagons')
-            ->join('rakes', 'rakes.id', '=', 'wagons.rake_id')
-            ->join('penalties', 'penalties.rake_id', '=', 'rakes.id')
-            ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereNull('penalties.deleted_at')
+        $rows = $this->penaltySnapshotQuery($sidingIds, $request)
+            ->join('wagons', function ($join): void {
+                $join->on('wagons.rake_id', '=', 'rr_penalty_snapshots.rake_id')
+                    ->on('wagons.wagon_number', '=', 'rr_penalty_snapshots.wagon_number');
+            })
             ->select(
                 DB::raw("COALESCE(NULLIF(wagons.wagon_type, ''), 'Unknown') as wagon_type"),
-                DB::raw('COUNT(DISTINCT penalties.id) as penalty_count'),
-                DB::raw('SUM(penalties.penalty_amount) as total_amount'),
+                DB::raw('COUNT(DISTINCT rr_penalty_snapshots.id) as penalty_count'),
+                DB::raw('SUM(rr_penalty_snapshots.amount) as total_amount'),
             )
             ->groupBy('wagons.wagon_type')
             ->orderByDesc('total_amount')

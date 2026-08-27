@@ -146,7 +146,9 @@ final readonly class GenerateDispatchReport
                 $tareFromWorkorder = $row->vwo_tare_weight !== null ? (float) $row->vwo_tare_weight : null;
                 $tareWt = $tareFromDve ?? $tareFromWorkorder;
 
-                $reachedAtRaw = $row->reached_at ?? $fallback?->reached_at;
+                // Most entries never record a gate arrival; use the dispatch issue
+                // time so the DPR shows the trip date instead of N/A.
+                $reachedAtRaw = $row->reached_at ?? $fallback?->reached_at ?? $row->issued_on;
                 $wbNo = $row->wb_no ?? $fallback?->wb_no;
                 $tripIdNo = $row->trip_id_no ?? $fallback?->trip_id_no;
 

@@ -24,6 +24,8 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
 final class DailyVehicleEntryController extends Controller
@@ -707,36 +709,35 @@ final class DailyVehicleEntryController extends Controller
         $filename = Str::slug("Hourly trips received - {$userLabel} - {$sidingName} - {$date} - shift {$shift}").'.xlsx';
         $filepath = storage_path("app/public/{$filename}");
 
-        $handle = fopen($filepath, 'w');
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
 
-        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.$filename.'</title></head><body>';
-        $html .= '<table border="1">';
+        $sheet->setCellValue([1, 1], 'Hourly trips received - '.$userLabel);
+        $sheet->mergeCells([1, 1, 2, 1]);
+        $sheet->getStyle([1, 1])->getFont()->setBold(true);
+        $sheet->setCellValue([1, 2], "Siding: {$sidingName} | Date: {$date} | Shift: {$shift}");
+        $sheet->mergeCells([1, 2, 2, 2]);
+        $sheet->getStyle([1, 2])->getFont()->setBold(true);
 
-        $html .= '<tr><td colspan="2" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">Hourly trips received - '.$userLabel.'</td></tr>';
-        $html .= '<tr><td colspan="2" style="font-weight:bold; text-align:center; background-color:#f8f8f8;">Siding: '.$sidingName.' | Date: '.$date.' | Shift: '.$shift.'</td></tr>';
-        $html .= '<tr><td colspan="2"></td></tr>';
+        $sheet->setCellValue([1, 4], 'Hour');
+        $sheet->setCellValue([2, 4], 'Trips');
+        $sheet->getStyle([1, 4])->getFont()->setBold(true);
+        $sheet->getStyle([2, 4])->getFont()->setBold(true);
 
-        $html .= '<tr>';
-        $html .= '<td style="font-weight:bold; background-color:#e0e0e0; border:1px solid #ccc;">Hour</td>';
-        $html .= '<td style="font-weight:bold; background-color:#e0e0e0; border:1px solid #ccc;">Trips</td>';
-        $html .= '</tr>';
-
+        $excelRow = 5;
         foreach ($rows as $r) {
-            $html .= '<tr>';
-            $html .= '<td style="border:1px solid #ccc;">'.$r['label'].'</td>';
-            $html .= '<td style="border:1px solid #ccc; text-align:right;">'.$r['count'].'</td>';
-            $html .= '</tr>';
+            $sheet->setCellValue([1, $excelRow], $r['label']);
+            $sheet->setCellValue([2, $excelRow], $r['count']);
+            $excelRow++;
         }
 
-        $html .= '<tr>';
-        $html .= '<td style="font-weight:bold; background-color:#f8f8f8; border:1px solid #ccc;">Total</td>';
-        $html .= '<td style="font-weight:bold; background-color:#f8f8f8; border:1px solid #ccc; text-align:right;">'.$total.'</td>';
-        $html .= '</tr>';
+        $sheet->setCellValue([1, $excelRow], 'Total');
+        $sheet->setCellValue([2, $excelRow], $total);
+        $sheet->getStyle([1, $excelRow])->getFont()->setBold(true);
+        $sheet->getStyle([2, $excelRow])->getFont()->setBold(true);
 
-        $html .= '</table></body></html>';
-
-        fwrite($handle, $html);
-        fclose($handle);
+        (new Xlsx($spreadsheet))->save($filepath);
+        $spreadsheet->disconnectWorksheets();
 
         return response()->download($filepath, basename($filepath), [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

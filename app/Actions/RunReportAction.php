@@ -115,9 +115,9 @@ final readonly class RunReportAction
      */
     private const float LOADER_OPERATOR_PERFORMANCE_MIN_ACCEPTABLE_LOAD_FRACTION_OF_CC = 0.97;
 
-    private const string PENALTY_STAGE_PRE = 'Pre-RR';
+    private const string PENALTY_STAGE_PRE = 'Estimated (before RR)';
 
-    private const string PENALTY_STAGE_POST = 'Post-RR';
+    private const string PENALTY_STAGE_POST = 'RR';
 
     private const string OVERLOADING_REPORT_PENALTY_IMPACT = 'Overload penalty';
 
@@ -2528,7 +2528,7 @@ final readonly class RunReportAction
             'Penalty Type' => $row['penalty_type'],
             'Reason' => '',
             'Amount' => $row['amount'],
-            'Stage Detected (Pre-RR/Post-RR)' => $row['stage_label'],
+            'Stage (RR / Estimated)' => $row['stage_label'],
             'Remarks' => $row['remarks'],
         ];
     }
@@ -2557,7 +2557,7 @@ final readonly class RunReportAction
             'Penalty Amount' => $row['amount'],
             'Overload Qty' => $row['overload_qty'],
             'Delay Time' => $row['delay_time'],
-            'Stage (Pre/Post RR)' => $row['stage_label'],
+            'Stage (RR / Estimated)' => $row['stage_label'],
             'Remarks' => $row['remarks'],
         ];
     }

@@ -843,7 +843,7 @@ export default function ReportsIndex({
                                     )}
                                     {showsPenaltyStageFilter && (
                                         <div className="grid gap-1.5">
-                                            <label className="text-xs font-medium">Stage (Pre / Post RR)</label>
+                                            <label className="text-xs font-medium">Stage</label>
                                             <select
                                                 value={penaltyStage}
                                                 onChange={(e) => setPenaltyStage(e.target.value)}
@@ -851,8 +851,8 @@ export default function ReportsIndex({
                                                 data-pan="report-filter-penalty-stage"
                                             >
                                                 <option value="">All stages</option>
-                                                <option value="pre_rr">Pre-RR</option>
-                                                <option value="post_rr">Post-RR</option>
+                                                <option value="pre_rr">Estimated (before RR)</option>
+                                                <option value="post_rr">RR</option>
                                             </select>
                                         </div>
                                     )}
