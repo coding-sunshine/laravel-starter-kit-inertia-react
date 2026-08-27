@@ -691,32 +691,86 @@ final class PenaltyController extends Controller
      */
     private function buildByOperator(array $sidingIds, Request $request): array
     {
-        // Wagon-level snapshots attribute to the operator who loaded that wagon
-        // (wagon_loading is unique per rake+wagon, so amounts are not duplicated).
+        // Snapshots are rake-level (imported without wagon numbers), so penalties
+        // are split across the rake's loaded wagons proportionally per operator.
         // Preventability is not tracked on rr_penalty_snapshots — reported as 0.
-        $rows = $this->penaltySnapshotQuery($sidingIds, $request)
-            ->join('wagons', function ($join): void {
-                $join->on('wagons.rake_id', '=', 'rr_penalty_snapshots.rake_id')
-                    ->on('wagons.wagon_number', '=', 'rr_penalty_snapshots.wagon_number');
-            })
-            ->join('wagon_loading as wl', 'wl.wagon_id', '=', 'wagons.id')
+        $rakeTotals = $this->rakePenaltyTotals($sidingIds, $request);
+        if ($rakeTotals === []) {
+            return [];
+        }
+
+        $shares = DB::table('wagon_loading as wl')
+            ->join('wagons', 'wagons.id', '=', 'wl.wagon_id')
+            ->whereIn('wagons.rake_id', array_keys($rakeTotals))
             ->select(
-                'wl.loader_operator_name as operator',
-                DB::raw('COUNT(DISTINCT rr_penalty_snapshots.id) as penalty_count'),
-                DB::raw('SUM(rr_penalty_snapshots.amount) as total_amount'),
+                'wagons.rake_id',
+                DB::raw("COALESCE(NULLIF(wl.loader_operator_name, ''), 'Unknown') as grp"),
+                DB::raw('COUNT(*) as wagons'),
             )
-            ->groupBy('wl.loader_operator_name')
-            ->orderByDesc('total_amount')
-            ->limit(15)
+            ->groupBy('wagons.rake_id', 'grp')
             ->get();
 
-        return $rows->map(fn ($r) => [
-            'operator' => $r->operator ?: 'Unknown',
-            'penaltyCount' => (int) $r->penalty_count,
-            'totalAmount' => (float) $r->total_amount,
+        $out = $this->distributeRakePenalties($rakeTotals, $shares);
+        uasort($out, fn (array $a, array $b) => $b['amount'] <=> $a['amount']);
+
+        return collect($out)->take(15)->map(fn (array $v, string $grp) => [
+            'operator' => $grp,
+            'penaltyCount' => (int) round($v['count']),
+            'totalAmount' => round($v['amount'], 2),
             'preventableCount' => 0,
             'preventablePct' => 0,
         ])->values()->all();
+    }
+
+    /**
+     * Per-rake penalty totals for the current filter window.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<int, array{amount: float, count: int}>
+     */
+    private function rakePenaltyTotals(array $sidingIds, Request $request): array
+    {
+        return $this->penaltySnapshotQuery($sidingIds, $request)
+            ->select(
+                'rr_penalty_snapshots.rake_id',
+                DB::raw('SUM(rr_penalty_snapshots.amount) as total'),
+                DB::raw('COUNT(*) as cnt'),
+            )
+            ->groupBy('rr_penalty_snapshots.rake_id')
+            ->get()
+            ->mapWithKeys(fn ($r) => [(int) $r->rake_id => ['amount' => (float) $r->total, 'count' => (int) $r->cnt]])
+            ->all();
+    }
+
+    /**
+     * Split each rake's penalty amount/count across its groups by wagon share.
+     *
+     * @param  array<int, array{amount: float, count: int}>  $rakeTotals
+     * @param  \Illuminate\Support\Collection<int, object{rake_id: int|string, grp: string, wagons: int|string}>  $shares
+     * @return array<string, array{amount: float, count: float}>
+     */
+    private function distributeRakePenalties(array $rakeTotals, \Illuminate\Support\Collection $shares): array
+    {
+        $rakeWagonTotals = [];
+        foreach ($shares as $row) {
+            $rakeWagonTotals[(int) $row->rake_id] = ($rakeWagonTotals[(int) $row->rake_id] ?? 0) + (int) $row->wagons;
+        }
+
+        $out = [];
+        foreach ($shares as $row) {
+            $rakeId = (int) $row->rake_id;
+            $totals = $rakeTotals[$rakeId] ?? null;
+            $rakeWagons = $rakeWagonTotals[$rakeId] ?? 0;
+            if ($totals === null || $rakeWagons === 0) {
+                continue;
+            }
+            $share = (int) $row->wagons / $rakeWagons;
+            $out[$row->grp] ??= ['amount' => 0.0, 'count' => 0.0];
+            $out[$row->grp]['amount'] += $totals['amount'] * $share;
+            $out[$row->grp]['count'] += $totals['count'] * $share;
+        }
+
+        return $out;
     }
 
     /**
@@ -725,35 +779,40 @@ final class PenaltyController extends Controller
      */
     private function buildByShift(array $sidingIds, Request $request): array
     {
-        $rows = $this->penaltySnapshotQuery($sidingIds, $request)
-            ->join('wagons', function ($join): void {
-                $join->on('wagons.rake_id', '=', 'rr_penalty_snapshots.rake_id')
-                    ->on('wagons.wagon_number', '=', 'rr_penalty_snapshots.wagon_number');
-            })
-            ->join('wagon_loading as wl', 'wl.wagon_id', '=', 'wagons.id')
+        // Rake-level snapshots split across the rake's loaded wagons by loading shift.
+        $rakeTotals = $this->rakePenaltyTotals($sidingIds, $request);
+        if ($rakeTotals === []) {
+            return [];
+        }
+
+        $shares = DB::table('wagon_loading as wl')
+            ->join('wagons', 'wagons.id', '=', 'wl.wagon_id')
+            ->whereIn('wagons.rake_id', array_keys($rakeTotals))
             ->whereNotNull('wl.loading_time')
             ->select(
+                'wagons.rake_id',
                 DB::raw("CASE
                 WHEN EXTRACT(HOUR FROM wl.loading_time) >= 6 AND EXTRACT(HOUR FROM wl.loading_time) < 14 THEN '1st Shift'
                 WHEN EXTRACT(HOUR FROM wl.loading_time) >= 14 AND EXTRACT(HOUR FROM wl.loading_time) < 22 THEN '2nd Shift'
                 ELSE '3rd Shift'
-            END as shift"),
-                DB::raw('COUNT(DISTINCT rr_penalty_snapshots.id) as penalty_count'),
-                DB::raw('SUM(rr_penalty_snapshots.amount) as total_amount'),
+            END as grp"),
+                DB::raw('COUNT(*) as wagons'),
             )
-            ->groupBy('shift')
-            ->orderBy('shift')
+            ->groupBy('wagons.rake_id', 'grp')
             ->get();
 
+        $out = $this->distributeRakePenalties($rakeTotals, $shares);
         $shiftOrder = ['1st Shift' => 0, '2nd Shift' => 1, '3rd Shift' => 2];
 
-        return $rows->sortBy(fn ($r) => $shiftOrder[$r->shift] ?? 99)
-            ->map(fn ($r) => [
-                'shift' => $r->shift,
-                'penaltyCount' => (int) $r->penalty_count,
-                'totalAmount' => (float) $r->total_amount,
+        return collect($out)
+            ->map(fn (array $v, string $grp) => [
+                'shift' => $grp,
+                'penaltyCount' => (int) round($v['count']),
+                'totalAmount' => round($v['amount'], 2),
                 'preventableCount' => 0,
-            ])->values()->all();
+            ])
+            ->sortBy(fn (array $r) => $shiftOrder[$r['shift']] ?? 99)
+            ->values()->all();
     }
 
     /**
@@ -762,25 +821,29 @@ final class PenaltyController extends Controller
      */
     private function buildByWagonType(array $sidingIds, Request $request): array
     {
-        $rows = $this->penaltySnapshotQuery($sidingIds, $request)
-            ->join('wagons', function ($join): void {
-                $join->on('wagons.rake_id', '=', 'rr_penalty_snapshots.rake_id')
-                    ->on('wagons.wagon_number', '=', 'rr_penalty_snapshots.wagon_number');
-            })
+        // Rake-level snapshots split across the rake's wagons by wagon type.
+        $rakeTotals = $this->rakePenaltyTotals($sidingIds, $request);
+        if ($rakeTotals === []) {
+            return [];
+        }
+
+        $shares = DB::table('wagons')
+            ->whereIn('wagons.rake_id', array_keys($rakeTotals))
             ->select(
-                DB::raw("COALESCE(NULLIF(wagons.wagon_type, ''), 'Unknown') as wagon_type"),
-                DB::raw('COUNT(DISTINCT rr_penalty_snapshots.id) as penalty_count'),
-                DB::raw('SUM(rr_penalty_snapshots.amount) as total_amount'),
+                'wagons.rake_id',
+                DB::raw("COALESCE(NULLIF(wagons.wagon_type, ''), 'Unknown') as grp"),
+                DB::raw('COUNT(*) as wagons'),
             )
-            ->groupBy('wagons.wagon_type')
-            ->orderByDesc('total_amount')
-            ->limit(10)
+            ->groupBy('wagons.rake_id', 'grp')
             ->get();
 
-        return $rows->map(fn ($r) => [
-            'wagonType' => $r->wagon_type,
-            'penaltyCount' => (int) $r->penalty_count,
-            'totalAmount' => (float) $r->total_amount,
+        $out = $this->distributeRakePenalties($rakeTotals, $shares);
+        uasort($out, fn (array $a, array $b) => $b['amount'] <=> $a['amount']);
+
+        return collect($out)->take(10)->map(fn (array $v, string $grp) => [
+            'wagonType' => $grp,
+            'penaltyCount' => (int) round($v['count']),
+            'totalAmount' => round($v['amount'], 2),
         ])->values()->all();
     }
 
