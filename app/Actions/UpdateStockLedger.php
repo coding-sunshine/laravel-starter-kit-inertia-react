@@ -26,6 +26,19 @@ final readonly class UpdateStockLedger
 {
     private const STOCK_REQUIREMENT_MT_PER_RAKE = 3500;
 
+    private const SIDING_LOCK_NAMESPACE = 823901;
+
+    /**
+     * Serialise all stock ledger writes for a siding within the current transaction.
+     * Prevents same-second races where two writers read the same latest row and one
+     * transaction's balance effect is silently dropped from the running chain.
+     * Must be called inside DB::transaction (advisory xact lock releases on commit).
+     */
+    public static function lockSiding(int $sidingId): void
+    {
+        DB::statement('select pg_advisory_xact_lock(?, ?)', [self::SIDING_LOCK_NAMESPACE, $sidingId]);
+    }
+
     /**
      * Record a stock receipt (coal arrival)
      */
@@ -37,6 +50,8 @@ final readonly class UpdateStockLedger
     ): StockLedger {
         return DB::transaction(function () use ($vehicleArrival, $quantity, $remarks, $userId): StockLedger {
             $siding = $vehicleArrival->siding;
+
+            self::lockSiding((int) $siding->id);
 
             // Get current balance
             $currentBalance = $this->getCurrentBalance($siding->id);
@@ -77,6 +92,9 @@ final readonly class UpdateStockLedger
     ): StockLedger {
         return DB::transaction(function () use ($vehicleUnload, $quantity, $remarks, $userId): StockLedger {
             $siding = $vehicleUnload->siding;
+
+            self::lockSiding((int) $siding->id);
+
             $currentBalance = $this->getCurrentBalance($siding->id);
             $newBalance = $currentBalance + $quantity;
 
@@ -117,9 +135,10 @@ final readonly class UpdateStockLedger
 
             $sidingId = (int) $siding->id;
 
+            self::lockSiding($sidingId);
+
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $sidingId)
-                ->lockForUpdate()
                 ->latest('id')
                 ->first();
 
@@ -213,9 +232,10 @@ final readonly class UpdateStockLedger
             $sidingId = (int) $siding->id;
             $qty = round(abs($quantityMt), 2);
 
+            self::lockSiding($sidingId);
+
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $sidingId)
-                ->lockForUpdate()
                 ->latest('id')
                 ->first();
 
@@ -260,6 +280,8 @@ final readonly class UpdateStockLedger
     ): void {
         DB::transaction(function () use ($siding, $rakeId, $rakeWeighmentId, $userId, $remarks): void {
             $sidingId = (int) $siding->id;
+
+            self::lockSiding($sidingId);
 
             $query = StockLedger::query()->where('siding_id', $sidingId)->where('rake_id', $rakeId);
 
@@ -331,6 +353,8 @@ final readonly class UpdateStockLedger
         int $userId = 0
     ): StockLedger {
         return DB::transaction(function () use ($siding, $correctionQuantity, $reason, $userId): StockLedger {
+            self::lockSiding((int) $siding->id);
+
             $currentBalance = $this->getCurrentBalance($siding->id);
             $newBalance = $currentBalance - abs($correctionQuantity);
 
@@ -363,7 +387,7 @@ final readonly class UpdateStockLedger
     public function getCurrentBalance(int $sidingId): float
     {
         $lastLedger = StockLedger::query()->where('siding_id', $sidingId)
-            ->latest('created_at')
+            ->latest('id')
             ->first();
 
         if ($lastLedger !== null) {

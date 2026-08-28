@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Actions\UpdateStockLedger;
 use App\Events\CoalStockUpdated;
 use App\Jobs\NotifySuperAdmins;
 use App\Models\DailyVehicleEntry;
@@ -270,6 +271,8 @@ final readonly class DailyVehicleEntryService
 
         DB::transaction(function () use ($entry, $netWeight, &$openingBalance, &$closingBalance) {
 
+            UpdateStockLedger::lockSiding((int) $entry->siding_id);
+
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $entry->siding_id)
                 ->lockForUpdate()
@@ -369,6 +372,8 @@ final readonly class DailyVehicleEntryService
 
         DB::transaction(function () use ($entry, $delta, $newWeight) {
 
+            UpdateStockLedger::lockSiding((int) $entry->siding_id);
+
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $entry->siding_id)
                 ->lockForUpdate()
@@ -402,8 +407,10 @@ final readonly class DailyVehicleEntryService
     {
         $query = StockLedger::query()->where('siding_id', $entry->siding_id)
             ->where('transaction_type', 'receipt')
-            ->where('daily_vehicle_entry_id', $entry->id)
-            ->orWhere('reference_number', $entry->e_challan_no);
+            ->where(function ($q) use ($entry) {
+                $q->where('daily_vehicle_entry_id', $entry->id)
+                    ->orWhere('reference_number', $entry->e_challan_no);
+            });
 
         $query->delete();
 
