@@ -22,7 +22,7 @@ final class StockLedgerDailyBalanceReport
      *     siding: array{id: int, name: string, code: string},
      *     from: string,
      *     to: string,
-     *     days: list<array{date: string, opening_mt: float, closing_mt: float, remarks: string|null}>
+     *     days: list<array{date: string, opening_mt: float, closing_mt: float, receipts_mt: float, dispatches_mt: float, corrections_mt: float, unexplained_mt: float, remarks: string|null}>
      * }
      */
     public static function build(Siding $siding, string $from, string $to): array
@@ -67,7 +67,7 @@ final class StockLedgerDailyBalanceReport
             ->whereDate('created_at', '<=', $toDate->toDateString())
             ->orderBy('created_at')
             ->orderBy('id')
-            ->get(['id', 'created_at', 'opening_balance_mt', 'closing_balance_mt'])
+            ->get(['id', 'created_at', 'transaction_type', 'opening_balance_mt', 'closing_balance_mt'])
             ->groupBy(fn (StockLedger $row): string => $row->created_at->toDateString());
 
         $daysAsc = [];
@@ -81,6 +81,10 @@ final class StockLedgerDailyBalanceReport
                     'date' => $dateStr,
                     'opening_mt' => round($running, 2),
                     'closing_mt' => round($running, 2),
+                    'receipts_mt' => 0.0,
+                    'dispatches_mt' => 0.0,
+                    'corrections_mt' => 0.0,
+                    'unexplained_mt' => 0.0,
                     'remarks' => self::QUIET_DAY_REMARKS,
                 ];
 
@@ -92,10 +96,24 @@ final class StockLedgerDailyBalanceReport
             $open = (float) $first->opening_balance_mt;
             $close = (float) $last->closing_balance_mt;
 
+            // Per-row effect (closing - opening) is the ground truth; quantity_mt sign
+            // conventions vary across historical rows.
+            $effects = ['receipt' => 0.0, 'dispatch' => 0.0, 'correction' => 0.0];
+            foreach ($dayRows as $row) {
+                $effects[$row->transaction_type] = ($effects[$row->transaction_type] ?? 0.0)
+                    + ((float) $row->closing_balance_mt - (float) $row->opening_balance_mt);
+            }
+
             $daysAsc[] = [
                 'date' => $dateStr,
                 'opening_mt' => round($open, 2),
                 'closing_mt' => round($close, 2),
+                'receipts_mt' => round($effects['receipt'], 2),
+                'dispatches_mt' => round(-$effects['dispatch'], 2),
+                'corrections_mt' => round($effects['correction'], 2),
+                // Chain breaks: closing moved vs yesterday's closing by more/less than the
+                // day's ledger effects explain (catches intra-day and carry-over breaks).
+                'unexplained_mt' => round(($close - $running) - array_sum($effects), 2),
                 'remarks' => null,
             ];
 

@@ -22,6 +22,10 @@ interface StockReportDay {
     date: string;
     opening_mt: number;
     closing_mt: number;
+    receipts_mt: number;
+    dispatches_mt: number;
+    corrections_mt: number;
+    unexplained_mt: number;
     remarks: string | null;
 }
 
@@ -196,9 +200,10 @@ export default function StockReportDialog({
                 <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4">
                     <DialogTitle>Stock report</DialogTitle>
                     <DialogDescription>
-                        Daily opening and closing balance (MT) from the stock ledger. Days without
-                        ledger lines carry the previous balance; remarks note when no transactions
-                        occurred.
+                        Daily opening/closing balance with receipts, dispatches and corrections
+                        (MT) from the stock ledger — compare each day against the DPR book.
+                        Unexplained flags days where the balance moved by more than the ledger
+                        lines account for.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -309,7 +314,19 @@ export default function StockReportDialog({
                                         Opening (MT)
                                     </th>
                                     <th className="px-3 py-2 text-right font-medium">
+                                        Receipts (MT)
+                                    </th>
+                                    <th className="px-3 py-2 text-right font-medium">
+                                        Dispatches (MT)
+                                    </th>
+                                    <th className="px-3 py-2 text-right font-medium">
+                                        Corrections (MT)
+                                    </th>
+                                    <th className="px-3 py-2 text-right font-medium">
                                         Closing (MT)
+                                    </th>
+                                    <th className="px-3 py-2 text-right font-medium">
+                                        Unexplained (MT)
                                     </th>
                                     <th className="px-3 py-2 text-left font-medium">Remarks</th>
                                 </tr>
@@ -318,7 +335,7 @@ export default function StockReportDialog({
                                 {payload == null || payload.days.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={4}
+                                            colSpan={8}
                                             className="px-3 py-8 text-center text-muted-foreground"
                                         >
                                             {loading
@@ -339,7 +356,25 @@ export default function StockReportDialog({
                                                 {formatMt(row.opening_mt)}
                                             </td>
                                             <td className="px-3 py-2 text-right tabular-nums">
+                                                {formatMt(row.receipts_mt)}
+                                            </td>
+                                            <td className="px-3 py-2 text-right tabular-nums">
+                                                {formatMt(row.dispatches_mt)}
+                                            </td>
+                                            <td className="px-3 py-2 text-right tabular-nums">
+                                                {formatMt(row.corrections_mt)}
+                                            </td>
+                                            <td className="px-3 py-2 text-right tabular-nums">
                                                 {formatMt(row.closing_mt)}
+                                            </td>
+                                            <td
+                                                className={cn(
+                                                    'px-3 py-2 text-right tabular-nums',
+                                                    Math.abs(row.unexplained_mt) > 0.005 &&
+                                                        'font-semibold text-amber-600 dark:text-amber-500',
+                                                )}
+                                            >
+                                                {formatMt(row.unexplained_mt)}
                                             </td>
                                             <td className="max-w-[min(24rem,40vw)] px-3 py-2 text-muted-foreground">
                                                 {row.remarks ?? '—'}
