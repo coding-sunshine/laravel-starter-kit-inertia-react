@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\UpdateStockLedger;
 use App\Events\CoalStockUpdated;
 use App\Http\Requests\AdjustStockLedgerRequest;
 use App\Models\CoalStock;
@@ -17,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -188,6 +190,7 @@ final class StockLedgerController extends Controller
             );
 
             $sidingId = (int) $siding->id;
+            UpdateStockLedger::lockSiding($sidingId);
             [$opening, $newBalance] = $this->lockedBalancesAfterDelta($sidingId, $quantity);
 
             StockLedger::query()->create([
@@ -221,10 +224,10 @@ final class StockLedgerController extends Controller
             );
 
             $sidingId = (int) $siding->id;
+            UpdateStockLedger::lockSiding($sidingId);
 
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $sidingId)
-                ->lockForUpdate()
                 ->latest('id')
                 ->first();
 
