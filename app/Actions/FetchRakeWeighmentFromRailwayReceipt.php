@@ -174,10 +174,18 @@ final readonly class FetchRakeWeighmentFromRailwayReceipt
                 $totalUnderMt = 0.0;
                 $totalOverMt = 0.0;
 
+                $usedWagonIds = [];
                 foreach ($snapshots as $snapshot) {
                     $seq = (int) ($snapshot->wagon_sequence ?? 0);
                     $wagonNumber = mb_trim((string) ($snapshot->wagon_number ?? ''));
                     $wagon = $wagonsBySequence[$seq] ?? ($wagonNumber !== '' ? ($wagonsByNumber[$wagonNumber] ?? null) : null);
+
+                    if ($wagon !== null && isset($usedWagonIds[$wagon->id])) {
+                        $wagon = null;
+                    }
+                    if ($wagon !== null) {
+                        $usedWagonIds[$wagon->id] = true;
+                    }
 
                     $netMt = null;
 

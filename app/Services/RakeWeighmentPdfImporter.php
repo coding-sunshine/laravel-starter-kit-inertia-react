@@ -287,10 +287,18 @@ final readonly class RakeWeighmentPdfImporter
             }
 
             $matched = 0;
+            $usedWagonIds = [];
             foreach ($wagonRows as $row) {
                 $seq = (int) ($row['sequence'] ?? 0);
                 $wagonNumber = mb_trim((string) ($row['wagon_number'] ?? ''));
                 $wagon = $wagonsBySequence[$seq] ?? $wagonsByNumber[$wagonNumber] ?? null;
+
+                if ($wagon !== null && isset($usedWagonIds[$wagon->id])) {
+                    $wagon = null;
+                }
+                if ($wagon !== null) {
+                    $usedWagonIds[$wagon->id] = true;
+                }
 
                 RakeWagonWeighment::query()->create([
                     'rake_weighment_id' => $weighment->id,

@@ -887,6 +887,7 @@ final readonly class WeighmentPdfImporter
             $wagonsByNumber[$wagon->wagon_number] = $wagon;
         }
 
+        $usedWagonIds = [];
         foreach ($wagonRows as $row) {
             $wagonNumber = (string) ($row['wagon_number'] ?? '');
             if ($wagonNumber === '') {
@@ -894,6 +895,13 @@ final readonly class WeighmentPdfImporter
             }
 
             $wagon = $wagonsByNumber[$wagonNumber] ?? null;
+
+            if ($wagon !== null && isset($usedWagonIds[$wagon->id])) {
+                $wagon = null;
+            }
+            if ($wagon !== null) {
+                $usedWagonIds[$wagon->id] = true;
+            }
 
             RakeWagonWeighment::query()->create([
                 'rake_weighment_id' => $weighment->id,
