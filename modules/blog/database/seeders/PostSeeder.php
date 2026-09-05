@@ -2,38 +2,33 @@
 
 declare(strict_types=1);
 
-namespace Modules\Blog\Database\Seeders;
+namespace Database\Seeders\Development;
 
+use App\Models\Post;
 use App\Models\User;
-use Database\Seeders\Concerns\LoadsJsonData;
 use Illuminate\Database\Seeder;
-use Modules\Blog\Models\Post;
 use RuntimeException;
 
 final class PostSeeder extends Seeder
 {
-    use LoadsJsonData;
-
-    private const int MIN_POSTS = 5;
-
     public function run(): void
     {
-        try {
-            $data = $this->loadJson('posts.json');
-        } catch (RuntimeException) {
+        $jsonPath = database_path('seeders/data/posts.json');
+
+        if (! file_exists($jsonPath)) {
             $this->command?->warn('Blog posts JSON file not found');
-            $this->ensureMinimumPosts();
 
             return;
         }
 
+        $data = json_decode((string) file_get_contents($jsonPath), true);
         $posts = $data['posts'] ?? [];
 
         foreach ($posts as $postData) {
             $author = User::query()->where('email', $postData['author_email'])->first();
 
             if (! $author) {
-                $this->command?->warn('Author not found: '.$postData['author_email']);
+                $this->command?->warn("Author not found: {$postData['author_email']}");
 
                 continue;
             }
@@ -57,22 +52,100 @@ final class PostSeeder extends Seeder
             ]);
         }
 
-        $this->ensureMinimumPosts();
         $this->command?->info('Blog posts seeded.');
     }
 
-    private function ensureMinimumPosts(): void
+    /**
+     * Seed relationships (idempotent).
+     */
+    private function seedRelationships(): void
     {
-        $current = Post::query()->count();
-        if ($current >= self::MIN_POSTS) {
-            return;
+        // Ensure User exists for 0 (idempotent)
+        if (User::query()->count() === 0) {
+            User::factory()->count(5)->create();
         }
 
-        $author = User::query()->first();
-        if ($author === null) {
-            return;
+        // Ensure Organization exists for 1 (idempotent)
+        if (\App\Models\Organization::query()->count() === 0) {
+            \App\Models\Organization::factory()->count(5)->create();
         }
 
-        Post::factory()->count(self::MIN_POSTS - $current)->create(['author_id' => $author->id]);
+        // Ensure Category exists for 2 (idempotent)
+        if (\App\Models\Category::query()->count() === 0) {
+            \App\Models\Category::factory()->count(5)->create();
+        }
+
+        // Ensure User exists for 3 (idempotent)
+        if (User::query()->count() === 0) {
+            User::factory()->count(5)->create();
+        }
+
+        // Ensure User exists for 4 (idempotent)
+        if (User::query()->count() === 0) {
+            User::factory()->count(5)->create();
+        }
+
+        // Ensure User exists for 5 (idempotent)
+        if (User::query()->count() === 0) {
+            User::factory()->count(5)->create();
+        }
+
+    }
+
+    /**
+     * Seed from JSON data file (idempotent).
+     */
+    private function seedFromJson(): void
+    {
+        try {
+            $data = $this->loadJson('posts.json');
+
+            if (! isset($data['posts']) || ! is_array($data['posts'])) {
+                return;
+            }
+
+            foreach ($data['posts'] as $itemData) {
+                $factoryState = $itemData['_factory_state'] ?? null;
+                unset($itemData['_factory_state']);
+
+                // Use idempotent updateOrCreate if unique field exists
+                if (isset($itemData['slug']) && ! empty($itemData['slug'])) {
+                    Post::query()->updateOrCreate(
+                        ['slug' => $itemData['slug']],
+                        $itemData
+                    );
+                } else {
+                    // Fallback to factory if no unique field
+                    $factory = Post::factory();
+                    if ($factoryState !== null && method_exists($factory, $factoryState)) {
+                        $factory = $factory->{$factoryState}();
+                    }
+                    $factory->create($itemData);
+                }
+            }
+        } catch (RuntimeException $e) {
+            // JSON file doesn't exist or is invalid - skip silently
+        }
+    }
+
+    /**
+     * Seed using factory (idempotent - safe to run multiple times).
+     */
+    private function seedFromFactory(): void
+    {
+        // Generate seed data with factory
+        // Note: Factory creates are not idempotent by default
+        // For true idempotency, use updateOrCreate in seedFromJson or add unique constraints
+        Post::factory()
+            ->count(5)
+            ->create();
+
+        // Create admin users if applicable
+        if (method_exists(Post::factory(), 'admin')) {
+            Post::factory()
+                ->admin()
+                ->count(2)
+                ->create();
+        }
     }
 }

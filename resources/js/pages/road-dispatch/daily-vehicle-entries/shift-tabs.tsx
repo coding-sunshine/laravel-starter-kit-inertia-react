@@ -1,0 +1,100 @@
+import React from 'react';
+import { Button } from '@/components/ui/button';
+
+interface ShiftStatus {
+  is_active: boolean;
+  is_available: boolean;
+  is_completed: boolean;
+}
+
+interface ShiftTabsProps {
+  activeShift: number;
+  onShiftChange: (shift: number) => void;
+  shiftSummary: Record<number, number>;
+  shiftStatus?: Record<number, ShiftStatus>;
+  shiftTimes?: Record<number, { start: string; end: string }>;
+  allowedShifts?: number[];
+  /** When true (today + non-admin), only {@see timeEditableShift} tab is clickable; others stay visible but disabled. */
+  lockTabsByTime?: boolean;
+  /** Shift number allowed for the current wall-clock window, or null when none (fully locked). */
+  timeEditableShift?: number | null;
+}
+
+export default function ShiftTabs({
+  activeShift,
+  onShiftChange,
+  shiftSummary,
+  shiftStatus,
+  shiftTimes,
+  allowedShifts = [1, 2, 3],
+  lockTabsByTime = false,
+  timeEditableShift = null,
+}: ShiftTabsProps) {
+  const allShifts = [
+    { id: 1, label: '1ST SHIFT' },
+    { id: 2, label: '2ND SHIFT' },
+    { id: 3, label: '3RD SHIFT' },
+  ];
+  const shifts = allShifts.filter((shift) => allowedShifts.includes(shift.id));
+
+  const getShiftVariant = (shiftId: number) => {
+    if (activeShift === shiftId) return "default";
+    if (shiftStatus && !shiftStatus[shiftId]?.is_available) return "secondary";
+    return "ghost";
+  };
+
+  const getShiftDisabled = (shiftId: number) => {
+    if (lockTabsByTime) {
+      if (timeEditableShift === null) {
+        return true;
+      }
+      return shiftId !== timeEditableShift;
+    }
+    return shiftStatus ? !shiftStatus[shiftId]?.is_available : false;
+  };
+
+  const getShiftTitle = (shiftId: number) => {
+    if (lockTabsByTime) {
+      if (timeEditableShift === null) {
+        return 'No shift is active for your assignment right now';
+      }
+      if (shiftId !== timeEditableShift) {
+        return 'Available only during this shift scheduled time (including grace period)';
+      }
+      return 'Current editable shift for your assignment';
+    }
+    if (!shiftStatus) return '';
+
+    const status = shiftStatus[shiftId];
+    if (status.is_active) return 'Current active shift';
+    if (!status.is_available) {
+      if (shiftId === 2) return `2nd shift will be available after 1st shift completion (after ${shiftTimes?.[1]?.end ?? '08:00'})`;
+      if (shiftId === 3) return `3rd shift will be available after 2nd shift completion (after ${shiftTimes?.[2]?.end ?? '16:00'})`;
+      return 'Shift not available';
+    }
+    if (status.is_completed) return 'Completed shift';
+    return 'Available shift';
+  };
+
+  return (
+    <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+      {shifts.map((shift) => (
+        <Button
+          key={shift.id}
+          variant={getShiftVariant(shift.id)}
+          onClick={() => onShiftChange(shift.id)}
+          disabled={getShiftDisabled(shift.id)}
+          title={getShiftTitle(shift.id)}
+          className={`flex-1 justify-center ${
+            getShiftDisabled(shift.id) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+          }`}
+        >
+          {shift.label} ({shiftSummary[shift.id] || 0})
+          {shiftStatus && shiftStatus[shift.id]?.is_active && (
+            <span className="ml-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          )}
+        </Button>
+      ))}
+    </div>
+  );
+}

@@ -16,30 +16,19 @@ const STORAGE_PREFIX = "dt-columns-";
 const ORDER_STORAGE_PREFIX = "dt-column-order-";
 
 function loadVisibility(tableName: string, columns: DataTableColumnDef[]): VisibilityState {
-    const serverDefaults: VisibilityState = {};
-    const knownIds = new Set<string>();
-    for (const col of columns) {
-        serverDefaults[col.id] = col.visible;
-        knownIds.add(col.id);
-    }
-
     const stored = localStorage.getItem(STORAGE_PREFIX + tableName);
     if (stored) {
         try {
-            const parsed = JSON.parse(stored) as VisibilityState;
-            // Reconcile: use stored values for known columns, server defaults for new ones
-            const merged: VisibilityState = { ...serverDefaults };
-            for (const [id, visible] of Object.entries(parsed)) {
-                if (knownIds.has(id)) {
-                    merged[id] = visible;
-                }
-            }
-            return merged;
+            return JSON.parse(stored) as VisibilityState;
         } catch {
             // fall through
         }
     }
-    return serverDefaults;
+    const visibility: VisibilityState = {};
+    for (const col of columns) {
+        visibility[col.id] = col.visible;
+    }
+    return visibility;
 }
 
 function saveVisibility(tableName: string, visibility: VisibilityState) {
@@ -49,19 +38,29 @@ function saveVisibility(tableName: string, visibility: VisibilityState) {
 function loadColumnOrder(tableName: string, columns: DataTableColumnDef[]): ColumnOrderState {
     const serverOrder = columns.map((col) => col.id);
     const stored = localStorage.getItem(ORDER_STORAGE_PREFIX + tableName);
-    if (stored) {
-        try {
-            const parsed = JSON.parse(stored) as ColumnOrderState;
-            const knownIds = new Set(serverOrder);
-            // Keep stored order for known columns, append any new columns at the end
-            const filtered = parsed.filter((id) => knownIds.has(id));
-            const missing = serverOrder.filter((id) => !filtered.includes(id));
-            return [...filtered, ...missing];
-        } catch {
-            // fall through
-        }
+    if (!stored) {
+        return serverOrder;
     }
-    return serverOrder;
+    try {
+        const parsed = JSON.parse(stored) as ColumnOrderState;
+        const serverSet = new Set(serverOrder);
+        const storedFiltered = parsed.filter((id) => serverSet.has(id));
+        if (storedFiltered.length !== serverOrder.length) {
+            return serverOrder;
+        }
+        if (new Set(storedFiltered).size !== serverOrder.length) {
+            return serverOrder;
+        }
+        for (const id of serverOrder) {
+            if (!storedFiltered.includes(id)) {
+                return serverOrder;
+            }
+        }
+
+        return storedFiltered;
+    } catch {
+        return serverOrder;
+    }
 }
 
 function saveColumnOrder(tableName: string, order: ColumnOrderState) {
@@ -72,9 +71,15 @@ interface UseDataTableOptions<TData> {
     tableData: DataTableResponse<TData>;
     tableName: string;
     columnDefs: ColumnDef<TData>[];
+    preserveSearchParams?: string[];
 }
 
-export function useDataTable<TData>({ tableData, tableName, columnDefs }: UseDataTableOptions<TData>) {
+export function useDataTable<TData>({
+    tableData,
+    tableName,
+    columnDefs,
+    preserveSearchParams = [],
+}: UseDataTableOptions<TData>) {
     const { meta } = tableData;
 
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
@@ -178,13 +183,20 @@ export function useDataTable<TData>({ tableData, tableName, columnDefs }: UseDat
                 searchParams.set("per_page", perPage);
             }
 
+            for (const key of preserveSearchParams) {
+                const v = currentUrl.searchParams.get(key);
+                if (v !== null && v !== "") {
+                    searchParams.set(key, v);
+                }
+            }
+
             router.get(
                 currentUrl.pathname + "?" + searchParams.toString(),
                 {},
                 { preserveScroll: true },
             );
         },
-        [],
+        [preserveSearchParams],
     );
 
     const applyColumns = useCallback(

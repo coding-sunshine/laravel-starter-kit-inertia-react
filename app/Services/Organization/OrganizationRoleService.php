@@ -45,6 +45,9 @@ final class OrganizationRoleService
      */
     public function syncRolePermissions(Organization $organization): void
     {
+        if (! config('permission.teams', false)) {
+            return;
+        }
         $teamKey = config('permission.column_names.team_foreign_key');
 
         foreach (['admin', 'member'] as $roleName) {

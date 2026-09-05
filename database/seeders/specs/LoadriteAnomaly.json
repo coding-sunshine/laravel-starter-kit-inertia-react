@@ -1,0 +1,82 @@
+{
+    "model": "LoadriteAnomaly",
+    "table": "loadrite_anomalies",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "loadrite_event_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "kind": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "raw_value": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "context": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "resolved_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "resolved_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "loadriteEvent": {
+            "type": "belongsTo",
+            "model": "LoadriteEvent"
+        },
+        "resolvedBy": {
+            "type": "belongsTo",
+            "model": "ResolvedBy"
+        }
+    },
+    "value_hints": {
+        "resolved_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

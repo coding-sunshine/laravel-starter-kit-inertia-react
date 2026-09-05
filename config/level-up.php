@@ -58,9 +58,24 @@ return [
     |
     */
     'multiplier' => [
-        'enabled' => env(key: 'MULTIPLIER_ENABLED', default: true),
+        // Disabled: the multipliers/multiplier_scopes tables were never migrated
+        // for this app and the feature is unused (no Multiplier records are seeded).
+        'enabled' => env(key: 'MULTIPLIER_ENABLED', default: false),
         'path' => env(key: 'MULTIPLIER_PATH', default: app_path(path: 'Multipliers')),
         'namespace' => env(key: 'MULTIPLIER_NAMESPACE', default: 'App\\Multipliers\\'),
+    ],
+
+    /*
+    |-----------------------------------------------------------------------
+    | Tiers
+    |-----------------------------------------------------------------------
+    |
+    | Disabled: the tiers table and tier_id columns were never migrated for
+    | this app and the feature is unused.
+    |
+    */
+    'tiers' => [
+        'enabled' => env(key: 'TIERS_ENABLED', default: false),
     ],
 
     /*

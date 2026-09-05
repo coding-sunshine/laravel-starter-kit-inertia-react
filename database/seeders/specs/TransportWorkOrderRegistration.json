@@ -1,0 +1,140 @@
+{
+    "model": "TransportWorkOrderRegistration",
+    "table": "transport_work_order_registrations",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "work_order_no_1": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "work_order_no_2": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "reference_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "work_order_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "transporter_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "trade_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "legal_name_of_business": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "pan_card": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "gst_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "email": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "vendor_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mobile_1": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mobile_2": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "gramin_or_non_gramin": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": {
+        "transporter_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "trade_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "legal_name_of_business": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "email": {
+            "type": "email",
+            "example": "user@example.com"
+        },
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

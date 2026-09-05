@@ -1,4 +1,6 @@
+import { cn } from '@/lib/utils';
 import {
+    type DataKey,
     Legend,
     PolarAngleAxis,
     PolarGrid,
@@ -9,77 +11,80 @@ import {
     Tooltip,
 } from 'recharts';
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { cn } from '@/lib/utils';
-import { CHART_COLORS } from './chart-colors';
+const COLORS = [
+    'var(--chart-1)',
+    'var(--chart-2)',
+    'var(--chart-3)',
+    'var(--chart-4)',
+    'var(--chart-5)',
+];
 
-export interface RadarChartProps {
-    data: Record<string, unknown>[];
-    dataKeys: string[];
-    angleKey: string;
-    showLegend?: boolean;
-    showTooltip?: boolean;
-    skeleton?: boolean;
+interface RadarChartProps<T extends Record<string, unknown>> {
+    data: T[];
+    axisKey: keyof T & string;
+    radarKeys: string[];
+    radarLabels?: Record<string, string>;
+    radarColors?: Record<string, string>;
     height?: number;
+    formatTooltip?: (value: number) => string;
     className?: string;
 }
 
-export function RadarChart({
+export function RadarChart<T extends Record<string, unknown>>({
     data,
-    dataKeys,
-    angleKey,
-    showLegend = false,
-    showTooltip = true,
-    skeleton = false,
+    axisKey,
+    radarKeys,
+    radarLabels,
+    radarColors,
     height = 300,
+    formatTooltip,
     className,
-}: RadarChartProps) {
-    const reducedMotion = useReducedMotion();
-
-    if (skeleton) {
-        return (
-            <Skeleton
-                className={cn('rounded-md', className)}
-                style={{ height }}
-            />
-        );
-    }
-
+}: RadarChartProps<T>) {
     return (
-        <div className={cn('w-full', className)} style={{ height }}>
-            <ResponsiveContainer width="100%" height="100%">
-                <RechartsRadarChart data={data}>
-                    <PolarGrid stroke="var(--border)" />
+        <div className={cn('w-full', className)}>
+            <ResponsiveContainer width="100%" height={height}>
+                <RechartsRadarChart
+                    data={data}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius="70%"
+                >
+                    <PolarGrid className="stroke-border/50" />
                     <PolarAngleAxis
-                        dataKey={angleKey}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+                        dataKey={axisKey as DataKey<T>}
+                        tick={{ fontSize: 11 }}
+                        className="fill-muted-foreground"
                     />
                     <PolarRadiusAxis
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+                        tick={{ fontSize: 10 }}
+                        className="fill-muted-foreground"
                         axisLine={false}
                     />
-                    {showTooltip && (
-                        <Tooltip
-                            contentStyle={{
-                                background: 'var(--popover)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '8px',
-                                color: 'var(--popover-foreground)',
-                                fontSize: 12,
-                            }}
-                        />
-                    )}
-                    {showLegend && <Legend />}
-                    {dataKeys.map((key, index) => (
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: 'var(--card)',
+                            borderColor: 'var(--border)',
+                            borderRadius: 8,
+                            fontSize: 12,
+                        }}
+                        formatter={(value, name) => [
+                            formatTooltip ? formatTooltip(Number(value)) : Number(value).toLocaleString(),
+                            radarLabels?.[String(name)] ?? String(name),
+                        ]}
+                    />
+                    <Legend
+                        formatter={(value) => radarLabels?.[String(value)] ?? String(value)}
+                        wrapperStyle={{ fontSize: 12 }}
+                    />
+                    {radarKeys.map((key, i) => (
                         <Radar
                             key={key}
                             name={key}
                             dataKey={key}
-                            stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                            fill={CHART_COLORS[index % CHART_COLORS.length]}
-                            fillOpacity={0.25}
-                            isAnimationActive={!reducedMotion}
+                            stroke={radarColors?.[key] ?? COLORS[i % COLORS.length]}
+                            fill={radarColors?.[key] ?? COLORS[i % COLORS.length]}
+                            fillOpacity={0.15}
+                            strokeWidth={2}
                         />
                     ))}
                 </RechartsRadarChart>

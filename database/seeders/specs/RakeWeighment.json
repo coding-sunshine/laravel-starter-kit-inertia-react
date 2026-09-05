@@ -1,0 +1,157 @@
+{
+    "model": "RakeWeighment",
+    "table": "rake_weighments",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "attempt_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "gross_weighment_datetime": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "tare_weighment_datetime": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "train_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "direction": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "commodity": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "from_station": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "to_station": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "priority_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "pdf_file_path": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "total_gross_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total_tare_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total_net_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total_cc_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total_under_load_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total_over_load_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "maximum_train_speed_kmph": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "maximum_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rr_document_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "rrDocument": {
+            "type": "belongsTo",
+            "model": "RrDocument"
+        },
+        "rakeWagonWeighments": {
+            "type": "hasMany",
+            "model": "RakeWagonWeighment"
+        }
+    },
+    "value_hints": {
+        "train_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

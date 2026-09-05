@@ -2,57 +2,52 @@
 
 ## Purpose
 
-Syncs subscription quantity with organization member count for per-seat plans when seat-based billing is enabled. Updates the `quantity` column and optionally the payment gateway.
+{One-line description of what this action does}
 
 ## Location
 
-`app/Actions/Billing/SyncSubscriptionSeatsAction.php`
+`app/Actions/SyncSubscriptionSeatsAction.php`
 
 ## Method Signature
 
 ```php
-public function handle(Organization $organization): void
+public function handle({parameters}): {returnType}
 ```
 
 ## Dependencies
 
-- `BillingSettings` – to check `enable_seat_based_billing`
-- `PaymentGatewayManager` – to call `updateSubscriptionQuantity` when the subscription has a `gateway_subscription_id`
+{List injected dependencies from constructor, or "None" if no dependencies}
 
 ## Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$organization` | `Organization` | The organization whose subscription quantity should be synced |
+| {param} | {type} | {description} |
 
 ## Return Value
 
-Void. Returns early if seat billing is disabled, or if the organization has no active per-seat subscription.
+{Description of what the method returns}
 
 ## Usage Examples
 
-### From Listener (automatic)
+### From Controller
 
 ```php
-// Invoked by SyncSubscriptionSeatsOnMemberChange on OrganizationMemberAdded / OrganizationMemberRemoved
-$this->syncSeats->handle($event->organization);
+app(SyncSubscriptionSeatsAction::class)->handle($params);
 ```
 
-### Manual invocation
+### From Job/Command
 
 ```php
-app(SyncSubscriptionSeatsAction::class)->handle($organization);
+(new SyncSubscriptionSeatsAction($dependency))->handle($params);
 ```
 
 ## Related Components
 
-- **Listener**: `SyncSubscriptionSeatsOnMemberChange` (listens to `OrganizationMemberAdded`, `OrganizationMemberRemoved`)
-- **Model**: `Organization`, `App\Models\Billing\Subscription`, `App\Models\Billing\Plan`
-- **Settings**: `BillingSettings` (`enable_seat_based_billing`)
+- **Controller**: `{RelatedController}` (if applicable)
+- **Route**: `{RouteName}` ({HttpMethod} {RoutePath}) (if applicable)
+- **Model**: `{RelatedModel}` (if applicable)
 
 ## Notes
 
-- Only runs when `BillingSettings::enable_seat_based_billing` is true.
-- Requires an active subscription whose plan has `is_per_seat` true.
-- Quantity is set to `max(1, memberCount)`.
-- If the subscription has `gateway_subscription_id`, the payment gateway's `updateSubscriptionQuantity` is called.
+{Any additional notes, edge cases, or important information}

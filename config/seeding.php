@@ -5,6 +5,30 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
+    | Development seeders whitelist
+    |--------------------------------------------------------------------------
+    |
+    | When the Development category runs, only these seeders are executed.
+    | Set SEED_DEVELOPMENT_WHITELIST in .env (comma-separated full class names)
+    | to override. Use empty value to run no Development seeders.
+    |
+    */
+
+    'development_whitelist' => (function (): array {
+        $fromEnv = env('SEED_DEVELOPMENT_WHITELIST');
+        if ($fromEnv === null) {
+            return [
+                Database\Seeders\Development\UsersSeeder::class,
+                Database\Seeders\Development\RealDataImportSeeder::class,
+            ];
+        }
+        $list = array_filter(array_map('trim', explode(',', (string) $fromEnv)), fn (string $s): bool => $s !== '');
+
+        return array_values($list);
+    })(),
+
+    /*
+    |--------------------------------------------------------------------------
     | Auto-Generate JSON
     |--------------------------------------------------------------------------
     |

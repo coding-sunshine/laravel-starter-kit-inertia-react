@@ -1,0 +1,167 @@
+<h2>Rake Loader — Wagon Loading Interface</h2>
+<p class="subtitle">Currently: a plain spreadsheet with no warnings. Which approach should replace it? (Phase 3 core UX)</p>
+
+<style>
+.approach-grid { display: flex; flex-direction: column; gap: 24px; margin-top: 16px; }
+.approach { border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.approach-header { padding: 12px 18px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+.approach-body { padding: 16px 18px; background: #fff; }
+.wagon-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.wagon-table th { background: #f8fafc; padding: 7px 10px; text-align: left; font-weight: 600; color: #64748b; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.wagon-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.gauge-bar { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+.gauge-fill { height: 100%; border-radius: 4px; }
+.fill-safe { background: #22c55e; }
+.fill-warn { background: #f59e0b; }
+.fill-over { background: #ef4444; }
+.row-safe { background: #f0fdf4; }
+.row-warn { background: #fffbeb; }
+.row-over { background: #fef2f2; }
+.badge { padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; }
+.badge-safe { background: #dcfce7; color: #166534; }
+.badge-warn { background: #fef9c3; color: #854d0e; }
+.badge-over { background: #fee2e2; color: #991b1b; }
+.mock-input { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; font-size: 12px; width: 80px; text-align: right; }
+.mock-input-warn { border-color: #f59e0b; background: #fffbeb; }
+.mock-input-over { border-color: #ef4444; background: #fee2e2; }
+.alert-box { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.alert-warn { background: #fffbeb; border: 1px solid #f59e0b; color: #854d0e; }
+.alert-over { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; }
+.summary-strip { display: flex; gap: 16px; padding: 10px 14px; background: #f8fafc; border-radius: 8px; margin-top: 12px; }
+.summary-item { text-align: center; }
+.summary-item .val { font-size: 18px; font-weight: 800; }
+.summary-item .lbl { font-size: 10px; color: #64748b; text-transform: uppercase; }
+.card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+.wagon-card { border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; }
+.wagon-card .num { font-size: 11px; font-weight: 700; color: #64748b; }
+.wagon-card .loaded { font-size: 16px; font-weight: 800; }
+.wagon-card .pcc { font-size: 10px; color: #94a3b8; }
+.wagon-card-safe { border-color: #22c55e; background: #f0fdf4; }
+.wagon-card-warn { border-color: #f59e0b; background: #fffbeb; }
+.wagon-card-over { border-color: #ef4444; background: #fef2f2; }
+.wagon-card-empty { border-color: #e2e8f0; background: #f8fafc; }
+.ring-safe { box-shadow: 0 0 0 3px #22c55e; }
+</style>
+
+<div class="approach-grid">
+
+  <!-- Option A: Enhanced Spreadsheet -->
+  <div class="option approach" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter" style="position:absolute;top:14px;left:14px;z-index:2">A</div>
+    <div class="approach-header" style="background:#f0fdf4; border-bottom:2px solid #bbf7d0; padding-left:52px;">
+      Enhanced Spreadsheet — Inline Gauges &amp; Color Rows
+      <span style="font-size:11px;color:#166534;font-weight:500;margin-left:auto">Keeps familiar Excel-like layout</span>
+    </div>
+    <div class="approach-body">
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px">Same spreadsheet format, but each row turns color as the operator types. PCC shown as a progress bar next to the input.</p>
+      <table class="wagon-table">
+        <thead><tr><th>Wagon</th><th>Type</th><th>PCC (MT)</th><th>Loaded (MT)</th><th>% of PCC</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr class="row-safe"><td style="font-family:monospace;font-weight:600">W-001</td><td>BOBR</td><td>58.80</td><td><input class="mock-input" value="57.20" /></td><td><div class="gauge-bar" style="width:80px"><div class="gauge-fill fill-safe" style="width:97%"></div></div></td><td><span class="badge badge-safe">97% ✓</span></td></tr>
+          <tr class="row-warn"><td style="font-family:monospace;font-weight:600">W-002</td><td>BOXN</td><td>59.40</td><td><input class="mock-input mock-input-warn" value="59.10" /></td><td><div class="gauge-bar" style="width:80px"><div class="gauge-fill fill-warn" style="width:99%"></div></div></td><td><span class="badge badge-warn">99% ⚠</span></td></tr>
+          <tr class="row-over"><td style="font-family:monospace;font-weight:600">W-003</td><td>BOBR</td><td>58.80</td><td><input class="mock-input mock-input-over" value="60.50" /></td><td><div class="gauge-bar" style="width:80px"><div class="gauge-fill fill-over" style="width:100%"></div></div></td><td><span class="badge badge-over">+1.7T ⛔</span></td></tr>
+          <tr><td style="font-family:monospace;font-weight:600">W-004</td><td>BOBR</td><td>58.80</td><td><input class="mock-input" value="" placeholder="—" /></td><td><div class="gauge-bar" style="width:80px"></div></td><td><span class="badge" style="background:#f1f5f9;color:#64748b">Empty</span></td></tr>
+        </tbody>
+      </table>
+      <div class="alert-box alert-over">⛔ W-003 is overloaded by 1.70 MT — estimated penalty: ~₹8,500</div>
+      <div class="summary-strip">
+        <div class="summary-item"><div class="val" style="color:#ef4444">1</div><div class="lbl">Overloaded</div></div>
+        <div class="summary-item"><div class="val" style="color:#f59e0b">1</div><div class="lbl">Near limit</div></div>
+        <div class="summary-item"><div class="val" style="color:#22c55e">2</div><div class="lbl">Safe</div></div>
+        <div class="summary-item"><div class="val" style="color:#64748b">~₹8,500</div><div class="lbl">Est. penalty</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Card Grid View -->
+  <div class="option approach" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter" style="position:absolute;top:14px;left:14px;z-index:2">B</div>
+    <div class="approach-header" style="background:#eff6ff; border-bottom:2px solid #bfdbfe; padding-left:52px;">
+      Wagon Card Grid — Visual-First, Mobile-Friendly
+      <span style="font-size:11px;color:#1d4ed8;font-weight:500;margin-left:auto">Best for at-a-glance status</span>
+    </div>
+    <div class="approach-body">
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px">Each wagon shown as a card with a circular gauge. Click a card to open an input panel. Great for seeing the whole rake status at once.</p>
+      <div class="card-grid">
+        <div class="wagon-card wagon-card-safe">
+          <div class="num">W-001 · BOBR</div>
+          <div style="margin: 6px auto; width:40px;height:40px;border-radius:50%;background:conic-gradient(#22c55e 349deg, #e2e8f0 349deg);display:flex;align-items:center;justify-content:center">
+            <div style="width:28px;height:28px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#166534">97%</div>
+          </div>
+          <div class="loaded" style="color:#166534">57.2</div>
+          <div class="pcc">PCC: 58.8 MT</div>
+        </div>
+        <div class="wagon-card wagon-card-warn">
+          <div class="num">W-002 · BOXN</div>
+          <div style="margin: 6px auto; width:40px;height:40px;border-radius:50%;background:conic-gradient(#f59e0b 356deg, #e2e8f0 356deg);display:flex;align-items:center;justify-content:center">
+            <div style="width:28px;height:28px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#854d0e">99%</div>
+          </div>
+          <div class="loaded" style="color:#854d0e">59.1</div>
+          <div class="pcc">PCC: 59.4 MT</div>
+        </div>
+        <div class="wagon-card wagon-card-over">
+          <div class="num">W-003 · BOBR</div>
+          <div style="margin: 6px auto; width:40px;height:40px;border-radius:50%;background:conic-gradient(#ef4444 360deg, #fca5a5 0deg);display:flex;align-items:center;justify-content:center">
+            <div style="width:28px;height:28px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#991b1b">⛔</div>
+          </div>
+          <div class="loaded" style="color:#991b1b">60.5</div>
+          <div class="pcc">PCC: 58.8 MT</div>
+        </div>
+        <div class="wagon-card wagon-card-empty">
+          <div class="num">W-004 · BOBR</div>
+          <div style="margin: 6px auto; width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center">
+            <div style="font-size:9px;font-weight:700;color:#94a3b8">—</div>
+          </div>
+          <div class="loaded" style="color:#94a3b8">—</div>
+          <div class="pcc">PCC: 58.8 MT</div>
+        </div>
+      </div>
+      <div class="alert-box alert-over">⛔ W-003 overloaded +1.70 MT · Est. penalty ₹8,500 · <strong>Resolve before dispatch</strong></div>
+    </div>
+  </div>
+
+  <!-- Option C: Split — Spreadsheet + Live Summary Panel -->
+  <div class="option approach" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter" style="position:absolute;top:14px;left:14px;z-index:2">C</div>
+    <div class="approach-header" style="background:#fefce8; border-bottom:2px solid #fde68a; padding-left:52px;">
+      Split Layout — Spreadsheet Left + Live Penalty Panel Right
+      <span style="font-size:11px;color:#854d0e;font-weight:500;margin-left:auto">Most information density</span>
+    </div>
+    <div class="approach-body">
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px">Spreadsheet on the left (fast data entry), live penalty dashboard on the right that updates as you type. Best for experienced operators on widescreen monitors.</p>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1.8">
+          <table class="wagon-table">
+            <thead><tr><th>Wagon</th><th>PCC</th><th>Loaded</th><th>Δ</th></tr></thead>
+            <tbody>
+              <tr class="row-safe"><td style="font-family:monospace;font-size:11px">W-001</td><td>58.80</td><td><input class="mock-input" style="width:60px" value="57.20" /></td><td style="color:#22c55e;font-weight:700;font-size:11px">-1.60</td></tr>
+              <tr class="row-warn"><td style="font-family:monospace;font-size:11px">W-002</td><td>59.40</td><td><input class="mock-input mock-input-warn" style="width:60px" value="59.10" /></td><td style="color:#f59e0b;font-weight:700;font-size:11px">-0.30</td></tr>
+              <tr class="row-over"><td style="font-family:monospace;font-size:11px">W-003</td><td>58.80</td><td><input class="mock-input mock-input-over" style="width:60px" value="60.50" /></td><td style="color:#ef4444;font-weight:700;font-size:11px">+1.70 ⛔</td></tr>
+              <tr><td style="font-family:monospace;font-size:11px;color:#94a3b8">W-004</td><td style="color:#94a3b8">58.80</td><td><input class="mock-input" style="width:60px" value="" placeholder="—" /></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="flex:1;background:#1e3a2f;color:white;border-radius:8px;padding:12px;font-size:12px">
+          <div style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#a7f3d0;margin-bottom:10px">Live Penalty Preview</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:#d1fae5">Total wagons</span><span style="font-weight:700">4</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:#d1fae5">Loaded</span><span style="font-weight:700">3 / 4</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:#fca5a5">Overloaded</span><span style="font-weight:800;color:#ef4444">1 wagon</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:#fde68a">Near limit (&gt;95%)</span><span style="font-weight:700;color:#f59e0b">1 wagon</span></div>
+            <div style="border-top:1px solid #2d5a3d;padding-top:8px;margin-top:4px">
+              <div style="color:#a7f3d0;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Est. penalty</div>
+              <div style="font-size:22px;font-weight:900;color:#ef4444;font-family:monospace">₹8,500</div>
+              <div style="font-size:10px;color:#6ee7b7;margin-top:2px">W-003: +1.70MT × ₹5,000/MT</div>
+            </div>
+            <button style="margin-top:8px;background:#ef4444;color:white;border:none;border-radius:6px;padding:8px 12px;font-weight:700;font-size:12px;cursor:pointer">⛔ Block dispatch until fixed</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:16px;padding:12px 16px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:12px;color:#166534">
+  <strong>Key decision:</strong> All three options include: real-time color coding, overload warnings, estimated penalty calculation, and a summary. The difference is <em>layout</em>. Option A keeps the familiar spreadsheet. B goes visual-first. C gives managers the most data at once.
+</div>

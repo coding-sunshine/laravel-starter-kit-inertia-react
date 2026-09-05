@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import {
     Cell,
     Legend,
@@ -7,87 +8,80 @@ import {
     Tooltip,
 } from 'recharts';
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { cn } from '@/lib/utils';
-import { CHART_COLORS } from './chart-colors';
+const CHART_COLORS = [
+    'var(--chart-1)', // primary coal / throughput
+    'var(--chart-3)', // penalty / risk
+    'var(--chart-2)', // secondary flow
+    'var(--chart-4)', // warning / amber
+    'var(--chart-5)', // accent
+];
 
-export interface PieChartDatum {
-    name: string;
-    value: number;
-    color?: string;
-}
-
-export interface PieChartProps {
-    data: PieChartDatum[];
-    donut?: boolean;
-    showLegend?: boolean;
-    showTooltip?: boolean;
-    skeleton?: boolean;
+interface PieChartProps<T extends Record<string, unknown>> {
+    data: T[];
+    nameKey: keyof T & string;
+    valueKey: keyof T & string;
     height?: number;
+    colors?: string[];
+    innerRadius?: number;
+    formatTooltip?: (value: number) => string;
+    showLegend?: boolean;
     className?: string;
 }
 
-export function PieChart({
+export function PieChart<T extends Record<string, unknown>>({
     data,
-    donut = false,
+    nameKey,
+    valueKey,
+    height = 280,
+    colors = CHART_COLORS,
+    innerRadius = 50,
+    formatTooltip,
     showLegend = true,
-    showTooltip = true,
-    skeleton = false,
-    height = 300,
     className,
-}: PieChartProps) {
-    const reducedMotion = useReducedMotion();
-
-    if (skeleton) {
-        return (
-            <Skeleton
-                className={cn('rounded-md', className)}
-                style={{ height }}
-            />
-        );
-    }
-
-    const innerRadius = donut ? '55%' : 0;
-
+}: PieChartProps<T>) {
     return (
-        <div className={cn('w-full', className)} style={{ height }}>
-            <ResponsiveContainer width="100%" height="100%">
+        <div className={cn('w-full', className)}>
+            <ResponsiveContainer width="100%" height={height}>
                 <RechartsPieChart>
-                    {showTooltip && (
-                        <Tooltip
-                            contentStyle={{
-                                background: 'var(--popover)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '8px',
-                                color: 'var(--popover-foreground)',
-                                fontSize: 12,
-                            }}
-                        />
-                    )}
-                    {showLegend && <Legend />}
                     <Pie
                         data={data}
+                        dataKey={valueKey}
+                        nameKey={nameKey}
                         cx="50%"
                         cy="50%"
                         innerRadius={innerRadius}
-                        outerRadius="75%"
-                        dataKey="value"
-                        nameKey="name"
-                        isAnimationActive={!reducedMotion}
-                        strokeWidth={2}
-                        stroke="var(--background)"
+                        outerRadius="78%"
+                        paddingAngle={3}
+                        strokeWidth={0}
                     >
-                        {data.map((entry, index) => (
+                        {data.map((_entry, index) => (
                             <Cell
-                                key={entry.name ?? String(entry.value)}
-                                fill={
-                                    entry.color ??
-                                    CHART_COLORS[index % CHART_COLORS.length]
-                                }
+                                key={`cell-${index}`}
+                                fill={colors[index % colors.length]}
                             />
                         ))}
                     </Pie>
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: 'var(--card)',
+                            borderColor: 'var(--border)',
+                            borderRadius: 8,
+                            fontSize: 12,
+                        }}
+                        formatter={(value, name) => [
+                            formatTooltip
+                                ? formatTooltip(Number(value))
+                                : Number(value).toLocaleString(),
+                            name,
+                        ]}
+                    />
+                    {showLegend && (
+                        <Legend
+                            wrapperStyle={{ fontSize: 12 }}
+                            iconType="circle"
+                            iconSize={8}
+                        />
+                    )}
                 </RechartsPieChart>
             </ResponsiveContainer>
         </div>

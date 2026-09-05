@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Modules\Billing\Services\PaymentGateway\Gateways;
+namespace App\Services\PaymentGateway\Gateways;
 
+use App\Models\Billing\PaymentGateway as PaymentGatewayModel;
 use App\Models\Organization;
+use App\Services\PaymentGateway\Contracts\PaymentGatewayInterface;
 use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
 use LemonSqueezy\Laravel\Checkout;
-use Modules\Billing\Models\PaymentGateway as PaymentGatewayModel;
-use Modules\Billing\Services\PaymentGateway\Contracts\PaymentGatewayInterface;
 use Throwable;
 
 /**
@@ -48,7 +48,6 @@ final class LemonSqueezyGateway implements PaymentGatewayInterface
         if (isset($first['credits']) && $first['credits'] > 0) {
             $customData['credits'] = (int) $first['credits'];
         }
-
         if (isset($first['credit_pack_id'])) {
             $customData['credit_pack_id'] = (int) $first['credit_pack_id'];
         }
@@ -147,7 +146,7 @@ final class LemonSqueezyGateway implements PaymentGatewayInterface
         $amount = (int) ($first['amount'] ?? 0);
 
         return [
-            'session_id' => 'ls_'.mb_substr(hash('sha256', $url), 0, 32),
+            'session_id' => 'ls_'.hash('sha256', $url),
             'url' => $url,
             'metadata' => [
                 'billable_type' => Organization::class,
@@ -166,7 +165,7 @@ final class LemonSqueezyGateway implements PaymentGatewayInterface
             }
         }
 
-        return config('services.lemon_squeezy.'.$key, $default);
+        return config("services.lemon_squeezy.{$key}", $default);
     }
 
     private function applyLemonSqueezyConfig(): void

@@ -16,6 +16,23 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
+// Rector's scoped autoloader registers itself first when app/Rector/* is loaded,
+// which breaks Application::inferBasePath() — pin the base path explicitly.
+$_ENV['APP_BASE_PATH'] = dirname(__DIR__);
+
+pest()->extend(TestCase::class)
+    ->beforeEach(function (): void {
+        Str::createRandomStringsNormally();
+        Str::createUuidsNormally();
+        Http::preventStrayRequests();
+        Process::preventStrayProcesses();
+        Sleep::fake();
+
+        $this->freezeTime();
+        $this->withoutVite();
+    })
+    ->in('Pure');
+
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->beforeEach(function (): void {
@@ -44,6 +61,22 @@ pest()->extend(TestCase::class)
 
     })
     ->in('Feature', 'Unit', '../modules/*/tests');
+
+pest()->extend(TestCase::class)
+    ->in('Validator');
+
+pest()->extend(TestCase::class)
+    ->beforeEach(function (): void {
+        Str::createRandomStringsNormally();
+        Str::createUuidsNormally();
+        Http::preventStrayRequests();
+        Process::preventStrayProcesses();
+        Sleep::fake();
+
+        $this->freezeTime();
+        $this->withoutVite();
+    })
+    ->in('Railway');
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)

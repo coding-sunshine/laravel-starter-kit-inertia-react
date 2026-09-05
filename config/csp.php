@@ -28,6 +28,7 @@ return [
             'https://fonts.googleapis.com',
             'https://unpkg.com',
             env('APP_ENV') === 'local' ? 'http://localhost:5173' : null,
+            env('APP_ENV') === 'local' ? 'http://localhost:5174' : null,
         ])],
 
         [Directive::IMG, [Keyword::SELF, 'data:', 'blob:', 'https:']],
@@ -38,11 +39,17 @@ return [
             Keyword::SELF,
             env('APP_ENV') === 'local' ? 'ws://localhost:5173' : null,
             env('APP_ENV') === 'local' ? 'wss://localhost:5173' : null,
+            env('APP_ENV') === 'local' ? 'ws://localhost:5174' : null,
+            env('APP_ENV') === 'local' ? 'wss://localhost:5174' : null,
+            env('APP_ENV') === 'local' ? 'ws://localhost:8080' : null,
+            env('APP_ENV') === 'local' ? 'wss://localhost:8080' : null,
             env('APP_ENV') === 'local' ? 'http://localhost:5173' : null,
+            env('APP_ENV') === 'local' ? 'http://localhost:5174' : null,
+            env('APP_ENV') === 'local' ? 'http://localhost:8080' : null,
         ])],
 
         in_array(env('APP_ENV'), ['local', 'testing'], true)
-            ? [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'http://localhost:5173', 'https://unpkg.com']]
+            ? [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'http://localhost:5173', 'http://localhost:5174', 'https://unpkg.com']]
             : [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_INLINE, 'https://unpkg.com']],
     ]),
 

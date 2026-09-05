@@ -38,57 +38,232 @@ final readonly class CreateFavorite
 
 # Documentation Guidelines
 
-## When to Document
+## CRITICAL: Documentation is MANDATORY
 
-Document new Actions, Controllers, Pages, and Routes. Skip documentation for bug fixes, refactors, and UI-only changes unless they change workflows.
+**Documentation is NOT optional.** Every new Action, Controller, Page, or Route MUST be documented before the task is considered complete. The AI agent MUST NOT mark a task as complete if documentation is missing.
 
-## Documentation Locations
+## Automatic Documentation Triggers
 
-| Component | Location |
-|-----------|----------|
-| Actions | `docs/developer/backend/actions/` |
-| Controllers | `docs/developer/backend/controllers/` |
-| Pages | `docs/developer/frontend/pages/` |
-| Routes | `docs/developer/api-reference/routes.md` |
-| User-facing features | `docs/user-guide/` |
+When completing work involving these paths, documentation updates are **MANDATORY** and **NON-NEGOTIABLE**:
 
-## Templates
+| File Pattern | Documentation Action | Boost Tool to Use |
+|--------------|---------------------|-------------------|
+| `app/Actions/*.php` (new) | Create action doc | `application-info`, `list-routes` |
+| `app/Actions/*.php` (modify) | Update existing action doc | `application-info` |
+| `app/Http/Controllers/*.php` (new) | Create controller doc | `list-routes`, `application-info` |
+| `resources/js/pages/**/*.tsx` (new) | Document page | `application-info`, `list-routes` |
+| `routes/web.php` (new route) | Update route reference | `list-routes` |
+| `config/fortify.php` (feature toggle) | Update auth docs | `application-info` |
+| `database/migrations/*` (new) | Update schema docs | `database-schema` |
 
-Templates in `docs/.templates/`: `action.md`, `controller.md`, `page.md`, `user-feature.md`.
+## Using Boost Tools for Documentation
 
-## Manifest Sync
+### Before Documenting New Features
 
-Run `php artisan docs:sync` to update `docs/.manifest.json` with codebase state and relationships.
+1. **Run `application-info`** to get:
+   - All Eloquent models and their relationships
+   - Installed packages and versions
+   - Current application context
 
-- `--check`: Check for undocumented items without updating
-- `--generate`: Create documentation stubs for undocumented items
+2. **Run `database-schema`** (if data-related) to understand:
+   - Table structures
+   - Foreign key relationships
+   - Column types and constraints
 
-## Cross-Referencing
+3. **Run `list-routes`** to capture:
+   - All available endpoints
+   - Route parameters
+   - Middleware applied
 
-The manifest tracks relationships automatically:
+4. **Run `search-docs`** (for Laravel features) to get:
+   - Version-specific documentation
+   - Best practices and patterns
+
+## Documentation Decision Matrix
+
+| Change Type | User Guide | Developer Guide | API Reference |
+|-------------|------------|-----------------|---------------|
+| New user-visible feature | ✅ Create | ✅ Create | ✅ Update routes |
+| New Action | ❌ Skip | ✅ Create | ❌ Skip |
+| New Controller | ❌ Skip | ✅ Create | ✅ Update routes |
+| New Page (user-facing) | ✅ Create | ✅ Create | ✅ Update routes |
+| Bug fix | ❌ Skip | ❌ Skip | ❌ Skip |
+| Refactor (no behavior change) | ❌ Skip | ✅ If architecture changes | ❌ Skip |
+| New validation rules | ❌ Skip | ✅ Update Form Request docs | ❌ Skip |
+| UI-only changes | ✅ If workflow changes | ❌ Skip | ❌ Skip |
+
+## Documentation Location Matrix
+
+| Component Type | User Docs Location | Developer Docs Location |
+|---------------|-------------------|-------------------------|
+| Authentication | `docs/user-guide/authentication/` | `docs/developer/backend/auth/` |
+| User Settings | `docs/user-guide/account/` | `docs/developer/backend/controllers/` |
+| Actions | N/A | `docs/developer/backend/actions/` |
+| Pages | `docs/user-guide/` (if user-facing) | `docs/developer/frontend/pages/` |
+| Components | N/A | `docs/developer/frontend/components/` |
+| Routes | N/A | `docs/developer/api-reference/routes.md` |
+
+## Documentation Templates
+
+Templates are available in `docs/.templates/`:
+
+- `action.md` - For documenting Actions
+- `controller.md` - For documenting Controllers
+- `page.md` - For documenting Inertia pages
+- `user-feature.md` - For user-facing documentation
+
+Use these templates to ensure consistent documentation structure.
+
+## Manifest Tracking
+
+After creating or updating documentation:
+
+1. Update `docs/.manifest.json` with:
+   - `"documented": true`
+   - `"path"`: Relative path to documentation file
+   - `"lastUpdated"`: Current date (YYYY-MM-DD format)
+
+2. Update relevant index files (e.g., `docs/developer/backend/actions/README.md`)
+
+## MANDATORY Self-Check Before Completing Tasks
+
+**YOU MUST VERIFY ALL OF THE FOLLOWING BEFORE MARKING ANY TASK COMPLETE:**
+
+- [ ] Did I create/modify an Action? → **MUST** use `application-info`, **MUST** document in `docs/developer/backend/actions/`, **MUST** update manifest
+- [ ] Did I add a route? → **MUST** use `list-routes`, **MUST** update `docs/developer/api-reference/routes.md`
+- [ ] Did I change the database? → **MUST** use `database-schema`, **MUST** update model docs
+- [ ] Is this user-visible? → **MUST** update `docs/user-guide/`
+- [ ] Did I update the manifest? → **MUST** update `docs/.manifest.json` with `"documented": true`
+- [ ] Did I run `php artisan docs:sync`? → **MUST** sync manifest to ensure accuracy
+
+**If ANY of the above apply and documentation is missing, the task is INCOMPLETE. Do NOT mark as complete.**
+
+## Documentation Generation Process
+
+<!-- Documentation workflow -->
+```text
+1. **AUTOMATIC TRIGGER**: When creating/modifying Actions, Controllers, Pages, or Routes
+2. **MANDATORY**: Use Boost tools to gather context:
+   - application-info → Models, packages
+   - database-schema → Related tables (if data-related)
+   - list-routes → Affected routes
+   - search-docs → Laravel best practices (if applicable)
+3. **MANDATORY**: Determine documentation scope using decision matrix
+4. **MANDATORY**: Generate documentation using appropriate template from docs/.templates/
+5. **MANDATORY**: Update manifest at docs/.manifest.json with "documented": true
+6. **MANDATORY**: Update relevant index/README files
+7. **MANDATORY**: Run `php artisan docs:sync` to verify manifest is accurate
+8. **MANDATORY**: Only mark task complete after ALL documentation steps are done
+```
+
+## Automated Manifest Sync
+
+The codebase includes an automated manifest sync command:
+
+- **Command**: `php artisan docs:sync`
+- **Purpose**: Scans codebase and updates manifest automatically
+- **When to run**: After creating documentation, before committing
+- **Options**:
+  - `--check`: Only check for undocumented items (useful in CI)
+  - `--generate`: Auto-generate documentation stubs for undocumented items
+
+**The AI agent MUST run `php artisan docs:sync --check` before marking any task complete to verify all items are documented.**
+
+## AI-Powered Documentation Features
+
+### Available Commands
+
+- `php artisan docs:sync` - Sync manifest and discover relationships
+- `php artisan docs:sync --generate` - Generate documentation stubs
+- `php artisan docs:sync --generate --ai` - Generate AI prompts for full documentation
+- `php artisan docs:review` - Review documentation quality
+- `php artisan docs:api` - Generate API documentation
+
+### AI Suggestion Triggers
+
+When creating new code, the AI agent should automatically:
+
+1. **Analyze code complexity** using `DocumentationSuggestionService`:
+   - Detect if user guide is needed (user-facing features)
+   - Identify if examples are needed (complex parameters, dependencies)
+   - Suggest FAQs based on error handling patterns
+   - Recommend related documentation to link
+
+2. **Generate suggestions** before creating documentation:
+   - Use `DocumentationSuggestionService::suggestDocumentation()` to analyze
+   - Review suggestions and include relevant ones in documentation
+   - Use `DocumentationSuggestionService::generateSuggestionPrompt()` for AI analysis
+
+3. **Use intelligent template selection**:
+   - `DocumentationTemplateSelector` automatically chooses appropriate template
+   - Simple templates for basic components
+   - Detailed templates for complex components
+   - API templates for controllers with many routes
+
+### AI-Powered Generation Workflow
+
+When using `--ai` flag with `docs:sync --generate`:
+
+1. **Extract code context**:
+   - PHPDoc/TSDoc comments
+   - Method signatures and parameters
+   - Dependencies and relationships
+
+2. **Gather Boost MCP context**:
+   - `application-info` for models and packages
+   - `list-routes` for route information
+   - `database-schema` for data relationships
+
+3. **Generate AI prompts**:
+   - Prompts saved to `docs/.ai-prompts/`
+   - Include all context and relationships
+   - Use AI agent to process prompts and generate documentation
+
+4. **Update documentation**:
+   - Fill templates with AI-generated content
+   - Update manifest automatically
+   - Update index files automatically
+
+### Code Change Detection
+
+The system automatically detects when code changes require documentation updates:
+
+- **Pre-commit hook** checks for:
+  - Method signature changes
+  - Parameter additions/modifications
+  - Return type changes
+  - New methods added
+
+- **Use `DocumentationChangeDetector`** service to:
+  - Detect staged file changes
+  - Analyze what changed (signatures, parameters, etc.)
+  - Determine if documentation needs update
+
+### Documentation Quality Review
+
+Use `php artisan docs:review` to:
+
+- Compare documentation to actual code
+- Verify method signatures match
+- Check for outdated information
+- Validate cross-references
+- Get AI-powered improvement suggestions
+
+### Cross-Referencing
+
+The system automatically discovers and documents relationships:
 
 - **Actions**: Which controllers use them, which models they use, which routes call them
 - **Controllers**: Which actions they use, which form requests, which routes, which pages they render
 - **Pages**: Which controllers render them, which routes lead to them
+
+All relationships are stored in manifest and automatically included in documentation.
 
 === .ai/general rules ===
 
 # General Guidelines
 
 - Don't include any superfluous PHP Annotations, except ones that start with `@` for typing variables.
-
-=== .ai/settings rules ===
-
-# Settings & Configuration Guidelines
-
-- Runtime configuration is DB-backed via **spatie/laravel-settings**. Settings classes live in `app/Settings/` and are managed via Filament admin pages.
-- Never use `env()` outside of config files. Use `config('key')` — the `SettingsOverlayServiceProvider` writes DB values into config at boot.
-- When adding a new setting: create the Settings class, create a settings migration in `database/settings/`, add the mapping to `SettingsOverlayServiceProvider::OVERLAY_MAP`, and create a Filament `SettingsPage`.
-- Settings that hold secrets (API keys, passwords) must define `public static function encrypted(): array` returning the encrypted property names.
-- 7 groups are org-overridable (Billing, Mail, Stripe, Paddle, LemonSqueezy, Prism, AI). Set `'orgOverridable' => true` in `OVERLAY_MAP` to enable per-org overrides.
-- Per-org overrides are stored in the `organization_settings` table and applied by `ApplyOrganizationSettings` middleware after `SetTenantContext`.
-- Infrastructure settings (`APP_KEY`, `DB_*`, `CACHE_STORE`, `SESSION_DRIVER`, `QUEUE_CONNECTION`, `REDIS_*`, `LOG_CHANNEL`) stay in `.env` — they are needed before the DB is available.
-- See `docs/developer/backend/settings.md` for full documentation.
 
 === foundation rules ===
 
@@ -110,11 +285,9 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/mcp (MCP) - v0
 - laravel/pennant (PENNANT) - v1
 - laravel/prompts (PROMPTS) - v0
-- laravel/pulse (PULSE) - v1
 - laravel/reverb (REVERB) - v1
 - laravel/sanctum (SANCTUM) - v4
 - laravel/scout (SCOUT) - v11
-- laravel/socialite (SOCIALITE) - v5
 - laravel/wayfinder (WAYFINDER) - v0
 - livewire/livewire (LIVEWIRE) - v4
 - larastan/larastan (LARASTAN) - v3
@@ -134,33 +307,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 ## Skills Activation
 
-This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
-
-- `ai-sdk-development` — TRIGGER when working with ai-sdk which is Laravel official first-party AI SDK. Activate when building, editing AI agents, chatbots, text generation, image generation, audio/TTS, transcription/STT, embeddings, RAG, vector stores, reranking, structured output, streaming, conversation memory, tools, queueing, broadcasting, and provider failover across OpenAI, Anthropic, Gemini, Azure, Groq, xAI, DeepSeek, Mistral, Ollama, ElevenLabs, Cohere, Jina, and VoyageAI. Invoke when the user references ai-sdk, the `Laravel\Ai\` namespace, or this project's AI features — not for Prism PHP or other AI packages used directly.
-- `fortify-development` — ACTIVATE when the user works on authentication in Laravel. This includes login, registration, password reset, email verification, two-factor authentication (2FA/TOTP/QR codes/recovery codes), profile updates, password confirmation, or any auth-related routes and controllers. Activate when the user mentions Fortify, auth, authentication, login, register, signup, forgot password, verify email, 2FA, or references app/Actions/Fortify/, CreateNewUser, UpdateUserProfileInformation, FortifyServiceProvider, config/fortify.php, or auth guards. Fortify is the frontend-agnostic authentication backend for Laravel that registers all auth routes and controllers. Also activate when building SPA or headless authentication, customizing login redirects, overriding response contracts like LoginResponse, or configuring login throttling. Do NOT activate for Laravel Passport (OAuth2 API tokens), Socialite (OAuth social login), or non-auth Laravel features.
-- `laravel-best-practices` — Apply this skill whenever writing, reviewing, or refactoring Laravel PHP code. This includes creating or modifying controllers, models, migrations, form requests, policies, jobs, scheduled commands, service classes, and Eloquent queries. Triggers for N+1 and query performance issues, caching strategies, authorization and security patterns, validation, error handling, queue and job configuration, route definitions, and architectural decisions. Also use for Laravel code reviews and refactoring existing Laravel code to follow best practices. Covers any task involving Laravel backend PHP code patterns.
-- `configuring-horizon` — Use this skill whenever the user mentions Horizon by name in a Laravel context. Covers the full Horizon lifecycle: installing Horizon (horizon:install, Sail setup), configuring config/horizon.php (supervisor blocks, queue assignments, balancing strategies, minProcesses/maxProcesses), fixing the dashboard (authorization via Gate::define viewHorizon, blank metrics, horizon:snapshot scheduling), and troubleshooting production issues (worker crashes, timeout chain ordering, LongWaitDetected notifications, waits config). Also covers job tagging and silencing. Do not use for generic Laravel queues without Horizon, SQS or database drivers, standalone Redis setup, Linux supervisord, Telescope, or job batching.
-- `mcp-development` — Develops MCP servers, tools, resources, and prompts. Activates when creating MCP tools, resources, or prompts; setting up AI integrations; debugging MCP connections; working with routes/ai.php; or when the user mentions MCP, Model Context Protocol, AI tools, AI server, or building tools for AI assistants.
-- `pennant-development` — Manages feature flags with Laravel Pennant. Activates when creating, checking, or toggling feature flags; showing or hiding features conditionally; implementing A/B testing; working with @feature directive; or when the user mentions feature flags, feature toggles, Pennant, conditional features, rollouts, or gradually enabling features.
-- `pulse-development` — Handles Laravel Pulse setup, configuration, and custom card development. Activates when installing Pulse; configuring the dashboard or authorization gate; setting up recorders and filtering; building custom Livewire cards; optimizing with Redis ingest or sampling; or when the user mentions /pulse, pulse:check, pulse:work, Pulse::record(), or application monitoring.
-- `scout-development` — Develops full-text search with Laravel Scout. Activates when installing or configuring Scout; choosing a search engine (Algolia, Meilisearch, Typesense, Database, Collection); adding the Searchable trait to models; customizing toSearchableArray or searchableAs; importing or flushing search indexes; writing search queries with where clauses, pagination, or soft deletes; configuring index settings; troubleshooting search results; or when the user mentions Scout, full-text search, search indexing, or search engines in a Laravel project. Make sure to use this skill whenever the user works with search functionality in Laravel, even if they don't explicitly mention Scout.
-- `socialite-development` — Manages OAuth social authentication with Laravel Socialite. Activate when adding social login providers; configuring OAuth redirect/callback flows; retrieving authenticated user details; customizing scopes or parameters; setting up community providers; testing with Socialite fakes; or when the user mentions social login, OAuth, Socialite, or third-party authentication.
-- `wayfinder-development` — Activates whenever referencing backend routes in frontend components. Use when importing from @/actions or @/routes, calling Laravel routes from TypeScript, or working with Wayfinder route functions.
-- `pest-testing` — Tests applications using the Pest 4 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, browser testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works.
-- `inertia-react-development` — Develops Inertia.js v2 React client-side applications. Activates when creating React pages, forms, or navigation; using <Link>, <Form>, useForm, or router; working with deferred props, prefetching, or polling; or when user mentions React with Inertia, React pages, React forms, or React navigation.
-- `echo-development` — Develops real-time broadcasting with Laravel Echo. Activates when setting up broadcasting (Reverb, Pusher, Ably); creating ShouldBroadcast events; defining broadcast channels (public, private, presence, encrypted); authorizing channels; configuring Echo; listening for events; implementing client events (whisper); setting up model broadcasting; broadcasting notifications; or when the user mentions broadcasting, Echo, WebSockets, real-time events, Reverb, or presence channels.
-- `tailwindcss-development` — Styles applications using Tailwind CSS v4 utilities. Activates when adding styles, restyling components, working with gradients, spacing, layout, flex, grid, responsive design, dark mode, colors, typography, or borders; or when the user mentions CSS, styling, classes, Tailwind, restyle, hero section, cards, buttons, or any visual/UI changes.
-- `developing-with-prism` — Guide for the narrow Prism/Relay role in this project. Activate ONLY when working with MCP tool integration via `PrismService::withTools()` (Relay bridge). For all other AI features — text generation, structured output, images, audio, embeddings, streaming, tools, conversation memory — use `developing-with-ai-sdk` instead.
-- `database-mail` — Database-backed email templates with martinpetricko/laravel-database-mail. Activates when adding events that should send emails from DB templates; creating or editing mail templates; or when the user mentions database mail, email templates, event-triggered emails, or TriggersDatabaseMail.
-- `developing-with-ai-sdk` — Builds AI agents, generates text and chat responses, produces images, synthesizes audio, transcribes speech, generates vector embeddings, reranks documents, and manages files and vector stores using the Laravel AI SDK (laravel/ai). Supports structured output, streaming, tools, conversation memory, middleware, queueing, broadcasting, and provider failover. Use when building, editing, updating, debugging, or testing any AI functionality, including agents, LLMs, chatbots, text generation, image generation, audio, transcription, embeddings, RAG, similarity search, vector stores, prompting, structured output, or any AI provider (OpenAI, Anthropic, Gemini, Cohere, Groq, xAI, ElevenLabs, Jina, OpenRouter).
-- `developing-with-fortify` — Laravel Fortify headless authentication backend development. Activate when implementing authentication features including login, registration, password reset, email verification, two-factor authentication (2FA/TOTP), profile updates, headless auth, authentication scaffolding, or auth guards in Laravel applications.
-- `documentation-automation` — Automates documentation when features are added or modified. Activates when creating Actions, Controllers, Pages, Routes, or Models; when modifying config/fortify.php; or when user mentions docs, documentation, readme.
-- `durable-workflow` — Durable Workflow (durable-workflow/workflow, durable-workflow/waterline) and Waterline. Activates when defining workflows or activities, using WorkflowStub, monitoring workflows at /waterline, or when the user mentions durable workflow, Waterline, long-running workflows, sagas, or workflow orchestration.
-- `laravel-data-table` — Server-side DataTables with machour/laravel-data-table (Laravel + Inertia + React, TanStack Table). Activates when building or editing data tables, DataTable classes, table columns/filters/sorting, quick views, exports, or when the user mentions DataTable, data table, server-side table, make:data-table.
-- `laravel-excel` — Laravel Excel and Filament Excel exports (maatwebsite/excel, pxlrbt/filament-excel). Activates when adding or editing exports, imports, Filament table exports, DataTable exports, or when the user mentions Laravel Excel, Excel export, import, maatwebsite/excel, or filament-excel.
-- `pan-product-analytics` — Product analytics with Pan (panphp/pan). Activates when adding or changing tabs, CTAs, nav links, buttons, or key UI that should be tracked for impressions, hovers, and clicks; or when the user mentions analytics, tracking, Pan, data-pan, or product analytics.
-- `taylor-otwell-style` — Code PHP and Laravel applications in the style of Taylor Otwell — the creator of Laravel. Use this skill whenever the user asks to write PHP code, Laravel applications, packages,  APIs, services, or any backend code and wants it to follow Laravel conventions, Taylor  Otwell's coding philosophy, or "elegant PHP." Trigger on: Laravel development, PHP package  creation, API design, service classes, Eloquent models, migrations, controllers, middleware, artisan commands, service providers, fluent interfaces, collection pipelines, or any  request mentioning "Laravel-style," "expressive syntax," "Taylor Otwell," or "code like  Laravel." Also trigger when the user wants to refactor messy PHP into clean, idiomatic  Laravel code. Even if the user just says "write this in PHP" — if you can apply Laravel  patterns to make it better, consult this skill.
-- `visibility-sharing` — Visibility and cross-organization sharing with HasVisibility. Activates when working with HasVisibility trait, VisibilityEnum, Shareable, VisibilityScope, shareItem policy, or copy-on-write cloning.
+This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
 ## Conventions
 
@@ -232,13 +379,25 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 # PHP
 
-- Always declare `declare(strict_types=1);` at the top of every `.php` file.
 - Always use curly braces for control structures, even for single-line bodies.
 - Use PHP 8 constructor property promotion: `public function __construct(public GitHub $github) { }`. Do not leave empty zero-parameter `__construct()` methods unless the constructor is private.
 - Use explicit return type declarations and type hints for all method parameters: `function isAccessible(User $user, ?string $path = null): bool`
 - Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
 - Prefer PHPDoc blocks over inline comments. Only add inline comments for exceptionally complex logic.
 - Use array shape type definitions in PHPDoc blocks.
+
+=== deployments rules ===
+
+# Deployment
+
+- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
+
+=== herd rules ===
+
+# Laravel Herd
+
+- The application is served by Laravel Herd at `https?://[kebab-case-project-dir].test`. Use the `get-absolute-url` tool to generate valid URLs. Never run commands to serve the site. It is always available.
+- Use the `herd` CLI to manage services, PHP versions, and sites (e.g. `herd sites`, `herd services:start <service>`, `herd php:list`). Run `herd list` to discover all available commands.
 
 === inertia-laravel/core rules ===
 
@@ -293,10 +452,6 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 - If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
 
-## Deployment
-
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
-
 === wayfinder/core rules ===
 
 # Laravel Wayfinder
@@ -315,6 +470,7 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 ## Pest
 
 - This project uses Pest for testing. Create tests: `php artisan make:test --pest {name}`.
+- The `{name}` argument should not include the test suite directory. Use `php artisan make:test --pest SomeFeatureTest` instead of `php artisan make:test --pest Feature/SomeFeatureTest`.
 - Run tests: `php artisan test --compact` or filter: `php artisan test --compact --filter=testName`.
 - Do NOT delete tests without approval.
 
@@ -328,14 +484,13 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 
 ## Filament
 
-- Filament is used by this application. Follow the existing conventions for how and where it is implemented.
-- Filament is a Server-Driven UI (SDUI) framework for Laravel that lets you define user interfaces in PHP using structured configuration objects. Built on Livewire, Alpine.js, and Tailwind CSS.
+- Filament is a Laravel UI framework built on Livewire, Alpine.js, and Tailwind CSS. UIs are defined in PHP via fluent, chainable components. Follow existing conventions in this app.
 - Use the `search-docs` tool for official documentation on Artisan commands, code examples, testing, relationships, and idiomatic practices. If `search-docs` is unavailable, refer to https://filamentphp.com/docs.
 
 ### Artisan
 
 - Always use Filament-specific Artisan commands to create files. Find available commands with the `list-artisan-commands` tool, or run `php artisan --help`.
-- Always inspect required options before running a command, and always pass `--no-interaction`.
+- Inspect required options before running, and always pass `--no-interaction`.
 
 ### Patterns
 
@@ -359,6 +514,62 @@ TextInput::make('company_name')
 
 </code-snippet>
 
+Use `Set $set` inside `->afterStateUpdated()` on a `->live()` field to mutate another field reactively. Prefer `->live(onBlur: true)` on text inputs to avoid per-keystroke updates:
+
+<code-snippet name="Reactive field update" lang="php">
+use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Support\Str;
+
+TextInput::make('title')
+    ->required()
+    ->live(onBlur: true)
+    ->afterStateUpdated(fn (Set $set, ?string $state) => $set(
+        'slug',
+        Str::slug($state ?? ''),
+    )),
+
+TextInput::make('slug')
+    ->required(),
+
+</code-snippet>
+
+Compose layout by nesting `Section` and `Grid`. Children need explicit `->columnSpan()` or `->columnSpanFull()`:
+
+<code-snippet name="Section and Grid layout" lang="php">
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+
+Section::make('Details')
+    ->schema([
+        Grid::make(2)->schema([
+            TextInput::make('first_name')
+                ->columnSpan(1),
+            TextInput::make('last_name')
+                ->columnSpan(1),
+            TextInput::make('bio')
+                ->columnSpanFull(),
+        ]),
+    ]),
+
+</code-snippet>
+
+Use `Repeater` for inline `HasMany` management. `->relationship()` with no args binds to the relationship matching the field name:
+
+<code-snippet name="Repeater for HasMany" lang="php">
+use Filament\Forms\Components\Repeater;
+
+Repeater::make('qualifications')
+    ->relationship()
+    ->schema([
+        TextInput::make('institution')
+            ->required(),
+        TextInput::make('qualification')
+            ->required(),
+    ])
+    ->columns(2),
+
+</code-snippet>
+
 Use `state()` with a `Closure` to compute derived column values:
 
 <code-snippet name="Computed table column value" lang="php">
@@ -369,11 +580,28 @@ TextColumn::make('full_name')
 
 </code-snippet>
 
-Actions encapsulate a button with an optional modal form and logic:
+Use `SelectFilter` for enum or relationship filters, and `Filter` with a `->query()` closure for custom logic:
+
+<code-snippet name="Table filters" lang="php">
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Database\Eloquent\Builder;
+
+SelectFilter::make('status')
+    ->options(UserStatus::class),
+
+SelectFilter::make('author')
+    ->relationship('author', 'name'),
+
+Filter::make('verified')
+    ->query(fn (Builder $query) => $query->whereNotNull('email_verified_at')),
+
+</code-snippet>
+
+Actions are buttons that encapsulate optional modal forms and behavior:
 
 <code-snippet name="Action with modal form" lang="php">
 use Filament\Actions\Action;
-use Filament\Forms\Components\TextInput;
 
 Action::make('updateEmail')
     ->schema([
@@ -381,13 +609,16 @@ Action::make('updateEmail')
             ->email()
             ->required(),
     ])
-    ->action(fn (array $data, User $record) => $record->update($data))
+    ->action(fn (array $data, User $record) => $record->update($data)),
 
 </code-snippet>
 
 ### Testing
 
-Always authenticate before testing panel functionality. Filament uses Livewire, so use `Livewire::test()` or `livewire()` (available when `pestphp/pest-plugin-livewire` is in `composer.json`):
+Testing setup (requires `pestphp/pest-plugin-livewire` in `composer.json`):
+
+- Always call `$this->actingAs(User::factory()->create())` before testing panel functionality.
+- For edit pages, pass `['record' => $user->id]`, use `->call('save')` (not `->call('create')`), and do not assert `->assertRedirect()` (edit pages do not redirect after save).
 
 <code-snippet name="Table test" lang="php">
 use function Pest\Livewire\livewire;
@@ -402,7 +633,6 @@ livewire(ListUsers::class)
 
 <code-snippet name="Create resource test" lang="php">
 use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Livewire\livewire;
 
 livewire(CreateUser::class)
     ->fillForm([
@@ -411,6 +641,7 @@ livewire(CreateUser::class)
     ])
     ->call('create')
     ->assertNotified()
+    ->assertHasNoFormErrors()
     ->assertRedirect();
 
 assertDatabaseHas(User::class, [
@@ -420,9 +651,21 @@ assertDatabaseHas(User::class, [
 
 </code-snippet>
 
-<code-snippet name="Testing validation" lang="php">
-use function Pest\Livewire\livewire;
+<code-snippet name="Edit resource test" lang="php">
+livewire(EditUser::class, ['record' => $user->id])
+    ->fillForm(['name' => 'Updated'])
+    ->call('save')
+    ->assertNotified()
+    ->assertHasNoFormErrors();
 
+assertDatabaseHas(User::class, [
+    'id' => $user->id,
+    'name' => 'Updated',
+]);
+
+</code-snippet>
+
+<code-snippet name="Testing validation" lang="php">
 livewire(CreateUser::class)
     ->fillForm([
         'name' => null,
@@ -437,20 +680,10 @@ livewire(CreateUser::class)
 
 </code-snippet>
 
-<code-snippet name="Calling actions in pages" lang="php">
-use Filament\Actions\DeleteAction;
-use function Pest\Livewire\livewire;
+Use `->callAction(DeleteAction::class)` for page actions, or `->callAction(TestAction::make('name')->table($record))` for table actions:
 
-livewire(EditUser::class, ['record' => $user->id])
-    ->callAction(DeleteAction::class)
-    ->assertNotified()
-    ->assertRedirect();
-
-</code-snippet>
-
-<code-snippet name="Calling actions in tables" lang="php">
+<code-snippet name="Calling actions" lang="php">
 use Filament\Actions\Testing\TestAction;
-use function Pest\Livewire\livewire;
 
 livewire(ListUsers::class)
     ->callAction(TestAction::make('promote')->table($user), [
@@ -462,21 +695,26 @@ livewire(ListUsers::class)
 
 ### Correct Namespaces
 
-- Form fields (`TextInput`, `Select`, etc.): `Filament\Forms\Components\`
+- Form fields (`TextInput`, `Select`, `Repeater`, etc.): `Filament\Forms\Components\`
 - Infolist entries (`TextEntry`, `IconEntry`, etc.): `Filament\Infolists\Components\`
 - Layout components (`Grid`, `Section`, `Fieldset`, `Tabs`, `Wizard`, etc.): `Filament\Schemas\Components\`
 - Schema utilities (`Get`, `Set`, etc.): `Filament\Schemas\Components\Utilities\`
+- Table columns (`TextColumn`, `IconColumn`, etc.): `Filament\Tables\Columns\`
+- Table filters (`SelectFilter`, `Filter`, etc.): `Filament\Tables\Filters\`
 - Actions (`DeleteAction`, `CreateAction`, etc.): `Filament\Actions\`. Never use `Filament\Tables\Actions\`, `Filament\Forms\Actions\`, or any other sub-namespace for actions.
 - Icons: `Filament\Support\Icons\Heroicon` enum (e.g., `Heroicon::PencilSquare`)
 
 ### Common Mistakes
 
 - **Never assume public file visibility.** File visibility is `private` by default. Always use `->visibility('public')` when public access is needed.
-- **Never assume full-width layout.** `Grid`, `Section`, and `Fieldset` do not span all columns by default. Explicitly set column spans when needed.
-- **Use correct property types when overriding Page, Resource, and Widget properties.** These properties have union types or changed modifiers that must be preserved:
+- **Never assume full-width layout.** `Grid`, `Section`, `Fieldset`, and `Repeater` do not span all columns by default.
+- **Use `Select::make('author_id')->relationship('author', 'name')` for BelongsTo fields.** `BelongsToSelect` does not exist in v4.
+- **`Repeater` uses `->schema()`, not `->fields()`.**
+- **Never add `->dehydrated(false)` to fields that need to be saved.** It strips the value from form state before `->action()` or the save handler runs. Only use it for helper/UI-only fields.
+- **Use correct property types when overriding `Page`, `Resource`, and `Widget` properties.** These properties have union types or changed modifiers that must be preserved:
   - `$navigationIcon`: `protected static string | BackedEnum | null` (not `?string`)
   - `$navigationGroup`: `protected static string | UnitEnum | null` (not `?string`)
-  - `$view`: `protected string` (not `protected static string`) on Page and Widget classes
+  - `$view`: `protected string` (not `protected static string`) on `Page` and `Widget` classes
 
 === prism-php/prism rules ===
 
@@ -504,42 +742,11 @@ required sections, and what to clarify with the user before planning.
 
 These apply in addition to the Laravel Boost guidelines above. They are kept **after** the `</laravel-boost-guidelines>` block so `php artisan boost:update` does not remove them.
 
-- **Multi-tenancy:** Organizations own content; use `TenantContext`, `SetTenantContext`, `EnsureTenantContext` (`tenant` middleware), and `BelongsToOrganization` trait. Spatie permissions use `organization_id` as team. Domain/subdomain resolution via `ResolveDomainMiddleware` and `organization_domains`. Single-tenant mode: `MULTI_ORGANIZATION_ENABLED=false` hides org UI. See `config/tenancy.php`, docs/developer/backend/billing-and-tenancy.md, docs/developer/backend/single-tenant-mode.md.
-- **Visibility & Sharing:** For global/org/shared data and cross-organization sharing, use the `HasVisibility` trait (do not combine with `BelongsToOrganization` on the same model). Models need `organization_id`, `visibility`; optional `cloned_from` for copy-on-write. Share via `Shareable` (view/edit, optional expiry); authorize with `shareItem` (ShareablePolicy). See docs/developer/backend/visibility-sharing.md, `App\Models\VisibilityDemo`.
-- **Org permissions:** JSON-driven org permissions in `database/seeders/data/organization-permissions.json`; run `permission:sync` to create and assign. Use `$user->canInOrganization()`, `@canOrg`, etc. See docs/developer/backend/permissions.md.
-- **Billing:** laravelcm/laravel-subscriptions + Stripe + Lemon Squeezy (one-time products); `HasCredits` and `HasBilling` traits on Organization (`modules/billing/src/Traits/`); seat-based billing (`BillingSettings`, `SyncSubscriptionSeatsAction`); billing routes under `tenant` middleware. See `config/billing.php`, `modules/billing/src/Http/Controllers/`, docs/developer/backend/billing-and-tenancy.md, docs/developer/backend/lemon-squeezy.md.
 - **Full-text search:** Use Laravel Scout; driver Typesense (Herd: `SCOUT_DRIVER=typesense`, `TYPESENSE_API_KEY=LARAVEL-HERD`, `TYPESENSE_HOST=localhost`). Add `Searchable` trait and `toSearchableArray()` (id as string, created_at as UNIX timestamp); define collection schema in `config/scout.php` under `typesense.model-settings`. See docs/developer/backend/scout-typesense.md.
 - **Third-party APIs:** use Saloon; add connectors and requests under `App\Http\Integrations\{Name}\` (see docs/developer/backend/saloon.md).
-- **Server-side DataTables:** machour/laravel-data-table (installed from fork coding-sunshine/laravel-data-table via VCS). One PHP class per model in `App\DataTables\*` (DTO + table config); Inertia + React UI; run `npx shadcn@latest add ./vendor/machour/laravel-data-table/react/public/r/data-table.json` to install React components. To develop the package in place, use a Composer path repository. See docs/developer/backend/data-table.md.
 - **Backups:** spatie/laravel-backup (v10) (config/backup.php, docs/developer/backend/backup.md).
 - **Userstamps:** wildside/userstamps for created_by/updated_by (docs/developer/backend/userstamps.md).
+- **Visibility & Sharing:** For global/org/shared data and cross-org sharing use `HasVisibility` trait (not with `BelongsToOrganization` on same model). Requires `organization_id`, `visibility`; optional `cloned_from`. Share via `Shareable`; authorize with `shareItem`. See docs/developer/backend/visibility-sharing.md.
 - **Product analytics (Pan):** panphp/pan tracks impressions, hovers, and clicks via `data-pan="name"` on HTML elements. Use only letters, numbers, dashes, underscores. Add new names to `AppServiceProvider::configurePan()` allowedAnalytics whitelist. View with `php artisan pan` or in Filament at Analytics → Product Analytics (`/admin/analytics/product`). See docs/developer/backend/pan.md. When adding new tabs, CTAs, or key nav/buttons, add `data-pan` and register the name in the whitelist.
 - **Database Mail (email templates):** martinpetricko/laravel-database-mail stores email templates in the DB and sends them when events are dispatched. For new events that should send DB-backed emails: implement `TriggersDatabaseMail` and `CanTriggerDatabaseMail`, define `getName()`, `getDescription()`, `getRecipients()`, and optionally `getAttachments()`; register the event in `config/database-mail.php` under `'events'`. Create templates via seeders or Filament plugin. See docs/developer/backend/database-mail.md.
-- **DB-backed settings & config overlay:** spatie/laravel-settings stores runtime config in the DB (26 settings classes in `app/Settings/`). `SettingsOverlayServiceProvider` writes these into `config()` at boot — all `config('...')` consumers read DB values transparently. Per-org overrides stored in `organization_settings` table and applied by `ApplyOrganizationSettings` middleware (after `SetTenantContext`). 7 groups are org-overridable: Billing, Mail, Stripe, Paddle, LemonSqueezy, Prism, AI. To add a new setting: create class in `app/Settings/`, add migration in `database/settings/`, add to `SettingsOverlayServiceProvider::OVERLAY_MAP`, create Filament page. Artisan: `settings:cache`, `settings:clear-cache`. See docs/developer/backend/settings.md, ADR-002.
 - **Architecture decisions:** record in docs/architecture/ADRs/ (see README there).
-- **Theming, branding & page builder:** App theme via `config/theme.php`, `ThemeSettings`, Filament ManageTheme; org branding via `OrganizationSettingsService::getBranding()`, `BrandingController`, `settings/branding.tsx`; custom pages via Puck (`Modules\PageBuilder\Models\Page`, `Modules\PageBuilder\Http\Controllers\PageController`, `PageViewController`, `puck-config.tsx`, `puck-blocks/`, `Modules\PageBuilder\Services\PageDataSourceRegistry`). See docs/developer/backend/theming-and-page-builder.md.
-- **Durable Workflow & Waterline:** durable-workflow/workflow for long-running workflows (sagas, onboarding, AI pipelines); durable-workflow/waterline UI at `/waterline` (admin only). Workflows live in `modules/workflows/src/Workflows/`; service provider at `Modules\Workflows\WorkflowsServiceProvider`. Workflows run on Laravel queues (Horizon). Gate `viewWaterline` same as Horizon (`access admin panel`). See docs/developer/backend/durable-workflow.md.
-- **User onboarding:** spatie/laravel-onboard for multi-step onboarding (verify email, complete profile, get started); steps in OnboardingServiceProvider; feature flag `onboarding`; middleware EnsureOnboardingComplete; CompleteOnboardingAction. See docs/developer/backend/onboarding.md.
-- **Health checks:** spatie/laravel-health for scheduled checks and notifications (mail by default in `config/health.php`; Slack can be enabled once notifications are compatible with your Slack channel stack); checks registered in HealthServiceProvider; `health:check` scheduled every 5 minutes. See docs/developer/backend/health.md.
-- **Rate-limited jobs:** spatie/laravel-rate-limited-job-middleware; throttle queued jobs via job middleware (allow/everySeconds/releaseAfterSeconds); used on ProcessWebhookJob, NotifyUsersOfNewTermsVersion, billing reminders, VerifyOrganizationDomain. See docs/developer/backend/rate-limited-jobs.md.
-
-## Design System
-Always read DESIGN.md before making any visual or UI decisions.
-All font choices, colors, spacing, and aesthetic direction are defined there.
-Do not deviate without explicit user approval.
-In QA mode, flag any code that doesn't match DESIGN.md.
-
-### Quick Reference
-- **Aesthetic**: Industrial-minimal, dark-first. References: Linear, Raycast, Vercel.
-- **Display font**: JetBrains Mono 700 (headings, stats, data). **Body font**: IBM Plex Sans 400/500/600. **Code**: JetBrains Mono 400.
-- **Accent**: Muted teal `oklch(0.65 0.14 165)`. Neutrals have cool blue undertone (hue 260).
-- **No card shadows** — use background-level differentiation only.
-- **Motion**: Minimal-functional. 100ms micro, 200ms transitions, 300ms page-level. No bounce/spring.
-- **Accessibility**: WCAG 2.1 AA. Full keyboard nav, reduced-motion respect.
-
-### 5 Design Principles
-1. **Precision over decoration** — every element earns its place
-2. **Speed is a feature** — skeleton states, optimistic updates, smooth transitions
-3. **Dark-first confidence** — design for dark first, adapt for light
-4. **Keyboard-first, mouse-friendly** — command palette, shortcuts, focus rings
-5. **Progressive disclosure** — show what matters now, reveal complexity on demand

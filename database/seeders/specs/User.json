@@ -3,7 +3,7 @@
     "table": "users",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -57,13 +57,13 @@
             "nullable": true,
             "default": null
         },
-        "current_team_id": {
-            "type": "bigint",
+        "onboarding_completed": {
+            "type": "boolean",
             "nullable": true,
             "default": null
         },
-        "onboarding_completed": {
-            "type": "boolean",
+        "onboarding_steps_completed": {
+            "type": "text",
             "nullable": true,
             "default": null
         },
@@ -72,52 +72,44 @@
             "nullable": true,
             "default": null
         },
-        "deleted_at": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
-        },
-        "theme_mode": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "phone": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "color": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "tags": {
-            "type": "text",
-            "nullable": true,
-            "default": null
-        },
-        "position": {
+        "siding_id": {
             "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "access_to_siding_shift_data": {
+            "type": "boolean",
             "nullable": true,
             "default": null
         }
     },
     "relationships": {
-        "socialAccounts": {
+        "organizations": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "ownedOrganizations": {
             "type": "hasMany",
-            "model": "SocialAccount"
+            "model": "OwnedOrganization"
         },
         "termsAcceptances": {
             "type": "hasMany",
             "model": "TermsAcceptance"
         },
-        "notificationPreferences": {
-            "type": "hasMany",
-            "model": "NotificationPreference"
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "sidingShifts": {
+            "type": "belongsTo",
+            "model": "SidingShift"
+        },
+        "activeSidingShifts": {
+            "type": "belongsTo",
+            "model": "ActiveSidingShift"
         },
         "categories": {
-            "type": "belongsToMany",
+            "type": "belongsTo",
             "model": "Category"
         },
         "experience": {
@@ -129,44 +121,52 @@
             "model": "ExperienceHistory"
         },
         "allAchievements": {
-            "type": "belongsToMany",
+            "type": "belongsTo",
             "model": "AllAchievement"
         },
         "achievements": {
-            "type": "belongsToMany",
+            "type": "belongsTo",
             "model": "Achievement"
         },
         "achievementsWithProgress": {
-            "type": "belongsToMany",
+            "type": "belongsTo",
             "model": "AchievementsWithProgress"
         },
         "achievementsWithSpecificProgress": {
-            "type": "belongsToMany",
+            "type": "belongsTo",
             "model": "AchievementsWithSpecificProgress"
         },
         "secretAchievements": {
-            "type": "belongsToMany",
+            "type": "belongsTo",
             "model": "SecretAchievement"
+        },
+        "achievementsRelation": {
+            "type": "belongsTo",
+            "model": "AchievementsRelation"
         },
         "affiliate": {
             "type": "hasOne",
             "model": "Affiliate"
         },
-        "organizations": {
-            "type": "belongsToMany",
-            "model": "Organization"
-        },
-        "ownedOrganizations": {
-            "type": "hasMany",
-            "model": "OwnedOrganization"
-        },
         "roles": {
-            "type": "belongsToMany",
+            "type": "belongsTo",
             "model": "Role"
         },
+        "teams": {
+            "type": "belongsTo",
+            "model": "Team"
+        },
         "permissions": {
-            "type": "belongsToMany",
+            "type": "belongsTo",
             "model": "Permission"
+        },
+        "accessibleSidings": {
+            "type": "belongsTo",
+            "model": "AccessibleSiding"
+        },
+        "sidings": {
+            "type": "belongsTo",
+            "model": "Siding"
         }
     },
     "value_hints": {
@@ -202,9 +202,9 @@
             "type": "boolean",
             "example": true
         },
-        "deleted_at": {
-            "type": "datetime",
-            "example": "2024-01-01 00:00:00"
+        "access_to_siding_shift_data": {
+            "type": "boolean",
+            "example": true
         }
     },
     "scenarios": []

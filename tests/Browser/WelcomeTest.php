@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-it('has welcome page', function (): void {
+it('redirects home to login', function (): void {
     $page = visit('/');
 
-    $page->assertSee('Laravel');
+    $page->assertSee('Log in');
 });

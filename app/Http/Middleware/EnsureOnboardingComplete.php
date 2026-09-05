@@ -46,6 +46,8 @@ final class EnsureOnboardingComplete
 
         /** @var User $user */
         $user = $request->user();
+        // Skip onboarding for global admin roles
+       
 
         // Super-admins bypass onboarding entirely — they need unrestricted access.
         if ($user->isSuperAdmin()) {

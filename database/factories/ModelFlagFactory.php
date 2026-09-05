@@ -20,7 +20,7 @@ final class ModelFlagFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->unique()->slug(2),
+            'name' => $this->faker->unique()->slug(2),
         ];
     }
 }

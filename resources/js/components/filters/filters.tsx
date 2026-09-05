@@ -6,7 +6,6 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { ArrowRightIcon, ChevronRightIcon, FilterIcon, Trash2, X } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { DataTableTranslations } from "../data-table/i18n";
 import { FilterControl } from "./filter-controls";
 import type { FilterColumn, FilterValue } from "./types";
 import { DEFAULT_OPERATOR, OPERATORS } from "./types";
@@ -15,29 +14,27 @@ import { useFilters } from "./use-filters";
 interface FiltersProps {
     columns: FilterColumn[];
     serverFilters: Record<string, unknown>;
-    t: DataTableTranslations;
-    prefix?: string;
-    debounceMs?: number;
-    partialReloadKey?: string;
-    renderFilter?: Record<string, (value: unknown, onChange: (value: unknown) => void) => React.ReactNode>;
+    layout?: 'popover' | 'inline';
+    /** Inline layout: one horizontal row with horizontal scroll (vs responsive grid). */
+    inlineSingleRow?: boolean;
 }
 
 function formatNumericValue(v: string): string {
     const n = Number(v);
     if (Number.isFinite(n)) {
-        return n.toLocaleString();
+        return n.toLocaleString("en-US");
     }
     return v;
 }
 
+const BOOL_LABELS: Record<string, string> = { "1": "Yes", "0": "No" };
+
 function formatValueLabel(
     column: FilterColumn,
-    values: string[],
-    t: DataTableTranslations,
+    values: string[]
 ): string {
     if (column.type === "boolean") {
-        const boolLabels: Record<string, string> = { "1": t.yes, "0": t.no };
-        return values.map((v) => boolLabels[v] ?? v).join(", ");
+        return values.map((v) => BOOL_LABELS[v] ?? v).join(", ");
     }
     if (column.type === "option" && column.options) {
         const labels = values
@@ -58,11 +55,9 @@ function formatValueLabel(
     return values.join(", ");
 }
 
-function getOperatorLabel(column: FilterColumn, operator: string, t: DataTableTranslations): string {
+function getOperatorLabel(column: FilterColumn, operator: string): string {
     const opDef = OPERATORS[column.type]?.find((o) => o.value === operator);
-    if (!opDef) return operator;
-    const label = t[opDef.labelKey];
-    return typeof label === "string" ? label : operator;
+    return opDef?.label ?? operator;
 }
 
 type PillSection = "operator" | "value";
@@ -73,8 +68,7 @@ function FilterPill({
                         openSection,
                         onSectionChange,
                         onClear,
-                        onSubmit,
-                        t,
+                        onSubmit
                     }: {
     column: FilterColumn;
     filterValue: FilterValue;
@@ -82,7 +76,6 @@ function FilterPill({
     onSectionChange: (section: PillSection | null) => void;
     onClear: () => void;
     onSubmit: (op: string, vals: string[]) => void;
-    t: DataTableTranslations;
 }) {
     const Icon = column.icon;
     const ops = OPERATORS[column.type];
@@ -101,17 +94,17 @@ function FilterPill({
             </span>
             <Separator orientation="vertical" />
 
-            {/* Operator section */}
+            {/* Operator section — clickable popover */}
             <Popover
                 open={openSection === "operator"}
-                onOpenChange={(open: boolean) => onSectionChange(open ? "operator" : null)}
+                onOpenChange={(open) => onSectionChange(open ? "operator" : null)}
             >
                 <PopoverTrigger asChild>
                     <button
                         type="button"
                         className="h-full whitespace-nowrap px-2 text-muted-foreground hover:bg-accent transition-colors"
                     >
-                        {getOperatorLabel(column, filterValue.operator, t)}
+                        {getOperatorLabel(column, filterValue.operator)}
                     </button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -120,14 +113,14 @@ function FilterPill({
                 >
                     <Command loop>
                         <CommandList className="max-h-fit">
-                            <CommandGroup heading={t.operators}>
+                            <CommandGroup heading="Operators">
                                 {ops.map((op) => (
                                     <CommandItem
                                         key={op.value}
                                         value={op.value}
                                         onSelect={() => handleOperatorSelect(op.value)}
                                     >
-                                        {String(t[op.labelKey])}
+                                        {op.label}
                                     </CommandItem>
                                 ))}
                             </CommandGroup>
@@ -138,10 +131,10 @@ function FilterPill({
 
             <Separator orientation="vertical" />
 
-            {/* Value section */}
+            {/* Value section — clickable popover */}
             <Popover
                 open={openSection === "value"}
-                onOpenChange={(open: boolean) => onSectionChange(open ? "value" : null)}
+                onOpenChange={(open) => onSectionChange(open ? "value" : null)}
             >
                 <PopoverTrigger asChild>
                     <button
@@ -151,7 +144,7 @@ function FilterPill({
                             column.type === "number" && "tabular-nums"
                         )}
                     >
-                        {formatValueLabel(column, filterValue.values, t)}
+                        {formatValueLabel(column, filterValue.values)}
                     </button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 w-auto" align="start">
@@ -160,7 +153,6 @@ function FilterPill({
                         value={filterValue}
                         onSubmit={onSubmit}
                         hideOperator
-                        t={t}
                     />
                 </PopoverContent>
             </Popover>
@@ -178,8 +170,8 @@ function FilterPill({
     );
 }
 
-export function Filters({ columns, serverFilters, t, prefix, debounceMs, partialReloadKey, renderFilter }: FiltersProps) {
-    const { activeFilters, setFilter, clearFilter, clearAllFilters } = useFilters(serverFilters, { prefix, debounceMs, partialReloadKey });
+export function Filters({ columns, serverFilters, layout = 'popover', inlineSingleRow = false }: FiltersProps) {
+    const { activeFilters, setFilter, clearFilter, clearAllFilters } = useFilters(serverFilters);
 
     const [selectorOpen, setSelectorOpen] = useState(false);
     const [selectorColumn, setSelectorColumn] = useState<string | null>(null);
@@ -247,6 +239,65 @@ export function Filters({ columns, serverFilters, t, prefix, debounceMs, partial
         ? columns.find((c) => c.id === selectorColumn)
         : null;
 
+    if (layout === 'inline') {
+        const hasActive = Object.keys(activeFilters).length > 0;
+
+        const inlineFieldsContainerClass = inlineSingleRow
+            ? 'flex flex-nowrap items-end gap-3 overflow-x-auto pb-1'
+            : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4';
+
+        return (
+            <div className="flex w-full flex-col gap-3">
+                <div className={inlineFieldsContainerClass}>
+                    {columns.map((col) => (
+                        <div
+                            key={col.id}
+                            className={cn(
+                                'space-y-1.5',
+                                inlineSingleRow ? 'shrink-0' : 'min-w-0',
+                                col.inlineWrapClassName,
+                                !col.inlineWrapClassName && !inlineSingleRow && 'min-w-0',
+                                !col.inlineWrapClassName && inlineSingleRow && 'min-w-[8rem]',
+                            )}
+                        >
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                {col.icon && <col.icon className="size-3.5 shrink-0 stroke-[2.25px]" />}
+                                <span>{col.label}</span>
+                            </div>
+                            <FilterControl
+                                column={col}
+                                value={activeFilters[col.id]}
+                                onSubmit={(op, vals) => handleFilterSubmit(col.id, op, vals)}
+                                variant="inline"
+                                hideOperator
+                                suppressFooterHints={inlineSingleRow}
+                                fixedOperator={
+                                    col.type === 'date'
+                                        ? 'between'
+                                        : col.type === 'text'
+                                          ? (col.textFixedOperator ?? 'contains')
+                                          : undefined
+                                }
+                            />
+                        </div>
+                    ))}
+                </div>
+                {hasActive && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-fit text-destructive hover:text-destructive"
+                        onClick={() => clearAllFilters()}
+                    >
+                        <Trash2 className="mr-1 size-4" />
+                        Clear all filters
+                    </Button>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-wrap items-center gap-1.5">
             <Popover open={selectorOpen} onOpenChange={handleSelectorOpenChange}>
@@ -257,7 +308,7 @@ export function Filters({ columns, serverFilters, t, prefix, debounceMs, partial
                         onClick={() => setOpenPill(null)}
                     >
                         <FilterIcon className="size-4" />
-                        {!hasActiveFilters && <span>{t.filter}</span>}
+                        {!hasActiveFilters && <span>Filtrer</span>}
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -277,31 +328,23 @@ export function Filters({ columns, serverFilters, t, prefix, debounceMs, partial
                                 )}
                                 <span>{selectedColumn.label}</span>
                             </button>
-                            {renderFilter?.[selectedColumn.id] ? (
-                                <div className="p-2">
-                                    {renderFilter[selectedColumn.id](
-                                        activeFilters[selectedColumn.id]?.values,
-                                        (val) => {
-                                            const values = Array.isArray(val) ? val.map(String) : [String(val)];
-                                            handleFilterSubmit(selectedColumn.id, activeFilters[selectedColumn.id]?.operator || "eq", values);
-                                        },
-                                    )}
-                                </div>
-                            ) : (
-                                <FilterControl
-                                    column={selectedColumn}
-                                    value={activeFilters[selectedColumn.id]}
-                                    onSubmit={(op, vals) =>
-                                        handleFilterSubmit(selectedColumn.id, op, vals)
-                                    }
-                                    t={t}
-                                />
-                            )}
+                            <FilterControl
+                                column={selectedColumn}
+                                value={activeFilters[selectedColumn.id]}
+                                onSubmit={(op, vals) =>
+                                    handleFilterSubmit(selectedColumn.id, op, vals)
+                                }
+                                fixedOperator={
+                                    selectedColumn.type === 'text'
+                                        ? selectedColumn.textFixedOperator
+                                        : undefined
+                                }
+                            />
                         </div>
                     ) : (
                         <Command
                             loop
-                            filter={(value: string, searchTerm: string, keywords?: string[]) => {
+                            filter={(value, searchTerm, keywords) => {
                                 const ext = `${value} ${keywords?.join(" ")}`;
                                 return ext.toLowerCase().includes(searchTerm.toLowerCase())
                                     ? 1
@@ -312,9 +355,9 @@ export function Filters({ columns, serverFilters, t, prefix, debounceMs, partial
                                 value={search}
                                 onValueChange={setSearch}
                                 ref={inputRef}
-                                placeholder={t.search}
+                                placeholder="Search..."
                             />
-                            <CommandEmpty>{t.noResults}</CommandEmpty>
+                            <CommandEmpty>No results.</CommandEmpty>
                             <CommandList className="max-h-fit">
                                 {hasActiveFilters && (
                                     <>
@@ -329,7 +372,7 @@ export function Filters({ columns, serverFilters, t, prefix, debounceMs, partial
                                             >
                                                 <div className="flex items-center gap-1.5">
                                                     <Trash2 className="size-4" />
-                                                    <span>{t.clearAllFilters}</span>
+                                                    <span>Effacer tous les filtres</span>
                                                 </div>
                                             </CommandItem>
                                         </CommandGroup>
@@ -437,7 +480,6 @@ export function Filters({ columns, serverFilters, t, prefix, debounceMs, partial
                             closeAll();
                         }}
                         onSubmit={(op, vals) => handleFilterSubmit(columnId, op, vals)}
-                        t={t}
                     />
                 );
             })}

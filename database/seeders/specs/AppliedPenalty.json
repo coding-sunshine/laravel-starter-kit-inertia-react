@@ -1,0 +1,91 @@
+{
+    "model": "AppliedPenalty",
+    "table": "applied_penalties",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "penalty_type_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "quantity": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "distance": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rate": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "meta": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "rake_charge_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "penaltyType": {
+            "type": "belongsTo",
+            "model": "PenaltyType"
+        },
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "rakeCharge": {
+            "type": "belongsTo",
+            "model": "RakeCharge"
+        },
+        "wagon": {
+            "type": "belongsTo",
+            "model": "Wagon"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

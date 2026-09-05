@@ -1,20 +1,14 @@
 import '../css/app.css';
 import './echo';
 
-import { createInertiaApp, router } from '@inertiajs/react';
+import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { ComponentType, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Toaster } from 'sonner';
 import { CookieConsentBanner } from './components/cookie-consent-banner';
-import { FlashListener } from './components/flash-listener';
-import { ThemeFromProps } from './components/theme-from-props';
-import { GlobalSearch } from './components/ui/global-search';
-import { KeyboardShortcutDisplay } from './components/ui/keyboard-shortcut-display';
 import { initializeTheme } from './hooks/use-appearance';
-import { QueryProvider } from './providers/query-provider';
 
-const appName = import.meta.env.VITE_APP_NAME || 'App';
+const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
@@ -23,21 +17,15 @@ createInertiaApp({
             `./pages/${name}.tsx`,
             import.meta.glob('./pages/**/*.tsx'),
         ).then((module) => {
-            const Page = (
-                module as { default: ComponentType<Record<string, unknown>> }
-            ).default;
+            const Page = (module as { default: ComponentType })
+                .default;
             return function PageWithCookieBanner(
                 props: Record<string, unknown>,
             ): ReactNode {
                 return (
                     <>
-                        <ThemeFromProps />
                         <CookieConsentBanner />
-                        <FlashListener />
-                        <GlobalSearch />
-                        <KeyboardShortcutDisplay />
                         <Page {...props} />
-                        <Toaster richColors position="top-right" />
                     </>
                 );
             };
@@ -45,11 +33,7 @@ createInertiaApp({
     setup({ el, App, props }) {
         const root = createRoot(el);
 
-        root.render(
-            <QueryProvider>
-                <App {...props} />
-            </QueryProvider>,
-        );
+        root.render(<App {...props} />);
     },
     progress: {
         color: '#4B5563',
@@ -58,11 +42,3 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
-
-// Page transition: fade-in the incoming page after Inertia swaps the component
-router.on('navigate', () => {
-    document.documentElement.classList.add('page-transitioning');
-    setTimeout(() => {
-        document.documentElement.classList.remove('page-transitioning');
-    }, 200);
-});

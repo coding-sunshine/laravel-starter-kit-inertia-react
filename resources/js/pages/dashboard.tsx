@@ -1,92 +1,7689 @@
-import type { ActivityEntry } from '@/components/composed/activity-log';
-import type { WeeklyStat } from '@/components/dashboard/activity-chart';
-import { SuperAdminDashboard } from '@/components/dashboard/super-admin-dashboard';
-import { UserDashboard } from '@/components/dashboard/user-dashboard';
+import { DispatchSummary } from '@/components/dashboard/dispatch-summary';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
+import {
+    RakePerformanceOverloadTrends,
+    type RpOverloadTrendsPeriod,
+} from '@/components/dashboard/rake-performance-overload-trends';
+import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
+import { useDashboardSectionPayload } from '@/hooks/use-dashboard-section-payload';
 import AppLayout from '@/layouts/app-layout';
+import { JsonFetchError, laravelJsonFetch } from '@/lib/laravel-json-fetch';
+import { EXECUTIVE_SIDING_BAR_CHART_COLORS } from '@/lib/dashboard-siding-chart-colors';
+import { cn } from '@/lib/utils';
+import { ExecutiveOverview } from '@/components/dashboard/ExecutiveOverview';
+import { LoaderOverloading } from '@/components/dashboard/LoaderOverloading';
+import { Operations } from '@/components/dashboard/Operations';
+import { PenaltyControl } from '@/components/dashboard/PenaltyControl';
+import { PowerPlant } from '@/components/dashboard/PowerPlant';
+import { RakePerformance } from '@/components/dashboard/RakePerformance';
+import { SidingOverview } from '@/components/dashboard/SidingOverview';
+import {
+    DEFAULT_LIVE_RAKE_WORKFLOW_STEPS,
+    formatCurrency,
+    formatRakeSequenceBySiding,
+    formatWeight,
+    SectionHeader,
+    SIDING_ACCENT,
+} from '@/components/dashboard/shared';
+import type {
+    DashboardFilters,
+    DispatchSummaryByPeriod,
+    LiveRakeStatusRow,
+    PowerPlantDispatchItem,
+    SidingPerformanceChartUiPeriod,
+    SidingPerformanceMetricsPenaltyRow,
+    SidingPerformanceMetricsRakeRow,
+    SidingPerformanceMetricsResponse,
+} from '@/components/dashboard/types';
+import {
+    deriveSidingPerformanceChartStateFromDashboardFilters,
+    sidingPerformanceChartMatchesDashboard,
+    sidingPerformanceSpQueryForChart,
+} from '@/components/dashboard/types';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import {
+    AlertTriangle,
+    BarChart3,
+    Bell,
+    Calendar,
+    Check,
+    CheckCircle,
+    ChevronDown,
+    ChevronUp,
+    Download,
+    Factory,
+    Filter,
+    Flame,
+    MapPin,
+    Table as TableIcon,
+    Train,
+    TriangleAlert,
+    X,
+    Zap,
+} from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+    Bar,
+    CartesianGrid,
+    Cell,
+    LabelList,
+    Legend,
+    Pie,
+    BarChart as RechartsBarChart,
+    PieChart as RechartsPieChart,
+    ReferenceLine,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts';
+
+export {
+    DEFAULT_LIVE_RAKE_WORKFLOW_STEPS,
+    formatCurrency,
+    formatRakeSequenceBySiding,
+    formatWeight,
+    SectionHeader,
+    SIDING_ACCENT,
+} from '@/components/dashboard/shared';
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: dashboard().url },
+];
+
+/** COLOR DESIGN from rake management dashboards.pdf: simple professional palette for visual impact. */
+const DASHBOARD_PALETTE = {
+    coalBlack: '#1e293b',
+    darkGrey: '#64748b',
+    steelBlue: '#4682b4',
+    steelBlueLight: '#6b9bc4',
+    safetyYellow: '#e6b800',
+    safetyYellowLight: '#f0c933',
+    alertRed: '#c41e3a',
+    alertRedLight: '#dc3545',
+    successGreen: '#2d6a4f',
+    successGreenLight: '#40916c',
+} as const;
+
+const ALL_FILTER_VALUE = '__all__';
+
+const PERIODS = [
+    { key: 'last_month', label: 'Last month' },
+    { key: 'last_week', label: 'Last week' },
+    { key: 'yesterday', label: 'Yesterday' },
+    { key: 'today', label: 'Today' },
+    { key: 'week', label: 'This week' },
+    { key: 'month', label: 'This month' },
+    { key: 'custom', label: 'Custom' },
+] as const;
+
+const DASHBOARD_SECTIONS = [
+    { id: 'executive-overview', label: 'Executive overview' },
+    { id: 'siding-overview', label: 'Siding overview' },
+    { id: 'operations', label: 'Operations control' },
+    { id: 'penalty-control', label: 'Penalty control' },
+    { id: 'rake-performance', label: 'Rake-wise performance' },
+    { id: 'loader-overload', label: 'Loader-wise overloading trends' },
+    { id: 'power-plant', label: 'Power plant wise dispatch' },
+] as const;
+
+const SECTION_FILTER_KEYS = {
+    'executive-overview': [
+        'power_plant',
+        'rake_number',
+        'penalty_type',
+    ] as const,
+    'siding-overview': ['power_plant', 'rake_number', 'penalty_type'] as const,
+    operations: ['shift', 'daily_rake_date', 'coal_transport_date'] as const,
+    'penalty-control': ['penalty_type'] as const,
+    'rake-performance': [
+        'rake_number',
+        'power_plant',
+        'rake_penalty_scope',
+    ] as const,
+    /** Loader / operator live in the Loader-wise overloading card (not the sticky Filters bar). */
+    'loader-overload': [] as const,
+    'power-plant': ['power_plant'] as const,
+} satisfies Record<
+    (typeof DASHBOARD_SECTIONS)[number]['id'],
+    readonly (
+        | 'power_plant'
+        | 'rake_number'
+        | 'loader_id'
+        | 'loader_operator'
+        | 'shift'
+        | 'penalty_type'
+        | 'rake_penalty_scope'
+        | 'daily_rake_date'
+        | 'coal_transport_date'
+    )[]
+>;
+
+const DEFAULT_DASHBOARD_SECTION = 'executive-overview';
+
+/** Mirrors `DashboardWidgetPermissions::executiveWidgetNames()` — used for section + executive empty states. */
+const EXECUTIVE_DASHBOARD_WIDGET_NAMES = [
+    'dashboard.widgets.executive_tables_road_dispatch',
+    'dashboard.widgets.executive_tables_rail_dispatch',
+    'dashboard.widgets.executive_tables_production',
+    'dashboard.widgets.executive_tables_custom',
+    'dashboard.widgets.executive_tables_fy_summary',
+    'dashboard.widgets.executive_chart_road_dispatch',
+    'dashboard.widgets.executive_chart_rail_dispatch',
+    'dashboard.widgets.executive_chart_production',
+    'dashboard.widgets.executive_chart_penalty_by_siding',
+    'dashboard.widgets.executive_chart_powerplant_dispatch',
+    'dashboard.widgets.executive_chart_fy',
+] as const;
+
+const EXEC_TABLE_WIDGETS: readonly string[] = [
+    'dashboard.widgets.executive_tables_road_dispatch',
+    'dashboard.widgets.executive_tables_rail_dispatch',
+    'dashboard.widgets.executive_tables_production',
+    'dashboard.widgets.executive_tables_custom',
+    'dashboard.widgets.executive_tables_fy_summary',
+];
+
+const EXEC_CHART_WIDGETS: readonly string[] = [
+    'dashboard.widgets.executive_chart_road_dispatch',
+    'dashboard.widgets.executive_chart_rail_dispatch',
+    'dashboard.widgets.executive_chart_production',
+    'dashboard.widgets.executive_chart_penalty_by_siding',
+    'dashboard.widgets.executive_chart_powerplant_dispatch',
+    'dashboard.widgets.executive_chart_fy',
+];
+
+function dashboardSectionVisible(
+    sectionId: (typeof DASHBOARD_SECTIONS)[number]['id'],
+    canWidget: (name: string) => boolean,
+): boolean {
+    switch (sectionId) {
+        case 'executive-overview':
+            return EXECUTIVE_DASHBOARD_WIDGET_NAMES.some((n) => canWidget(n));
+        case 'siding-overview':
+            return (
+                canWidget('dashboard.widgets.siding_overview_performance') ||
+                canWidget('dashboard.widgets.siding_overview_penalty_trend') ||
+                canWidget(
+                    'dashboard.widgets.siding_overview_power_plant_distribution',
+                ) ||
+                canWidget(
+                    'dashboard.widgets.siding_overview_rr_rake_coverage',
+                )
+            );
+        case 'operations':
+            return (
+                canWidget('dashboard.widgets.operations_coal_transport') ||
+                canWidget('dashboard.widgets.operations_daily_rake_details') ||
+                canWidget('dashboard.widgets.operations_truck_receipt_trend') ||
+                canWidget(
+                    'dashboard.widgets.operations_shift_vehicle_receipt',
+                ) ||
+                canWidget('dashboard.widgets.operations_live_rake_status')
+            );
+        case 'penalty-control':
+            return (
+                canWidget(
+                    'dashboard.widgets.penalty_control_type_distribution',
+                ) ||
+                canWidget(
+                    'dashboard.widgets.penalty_control_penalty_by_siding',
+                )
+            );
+        case 'rake-performance':
+            return canWidget('dashboard.widgets.rake_performance');
+        case 'loader-overload':
+            return canWidget('dashboard.widgets.loader_overload_trends');
+        case 'power-plant':
+            return canWidget('dashboard.widgets.power_plant_dispatch_section');
+        default:
+            return false;
+    }
+}
+
+/** MT of coal required to load one rake; used for "rakes we can load" KPI. */
+const MT_PER_RAKE_LOAD = 3500;
+
+interface SidingOption {
+    id: number;
+    name: string;
+    code: string;
+}
+
+interface SidingStock {
+    siding_id: number;
+    opening_balance_mt: number;
+    closing_balance_mt: number;
+    total_rakes: number;
+    received_mt: number;
+    dispatched_mt: number;
+    last_receipt_at: string | null;
+    last_dispatch_at: string | null;
+    e_demand_raised: number;
+}
+
+interface SidingPerformanceItem {
+    name: string;
+    rakes: number;
+    penalties: number;
+    penalty_amount: number;
+    penalty_rate: number;
+}
+
+interface SidingWiseMonthlyPoint {
+    month: string;
+    [sidingName: string]: string | number;
+}
+
+interface SidingComparisonItem {
+    name: string;
+    rakes_dispatched: number;
+    on_time: number;
+    vehicles: number;
+    penalty_amount: number;
+}
+
+interface SidingComparisonData {
+    sidings: SidingComparisonItem[];
+}
+
+interface RakePerformanceItem {
+    id: number;
+    siding_id?: number;
+    rake_number: string;
+    rake_serial_number?: string | null;
+    siding: string;
+    dispatch_date: string;
+    wagon_count: number | null;
+    net_weight: number | null;
+    over_load: number | null;
+    under_load: number | null;
+    loading_minutes: number | null;
+    predicted_penalty_amount: number;
+    predicted_penalty_count: number;
+    actual_penalty_amount: number;
+    actual_penalty_count: number;
+    wagon_overloads?: Array<{
+        wagon_number: string;
+        over_load_mt: number;
+        under_load_mt?: number | null;
+        cc_capacity_mt?: number | null;
+        net_weight_mt?: number | null;
+        loader_id?: number | null;
+        loader_name?: string | null;
+        loader_operator_name?: string | null;
+    }>;
+}
+
+/** List API row: no loading_minutes, no wagon_overloads, includes siding_id. */
+type RakePerformanceSummaryItem = Omit<
+    RakePerformanceItem,
+    'loading_minutes' | 'wagon_overloads'
+> & {
+    siding_id: number;
+};
+
+interface LoaderInfo {
+    id: number;
+    name: string;
+    siding: string;
+}
+
+interface LoaderOverloadTrends {
+    loaders: LoaderInfo[];
+    monthly: Record<string, unknown>[];
+}
+
+interface PowerPlantSidingBreakdown {
+    rakes: number;
+    weight_mt: number;
+}
+
+/**
+ * Builds query params for `router.get` to the dashboard. Persists `loader_id` / `loader_operator`
+ * when `section=loader-overload` even though those keys are not in the sticky Filters bar.
+ */
+function buildDashboardGetParams(args: {
+    overrides: Record<string, unknown>;
+    filters: DashboardFilters;
+    currentSection: string | undefined;
+    allSidingIds: number[];
+    resolvedPeriod: string;
+    resolvedFrom: string;
+    resolvedTo: string;
+}): Record<string, unknown> {
+    const {
+        overrides,
+        filters,
+        currentSection,
+        allSidingIds,
+        resolvedPeriod,
+        resolvedFrom,
+        resolvedTo,
+    } = args;
+    const sectionId = (currentSection ??
+        DEFAULT_DASHBOARD_SECTION) as keyof typeof SECTION_FILTER_KEYS;
+    const sectionFilterKeys = SECTION_FILTER_KEYS[sectionId] ?? [];
+    const sectionHasFilter = (key: string): boolean =>
+        (sectionFilterKeys as readonly string[]).includes(key);
+    const persistLoaderFilters = sectionId === 'loader-overload';
+
+    const params: Record<string, unknown> = {
+        period: (overrides.period as string | undefined) ?? resolvedPeriod,
+        ...overrides,
+    };
+
+    if (params.period === 'custom') {
+        params.from = (overrides.from as string | undefined) ?? resolvedFrom;
+        params.to = (overrides.to as string | undefined) ?? resolvedTo;
+    } else {
+        delete params.from;
+        delete params.to;
+    }
+
+    const sidingIds =
+        (overrides.siding_ids as number[] | undefined) ?? filters.siding_ids;
+    if (sidingIds.length > 0 && sidingIds.length < allSidingIds.length) {
+        params.siding_ids = sidingIds.join(',');
+    }
+
+    if (sectionHasFilter('power_plant')) {
+        const powerPlant =
+            (overrides.power_plant !== undefined
+                ? overrides.power_plant
+                : filters.power_plant) ?? '';
+        if (powerPlant !== '') params.power_plant = powerPlant;
+    }
+
+    if (sectionHasFilter('rake_number')) {
+        const rakeNumber =
+            (overrides.rake_number !== undefined
+                ? overrides.rake_number
+                : filters.rake_number) ?? '';
+        if (rakeNumber !== '') params.rake_number = rakeNumber;
+    }
+
+    if (sectionHasFilter('loader_id') || persistLoaderFilters) {
+        const loaderId =
+            (overrides.loader_id !== undefined
+                ? overrides.loader_id
+                : filters.loader_id) ?? '';
+        if (loaderId !== '' && loaderId !== null) params.loader_id = loaderId;
+    }
+
+    if (sectionHasFilter('loader_operator') || persistLoaderFilters) {
+        const loaderOp =
+            (overrides.loader_operator !== undefined
+                ? overrides.loader_operator
+                : filters.loader_operator) ?? null;
+        if (loaderOp != null && loaderOp !== '')
+            params.loader_operator = loaderOp;
+    }
+
+    if (persistLoaderFilters) {
+        const utRaw =
+            overrides.underload_threshold !== undefined
+                ? overrides.underload_threshold
+                : filters.underload_threshold;
+        const ut =
+            typeof utRaw === 'number'
+                ? utRaw
+                : parseFloat(String(utRaw ?? '1'));
+        if (!Number.isNaN(ut) && ut !== 1) {
+            params.underload_threshold = ut;
+        }
+    }
+
+    if (sectionHasFilter('shift')) {
+        const shift =
+            (overrides.shift !== undefined ? overrides.shift : filters.shift) ??
+            '';
+        if (shift !== '') params.shift = shift;
+    }
+
+    if (sectionHasFilter('penalty_type')) {
+        const penaltyType =
+            (overrides.penalty_type !== undefined
+                ? overrides.penalty_type
+                : filters.penalty_type) ?? null;
+        if (penaltyType != null) params.penalty_type = penaltyType;
+    }
+
+    if (sectionHasFilter('rake_penalty_scope')) {
+        const rakePenaltyScope =
+            (overrides.rake_penalty_scope !== undefined
+                ? overrides.rake_penalty_scope
+                : filters.rake_penalty_scope) ?? 'all';
+        if (rakePenaltyScope === 'with_penalties') {
+            params.rake_penalty_scope = 'with_penalties';
+        }
+    }
+
+    if (sectionHasFilter('daily_rake_date')) {
+        const dailyRakeDate =
+            (overrides.daily_rake_date !== undefined
+                ? overrides.daily_rake_date
+                : filters.daily_rake_date) ?? '';
+        if (dailyRakeDate !== '') params.daily_rake_date = dailyRakeDate;
+    }
+
+    if (sectionHasFilter('coal_transport_date')) {
+        const coalTransportDate =
+            (overrides.coal_transport_date !== undefined
+                ? overrides.coal_transport_date
+                : filters.coal_transport_date) ?? '';
+        if (coalTransportDate !== '')
+            params.coal_transport_date = coalTransportDate;
+    }
+
+    if (currentSection) params.section = currentSection;
+
+    return params;
+}
+
+function buildRakePerformanceApiSearchParams(args: {
+    filters: DashboardFilters;
+    allSidingIds: number[];
+    page?: number;
+    perPage?: number;
+    /** When set, list/detail are scoped to this siding (must be in current filter scope). */
+    sidingId?: number;
+}): string {
+    const params = buildDashboardGetParams({
+        overrides: { section: 'rake-performance' },
+        filters: args.filters,
+        currentSection: 'rake-performance',
+        allSidingIds: args.allSidingIds,
+        resolvedPeriod: args.filters.period,
+        resolvedFrom: args.filters.from,
+        resolvedTo: args.filters.to,
+    });
+    const u = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null) {
+            continue;
+        }
+        u.set(k, String(v));
+    }
+    if (args.page != null) {
+        u.set('page', String(args.page));
+    }
+    if (args.perPage != null) {
+        u.set('per_page', String(args.perPage));
+    }
+    if (args.sidingId != null && args.sidingId > 0) {
+        u.set('siding_id', String(args.sidingId));
+    }
+
+    return u.toString();
+}
+
+function buildRakePerformanceOverloadTrendsParams(args: {
+    filters: DashboardFilters;
+    allSidingIds: number[];
+    trendsPeriod: RpOverloadTrendsPeriod;
+    sidingId?: number;
+}): string {
+    const u = new URLSearchParams();
+    u.set('section', 'rake-performance');
+    u.set('rp_overload_period', args.trendsPeriod);
+
+    const sidingIds = args.filters.siding_ids;
+    if (sidingIds.length > 0 && sidingIds.length < args.allSidingIds.length) {
+        u.set('siding_ids', sidingIds.join(','));
+    }
+
+    const powerPlant = args.filters.power_plant ?? '';
+    if (powerPlant !== '') {
+        u.set('power_plant', powerPlant);
+    }
+
+    const rakeNumber = args.filters.rake_number ?? '';
+    if (rakeNumber !== '') {
+        u.set('rake_number', rakeNumber);
+    }
+
+    if (args.sidingId != null && args.sidingId > 0) {
+        u.set('siding_id', String(args.sidingId));
+    }
+
+    return u.toString();
+}
+
+function buildLoaderOverloadApiSearchParams(args: {
+    filters: DashboardFilters;
+    allSidingIds: number[];
+    page?: number;
+    perPage?: number;
+}): string {
+    const params = buildDashboardGetParams({
+        overrides: { section: 'loader-overload' },
+        filters: args.filters,
+        currentSection: 'loader-overload',
+        allSidingIds: args.allSidingIds,
+        resolvedPeriod: args.filters.period,
+        resolvedFrom: args.filters.from,
+        resolvedTo: args.filters.to,
+    });
+    const u = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null) {
+            continue;
+        }
+        u.set(k, String(v));
+    }
+    if (args.page != null) {
+        u.set('page', String(args.page));
+    }
+    if (args.perPage != null) {
+        u.set('per_page', String(args.perPage));
+    }
+
+    return u.toString();
+}
+
+interface DailyRakeDetailsRow {
+    sl_no: number;
+    siding_name: string;
+    year: string;
+    day_rakes: number;
+    day_qty: number;
+    month_rakes: number;
+    month_qty: number;
+    year_rakes: number;
+    year_qty: number;
+}
+
+interface DailyRakeDetailsData {
+    date: string;
+    rows: DailyRakeDetailsRow[];
+    totals: {
+        day_rakes: number;
+        day_qty: number;
+        month_rakes: number;
+        month_qty: number;
+        year_rakes: number;
+        year_qty: number;
+    };
+}
+
+interface CoalTransportSidingMetric {
+    siding_name: string;
+    trips: number;
+    qty: number;
+}
+
+interface CoalTransportReportRow {
+    sl_no: number;
+    shift_label: string;
+    siding_metrics: CoalTransportSidingMetric[];
+    total_trips: number;
+    total_qty: number;
+}
+
+interface CoalTransportReportData {
+    date: string;
+    sidings: Array<{ id: number; name: string }>;
+    rows: CoalTransportReportRow[];
+    totals: {
+        siding_metrics: CoalTransportSidingMetric[];
+        total_trips: number;
+        total_qty: number;
+    };
+}
+
+interface FilterOptions {
+    powerPlants: Array<{ value: string; label: string }>;
+    loaders: Array<{ id: number; name: string; siding_name: string }>;
+    shifts: Array<{ value: string; label: string }>;
+    penaltyTypes: Array<{ value: string; label: string }>;
+    /** loader id (string) -> operator names for dashboard filters */
+    loaderOperatorsByLoader?: Record<string, string[]>;
+}
+
+interface DashboardKpis {
+    rakesDispatchedToday: number;
+    coalDispatchedToday: number;
+    totalPenaltyThisMonth: number;
+    predictedPenaltyRisk: number;
+    avgLoadingTimeMinutes: number | null;
+    trucksReceivedToday: number;
+}
+
+interface PenaltyTrendChartPayload {
+    series: Array<{ key: string; label: string; siding_id: number }>;
+    points: Array<Record<string, string | number>>;
+}
+
+interface PenaltyByTypePoint {
+    name: string;
+    value: number;
+}
+
+interface PenaltyBySidingPoint {
+    name: string;
+    total: number;
+}
+
+interface YesterdayPenaltyRow {
+    type_code: string;
+    type_name: string;
+    amount: number;
+}
+
+interface YesterdayPenaltyRake {
+    rake_id: number;
+    rake_number: string;
+    total_penalty: number;
+    penalties: YesterdayPenaltyRow[];
+}
+
+interface YesterdayPredictedPenaltyItem {
+    siding_id: number;
+    siding_name: string;
+    rakes: YesterdayPenaltyRake[];
+}
+
+interface ExecutiveTimelineValue {
+    trips: number | null;
+    qty: number | null;
+}
+
+interface ExecutiveTimelineSeries {
+    dateWise: ExecutiveTimelineValue;
+    monthWise: ExecutiveTimelineValue;
+    fyWise: ExecutiveTimelineValue;
+}
+
+interface ExecutiveYesterdayData {
+    anchorDate: string;
+    fyLabel: string;
+    periods: Record<
+        'yesterday' | 'today' | 'week' | 'month' | 'fy',
+        { from: string; to: string }
+    >;
+    roadDispatch: {
+        totals: Record<
+            'yesterday' | 'today' | 'week' | 'month' | 'fy',
+            { trips: number; qty: number }
+        >;
+        bySiding: Array<{
+            sidingId: number;
+            sidingName: string;
+            totals: Record<
+                'yesterday' | 'today' | 'week' | 'month' | 'fy',
+                { trips: number; qty: number }
+            >;
+        }>;
+    };
+    railDispatch: {
+        totals: Record<
+            'yesterday' | 'today' | 'week' | 'month' | 'fy',
+            { rakes: number; qty: number }
+        >;
+        bySiding: Array<{
+            sidingId: number;
+            sidingName: string;
+            totals: Record<
+                'yesterday' | 'today' | 'week' | 'month' | 'fy',
+                { rakes: number; qty: number }
+            >;
+        }>;
+    };
+    obProduction: Record<
+        'yesterday' | 'today' | 'week' | 'month' | 'fy',
+        { trips: number; qty: number }
+    >;
+    coalProduction: Record<
+        'yesterday' | 'today' | 'week' | 'month' | 'fy',
+        { trips: number; qty: number }
+    >;
+    customRanges: {
+        roadDispatch: {
+            from: string;
+            to: string;
+            totals: { trips: number; qty: number };
+            bySiding: Array<{
+                sidingId: number;
+                sidingName: string;
+                trips: number;
+                qty: number;
+            }>;
+            summary: {
+                granularity: string;
+                columns: string[];
+                data: Record<string, { trips: number; qty: number }>;
+            };
+        };
+        railDispatch: {
+            from: string;
+            to: string;
+            totals: { rakes: number; qty: number };
+            bySiding: Array<{
+                sidingId: number;
+                sidingName: string;
+                rakes: number;
+                qty: number;
+            }>;
+            summary: {
+                granularity: string;
+                columns: string[];
+                data: Record<string, { rakes: number; qty: number }>;
+            };
+        };
+        obProduction: {
+            from: string;
+            to: string;
+            totals: { trips: number; qty: number };
+            summary: {
+                granularity: string;
+                columns: string[];
+                data: Record<string, { trips: number; qty: number }>;
+            };
+        };
+        coalProduction: {
+            from: string;
+            to: string;
+            totals: { trips: number; qty: number };
+            summary: {
+                granularity: string;
+                columns: string[];
+                data: Record<string, { trips: number; qty: number }>;
+            };
+        };
+    };
+    fySummary: {
+        rows: Array<{
+            fy: string;
+            production: { obQty: number; coalQty: number };
+            roadDispatch: { trips: number; qty: number };
+            railDispatch: { rakes: number; qty: number };
+        }>;
+    };
+    fyCharts: {
+        cutoverDate: string;
+        rows: Array<{
+            fy: string;
+            production: { obQty: number; coalQty: number };
+            dispatch: { roadQty: number; railQty: number };
+        }>;
+    };
+    /** Per chart-period slices (anchor-relative), same ranges as road/rail production charts, plus last_month for penalty control. */
+    penaltyBySidingByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
+        PenaltyBySidingPoint[]
+    >;
+    powerPlantDispatchByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy',
+        PowerPlantDispatchItem[]
+    >;
+    rrCoverageByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
+        {
+            total_rakes: number;
+            rakes_with_rr: number;
+            rakes_without_rr: number;
+        }
+    >;
+}
+
+interface DashboardAlert {
+    id: number;
+    type: string;
+    title: string;
+    severity: string;
+    rake_id: number | null;
+    siding_id: number | null;
+    created_at: string;
+}
+
+interface DashboardAlert {
+    rake_number: string;
+    rake_serial_number?: string | null;
+    siding_name: string;
+    state: string;
+    workflow_steps?: WorkflowSteps;
+    time_elapsed: string;
+    /** YYYY-MM-DD or em dash when unset */
+    loading_date?: string;
+    risk: string;
+}
+
+interface TruckReceiptHour {
+    hour: string;
+    label: string;
+    count: number;
+}
+
+/** Shift label + one key per siding name with vehicle count. */
+interface ShiftWiseVehicleReceiptPoint {
+    shift_label: string;
+    [sidingName: string]: string | number;
+}
+
+interface StockGaugeSidingItem {
+    siding_id: number;
+    siding_name: string;
+    stock_available_mt: number;
+    rake_required_mt: number;
+    status: string;
+}
+
+type StockGaugeData = StockGaugeSidingItem[];
+
+interface PenaltySummary {
+    today_rs: number;
+    trend_7d: { date: string; rs: number }[];
+    preventable_pct: number;
+}
+
+type RakeLifecycleStage =
+    | 'awaiting_placement'
+    | 'loading'
+    | 'awaiting_dispatch'
+    | 'dispatched'
+    | 'in_transit'
+    | 'delivered';
+
+interface RakePipelineCard {
+    rake_id: number;
+    rake_number: string;
+    siding_name: string;
+    siding_code: string;
+    wagon_count: number;
+    overloaded_count: number;
+    penalty_risk_rs: number;
+    state: string;
+    stage: RakeLifecycleStage;
+    stage_label: string;
+    loading_date: string | null;
+}
+
+interface ActiveRakePipeline {
+    awaiting_placement: RakePipelineCard[];
+    loading: RakePipelineCard[];
+    awaiting_dispatch: RakePipelineCard[];
+    dispatched: RakePipelineCard[];
+}
+
+interface SidingRiskScoreData {
+    siding_id: number;
+    siding_name: string;
+    siding_code: string;
+    score: number;
+    trend: string;
+    risk_factors: string[];
+    calculated_at: string | null;
+}
+
+interface AlertRecord {
+    id: number;
+    type: string;
+    title: string;
+    body: string;
+    severity: string;
+    siding_id: number | null;
+    rake_id: number | null;
+    created_at: string;
+}
+
+interface OperatorRake {
+    rake_id: number;
+    rake_number: string;
+    siding_name: string;
+    state: string;
+    loaded: number;
+    total: number;
+    status: string;
+    loading_date: string | null;
+}
+
+type DashboardProps = SharedData & {
+    sidings?: SidingOption[];
+    section?: string;
+    filters?: DashboardFilters;
+    filterOptions?: FilterOptions;
+    kpis?: DashboardKpis;
+    penaltyTrendDaily?: PenaltyTrendChartPayload;
+    penaltyByType?: PenaltyByTypePoint[];
+    penaltyBySiding?: PenaltyBySidingPoint[];
+    penaltyControlRrCoverage?: {
+        total_rakes: number;
+        rakes_with_rr: number;
+        rakes_without_rr: number;
+        by_siding?: Array<{
+            siding_id: number;
+            siding_name: string;
+            total_rakes: number;
+            rakes_with_rr: number;
+            rakes_without_rr: number;
+        }>;
+    };
+    notifications?: Array<{
+        id: string;
+        type: string;
+        data: Record<string, unknown>;
+        read_at: string | null;
+        created_at: string;
+    }>;
+    notificationsUnreadCount?: number;
+    liveRakeStatus?: LiveRakeStatusRow[];
+    dailyRakeDetails?: DailyRakeDetailsData;
+    coalTransportReport?: CoalTransportReportData;
+    truckReceiptTrend?: TruckReceiptHour[];
+    shiftWiseVehicleReceipt?: ShiftWiseVehicleReceiptPoint[];
+    stockGauge?: StockGaugeData;
+    predictedVsActualPenalty?: {
+        predicted: number;
+        actual: number;
+        bySiding?: Array<{ name: string; predicted: number; actual: number }>;
+    };
+    sidingStocks?: Record<number, SidingStock>;
+    sidingPerformance?: SidingPerformanceItem[];
+    sidingWiseMonthly?: SidingWiseMonthlyPoint[];
+    sidingRadar?: SidingComparisonData;
+    dispatchSummaryByPeriod?: DispatchSummaryByPeriod;
+    rakePerformance?: RakePerformanceItem[];
+    loaderOverloadTrends?: LoaderOverloadTrends;
+    powerPlantDispatch?: PowerPlantDispatchItem[];
+    yesterdayPredictedPenalties?: YesterdayPredictedPenaltyItem[];
+    executiveYesterday?: ExecutiveYesterdayData;
+    /** Spatie permission names; omit or empty = no widgets (after deploy, always set for authenticated users). */
+    allowedDashboardWidgets?: string[];
+    penaltySummary?: PenaltySummary;
+    activeRakePipeline?: ActiveRakePipeline;
+    riskScores?: Record<number, SidingRiskScoreData>;
+    alerts?: Record<string, AlertRecord[]>;
+    operatorRake?: OperatorRake | null;
+    penaltyPredictions?: Array<{
+        siding_name: string;
+        risk_level: 'high' | 'medium' | 'low';
+        predicted_amount_min: number;
+        predicted_amount_max: number;
+        top_recommendation: string | null;
+    }>;
+    overloadPatterns?: Array<{
+        siding_name: string;
+        patterns: Array<{
+            wagon_type: string;
+            overload_rate_percent: number;
+            overloaded_count: number;
+            total_count: number;
+        }>;
+    }>;
+};
+
+/** Period keys aligned with executive table / backend totals (FY = year-to-date in FY). */
+export type ExecutiveChartPeriodKey = 'yesterday' | 'today' | 'month' | 'fy';
+
+export const EXEC_CHART_PERIOD_OPTIONS: {
+    value: ExecutiveChartPeriodKey;
+    label: string;
+}[] = [
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'today', label: 'Today' },
+    { value: 'month', label: 'This month' },
+    { value: 'fy', label: 'Year' },
+];
+
+function executiveChartFormatBarTooltipValue(
+    n: number,
+    unit: 'count' | 'mt',
+): string {
+    if (unit === 'count') {
+        return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    return `${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`;
+}
+
+function ExecutiveSidingBarChartCard(props: {
+    title: string;
+    rows: Array<{ name: string; value: number }>;
+    period: ExecutiveChartPeriodKey;
+    onPeriodChange: (p: ExecutiveChartPeriodKey) => void;
+    valueKind: 'count' | 'qty';
+    onValueKindChange: (k: 'count' | 'qty') => void;
+    countLabel: string;
+}) {
+    const coloredRows = useMemo(
+        () =>
+            props.rows.map((r, i) => ({
+                ...r,
+                fill: EXECUTIVE_SIDING_BAR_CHART_COLORS[
+                    i % EXECUTIVE_SIDING_BAR_CHART_COLORS.length
+                ],
+            })),
+        [props.rows],
+    );
+
+    const max = Math.max(...props.rows.map((r) => r.value), 1);
+    const unit: 'count' | 'mt' = props.valueKind === 'qty' ? 'mt' : 'count';
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-gray-900">
+                        {props.title}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                            value={props.period}
+                            onValueChange={(v) =>
+                                props.onPeriodChange(
+                                    v as ExecutiveChartPeriodKey,
+                                )
+                            }
+                        >
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                    <SelectItem
+                                        key={o.value}
+                                        value={o.value}
+                                        className="text-xs"
+                                    >
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <div className="flex rounded-lg border border-gray-200 p-0.5">
+                            <Button
+                                type="button"
+                                variant={
+                                    props.valueKind === 'count'
+                                        ? 'default'
+                                        : 'ghost'
+                                }
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('count')}
+                            >
+                                {props.countLabel}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={
+                                    props.valueKind === 'qty'
+                                        ? 'default'
+                                        : 'ghost'
+                                }
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('qty')}
+                            >
+                                Qty
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-[#fbfbfc] p-4">
+                {props.rows.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-muted-foreground">
+                        No siding data.
+                    </p>
+                ) : (
+                    <>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <RechartsBarChart
+                                data={coloredRows}
+                                margin={{
+                                    top: 12,
+                                    right: 16,
+                                    bottom: 12,
+                                    left: 8,
+                                }}
+                                barCategoryGap="18%"
+                            >
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    vertical={false}
+                                />
+                                <XAxis
+                                    dataKey="name"
+                                    tick={{ fontSize: 10, fill: '#374151' }}
+                                    interval={0}
+                                    angle={0}
+                                    textAnchor="middle"
+                                    height={36}
+                                />
+                                <YAxis
+                                    tick={{ fontSize: 11 }}
+                                    domain={[0, max * 1.12]}
+                                />
+                                <Tooltip
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload?.length) {
+                                            return null;
+                                        }
+                                        const v = Number(
+                                            payload[0]?.value ?? 0,
+                                        );
+
+                                        return (
+                                            <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
+                                                <div className="font-semibold">
+                                                    {String(label ?? '')}
+                                                </div>
+                                                <div className="mt-1 font-semibold tabular-nums">
+                                                    {executiveChartFormatBarTooltipValue(
+                                                        v,
+                                                        unit,
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                <Bar
+                                    dataKey="value"
+                                    radius={[2, 2, 0, 0]}
+                                    maxBarSize={48}
+                                >
+                                    {coloredRows.map((row, i) => (
+                                        <Cell
+                                            key={`${row.name}-${i}`}
+                                            fill={row.fill}
+                                        />
+                                    ))}
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                        <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 border-t border-[#d5dbe4] pt-3">
+                            {coloredRows.map((row, i) => (
+                                <span
+                                    key={`${row.name}-${i}`}
+                                    className="inline-flex max-w-[min(100%,12rem)] items-center gap-1.5 text-[11px] text-gray-700"
+                                    title={row.name}
+                                >
+                                    <span
+                                        className="size-2.5 shrink-0 rounded-sm"
+                                        style={{ backgroundColor: row.fill }}
+                                        aria-hidden
+                                    />
+                                    <span className="truncate">{row.name}</span>
+                                </span>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ExecutiveProductionDonutCard(props: {
+    period: ExecutiveChartPeriodKey;
+    onPeriodChange: (p: ExecutiveChartPeriodKey) => void;
+    valueKind: 'trips' | 'qty';
+    onValueKindChange: (k: 'trips' | 'qty') => void;
+    obValue: number;
+    coalValue: number;
+}) {
+    const data = [
+        {
+            name: 'OB',
+            value: props.obValue,
+            fill: DASHBOARD_PALETTE.successGreen,
+        },
+        {
+            name: 'Coal',
+            value: props.coalValue,
+            fill: DASHBOARD_PALETTE.steelBlue,
+        },
+    ];
+    const total = props.obValue + props.coalValue;
+    const isEmpty = total <= 0;
+    /** Muted 50/50 donut so the chart frame is visible when there is no production data. */
+    const chartData = isEmpty
+        ? [
+              { name: 'OB', value: 1, fill: '#e2e8f0' },
+              { name: 'Coal', value: 1, fill: '#cbd5e1' },
+          ]
+        : data;
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-gray-900">
+                        Production
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                            value={props.period}
+                            onValueChange={(v) =>
+                                props.onPeriodChange(
+                                    v as ExecutiveChartPeriodKey,
+                                )
+                            }
+                        >
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                    <SelectItem
+                                        key={o.value}
+                                        value={o.value}
+                                        className="text-xs"
+                                    >
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <div className="flex rounded-lg border border-gray-200 p-0.5">
+                            <Button
+                                type="button"
+                                variant={
+                                    props.valueKind === 'trips'
+                                        ? 'default'
+                                        : 'ghost'
+                                }
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('trips')}
+                            >
+                                Trips
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={
+                                    props.valueKind === 'qty'
+                                        ? 'default'
+                                        : 'ghost'
+                                }
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('qty')}
+                            >
+                                Qty
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="relative bg-[#fbfbfc] p-4">
+                <div className="relative min-h-[280px]">
+                    <ResponsiveContainer width="100%" height={280}>
+                        <RechartsPieChart
+                            margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                        >
+                            <Pie
+                                data={chartData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={72}
+                                outerRadius={104}
+                                paddingAngle={isEmpty ? 1 : 2}
+                                isAnimationActive={!isEmpty}
+                                stroke={isEmpty ? '#f8fafc' : undefined}
+                                strokeWidth={isEmpty ? 1 : 0}
+                            >
+                                {chartData.map((entry) => (
+                                    <Cell
+                                        key={`cell-${entry.name}`}
+                                        fill={entry.fill}
+                                    />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                formatter={(value, name) => {
+                                    if (isEmpty) {
+                                        return [
+                                            'No production data for this period',
+                                            String(name),
+                                        ];
+                                    }
+                                    const v = Number(value ?? 0);
+
+                                    return [
+                                        props.valueKind === 'qty'
+                                            ? `${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                            : v.toLocaleString(undefined, {
+                                                  maximumFractionDigits: 0,
+                                              }),
+                                        String(name),
+                                    ];
+                                }}
+                            />
+                            <Legend
+                                wrapperStyle={{
+                                    fontSize: 12,
+                                    opacity: isEmpty ? 0.45 : 1,
+                                }}
+                            />
+                        </RechartsPieChart>
+                    </ResponsiveContainer>
+                    {isEmpty ? (
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-6 text-center">
+                            <p className="text-xs font-medium text-muted-foreground">
+                                No production data
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                                for this period
+                            </p>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export const PENALTY_BY_SIDING_CHART_COLORS = [
+    '#DC2626',
+    '#EA580C',
+    '#CA8A04',
+    '#65A30D',
+    '#059669',
+    '#0D9488',
+    '#2563EB',
+    '#7C3AED',
+    '#C026D3',
+    '#DB2777',
+];
+
+/** Period keys for penalty-by-siding chart (includes last calendar month). */
+export type PenaltyBySidingChartPeriodKey =
+    | ExecutiveChartPeriodKey
+    | 'last_month';
+
+export const PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS: {
+    value: PenaltyBySidingChartPeriodKey;
+    label: string;
+}[] = [
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'last_month', label: 'Last month' },
+    { value: 'month', label: 'This month' },
+    { value: 'fy', label: 'Year' },
+];
+
+export function DashboardPenaltyBySidingChart({
+    data,
+    period,
+    onPeriodChange,
+    periodOptions,
+    rrCoverageLabel,
+    className,
+}: {
+    data: PenaltyBySidingPoint[];
+    period?: PenaltyBySidingChartPeriodKey;
+    onPeriodChange?: (p: PenaltyBySidingChartPeriodKey) => void;
+    periodOptions?: { value: PenaltyBySidingChartPeriodKey; label: string }[];
+    rrCoverageLabel?: string;
+    className?: string;
+}) {
+    const sorted = useMemo(
+        () => [...data].sort((a, b) => b.total - a.total),
+        [data],
+    );
+    const showPeriod = onPeriodChange != null && period != null;
+    const selectOptions =
+        periodOptions ??
+        (EXEC_CHART_PERIOD_OPTIONS as {
+            value: PenaltyBySidingChartPeriodKey;
+            label: string;
+        }[]);
+
+    return (
+        <div
+            className={cn(
+                'dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0',
+                className,
+            )}
+        >
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                {showPeriod ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <SectionHeader
+                            icon={BarChart3}
+                            title="Penalty by siding"
+                            subtitle="Which siding causes most penalties"
+                        />
+                        <Select
+                            value={period}
+                            onValueChange={(v) =>
+                                onPeriodChange(v as PenaltyBySidingChartPeriodKey)
+                            }
+                        >
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {selectOptions.map((o) => (
+                                    <SelectItem
+                                        key={o.value}
+                                        value={o.value}
+                                        className="text-xs"
+                                    >
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                ) : (
+                    <SectionHeader
+                        icon={BarChart3}
+                        title="Penalty by siding"
+                        subtitle="Which siding causes most penalties"
+                    />
+                )}
+            </div>
+            {rrCoverageLabel ? (
+                <p className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-2 text-xs text-muted-foreground">
+                    {rrCoverageLabel}
+                </p>
+            ) : null}
+            <div className="bg-[#fbfbfc] p-4">
+                {sorted.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                        No sidings available for selected filters.
+                    </p>
+                ) : (
+                    <ResponsiveContainer width="100%" height={320}>
+                        <RechartsBarChart
+                            data={sorted}
+                            margin={{ top: 8, right: 24, bottom: 24, left: 16 }}
+                        >
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                strokeOpacity={0.3}
+                            />
+                            <XAxis
+                                dataKey="name"
+                                type="category"
+                                tick={{ fontSize: 11 }}
+                                interval={0}
+                                height={48}
+                            />
+                            <YAxis
+                                type="number"
+                                tickFormatter={(v: number) => formatCurrency(v)}
+                                width={72}
+                                tick={{ fontSize: 11 }}
+                            />
+                            <Tooltip
+                                formatter={numericTooltipFormatter((v) =>
+                                    formatCurrency(v),
+                                )}
+                            />
+                            <Bar
+                                dataKey="total"
+                                radius={[4, 4, 0, 0]}
+                                barSize={28}
+                                isAnimationActive
+                            >
+                                <LabelList
+                                    dataKey="total"
+                                    position="top"
+                                    formatter={(v: unknown) =>
+                                        formatCurrency(Number(v ?? 0))
+                                    }
+                                />
+                                {sorted.map((row, i) => (
+                                    <Cell
+                                        key={row.name}
+                                        fill={
+                                            PENALTY_BY_SIDING_CHART_COLORS[
+                                                i %
+                                                    PENALTY_BY_SIDING_CHART_COLORS.length
+                                            ]
+                                        }
+                                    />
+                                ))}
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ExecutiveYesterdayTable({
+    title,
+    values,
+    dateLabel,
+    monthLabel,
+    fyLabel,
+}: {
+    title: string;
+    values: ExecutiveTimelineSeries;
+    dateLabel: string;
+    monthLabel: string;
+    fyLabel: string;
+}) {
+    const rows: Array<{ label: string; value: ExecutiveTimelineValue }> = [
+        { label: `Date wise (${dateLabel})`, value: values.dateWise },
+        { label: `Month wise (${monthLabel})`, value: values.monthWise },
+        { label: `FY wise (${fyLabel})`, value: values.fyWise },
+    ];
+
+    const formatQtyOrDash = (qty: number | null): string => {
+        if (qty == null) {
+            return '—';
+        }
+
+        return qty.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    };
+
+    const formatTripsOrDash = (trips: number | null): string => {
+        if (trips == null) {
+            return '—';
+        }
+
+        return trips.toLocaleString();
+    };
+
+    return (
+        <div className="dashboard-card rounded-xl border-0 p-5">
+            <SectionHeader
+                icon={BarChart3}
+                title={title}
+                subtitle="Timeline"
+                titleClassName="font-bold text-black"
+            />
+            <div className="dashboard-table-scroll mt-3 overflow-x-auto">
+                <table
+                    className="w-full border-separate text-sm"
+                    style={{ borderSpacing: 0 }}
+                >
+                    <thead className="bg-[#eef2f7] text-black">
+                        <tr>
+                            <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium">
+                                Period
+                            </th>
+                            <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                Trips
+                            </th>
+                            <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                Qty (MT)
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((row) => (
+                            <tr key={row.label} className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2">
+                                    {row.label}
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    {formatTripsOrDash(row.value.trips)}
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    {formatQtyOrDash(row.value.qty)}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+export function ExecutiveYesterdaySection({
+    data,
+    viewMode,
+    onViewModeChange,
+    showViewToggle = false,
+    exportReportHref = null,
+    penaltyBySiding = [],
+    powerPlantDispatch = [],
+    sidingStocks = {},
+    filteredSidings = [],
+    canWidget,
+    dispatchSummaryAside,
+}: {
+    data: ExecutiveYesterdayData;
+    viewMode: 'table' | 'charts';
+    onViewModeChange?: (mode: 'table' | 'charts') => void;
+    showViewToggle?: boolean;
+    /** Same-origin GET URL including query string; opens in a new tab to download `.xlsx`. */
+    exportReportHref?: string | null;
+    penaltyBySiding?: PenaltyBySidingPoint[];
+    powerPlantDispatch?: PowerPlantDispatchItem[];
+    sidingStocks?: Record<number, SidingStock>;
+    filteredSidings?: SidingOption[];
+    canWidget: (permissionName: string) => boolean;
+    /** Rendered beside Powerplant Dispatch chart (e.g. dispatch summary card). */
+    dispatchSummaryAside?: ReactNode;
+}) {
+    const [executiveData, setExecutiveData] =
+        useState<ExecutiveYesterdayData>(data);
+
+    /** Single range for the Custom (by siding) table — applied to both road and rail. */
+    const [customFrom, setCustomFrom] = useState<string>(
+        data.customRanges.roadDispatch.from,
+    );
+    const [customTo, setCustomTo] = useState<string>(
+        data.customRanges.roadDispatch.to,
+    );
+
+    /** Custom (by siding) table Apply in flight. */
+    const [customApplyLoading, setCustomApplyLoading] = useState<
+        'customTable' | null
+    >(null);
+    const [customError, setCustomError] = useState<string | null>(null);
+
+    const [roadChartPeriod, setRoadChartPeriod] =
+        useState<ExecutiveChartPeriodKey>('yesterday');
+    const [roadChartValueKind, setRoadChartValueKind] = useState<
+        'count' | 'qty'
+    >('count');
+    const [railChartPeriod, setRailChartPeriod] =
+        useState<ExecutiveChartPeriodKey>('yesterday');
+    const [railChartValueKind, setRailChartValueKind] = useState<
+        'count' | 'qty'
+    >('count');
+    const [productionChartPeriod, setProductionChartPeriod] =
+        useState<ExecutiveChartPeriodKey>('month');
+    const [productionChartMetric, setProductionChartMetric] = useState<
+        'trips' | 'qty'
+    >('trips');
+    const [penaltyChartPeriod, setPenaltyChartPeriod] =
+        useState<PenaltyBySidingChartPeriodKey>('month');
+    const [powerPlantChartPeriod, setPowerPlantChartPeriod] =
+        useState<ExecutiveChartPeriodKey>('month');
+    const [powerPlantMetric, setPowerPlantMetric] = useState<'rakes' | 'qty'>(
+        'rakes',
+    );
+
+    /** Table view: road/rail totals visible; siding rows hidden until expanded. */
+    const [roadTableSidingExpanded, setRoadTableSidingExpanded] =
+        useState(false);
+    const [railTableSidingExpanded, setRailTableSidingExpanded] =
+        useState(false);
+
+    useEffect(() => {
+        setExecutiveData(data);
+        setCustomFrom(data.customRanges.roadDispatch.from);
+        setCustomTo(data.customRanges.roadDispatch.to);
+    }, [data]);
+
+    const fmtNumber = (n: number, fractionDigits = 0): string =>
+        n.toLocaleString(undefined, {
+            minimumFractionDigits: fractionDigits,
+            maximumFractionDigits: fractionDigits,
+        });
+
+    const execPeriodOrder = [
+        'yesterday',
+        'today',
+        'week',
+        'month',
+        'fy',
+    ] as const;
+    const execPeriodColumnLabel: Record<
+        (typeof execPeriodOrder)[number],
+        string
+    > = {
+        yesterday: 'Yesterday',
+        today: 'Today',
+        week: 'Week',
+        month: 'Month',
+        fy: 'Year',
+    };
+
+    const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
+
+    const isValidRange = (from: string, to: string): boolean =>
+        Boolean(from) && Boolean(to) && from <= to;
+
+    const applyCustomTableRoadRail = useCallback(async (): Promise<void> => {
+        setCustomApplyLoading('customTable');
+        setCustomError(null);
+        try {
+            const url = new URL(
+                `${dashboardPath.replace(/\/$/, '')}/executive-yesterday-data`,
+                window.location.origin,
+            );
+            url.searchParams.set(
+                'executive_yesterday_date',
+                executiveData.anchorDate,
+            );
+            url.searchParams.set('executive_road_from', customFrom);
+            url.searchParams.set('executive_road_to', customTo);
+            url.searchParams.set('executive_rail_from', customFrom);
+            url.searchParams.set('executive_rail_to', customTo);
+            url.searchParams.set(
+                'executive_ob_from',
+                executiveData.customRanges.obProduction.from,
+            );
+            url.searchParams.set(
+                'executive_ob_to',
+                executiveData.customRanges.obProduction.to,
+            );
+            url.searchParams.set(
+                'executive_coal_from',
+                executiveData.customRanges.coalProduction.from,
+            );
+            url.searchParams.set(
+                'executive_coal_to',
+                executiveData.customRanges.coalProduction.to,
+            );
+            url.searchParams.set('executive_apply_scope', 'road,rail');
+
+            const res = await fetch(url.toString(), {
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (!res.ok) {
+                throw new Error(`Request failed (${res.status})`);
+            }
+
+            const body: unknown = await res.json();
+            if (
+                typeof body === 'object' &&
+                body !== null &&
+                'customRanges' in body &&
+                typeof (body as { customRanges?: unknown }).customRanges ===
+                    'object' &&
+                (body as { customRanges?: unknown }).customRanges !== null
+            ) {
+                const partial = (
+                    body as {
+                        customRanges: Partial<
+                            ExecutiveYesterdayData['customRanges']
+                        >;
+                    }
+                ).customRanges;
+                setExecutiveData((prev) => ({
+                    ...prev,
+                    customRanges: {
+                        ...prev.customRanges,
+                        ...partial,
+                    },
+                }));
+                return;
+            }
+            throw new Error('Unexpected response shape.');
+        } catch (e) {
+            setCustomError(
+                e instanceof Error
+                    ? e.message
+                    : 'Failed to load custom range data.',
+            );
+        } finally {
+            setCustomApplyLoading(null);
+        }
+    }, [
+        dashboardPath,
+        executiveData.anchorDate,
+        executiveData.customRanges,
+        customFrom,
+        customTo,
+    ]);
+
+    const railCustomBySidingId = useMemo(
+        () =>
+            new Map(
+                executiveData.customRanges.railDispatch.bySiding.map((r) => [
+                    r.sidingId,
+                    r,
+                ]),
+            ),
+        [executiveData.customRanges.railDispatch.bySiding],
+    );
+
+    const roadDispatchBarRows = useMemo(
+        () =>
+            executiveData.roadDispatch.bySiding.map((s) => ({
+                name: s.sidingName,
+                value:
+                    roadChartValueKind === 'count'
+                        ? s.totals[roadChartPeriod].trips
+                        : s.totals[roadChartPeriod].qty,
+            })),
+        [
+            executiveData.roadDispatch.bySiding,
+            roadChartPeriod,
+            roadChartValueKind,
+        ],
+    );
+
+    const railDispatchBarRows = useMemo(
+        () =>
+            executiveData.railDispatch.bySiding.map((s) => ({
+                name: s.sidingName,
+                value:
+                    railChartValueKind === 'count'
+                        ? s.totals[railChartPeriod].rakes
+                        : s.totals[railChartPeriod].qty,
+            })),
+        [
+            executiveData.railDispatch.bySiding,
+            railChartPeriod,
+            railChartValueKind,
+        ],
+    );
+
+    const productionObValue = useMemo(() => {
+        const row = executiveData.obProduction[productionChartPeriod];
+
+        return productionChartMetric === 'trips' ? row.trips : row.qty;
+    }, [
+        executiveData.obProduction,
+        productionChartPeriod,
+        productionChartMetric,
+    ]);
+
+    const productionCoalValue = useMemo(() => {
+        const row = executiveData.coalProduction[productionChartPeriod];
+
+        return productionChartMetric === 'trips' ? row.trips : row.qty;
+    }, [
+        executiveData.coalProduction,
+        productionChartPeriod,
+        productionChartMetric,
+    ]);
+
+    const hasPenaltyPeriodSlices =
+        executiveData.penaltyBySidingByPeriod != null;
+    const hasPowerPlantPeriodSlices =
+        executiveData.powerPlantDispatchByPeriod != null;
+
+    const penaltyChartData = useMemo(() => {
+        if (hasPenaltyPeriodSlices && executiveData.penaltyBySidingByPeriod) {
+            return (
+                executiveData.penaltyBySidingByPeriod[penaltyChartPeriod] ?? []
+            );
+        }
+
+        return penaltyBySiding;
+    }, [
+        executiveData.penaltyBySidingByPeriod,
+        hasPenaltyPeriodSlices,
+        penaltyBySiding,
+        penaltyChartPeriod,
+    ]);
+
+    const powerPlantChartData = useMemo(() => {
+        if (
+            hasPowerPlantPeriodSlices &&
+            executiveData.powerPlantDispatchByPeriod
+        ) {
+            return (
+                executiveData.powerPlantDispatchByPeriod[
+                    powerPlantChartPeriod
+                ] ?? []
+            );
+        }
+
+        return powerPlantDispatch;
+    }, [
+        executiveData.powerPlantDispatchByPeriod,
+        hasPowerPlantPeriodSlices,
+        powerPlantChartPeriod,
+        powerPlantDispatch,
+    ]);
+
+    const customTableToolbar = (
+        <>
+            <label className="text-xs font-medium text-gray-600">From</label>
+            <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <label className="text-xs font-medium text-gray-600">To</label>
+            <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={
+                    customApplyLoading === 'customTable' ||
+                    !isValidRange(customFrom, customTo)
+                }
+                onClick={() => void applyCustomTableRoadRail()}
+            >
+                {customApplyLoading === 'customTable' ? 'Applying…' : 'Apply'}
+            </Button>
+        </>
+    );
+
+    const dispatchPowerPlantBand = (() => {
+        const showPowerPlantChart = canWidget(
+            'dashboard.widgets.executive_chart_powerplant_dispatch',
+        );
+        const showDispatchAside =
+            dispatchSummaryAside !== null &&
+            dispatchSummaryAside !== undefined;
+
+        if (!showPowerPlantChart && !showDispatchAside) {
+            return null;
+        }
+
+        if (showDispatchAside && showPowerPlantChart) {
+            return (
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+                    <div className="min-w-0 flex flex-col">
+                        <RakesPerPowerPlantExecutiveChart
+                            data={powerPlantChartData}
+                            {...(hasPowerPlantPeriodSlices
+                                ? {
+                                      period: powerPlantChartPeriod,
+                                      onPeriodChange: setPowerPlantChartPeriod,
+                                      metric: powerPlantMetric,
+                                      onMetricChange: setPowerPlantMetric,
+                                  }
+                                : {})}
+                        />
+                    </div>
+                    <div className="min-w-0">{dispatchSummaryAside}</div>
+                </div>
+            );
+        }
+
+        return (
+            <>
+                {showPowerPlantChart ? (
+                    <RakesPerPowerPlantExecutiveChart
+                        data={powerPlantChartData}
+                        {...(hasPowerPlantPeriodSlices
+                            ? {
+                                  period: powerPlantChartPeriod,
+                                  onPeriodChange: setPowerPlantChartPeriod,
+                                  metric: powerPlantMetric,
+                                  onMetricChange: setPowerPlantMetric,
+                              }
+                            : {})}
+                    />
+                ) : null}
+                {showDispatchAside ? dispatchSummaryAside : null}
+            </>
+        );
+    })();
+
+    const TableView = (
+        <div className="space-y-6">
+            {canWidget('dashboard.widgets.executive_tables_road_dispatch') ? (
+                <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                    <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-900">
+                            Road Dispatch
+                        </p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table
+                            className="w-full border-separate text-xs"
+                            style={{ borderSpacing: 0 }}
+                        >
+                            <thead className="bg-[#eef2f7] text-black">
+                                <tr>
+                                    <th
+                                        className="border border-[#d5dbe4] px-3 py-2 text-left font-medium"
+                                        colSpan={2}
+                                    >
+                                        {executiveData.fyLabel}
+                                    </th>
+                                    {execPeriodOrder.map((k) => (
+                                        <th
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                        >
+                                            {execPeriodColumnLabel[k]}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr className="bg-white">
+                                    <td
+                                        className="border border-[#d5dbe4] px-3 py-2 font-semibold"
+                                        rowSpan={2}
+                                    >
+                                        Road Dispatch
+                                    </td>
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                        Trips
+                                    </td>
+                                    {execPeriodOrder.map((k) => (
+                                        <td
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                        >
+                                            {fmtNumber(
+                                                executiveData.roadDispatch
+                                                    .totals[k].trips,
+                                                0,
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                                <tr className="bg-white">
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                        Qty
+                                    </td>
+                                    {execPeriodOrder.map((k) => (
+                                        <td
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                        >
+                                            {fmtNumber(
+                                                executiveData.roadDispatch
+                                                    .totals[k].qty,
+                                                2,
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                                {roadTableSidingExpanded
+                                    ? executiveData.roadDispatch.bySiding.map(
+                                          (s) => (
+                                              <Fragment key={s.sidingId}>
+                                                  <tr className="bg-white">
+                                                      <td
+                                                          className="border border-[#d5dbe4] px-3 py-2 font-medium"
+                                                          rowSpan={2}
+                                                      >
+                                                          {s.sidingName}
+                                                      </td>
+                                                      <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                                          Trips
+                                                      </td>
+                                                      {execPeriodOrder.map(
+                                                          (k) => (
+                                                              <td
+                                                                  key={k}
+                                                                  className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums"
+                                                              >
+                                                                  {fmtNumber(
+                                                                      s.totals[
+                                                                          k
+                                                                      ].trips,
+                                                                      0,
+                                                                  )}
+                                                              </td>
+                                                          ),
+                                                      )}
+                                                  </tr>
+                                                  <tr className="bg-white">
+                                                      <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                                          Qty
+                                                      </td>
+                                                      {execPeriodOrder.map(
+                                                          (k) => (
+                                                              <td
+                                                                  key={k}
+                                                                  className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums"
+                                                              >
+                                                                  {fmtNumber(
+                                                                      s.totals[
+                                                                          k
+                                                                      ].qty,
+                                                                      2,
+                                                                  )}
+                                                              </td>
+                                                          ),
+                                                      )}
+                                                  </tr>
+                                              </Fragment>
+                                          ),
+                                      )
+                                    : null}
+                                {executiveData.roadDispatch.bySiding.length >
+                                0 ? (
+                                    <tr className="bg-[#f8fafc]">
+                                        <td
+                                            colSpan={2 + execPeriodOrder.length}
+                                            className="border border-[#d5dbe4] p-0"
+                                        >
+                                            <button
+                                                type="button"
+                                                className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100"
+                                                onClick={() =>
+                                                    setRoadTableSidingExpanded(
+                                                        (v) => !v,
+                                                    )
+                                                }
+                                                aria-expanded={
+                                                    roadTableSidingExpanded
+                                                }
+                                            >
+                                                <ChevronDown
+                                                    className={`size-4 shrink-0 text-gray-500 transition-transform ${roadTableSidingExpanded ? 'rotate-180' : ''}`}
+                                                />
+                                                {roadTableSidingExpanded
+                                                    ? 'Hide siding breakdown'
+                                                    : 'Show siding breakdown'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ) : null}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : null}
+            {canWidget('dashboard.widgets.executive_tables_rail_dispatch') ? (
+                <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                    <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-900">
+                            Rail Dispatch
+                        </p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table
+                            className="w-full border-separate text-xs"
+                            style={{ borderSpacing: 0 }}
+                        >
+                            <thead className="bg-[#eef2f7] text-black">
+                                <tr>
+                                    <th
+                                        className="border border-[#d5dbe4] px-3 py-2 text-left font-medium"
+                                        colSpan={2}
+                                    >
+                                        {executiveData.fyLabel}
+                                    </th>
+                                    {execPeriodOrder.map((k) => (
+                                        <th
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                        >
+                                            {execPeriodColumnLabel[k]}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr className="bg-white">
+                                    <td
+                                        className="border border-[#d5dbe4] px-3 py-2 font-semibold"
+                                        rowSpan={2}
+                                    >
+                                        Rail Dispatch
+                                    </td>
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                        Rakes
+                                    </td>
+                                    {execPeriodOrder.map((k) => (
+                                        <td
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                        >
+                                            {fmtNumber(
+                                                executiveData.railDispatch
+                                                    .totals[k].rakes,
+                                                0,
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                                <tr className="bg-white">
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                        Qty
+                                    </td>
+                                    {execPeriodOrder.map((k) => (
+                                        <td
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                        >
+                                            {fmtNumber(
+                                                executiveData.railDispatch
+                                                    .totals[k].qty,
+                                                2,
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                                {railTableSidingExpanded
+                                    ? executiveData.railDispatch.bySiding.map(
+                                          (s) => (
+                                              <Fragment key={s.sidingId}>
+                                                  <tr className="bg-white">
+                                                      <td
+                                                          className="border border-[#d5dbe4] px-3 py-2 font-medium"
+                                                          rowSpan={2}
+                                                      >
+                                                          {s.sidingName}
+                                                      </td>
+                                                      <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                                          Rakes
+                                                      </td>
+                                                      {execPeriodOrder.map(
+                                                          (k) => (
+                                                              <td
+                                                                  key={k}
+                                                                  className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums"
+                                                              >
+                                                                  {fmtNumber(
+                                                                      s.totals[
+                                                                          k
+                                                                      ].rakes,
+                                                                      0,
+                                                                  )}
+                                                              </td>
+                                                          ),
+                                                      )}
+                                                  </tr>
+                                                  <tr className="bg-white">
+                                                      <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                                          Qty
+                                                      </td>
+                                                      {execPeriodOrder.map(
+                                                          (k) => (
+                                                              <td
+                                                                  key={k}
+                                                                  className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums"
+                                                              >
+                                                                  {fmtNumber(
+                                                                      s.totals[
+                                                                          k
+                                                                      ].qty,
+                                                                      2,
+                                                                  )}
+                                                              </td>
+                                                          ),
+                                                      )}
+                                                  </tr>
+                                              </Fragment>
+                                          ),
+                                      )
+                                    : null}
+                                {executiveData.railDispatch.bySiding.length >
+                                0 ? (
+                                    <tr className="bg-[#f8fafc]">
+                                        <td
+                                            colSpan={2 + execPeriodOrder.length}
+                                            className="border border-[#d5dbe4] p-0"
+                                        >
+                                            <button
+                                                type="button"
+                                                className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100"
+                                                onClick={() =>
+                                                    setRailTableSidingExpanded(
+                                                        (v) => !v,
+                                                    )
+                                                }
+                                                aria-expanded={
+                                                    railTableSidingExpanded
+                                                }
+                                            >
+                                                <ChevronDown
+                                                    className={`size-4 shrink-0 text-gray-500 transition-transform ${railTableSidingExpanded ? 'rotate-180' : ''}`}
+                                                />
+                                                {railTableSidingExpanded
+                                                    ? 'Hide siding breakdown'
+                                                    : 'Show siding breakdown'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ) : null}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : null}
+
+            {canWidget('dashboard.widgets.executive_tables_custom') &&
+            customError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                    {customError}
+                </div>
+            ) : null}
+
+            {canWidget('dashboard.widgets.executive_tables_production') ? (
+                <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                    <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-900">
+                            Production
+                        </p>
+                    </div>
+                    <div className="space-y-0">
+                        <p className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-2 text-xs font-semibold text-gray-800">
+                            OB Production
+                        </p>
+                        <div className="overflow-x-auto">
+                            <table
+                                className="w-full border-separate text-xs"
+                                style={{ borderSpacing: 0 }}
+                            >
+                                <thead className="bg-[#eef2f7] text-black">
+                                    <tr>
+                                        <th
+                                            className="border border-[#d5dbe4] px-3 py-2 text-left font-medium"
+                                            colSpan={2}
+                                        >
+                                            {executiveData.fyLabel}
+                                        </th>
+                                        {execPeriodOrder.map((k) => (
+                                            <th
+                                                key={k}
+                                                className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                            >
+                                                {execPeriodColumnLabel[k]}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr className="bg-white">
+                                        <td
+                                            className="border border-[#d5dbe4] px-3 py-2 font-semibold"
+                                            rowSpan={2}
+                                        >
+                                            OB Production
+                                        </td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                            Trips
+                                        </td>
+                                        {execPeriodOrder.map((k) => (
+                                            <td
+                                                key={k}
+                                                className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                            >
+                                                {fmtNumber(
+                                                    executiveData.obProduction[
+                                                        k
+                                                    ].trips,
+                                                    0,
+                                                )}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    <tr className="bg-white">
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                            Qty
+                                        </td>
+                                        {execPeriodOrder.map((k) => (
+                                            <td
+                                                key={k}
+                                                className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                            >
+                                                {fmtNumber(
+                                                    executiveData.obProduction[
+                                                        k
+                                                    ].qty,
+                                                    2,
+                                                )}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p className="border-t border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-2 text-xs font-semibold text-gray-800">
+                            Coal Production
+                        </p>
+                        <div className="overflow-x-auto">
+                            <table
+                                className="w-full border-separate text-xs"
+                                style={{ borderSpacing: 0 }}
+                            >
+                                <thead className="bg-[#eef2f7] text-black">
+                                    <tr>
+                                        <th
+                                            className="border border-[#d5dbe4] px-3 py-2 text-left font-medium"
+                                            colSpan={2}
+                                        >
+                                            {executiveData.fyLabel}
+                                        </th>
+                                        {execPeriodOrder.map((k) => (
+                                            <th
+                                                key={k}
+                                                className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                            >
+                                                {execPeriodColumnLabel[k]}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr className="bg-white">
+                                        <td
+                                            className="border border-[#d5dbe4] px-3 py-2 font-semibold"
+                                            rowSpan={2}
+                                        >
+                                            Coal Production
+                                        </td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                            Trips
+                                        </td>
+                                        {execPeriodOrder.map((k) => (
+                                            <td
+                                                key={k}
+                                                className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                            >
+                                                {fmtNumber(
+                                                    executiveData
+                                                        .coalProduction[k]
+                                                        .trips,
+                                                    0,
+                                                )}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    <tr className="bg-white">
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                            Qty
+                                        </td>
+                                        {execPeriodOrder.map((k) => (
+                                            <td
+                                                key={k}
+                                                className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                            >
+                                                {fmtNumber(
+                                                    executiveData
+                                                        .coalProduction[k].qty,
+                                                    2,
+                                                )}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            {canWidget('dashboard.widgets.executive_tables_custom') ? (
+                <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                    <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-gray-900">
+                                Custom
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {customTableToolbar}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table
+                            className="w-full border-separate text-xs"
+                            style={{ borderSpacing: 0 }}
+                        >
+                            <thead className="bg-[#eef2f7] text-black">
+                                <tr>
+                                    <th
+                                        className="border border-[#d5dbe4] px-3 py-2 text-left font-medium"
+                                        rowSpan={2}
+                                    >
+                                        Siding
+                                    </th>
+                                    <th
+                                        className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                        colSpan={2}
+                                    >
+                                        Road dispatch
+                                    </th>
+                                    <th
+                                        className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                        colSpan={2}
+                                    >
+                                        Rail dispatch
+                                    </th>
+                                </tr>
+                                <tr>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Trips
+                                    </th>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Qty (MT)
+                                    </th>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Rakes
+                                    </th>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Qty (MT)
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr className="bg-[#f1f5f9]">
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-semibold">
+                                        Total
+                                    </td>
+                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right font-semibold tabular-nums">
+                                        {fmtNumber(
+                                            executiveData.customRanges
+                                                .roadDispatch.totals.trips,
+                                            0,
+                                        )}
+                                    </td>
+                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right font-semibold tabular-nums">
+                                        {fmtNumber(
+                                            executiveData.customRanges
+                                                .roadDispatch.totals.qty,
+                                            2,
+                                        )}
+                                    </td>
+                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right font-semibold tabular-nums">
+                                        {fmtNumber(
+                                            executiveData.customRanges
+                                                .railDispatch.totals.rakes,
+                                            0,
+                                        )}
+                                    </td>
+                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right font-semibold tabular-nums">
+                                        {fmtNumber(
+                                            executiveData.customRanges
+                                                .railDispatch.totals.qty,
+                                            2,
+                                        )}
+                                    </td>
+                                </tr>
+                                {executiveData.customRanges.roadDispatch.bySiding.map(
+                                    (row) => {
+                                        const rail = railCustomBySidingId.get(
+                                            row.sidingId,
+                                        );
+
+                                        return (
+                                            <tr
+                                                key={row.sidingId}
+                                                className="bg-white"
+                                            >
+                                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">
+                                                    {row.sidingName}
+                                                </td>
+                                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                    {fmtNumber(row.trips, 0)}
+                                                </td>
+                                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                    {fmtNumber(row.qty, 2)}
+                                                </td>
+                                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                    {fmtNumber(
+                                                        rail?.rakes ?? 0,
+                                                        0,
+                                                    )}
+                                                </td>
+                                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                    {fmtNumber(
+                                                        rail?.qty ?? 0,
+                                                        2,
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    },
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : null}
+
+            {canWidget('dashboard.widgets.executive_tables_fy_summary') ? (
+                <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                    <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-900">
+                            FY Summary
+                        </p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table
+                            className="w-full border-separate text-xs"
+                            style={{ borderSpacing: 0 }}
+                        >
+                            <thead className="bg-[#eef2f7] text-black">
+                                <tr>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium">
+                                        FY
+                                    </th>
+                                    <th
+                                        className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                        colSpan={2}
+                                    >
+                                        Production
+                                    </th>
+                                    <th
+                                        className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                        colSpan={2}
+                                    >
+                                        Road Dispatch
+                                    </th>
+                                    <th
+                                        className="border border-[#d5dbe4] px-3 py-2 text-center font-medium"
+                                        colSpan={2}
+                                    >
+                                        Rail Dispatch
+                                    </th>
+                                </tr>
+                                <tr>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" />
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        OB
+                                    </th>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Coal
+                                    </th>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Trips
+                                    </th>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Qty
+                                    </th>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Rakes
+                                    </th>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">
+                                        Qty
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {executiveData.fySummary.rows.map((r) => {
+                                    const isTillDate = r.fy === 'Till Date';
+                                    const strong = isTillDate
+                                        ? 'font-bold'
+                                        : '';
+
+                                    return (
+                                        <tr key={r.fy} className="bg-white">
+                                            <td
+                                                className={`border border-[#d5dbe4] px-3 py-2 ${isTillDate ? 'font-bold' : 'font-medium'}`}
+                                            >
+                                                {r.fy}
+                                            </td>
+                                            <td
+                                                className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                            >
+                                                {fmtNumber(
+                                                    r.production.obQty,
+                                                    2,
+                                                )}
+                                            </td>
+                                            <td
+                                                className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                            >
+                                                {fmtNumber(
+                                                    r.production.coalQty,
+                                                    2,
+                                                )}
+                                            </td>
+                                            <td
+                                                className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                            >
+                                                {fmtNumber(
+                                                    r.roadDispatch.trips,
+                                                    0,
+                                                )}
+                                            </td>
+                                            <td
+                                                className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                            >
+                                                {fmtNumber(
+                                                    r.roadDispatch.qty,
+                                                    2,
+                                                )}
+                                            </td>
+                                            <td
+                                                className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                            >
+                                                {fmtNumber(
+                                                    r.railDispatch.rakes,
+                                                    0,
+                                                )}
+                                            </td>
+                                            <td
+                                                className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                            >
+                                                {fmtNumber(
+                                                    r.railDispatch.qty,
+                                                    2,
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : null}
+        </div>
+    );
+
+    const compactQty = (n: number): string => fmtNumber(n, n % 1 === 0 ? 0 : 2);
+
+    const fyProductionRows = executiveData.fyCharts.rows.map((r) => ({
+        fy: r.fy,
+        OB: r.production.obQty,
+        COAL: r.production.coalQty,
+        unit: 'MT',
+    }));
+
+    const fyDispatchRows = executiveData.fyCharts.rows.map((r) => ({
+        fy: r.fy,
+        ROAD: r.dispatch.roadQty,
+        RAIL: r.dispatch.railQty,
+        unit: 'MT',
+    }));
+
+    const maxOf = (rows: Array<Record<string, number | string>>) =>
+        Math.max(
+            ...(rows
+                .flatMap((row) => Object.values(row))
+                .filter((v) => typeof v === 'number') as number[]),
+            1,
+        );
+
+    const FyChartCard = (props: {
+        title: string;
+        subtitle?: string;
+        rows: Array<Record<string, number | string>>;
+        series: Array<{ key: string; label: string; color: string }>;
+        height?: number;
+    }) => {
+        const max = maxOf(props.rows);
+
+        return (
+            <div className="dashboard-card overflow-hidden rounded-xl border-0 p-0">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                                {props.title}
+                            </p>
+                            {props.subtitle ? (
+                                <p className="text-[11px] text-muted-foreground">
+                                    {props.subtitle}
+                                </p>
+                            ) : null}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-muted-foreground">
+                            {props.series.map((s) => (
+                                <span
+                                    key={s.key}
+                                    className="inline-flex items-center gap-1.5"
+                                >
+                                    <span
+                                        className="inline-block size-2.5 rounded-sm"
+                                        style={{ backgroundColor: s.color }}
+                                    />
+                                    {s.label}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-[#fbfbfc] p-4">
+                    <ResponsiveContainer
+                        width="100%"
+                        height={props.height ?? 300}
+                    >
+                        <RechartsBarChart
+                            data={props.rows}
+                            margin={{ top: 12, right: 16, bottom: 8, left: 8 }}
+                            barCategoryGap="28%"
+                        >
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                vertical={false}
+                            />
+                            <XAxis
+                                dataKey="fy"
+                                tick={{ fontSize: 11 }}
+                                interval={0}
+                                height={36}
+                            />
+                            <YAxis
+                                tick={{ fontSize: 11 }}
+                                domain={[0, max * 1.12]}
+                            />
+                            <Tooltip
+                                content={(tooltipProps: unknown) => {
+                                    const { active, payload, label } =
+                                        (tooltipProps ?? {}) as {
+                                            active?: boolean;
+                                            payload?: ReadonlyArray<{
+                                                name?: string;
+                                                value?: number | string;
+                                                payload?: { unit?: string };
+                                            }>;
+                                            label?: string;
+                                        };
+                                    if (!active || !payload?.length) {
+                                        return null;
+                                    }
+
+                                    const unit = String(
+                                        payload[0]?.payload?.unit ?? 'MT',
+                                    );
+
+                                    return (
+                                        <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
+                                            <div className="font-semibold">
+                                                {String(label ?? '')}
+                                            </div>
+                                            <div className="mt-1 space-y-0.5">
+                                                {payload.map((p) => (
+                                                    <div
+                                                        key={String(p.name)}
+                                                        className="flex items-center justify-between gap-4"
+                                                    >
+                                                        <span className="text-muted-foreground">
+                                                            {String(p.name)}
+                                                        </span>
+                                                        <span className="font-semibold tabular-nums">
+                                                            {compactQty(
+                                                                Number(
+                                                                    p.value ??
+                                                                        0,
+                                                                ),
+                                                            )}{' '}
+                                                            <span className="font-normal text-muted-foreground">
+                                                                {unit}
+                                                            </span>
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                }}
+                            />
+                            {props.series.map((s) => (
+                                <Bar
+                                    key={s.key}
+                                    name={s.label}
+                                    dataKey={s.key}
+                                    fill={s.color}
+                                    radius={0}
+                                    barSize={16}
+                                />
+                            ))}
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+        );
+    };
+
+    const ChartsView = (
+        <div className="space-y-6">
+            {canWidget('dashboard.widgets.executive_chart_road_dispatch') ||
+            canWidget('dashboard.widgets.executive_chart_rail_dispatch') ? (
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                    {canWidget(
+                        'dashboard.widgets.executive_chart_road_dispatch',
+                    ) ? (
+                        <ExecutiveSidingBarChartCard
+                            title="Road Dispatch"
+                            rows={roadDispatchBarRows}
+                            period={roadChartPeriod}
+                            onPeriodChange={setRoadChartPeriod}
+                            valueKind={roadChartValueKind}
+                            onValueKindChange={setRoadChartValueKind}
+                            countLabel="Trips"
+                        />
+                    ) : null}
+                    {canWidget(
+                        'dashboard.widgets.executive_chart_rail_dispatch',
+                    ) ? (
+                        <ExecutiveSidingBarChartCard
+                            title="Rail Dispatch"
+                            rows={railDispatchBarRows}
+                            period={railChartPeriod}
+                            onPeriodChange={setRailChartPeriod}
+                            valueKind={railChartValueKind}
+                            onValueKindChange={setRailChartValueKind}
+                            countLabel="Rakes"
+                        />
+                    ) : null}
+                </div>
+            ) : null}
+
+            {canWidget('dashboard.widgets.executive_chart_production') ||
+            canWidget('dashboard.widgets.executive_chart_penalty_by_siding') ? (
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                    {canWidget(
+                        'dashboard.widgets.executive_chart_production',
+                    ) ? (
+                        <ExecutiveProductionDonutCard
+                            period={productionChartPeriod}
+                            onPeriodChange={setProductionChartPeriod}
+                            valueKind={productionChartMetric}
+                            onValueKindChange={setProductionChartMetric}
+                            obValue={productionObValue}
+                            coalValue={productionCoalValue}
+                        />
+                    ) : null}
+                    {canWidget(
+                        'dashboard.widgets.executive_chart_penalty_by_siding',
+                    ) ? (
+                        <DashboardPenaltyBySidingChart
+                            data={penaltyChartData}
+                            {...(hasPenaltyPeriodSlices
+                                ? {
+                                      period: penaltyChartPeriod,
+                                      onPeriodChange: setPenaltyChartPeriod,
+                                  }
+                                : {})}
+                        />
+                    ) : null}
+                </div>
+            ) : null}
+
+            {dispatchPowerPlantBand}
+
+            {canWidget('dashboard.widgets.executive_chart_fy') ? (
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                    <FyChartCard
+                        title="Production"
+                        rows={fyProductionRows}
+                        series={[
+                            {
+                                key: 'OB',
+                                label: 'OB',
+                                color: DASHBOARD_PALETTE.successGreen,
+                            },
+                            {
+                                key: 'COAL',
+                                label: 'COAL',
+                                color: DASHBOARD_PALETTE.steelBlue,
+                            },
+                        ]}
+                    />
+                    <FyChartCard
+                        title="Dispatch"
+                        rows={fyDispatchRows}
+                        series={[
+                            {
+                                key: 'ROAD',
+                                label: 'ROAD',
+                                color: DASHBOARD_PALETTE.steelBlue,
+                            },
+                            {
+                                key: 'RAIL',
+                                label: 'RAIL',
+                                color: DASHBOARD_PALETTE.darkGrey,
+                            },
+                        ]}
+                    />
+                </div>
+            ) : null}
+        </div>
+    );
+
+    const tableAllowed = EXEC_TABLE_WIDGETS.some((n) => canWidget(n));
+    const chartsAllowed = EXEC_CHART_WIDGETS.some((n) => canWidget(n));
+    if (viewMode === 'table' && !tableAllowed) {
+        return (
+            <div className="space-y-4">
+                <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
+                    No executive table widgets are enabled for your account.
+                </div>
+            </div>
+        );
+    }
+    if (viewMode === 'charts' && !chartsAllowed) {
+        return (
+            <div className="space-y-4">
+                {dispatchPowerPlantBand}
+                <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
+                    No executive chart widgets are enabled for your account.
+                </div>
+            </div>
+        );
+    }
+
+    const viewToggle =
+        showViewToggle && onViewModeChange ? (
+            <div
+                role="group"
+                aria-label="Executive yesterday view mode"
+                className="inline-flex items-center rounded-md border border-input bg-background p-0.5 shadow-sm"
+            >
+                <button
+                    type="button"
+                    onClick={() => onViewModeChange('charts')}
+                    aria-pressed={viewMode === 'charts'}
+                    className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                        viewMode === 'charts'
+                            ? 'bg-foreground text-background'
+                            : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                >
+                    <BarChart3 className="size-3.5" aria-hidden="true" />
+                    Charts
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onViewModeChange('table')}
+                    aria-pressed={viewMode === 'table'}
+                    className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                        viewMode === 'table'
+                            ? 'bg-foreground text-background'
+                            : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                >
+                    <TableIcon className="size-3.5" aria-hidden="true" />
+                    Table
+                </button>
+            </div>
+        ) : null;
+
+    return (
+        <div className="space-y-4">
+            {(viewToggle ||
+                (viewMode === 'table' && exportReportHref)) && (
+                <div className="flex flex-wrap items-center justify-end gap-2 px-1">
+                    {viewMode === 'table' && exportReportHref ? (
+                        <Button variant="outline" size="sm" asChild>
+                            <a
+                                href={exportReportHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <Download
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                                <span className="ml-1.5">
+                                    Export report
+                                </span>
+                            </a>
+                        </Button>
+                    ) : null}
+                    {viewToggle}
+                </div>
+            )}
+            {viewMode === 'table' ? TableView : ChartsView}
+        </div>
+    );
+}
+
+const SIDING_BAR_COLORS = [
+    DASHBOARD_PALETTE.steelBlue,
+    DASHBOARD_PALETTE.successGreen,
+    DASHBOARD_PALETTE.safetyYellow,
+];
+const SIDING_DOT_COLORS = [
+    DASHBOARD_PALETTE.steelBlue,
+    DASHBOARD_PALETTE.successGreen,
+    DASHBOARD_PALETTE.safetyYellow,
+];
+
+interface MetricDef {
+    key: keyof SidingComparisonItem;
+    label: string;
+    format: (v: number) => string;
+}
+
+const COMPARISON_METRICS: MetricDef[] = [
     {
-        title: 'Dashboard',
-        href: dashboard().url,
+        key: 'rakes_dispatched',
+        label: 'Rakes dispatched',
+        format: (v) => `${v}`,
+    },
+    { key: 'on_time', label: 'On-time rakes', format: (v) => `${v}` },
+    { key: 'vehicles', label: 'Vehicles', format: (v) => `${v}` },
+    {
+        key: 'penalty_amount',
+        label: 'Penalty',
+        format: (v) => formatCurrency(v),
     },
 ];
 
-interface DashboardProps {
-    usersCount?: number;
-    orgsCount?: number;
-    contactSubmissionsCount?: number;
-    weeklyStats?: WeeklyStat[];
-    recentActivity?: ActivityEntry[];
-    usersGrowthPercent?: number | null;
-    orgsGrowthPercent?: number | null;
+function SidingComparisonVertical({ data }: { data: SidingComparisonItem[] }) {
+    const [hoveredBar, setHoveredBar] = useState<{
+        siding: string;
+        metric: string;
+    } | null>(null);
+
+    return (
+        <div className="rounded-xl border bg-card p-5">
+            <SectionHeader
+                icon={Zap}
+                title="Siding comparison"
+                subtitle="Key metrics across sidings"
+            />
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+                {data.map((s, i) => (
+                    <div
+                        key={s.name}
+                        className="flex items-center gap-1.5 text-xs"
+                    >
+                        <span
+                            className="inline-block size-2.5 rounded-full"
+                            style={{
+                                backgroundColor:
+                                    SIDING_DOT_COLORS[
+                                        i % SIDING_DOT_COLORS.length
+                                    ],
+                            }}
+                        />
+                        <span className="font-medium">{s.name}</span>
+                    </div>
+                ))}
+            </div>
+            <div className="mt-5 grid grid-cols-4 gap-4">
+                {COMPARISON_METRICS.map((metric) => {
+                    const values = data.map((s) => s[metric.key] as number);
+                    const max = Math.max(...values, 1);
+
+                    return (
+                        <div key={metric.key}>
+                            <p className="mb-3 text-center text-xs font-medium text-muted-foreground">
+                                {metric.label}
+                            </p>
+                            <div
+                                className="flex items-end justify-center gap-2"
+                                style={{ height: 160 }}
+                            >
+                                {data.map((s, i) => {
+                                    const value = s[metric.key] as number;
+                                    const pct = Math.max(
+                                        5,
+                                        (value / max) * 100,
+                                    );
+                                    const isHovered =
+                                        hoveredBar?.siding === s.name &&
+                                        hoveredBar?.metric === metric.key;
+
+                                    return (
+                                        <div
+                                            key={s.name}
+                                            className="group relative flex flex-1 flex-col items-center"
+                                            onMouseEnter={() =>
+                                                setHoveredBar({
+                                                    siding: s.name,
+                                                    metric: metric.key,
+                                                })
+                                            }
+                                            onMouseLeave={() =>
+                                                setHoveredBar(null)
+                                            }
+                                        >
+                                            {isHovered && (
+                                                <div className="absolute -top-12 z-10 rounded-lg border bg-popover px-3 py-1.5 text-xs whitespace-nowrap shadow-md">
+                                                    <span className="font-semibold">
+                                                        {s.name}
+                                                    </span>
+                                                    <span className="ml-1.5">
+                                                        {metric.format(value)}
+                                                    </span>
+                                                    <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 border-r border-b bg-popover" />
+                                                </div>
+                                            )}
+                                            <div
+                                                className="flex w-full flex-col items-center"
+                                                style={{ height: 140 }}
+                                            >
+                                                <div className="mt-auto w-full max-w-10">
+                                                    <div
+                                                        className={`w-full rounded-t-md transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-80'}`}
+                                                        style={{
+                                                            backgroundColor:
+                                                                SIDING_BAR_COLORS[
+                                                                    i %
+                                                                        SIDING_BAR_COLORS.length
+                                                                ],
+                                                            height: `${pct}%`,
+                                                            minHeight: 8,
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <span className="mt-1.5 text-[10px] font-bold tabular-nums">
+                                                {metric.format(value)}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
 }
 
-function getGreeting(): string {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+const SIDING_PERF_COLORS = [
+    // Vibrant palette inspired by rd2.jpeg for siding rows
+    '#3b82f6', // blue
+    '#f97316', // orange
+    '#22c55e', // green
+    '#eab308', // amber
+    '#a855f7', // purple
+];
+
+const SIDING_PERFORMANCE_CHART_SELECT_OPTIONS: {
+    value: SidingPerformanceChartUiPeriod;
+    label: string;
+}[] = [
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'today', label: 'Today' },
+    { value: 'month', label: 'This month' },
+    { value: 'last_month', label: 'Last month' },
+    { value: 'custom', label: 'Custom range' },
+];
+
+function SidingPerformanceChartPeriodSelect({
+    period,
+    onPeriodChange,
+    draftFrom,
+    draftTo,
+    onDraftFromChange,
+    onDraftToChange,
+    onApplyCustom,
+    panSelectName,
+}: {
+    period: SidingPerformanceChartUiPeriod;
+    onPeriodChange: (next: SidingPerformanceChartUiPeriod) => void;
+    draftFrom: string;
+    draftTo: string;
+    onDraftFromChange: (v: string) => void;
+    onDraftToChange: (v: string) => void;
+    onApplyCustom: () => void;
+    panSelectName: string;
+}) {
+    return (
+        <div className="space-y-2">
+            <Select
+                value={period}
+                onValueChange={(v) =>
+                    onPeriodChange(v as SidingPerformanceChartUiPeriod)
+                }
+            >
+                <SelectTrigger
+                    className="h-8 w-full max-w-[240px] text-xs"
+                    data-pan={panSelectName}
+                >
+                    <SelectValue placeholder="Period" />
+                </SelectTrigger>
+                <SelectContent>
+                    {SIDING_PERFORMANCE_CHART_SELECT_OPTIONS.map(
+                        ({ value, label }) => (
+                            <SelectItem key={value} value={value}>
+                                {label}
+                            </SelectItem>
+                        ),
+                    )}
+                </SelectContent>
+            </Select>
+            {period === 'custom' ? (
+                <div className="flex flex-wrap items-end gap-2">
+                    <div className="flex min-w-[8rem] flex-col gap-0.5">
+                        <span className="text-[10px] font-medium text-gray-500">
+                            From
+                        </span>
+                        <Input
+                            type="date"
+                            className="h-8 text-xs"
+                            value={draftFrom}
+                            onChange={(e) => onDraftFromChange(e.target.value)}
+                            data-pan={`${panSelectName}-custom-from`}
+                        />
+                    </div>
+                    <div className="flex min-w-[8rem] flex-col gap-0.5">
+                        <span className="text-[10px] font-medium text-gray-500">
+                            To
+                        </span>
+                        <Input
+                            type="date"
+                            className="h-8 text-xs"
+                            value={draftTo}
+                            onChange={(e) => onDraftToChange(e.target.value)}
+                            data-pan={`${panSelectName}-custom-to`}
+                        />
+                    </div>
+                    <Button
+                        type="button"
+                        size="sm"
+                        className="h-8"
+                        data-pan={`${panSelectName}-custom-apply`}
+                        onClick={onApplyCustom}
+                    >
+                        Apply
+                    </Button>
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+export function SidingPerformanceSection({
+    data,
+    filters,
+}: {
+    data: SidingPerformanceItem[];
+    filters: DashboardFilters;
+}) {
+    const pageUrl = usePage().url;
+    const queryString = pageUrl.includes('?')
+        ? pageUrl.slice(pageUrl.indexOf('?') + 1)
+        : '';
+
+    const [rakesPeriod, setRakesPeriod] =
+        useState<SidingPerformanceChartUiPeriod>(() => {
+            return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+                .period;
+        });
+    const [penaltyPeriod, setPenaltyPeriod] =
+        useState<SidingPerformanceChartUiPeriod>(() => {
+            return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+                .period;
+        });
+
+    const [rakesCustomFrom, setRakesCustomFrom] = useState(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        return d.period === 'custom' ? d.customFrom : '';
+    });
+    const [rakesCustomTo, setRakesCustomTo] = useState(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        return d.period === 'custom' ? d.customTo : '';
+    });
+    const [rakesDraftFrom, setRakesDraftFrom] = useState(() => {
+        return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+            .customFrom;
+    });
+    const [rakesDraftTo, setRakesDraftTo] = useState(() => {
+        return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+            .customTo;
+    });
+
+    const [penaltyCustomFrom, setPenaltyCustomFrom] = useState(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        return d.period === 'custom' ? d.customFrom : '';
+    });
+    const [penaltyCustomTo, setPenaltyCustomTo] = useState(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        return d.period === 'custom' ? d.customTo : '';
+    });
+    const [penaltyDraftFrom, setPenaltyDraftFrom] = useState(() => {
+        return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+            .customFrom;
+    });
+    const [penaltyDraftTo, setPenaltyDraftTo] = useState(() => {
+        return deriveSidingPerformanceChartStateFromDashboardFilters(filters)
+            .customTo;
+    });
+
+    const [fetchedRakes, setFetchedRakes] = useState<
+        SidingPerformanceMetricsRakeRow[] | null
+    >(null);
+    const [fetchedPenalties, setFetchedPenalties] = useState<
+        SidingPerformanceMetricsPenaltyRow[] | null
+    >(null);
+    const [chartLoading, setChartLoading] = useState(false);
+    const [chartFetchError, setChartFetchError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const d = deriveSidingPerformanceChartStateFromDashboardFilters(filters);
+        setRakesPeriod(d.period);
+        setPenaltyPeriod(d.period);
+        if (d.period === 'custom') {
+            setRakesCustomFrom(d.customFrom);
+            setRakesCustomTo(d.customTo);
+            setPenaltyCustomFrom(d.customFrom);
+            setPenaltyCustomTo(d.customTo);
+        } else {
+            setRakesCustomFrom('');
+            setRakesCustomTo('');
+            setPenaltyCustomFrom('');
+            setPenaltyCustomTo('');
+        }
+        setRakesDraftFrom(d.customFrom);
+        setRakesDraftTo(d.customTo);
+        setPenaltyDraftFrom(d.customFrom);
+        setPenaltyDraftTo(d.customTo);
+    }, [filters.period, filters.from, filters.to]);
+
+    const rakesMatchesDashboard = sidingPerformanceChartMatchesDashboard(
+        rakesPeriod,
+        rakesCustomFrom,
+        rakesCustomTo,
+        filters,
+    );
+    const penaltyMatchesDashboard = sidingPerformanceChartMatchesDashboard(
+        penaltyPeriod,
+        penaltyCustomFrom,
+        penaltyCustomTo,
+        filters,
+    );
+
+    const rakesSp = sidingPerformanceSpQueryForChart(
+        rakesPeriod,
+        rakesCustomFrom,
+        rakesCustomTo,
+        filters,
+    );
+    const penaltySp = sidingPerformanceSpQueryForChart(
+        penaltyPeriod,
+        penaltyCustomFrom,
+        penaltyCustomTo,
+        filters,
+    );
+
+    const chartsDivergeFromDashboard =
+        !rakesMatchesDashboard || !penaltyMatchesDashboard;
+
+    const rakesFetchReady =
+        rakesMatchesDashboard ||
+        (rakesSp.period !== 'custom' ||
+            Boolean(rakesSp.from && rakesSp.to));
+    const penaltyFetchReady =
+        penaltyMatchesDashboard ||
+        (penaltySp.period !== 'custom' ||
+            Boolean(penaltySp.from && penaltySp.to));
+
+    const shouldRunFetch =
+        chartsDivergeFromDashboard &&
+        rakesFetchReady &&
+        penaltyFetchReady;
+
+    useEffect(() => {
+        if (!chartsDivergeFromDashboard) {
+            setFetchedRakes(null);
+            setFetchedPenalties(null);
+            setChartFetchError(null);
+            setChartLoading(false);
+
+            return;
+        }
+
+        if (!shouldRunFetch) {
+            setFetchedRakes(null);
+            setFetchedPenalties(null);
+            setChartFetchError(null);
+            setChartLoading(false);
+
+            return;
+        }
+
+        let cancelled = false;
+        setChartLoading(true);
+        setChartFetchError(null);
+
+        const run = async (): Promise<void> => {
+            try {
+                const base =
+                    dashboard().url.split('?')[0] || dashboard().url || '';
+                const url = new URL(
+                    `${base.replace(/\/$/, '')}/siding-performance-metrics`,
+                    window.location.origin,
+                );
+                const qs = new URLSearchParams(
+                    queryString.length > 0
+                        ? queryString
+                        : window.location.search.replace(/^\?/, ''),
+                );
+                qs.forEach((v, k) => {
+                    url.searchParams.set(k, v);
+                });
+                url.searchParams.set('sp_rakes_period', rakesSp.period);
+                url.searchParams.set('sp_penalty_period', penaltySp.period);
+                if (rakesSp.period === 'custom' && rakesSp.from && rakesSp.to) {
+                    url.searchParams.set('sp_rakes_from', rakesSp.from);
+                    url.searchParams.set('sp_rakes_to', rakesSp.to);
+                }
+                if (
+                    penaltySp.period === 'custom' &&
+                    penaltySp.from &&
+                    penaltySp.to
+                ) {
+                    url.searchParams.set('sp_penalty_from', penaltySp.from);
+                    url.searchParams.set('sp_penalty_to', penaltySp.to);
+                }
+
+                const body = await laravelJsonFetch<SidingPerformanceMetricsResponse>(
+                    url.toString(),
+                    { method: 'GET' },
+                );
+                if (cancelled) {
+                    return;
+                }
+                setFetchedRakes(body.rakes);
+                setFetchedPenalties(body.penalties);
+            } catch (e) {
+                if (cancelled) {
+                    return;
+                }
+                const message =
+                    e instanceof JsonFetchError
+                        ? e.message
+                        : e instanceof Error
+                          ? e.message
+                          : 'Request failed';
+                setChartFetchError(message);
+                setFetchedRakes(null);
+                setFetchedPenalties(null);
+            } finally {
+                if (!cancelled) {
+                    setChartLoading(false);
+                }
+            }
+        };
+
+        void run();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        shouldRunFetch,
+        chartsDivergeFromDashboard,
+        rakesSp.period,
+        rakesSp.from,
+        rakesSp.to,
+        penaltySp.period,
+        penaltySp.from,
+        penaltySp.to,
+        queryString,
+        filters.period,
+        filters.from,
+        filters.to,
+    ]);
+
+    const mergedChartData = useMemo(() => {
+        const rakeMap = new Map<string, number>();
+        const penMap = new Map<string, number>();
+
+        if (rakesMatchesDashboard) {
+            data.forEach((d) => rakeMap.set(d.name, d.rakes));
+        } else if (fetchedRakes) {
+            fetchedRakes.forEach((r) => rakeMap.set(r.name, r.rakes));
+        } else {
+            data.forEach((d) => rakeMap.set(d.name, d.rakes));
+        }
+
+        if (penaltyMatchesDashboard) {
+            data.forEach((d) => penMap.set(d.name, d.penalty_amount));
+        } else if (fetchedPenalties) {
+            fetchedPenalties.forEach((p) =>
+                penMap.set(p.name, p.penalty_amount),
+            );
+        } else {
+            data.forEach((d) => penMap.set(d.name, d.penalty_amount));
+        }
+
+        const namesInOrder = data.map((d) => d.name);
+        const allNames = new Set([
+            ...namesInOrder,
+            ...rakeMap.keys(),
+            ...penMap.keys(),
+        ]);
+        const orderedNames =
+            namesInOrder.length > 0
+                ? namesInOrder
+                : [...allNames].sort((a, b) => a.localeCompare(b));
+
+        return orderedNames.map((name) => {
+            const propRow = data.find((d) => d.name === name);
+            return {
+                name,
+                rakes: rakeMap.get(name) ?? 0,
+                penalty_amount: penMap.get(name) ?? 0,
+                penalty_rate: propRow?.penalty_rate ?? 0,
+                penalties: propRow?.penalties ?? 0,
+            };
+        });
+    }, [
+        data,
+        fetchedRakes,
+        fetchedPenalties,
+        rakesMatchesDashboard,
+        penaltyMatchesDashboard,
+    ]);
+
+    const penaltyChips = useMemo(
+        () =>
+            [...mergedChartData].sort(
+                (a, b) => b.penalty_amount - a.penalty_amount,
+            ),
+        [mergedChartData],
+    );
+
+    return (
+        <div className="dashboard-card rounded-xl border-0 p-6">
+            <SectionHeader
+                icon={BarChart3}
+                title="Siding performance"
+                subtitle="Rakes dispatched & penalty amount by siding"
+            />
+
+            {chartFetchError ? (
+                <p className="mt-3 text-sm text-red-600">{chartFetchError}</p>
+            ) : null}
+
+            <div className="mt-5 grid gap-6 lg:grid-cols-2">
+                <div
+                    className={cn(
+                        'min-w-0 space-y-2',
+                        chartLoading && 'opacity-60',
+                    )}
+                >
+                    <p className="text-xs font-medium text-gray-600">
+                        Rakes dispatched
+                    </p>
+                    <SidingPerformanceChartPeriodSelect
+                        period={rakesPeriod}
+                        onPeriodChange={(next) => {
+                            setRakesPeriod(next);
+                            if (next === 'custom') {
+                                const seed =
+                                    deriveSidingPerformanceChartStateFromDashboardFilters(
+                                        filters,
+                                    );
+                                setRakesDraftFrom(seed.customFrom);
+                                setRakesDraftTo(seed.customTo);
+                                setRakesCustomFrom(seed.customFrom);
+                                setRakesCustomTo(seed.customTo);
+                            } else {
+                                setRakesCustomFrom('');
+                                setRakesCustomTo('');
+                            }
+                        }}
+                        draftFrom={rakesDraftFrom}
+                        draftTo={rakesDraftTo}
+                        onDraftFromChange={setRakesDraftFrom}
+                        onDraftToChange={setRakesDraftTo}
+                        onApplyCustom={() => {
+                            setRakesCustomFrom(rakesDraftFrom);
+                            setRakesCustomTo(rakesDraftTo);
+                        }}
+                        panSelectName="siding-perf-rakes-period-select"
+                    />
+                    <ResponsiveContainer width="100%" height={260}>
+                        <RechartsBarChart
+                            data={mergedChartData}
+                            layout="horizontal"
+                            margin={{ top: 8, right: 16, bottom: 0, left: 16 }}
+                        >
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                strokeOpacity={0.3}
+                            />
+                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                            <YAxis
+                                allowDecimals={false}
+                                tick={{ fontSize: 12 }}
+                            />
+                            <Tooltip
+                                formatter={numericTooltipFormatter((value) =>
+                                    value.toLocaleString(),
+                                )}
+                            />
+                            <Bar
+                                dataKey="rakes"
+                                name="Rakes dispatched"
+                                fill="#3B82F6"
+                                barSize={14}
+                                radius={[4, 4, 0, 0]}
+                                isAnimationActive
+                            >
+                                <LabelList dataKey="rakes" position="right" />
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                </div>
+                <div
+                    className={cn(
+                        'min-w-0 space-y-2',
+                        chartLoading && 'opacity-60',
+                    )}
+                >
+                    <p className="text-xs font-medium text-gray-600">
+                        Penalty amount by siding
+                    </p>
+                    <SidingPerformanceChartPeriodSelect
+                        period={penaltyPeriod}
+                        onPeriodChange={(next) => {
+                            setPenaltyPeriod(next);
+                            if (next === 'custom') {
+                                const seed =
+                                    deriveSidingPerformanceChartStateFromDashboardFilters(
+                                        filters,
+                                    );
+                                setPenaltyDraftFrom(seed.customFrom);
+                                setPenaltyDraftTo(seed.customTo);
+                                setPenaltyCustomFrom(seed.customFrom);
+                                setPenaltyCustomTo(seed.customTo);
+                            } else {
+                                setPenaltyCustomFrom('');
+                                setPenaltyCustomTo('');
+                            }
+                        }}
+                        draftFrom={penaltyDraftFrom}
+                        draftTo={penaltyDraftTo}
+                        onDraftFromChange={setPenaltyDraftFrom}
+                        onDraftToChange={setPenaltyDraftTo}
+                        onApplyCustom={() => {
+                            setPenaltyCustomFrom(penaltyDraftFrom);
+                            setPenaltyCustomTo(penaltyDraftTo);
+                        }}
+                        panSelectName="siding-perf-penalty-period-select"
+                    />
+                    <ResponsiveContainer width="100%" height={260}>
+                        <RechartsBarChart
+                            data={mergedChartData}
+                            margin={{ top: 8, right: 16, bottom: 0, left: 8 }}
+                        >
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                strokeOpacity={0.3}
+                            />
+                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                            <YAxis
+                                tick={{ fontSize: 12 }}
+                                tickFormatter={(v) => formatCurrency(v)}
+                            />
+                            <Tooltip
+                                formatter={numericTooltipFormatter((value) =>
+                                    formatCurrency(value),
+                                )}
+                            />
+                            <Bar
+                                dataKey="penalty_amount"
+                                fill="#DC2626"
+                                radius={[4, 4, 0, 0]}
+                                barSize={14}
+                                isAnimationActive
+                            >
+                                <LabelList
+                                    dataKey="penalty_amount"
+                                    position="top"
+                                    formatter={(v: unknown) =>
+                                        formatCurrency(Number(v ?? 0))
+                                    }
+                                />
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
+                        {penaltyChips.map((s) => (
+                            <div
+                                key={s.name}
+                                className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-800"
+                            >
+                                <span>{s.name}:</span>
+                                <span className="font-semibold tabular-nums">
+                                    {formatCurrency(s.penalty_amount)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function RakePerformanceDetailCharts({
+    r,
+    underloadThresholdPercent,
+    onUnderloadThresholdChange,
+    onNavigateToLoader,
+}: {
+    r: RakePerformanceItem;
+    underloadThresholdPercent: number;
+    onUnderloadThresholdChange: (v: number) => void;
+    onNavigateToLoader: (
+        loaderId: number,
+        rakeUnderloadThresholdPercent: number,
+    ) => void;
+}) {
+    const [noLoaderDialogOpen, setNoLoaderDialogOpen] = useState(false);
+    const [noLoaderWagonNumber, setNoLoaderWagonNumber] = useState<
+        string | null
+    >(null);
+
+    const loadingHours =
+        r.loading_minutes != null ? Math.floor(r.loading_minutes / 60) : null;
+    const loadingMins =
+        r.loading_minutes != null ? r.loading_minutes % 60 : null;
+
+    const weightChartData = useMemo(() => {
+        const items: { name: string; value: number; fill?: string }[] = [];
+        if (r.net_weight != null)
+            items.push({
+                name: 'Net weight',
+                value: r.net_weight,
+                fill: '#4B72BE',
+            });
+        if (r.over_load != null && r.over_load > 0)
+            items.push({
+                name: 'Overload',
+                value: r.over_load,
+                fill: '#DC2626',
+            });
+        if (r.under_load != null && r.under_load > 0)
+            items.push({
+                name: 'Underload',
+                value: r.under_load,
+                fill: '#F59E0B',
+            });
+        return items;
+    }, [r]);
+
+    const wagonBarChartData = useMemo(() => {
+        const list = r.wagon_overloads ?? [];
+        const thr = underloadThresholdPercent;
+        return list.map((w, i) => {
+            const over = w.over_load_mt > 0 ? w.over_load_mt : 0;
+            const underLoadMt =
+                w.under_load_mt != null && w.under_load_mt > 0
+                    ? w.under_load_mt
+                    : 0;
+            const cc = w.cc_capacity_mt ?? null;
+            let shortfallPct: number | null = null;
+            if (underLoadMt > 0 && cc != null && cc > 0) {
+                shortfallPct = (underLoadMt / cc) * 100;
+            }
+            let bar_mt = 0;
+            if (over > 0) {
+                bar_mt = over;
+            } else if (
+                underLoadMt > 0 &&
+                shortfallPct != null &&
+                shortfallPct >= thr
+            ) {
+                bar_mt = -underLoadMt;
+            }
+            return {
+                position: i + 1,
+                wagon_number: w.wagon_number,
+                over_load_mt: w.over_load_mt,
+                under_load_mt: w.under_load_mt ?? null,
+                cc_capacity_mt: cc,
+                net_weight_mt: w.net_weight_mt ?? null,
+                loader_id: w.loader_id ?? null,
+                loader_name: w.loader_name ?? null,
+                loader_operator_name: w.loader_operator_name ?? null,
+                shortfall_pct: shortfallPct,
+                bar_mt,
+            };
+        });
+    }, [r.wagon_overloads, underloadThresholdPercent]);
+
+    /**
+     * Stock (MT) and wagon counts — same rules as bars: overload takes precedence; underload uses threshold % of CC.
+     */
+    const wagonWeighmentSummary = useMemo(() => {
+        const list = r.wagon_overloads ?? [];
+        const thr = underloadThresholdPercent;
+        let underloadStockMt = 0;
+        let overloadStockMt = 0;
+        let underloadWagons = 0;
+        let overloadWagons = 0;
+        for (const w of list) {
+            const over =
+                w.over_load_mt != null && w.over_load_mt > 0
+                    ? w.over_load_mt
+                    : 0;
+            if (over > 0) {
+                overloadStockMt += over;
+                overloadWagons++;
+                continue;
+            }
+            const underLoadMt =
+                w.under_load_mt != null && w.under_load_mt > 0
+                    ? w.under_load_mt
+                    : 0;
+            if (underLoadMt <= 0) {
+                continue;
+            }
+            const cc = w.cc_capacity_mt ?? null;
+            if (cc == null || cc <= 0) {
+                continue;
+            }
+            const shortfallPct = (underLoadMt / cc) * 100;
+            if (shortfallPct >= thr) {
+                underloadStockMt += underLoadMt;
+                underloadWagons++;
+            }
+        }
+        return {
+            underloadStockMt,
+            overloadStockMt,
+            underloadWagons,
+            overloadWagons,
+        };
+    }, [r.wagon_overloads, underloadThresholdPercent]);
+
+    const fmtMt = (n: number): string =>
+        n.toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+        });
+
+    return (
+        <div className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-600">Siding</p>
+                    <p className="mt-1 font-bold text-gray-900">{r.siding}</p>
+                </div>
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-600">
+                        Dispatch date
+                    </p>
+                    <p className="mt-1 font-bold text-gray-900 tabular-nums">
+                        {r.dispatch_date}
+                    </p>
+                </div>
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-600">Wagons</p>
+                    <p className="mt-1 font-bold text-gray-900 tabular-nums">
+                        {r.wagon_count ?? '—'}
+                    </p>
+                </div>
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-600">
+                        Net weight
+                    </p>
+                    <p className="mt-1 font-bold text-gray-900 tabular-nums">
+                        {r.net_weight != null
+                            ? formatWeight(r.net_weight)
+                            : '—'}
+                    </p>
+                </div>
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-600">
+                        Loading time
+                    </p>
+                    <p className="mt-1 font-bold text-gray-900 tabular-nums">
+                        {loadingHours != null
+                            ? `${loadingHours}h ${loadingMins}m`
+                            : '—'}
+                    </p>
+                </div>
+                <div
+                    className={`rounded-lg border p-3 ${
+                        r.predicted_penalty_amount > 0
+                            ? 'border-red-100 bg-red-50'
+                            : 'border-green-100 bg-green-50'
+                    }`}
+                >
+                    <p className="text-xs font-medium text-gray-600">
+                        Predicted Penalty
+                    </p>
+                    <p
+                        className={`mt-1 font-bold tabular-nums ${
+                            r.predicted_penalty_amount > 0
+                                ? 'text-red-700'
+                                : 'text-green-700'
+                        }`}
+                    >
+                        {r.predicted_penalty_amount > 0
+                            ? formatCurrency(r.predicted_penalty_amount)
+                            : 'None'}
+                    </p>
+                </div>
+                <div
+                    className={`rounded-lg border p-3 ${
+                        r.actual_penalty_amount > 0
+                            ? 'border-red-100 bg-red-50'
+                            : 'border-green-100 bg-green-50'
+                    }`}
+                >
+                    <p className="text-xs font-medium text-gray-600">
+                        Actual Penalty
+                    </p>
+                    <p
+                        className={`mt-1 font-bold tabular-nums ${
+                            r.actual_penalty_amount > 0
+                                ? 'text-red-700'
+                                : 'text-green-700'
+                        }`}
+                    >
+                        {r.actual_penalty_amount > 0
+                            ? formatCurrency(r.actual_penalty_amount)
+                            : 'None'}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-5 space-y-8">
+                <div>
+                    <p className="mb-2 text-xs font-medium text-gray-600">
+                        Weight breakdown (MT)
+                    </p>
+                    {weightChartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={260}>
+                            <RechartsPieChart
+                                margin={{
+                                    top: 8,
+                                    right: 8,
+                                    bottom: 8,
+                                    left: 8,
+                                }}
+                            >
+                                <Pie
+                                    data={weightChartData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={56}
+                                    outerRadius={92}
+                                    minAngle={2}
+                                    paddingAngle={2}
+                                    isAnimationActive
+                                >
+                                    {weightChartData.map((entry, i) => (
+                                        <Cell
+                                            key={`${entry.name}-${i}`}
+                                            fill={entry.fill ?? '#4B72BE'}
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value, name) => [
+                                        `${Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`,
+                                        String(name ?? ''),
+                                    ]}
+                                />
+                                <Legend
+                                    verticalAlign="bottom"
+                                    wrapperStyle={{
+                                        fontSize: 12,
+                                        paddingTop: 8,
+                                    }}
+                                />
+                            </RechartsPieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex h-[220px] items-center justify-center rounded-lg border border-gray-100 bg-gray-50/50 text-sm text-gray-600">
+                            No weighment data available
+                        </div>
+                    )}
+                </div>
+                <div>
+                    <div className="mb-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+                        <div className="min-w-0 space-y-0.5">
+                            <p className="text-xs font-semibold text-gray-900">
+                                Wagon-wise overload / underload (MT)
+                            </p>
+                            <p className="text-[11px] font-semibold text-red-600">
+                                This data is based on weighment.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-end justify-end gap-2 sm:ml-auto">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 gap-1.5 px-2.5 text-[11px] font-medium"
+                                    >
+                                        Weighment KPIs
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    align="end"
+                                    sideOffset={6}
+                                    className="w-[min(100vw-2rem,18rem)] p-3 text-xs shadow-lg"
+                                >
+                                    <p className="mb-2 border-b border-gray-100 pb-2 text-[11px] font-semibold text-gray-900">
+                                        Weighment summary
+                                    </p>
+                                    <dl className="space-y-2 text-[11px]">
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">
+                                                Underload stock
+                                            </dt>
+                                            <dd className="font-semibold text-amber-900 tabular-nums">
+                                                {fmtMt(
+                                                    wagonWeighmentSummary.underloadStockMt,
+                                                )}{' '}
+                                                MT
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">
+                                                Overload stock
+                                            </dt>
+                                            <dd className="font-semibold text-red-900 tabular-nums">
+                                                {fmtMt(
+                                                    wagonWeighmentSummary.overloadStockMt,
+                                                )}{' '}
+                                                MT
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">
+                                                Underload wagons
+                                            </dt>
+                                            <dd className="font-semibold text-gray-900 tabular-nums">
+                                                {
+                                                    wagonWeighmentSummary.underloadWagons
+                                                }
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">
+                                                Overload wagons
+                                            </dt>
+                                            <dd className="font-semibold text-gray-900 tabular-nums">
+                                                {
+                                                    wagonWeighmentSummary.overloadWagons
+                                                }
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </PopoverContent>
+                            </Popover>
+                            <div className="flex flex-col items-end gap-0.5">
+                                <label
+                                    htmlFor="rake-perf-modal-underload"
+                                    className="text-[10px] leading-tight font-medium text-gray-600"
+                                >
+                                    Underload threshold (% of CC)
+                                </label>
+                                <Input
+                                    id="rake-perf-modal-underload"
+                                    type="number"
+                                    inputMode="decimal"
+                                    min={0}
+                                    step={0.1}
+                                    className="h-8 w-[4.5rem] rounded-md border-gray-200 bg-white px-2 text-xs font-semibold tabular-nums"
+                                    value={underloadThresholdPercent}
+                                    onChange={(e) => {
+                                        const raw = e.target.value;
+                                        if (raw === '') {
+                                            onUnderloadThresholdChange(0);
+                                            return;
+                                        }
+                                        const v = parseFloat(raw);
+                                        if (!Number.isNaN(v)) {
+                                            onUnderloadThresholdChange(
+                                                Math.max(0, v),
+                                            );
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    {wagonBarChartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={400}>
+                            <RechartsBarChart
+                                data={wagonBarChartData}
+                                margin={{
+                                    top: 8,
+                                    right: 8,
+                                    left: 8,
+                                    bottom: 24,
+                                }}
+                            >
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    strokeOpacity={0.3}
+                                />
+                                <XAxis
+                                    dataKey="position"
+                                    tick={{ fontSize: 10 }}
+                                    interval={0}
+                                    height={40}
+                                />
+                                <YAxis
+                                    tick={{ fontSize: 11 }}
+                                    tickFormatter={(v: number) => `${v} MT`}
+                                    label={{
+                                        value: 'Overload + / Underload − (MT)',
+                                        angle: -90,
+                                        position: 'insideLeft',
+                                        style: { fontSize: 10 },
+                                    }}
+                                />
+                                <ReferenceLine
+                                    y={0}
+                                    stroke="#9CA3AF"
+                                    strokeWidth={1}
+                                />
+                                <Tooltip
+                                    content={({ active, payload }) => {
+                                        if (!active || !payload?.length)
+                                            return null;
+                                        const pl = payload[0]?.payload as {
+                                            wagon_number?: string;
+                                            bar_mt?: number;
+                                            over_load_mt?: number;
+                                            under_load_mt?: number | null;
+                                            cc_capacity_mt?: number | null;
+                                            net_weight_mt?: number | null;
+                                            loader_name?: string | null;
+                                            loader_operator_name?:
+                                                | string
+                                                | null;
+                                            shortfall_pct?: number | null;
+                                        };
+                                        const wagonNum = pl.wagon_number ?? '—';
+                                        const cc =
+                                            pl.cc_capacity_mt != null
+                                                ? `${Number(pl.cc_capacity_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                : '—';
+                                        const net =
+                                            pl.net_weight_mt != null
+                                                ? `${Number(pl.net_weight_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                : '—';
+                                        const over =
+                                            pl.over_load_mt != null &&
+                                            pl.over_load_mt > 0
+                                                ? `${Number(pl.over_load_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                : '—';
+                                        const under =
+                                            pl.under_load_mt != null &&
+                                            pl.under_load_mt > 0
+                                                ? `${Number(pl.under_load_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                : '—';
+                                        const sf =
+                                            pl.shortfall_pct != null
+                                                ? `${pl.shortfall_pct.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
+                                                : '—';
+                                        const loaderLabel =
+                                            pl.loader_name != null &&
+                                            String(pl.loader_name).trim() !== ''
+                                                ? String(pl.loader_name).trim()
+                                                : '—';
+                                        const operatorLabel =
+                                            pl.loader_operator_name != null &&
+                                            String(
+                                                pl.loader_operator_name,
+                                            ).trim() !== ''
+                                                ? String(
+                                                      pl.loader_operator_name,
+                                                  ).trim()
+                                                : '—';
+                                        return (
+                                            <div className="max-w-xs rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
+                                                <p className="font-medium text-gray-800">
+                                                    Wagon {wagonNum}
+                                                </p>
+                                                <p className="mt-1 text-gray-600">
+                                                    Loader:{' '}
+                                                    <span className="font-medium text-gray-900">
+                                                        {loaderLabel}
+                                                    </span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Operator:{' '}
+                                                    <span className="text-gray-900">
+                                                        {operatorLabel}
+                                                    </span>
+                                                </p>
+                                                <p className="mt-1 text-gray-600">
+                                                    CC:{' '}
+                                                    <span className="font-medium text-gray-900 tabular-nums">
+                                                        {cc}
+                                                    </span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Net:{' '}
+                                                    <span className="tabular-nums">
+                                                        {net}
+                                                    </span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Overload:{' '}
+                                                    <span className="text-red-700 tabular-nums">
+                                                        {over}
+                                                    </span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Underload:{' '}
+                                                    <span className="text-amber-700 tabular-nums">
+                                                        {under}
+                                                    </span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Shortfall % of CC:{' '}
+                                                    <span className="tabular-nums">
+                                                        {sf}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                <Bar
+                                    dataKey="bar_mt"
+                                    radius={[4, 4, 4, 4]}
+                                    barSize={20}
+                                    isAnimationActive
+                                    className="cursor-pointer [&_.recharts-rectangle]:cursor-pointer"
+                                    onClick={(item) => {
+                                        const row = item?.payload as
+                                            | {
+                                                  loader_id?: number | null;
+                                                  wagon_number?: string;
+                                              }
+                                            | undefined;
+                                        if (row?.loader_id != null) {
+                                            onNavigateToLoader(
+                                                row.loader_id,
+                                                underloadThresholdPercent,
+                                            );
+                                            return;
+                                        }
+                                        setNoLoaderWagonNumber(
+                                            row?.wagon_number ?? null,
+                                        );
+                                        setNoLoaderDialogOpen(true);
+                                    }}
+                                >
+                                    {wagonBarChartData.map((entry, i) => {
+                                        let fill = '#E5E7EB';
+                                        if (entry.bar_mt > 0) {
+                                            fill = '#DC2626';
+                                        } else if (entry.bar_mt < 0) {
+                                            fill = '#D97706';
+                                        }
+                                        return <Cell key={i} fill={fill} />;
+                                    })}
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div
+                            className={`flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-xl p-6 ${r.over_load != null && r.over_load > 0 ? 'bg-[#FEF2F2]' : 'bg-gray-50'}`}
+                        >
+                            {r.over_load != null && r.over_load > 0 ? (
+                                <>
+                                    <TriangleAlert
+                                        className="size-10 text-red-600"
+                                        aria-hidden
+                                    />
+                                    <span className="text-lg font-bold text-red-700 tabular-nums">
+                                        +{r.over_load.toLocaleString()} MT total
+                                    </span>
+                                    <span className="text-xs text-gray-600">
+                                        No wagon-level weighment data
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <Check
+                                        className="size-10 text-green-600"
+                                        aria-hidden
+                                    />
+                                    <span className="text-sm font-medium text-green-700">
+                                        Within limits
+                                    </span>
+                                    <span className="text-xs text-gray-600">
+                                        No wagon-level weighment data
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <Dialog
+                open={noLoaderDialogOpen}
+                onOpenChange={setNoLoaderDialogOpen}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Loader data unavailable</DialogTitle>
+                        <DialogDescription>
+                            {noLoaderWagonNumber != null
+                                ? `Loader data is not available for wagon ${noLoaderWagonNumber}.`
+                                : 'Loader data is not available for this wagon.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            onClick={() => setNoLoaderDialogOpen(false)}
+                        >
+                            OK
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+/**
+ * Siding-specific display for the rake sequence column: P-/D-/K- + rake_number for known locations.
+ */
+function formatRakeSequenceForSiding(
+    sidingName: string,
+    rakeNumber: string,
+): string {
+    const n = sidingName.trim().toLowerCase();
+    if (n.includes('pakur')) {
+        return `P-${rakeNumber}`;
+    }
+    if (n.includes('dumka')) {
+        return `D-${rakeNumber}`;
+    }
+    if (n.includes('kurwa') || n.includes('kurawa')) {
+        return `K-${rakeNumber}`;
+    }
+    return rakeNumber;
+}
+
+export function RakePerformanceSection({
+    filters,
+    allSidingIds,
+    sidings,
+    rakePenaltyScope,
+    onRakePenaltyScopeChange,
+    onNavigateToLoader,
+}: {
+    filters: DashboardFilters;
+    allSidingIds: number[];
+    /** Sidings in scope (for pills + siding_id filter). */
+    sidings: SidingOption[];
+    rakePenaltyScope: 'all' | 'with_penalties';
+    onRakePenaltyScopeChange: (scope: 'all' | 'with_penalties') => void;
+    onNavigateToLoader: (
+        loaderId: number,
+        rakeUnderloadThresholdPercent: number,
+    ) => void;
+}) {
+    const filterKey = useMemo(
+        () =>
+            [
+                filters.period,
+                filters.from,
+                filters.to,
+                filters.siding_ids.join(','),
+                filters.power_plant,
+                filters.rake_number ?? '',
+                filters.rake_penalty_scope ?? 'all',
+            ].join('|'),
+        [
+            filters.period,
+            filters.from,
+            filters.to,
+            filters.siding_ids,
+            filters.power_plant,
+            filters.rake_number,
+            filters.rake_penalty_scope,
+        ],
+    );
+
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(100);
+    const [selectedSidingTab, setSelectedSidingTab] = useState<'all' | number>(
+        'all',
+    );
+    const [rows, setRows] = useState<RakePerformanceSummaryItem[]>([]);
+    const [prefetchedRows, setPrefetchedRows] = useState<
+        RakePerformanceSummaryItem[]
+    >([]);
+    const [listMeta, setListMeta] = useState<{
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+    } | null>(null);
+    const [listLoading, setListLoading] = useState(true);
+    const [listLoadingMore, setListLoadingMore] = useState(false);
+    const [apiEndReached, setApiEndReached] = useState(false);
+    const [listError, setListError] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalRakeId, setModalRakeId] = useState<number | null>(null);
+    const [detail, setDetail] = useState<RakePerformanceItem | null>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState<string | null>(null);
+    const [modalUnderloadThreshold, setModalUnderloadThreshold] = useState(1);
+    const [sectionTab, setSectionTab] = useState<'list' | 'trends'>('list');
+    const [trendsPeriod, setTrendsPeriod] =
+        useState<RpOverloadTrendsPeriod>('month');
+
+    const trendsFilterKey = useMemo(
+        () =>
+            [
+                trendsPeriod,
+                selectedSidingTab,
+                filters.siding_ids.join(','),
+                filters.power_plant ?? '',
+                filters.rake_number ?? '',
+                filters.underload_threshold,
+            ].join('|'),
+        [
+            trendsPeriod,
+            selectedSidingTab,
+            filters.siding_ids,
+            filters.power_plant,
+            filters.rake_number,
+            filters.underload_threshold,
+        ],
+    );
+
+    const buildOverloadTrendsSearchParams = useCallback(
+        (args: {
+            trendsPeriod: RpOverloadTrendsPeriod;
+            sidingId?: number;
+        }) =>
+            buildRakePerformanceOverloadTrendsParams({
+                filters,
+                allSidingIds,
+                trendsPeriod: args.trendsPeriod,
+                sidingId: args.sidingId,
+            }),
+        [filters, allSidingIds],
+    );
+
+    useEffect(() => {
+        setSelectedSidingTab('all');
+    }, [filterKey]);
+
+    useEffect(() => {
+        setPage(1);
+        setPerPage(100);
+        setRows([]);
+        setPrefetchedRows([]);
+        setListMeta(null);
+        setApiEndReached(false);
+    }, [filterKey, selectedSidingTab]);
+
+    useEffect(() => {
+        if (selectedSidingTab === 'all') {
+            return;
+        }
+        if (!sidings.some((s) => s.id === selectedSidingTab)) {
+            setSelectedSidingTab('all');
+        }
+    }, [sidings, selectedSidingTab]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const isInitialLoad = page === 1 && perPage === 100;
+        setListLoading(isInitialLoad);
+        setListLoadingMore(!isInitialLoad);
+        setListError(null);
+        const qs = buildRakePerformanceApiSearchParams({
+            filters,
+            allSidingIds,
+            page,
+            perPage,
+            sidingId:
+                selectedSidingTab === 'all' ? undefined : selectedSidingTab,
+        });
+        laravelJsonFetch<{
+            data: RakePerformanceSummaryItem[];
+            meta: {
+                current_page: number;
+                last_page: number;
+                per_page: number;
+                total: number;
+            };
+        }>(`/dashboard/rake-performance/rakes?${qs}`)
+            .then((res) => {
+                if (!cancelled) {
+                    if (isInitialLoad) {
+                        // For testing: show only the first 50 rows initially.
+                        // Keep the rest ready to append in 20-row chunks on scroll.
+                        setRows(res.data.slice(0, 50));
+                        setPrefetchedRows(res.data.slice(50));
+                    } else {
+                        setRows((prev) => {
+                        if (prev.length === 0) {
+                            return res.data;
+                        }
+                        const seen = new Set(prev.map((r) => r.id));
+                        const merged = [...prev];
+                        res.data.forEach((r) => {
+                            if (!seen.has(r.id)) {
+                                merged.push(r);
+                                seen.add(r.id);
+                            }
+                        });
+                        return merged;
+                        });
+                    }
+                    setListMeta(res.meta);
+                    setApiEndReached(
+                        res.data.length === 0 ||
+                            res.meta.current_page >= res.meta.last_page,
+                    );
+                }
+            })
+            .catch((e: unknown) => {
+                if (!cancelled) {
+                    setListError(
+                        e instanceof Error ? e.message : 'Failed to load rakes',
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setListLoading(false);
+                    setListLoadingMore(false);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [filterKey, allSidingIds, page, perPage, selectedSidingTab]);
+
+    const loadMore = useCallback(() => {
+        const endReached = apiEndReached && prefetchedRows.length === 0;
+        if (listLoading || listLoadingMore || endReached || listError != null) {
+            return;
+        }
+        if (rows.length === 0) {
+            return;
+        }
+
+        if (prefetchedRows.length > 0) {
+            const next = prefetchedRows.slice(0, 20);
+            setRows((prev) => [...prev, ...next]);
+            setPrefetchedRows((prev) => prev.slice(20));
+            return;
+        }
+
+        // After the initial 100-row load (page=1, perPage=100), jump to the
+        // next 20-row page that starts after the first 100 results.
+        if (page === 1 && perPage === 100) {
+            setPerPage(20);
+            setPage(6);
+            return;
+        }
+
+        setPage((p) => p + 1);
+    }, [
+        apiEndReached,
+        listError,
+        listLoading,
+        listLoadingMore,
+        page,
+        perPage,
+        prefetchedRows.length,
+        rows.length,
+    ]);
+
+    useEffect(() => {
+        if (modalRakeId == null) {
+            setDetail(null);
+            return;
+        }
+        let cancelled = false;
+        setDetailLoading(true);
+        setDetailError(null);
+        const qs = buildRakePerformanceApiSearchParams({
+            filters,
+            allSidingIds,
+            sidingId:
+                selectedSidingTab === 'all' ? undefined : selectedSidingTab,
+        });
+        laravelJsonFetch<{ data: RakePerformanceItem }>(
+            `/dashboard/rake-performance/rakes/${modalRakeId}?${qs}`,
+        )
+            .then((res) => {
+                if (!cancelled) {
+                    setDetail(res.data);
+                }
+            })
+            .catch((e: unknown) => {
+                if (!cancelled) {
+                    setDetailError(
+                        e instanceof Error ? e.message : 'Failed to load',
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setDetailLoading(false);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [modalRakeId, filterKey, allSidingIds, selectedSidingTab]);
+
+    const showSidingColumn = selectedSidingTab === 'all';
+
+    const openRake = (id: number) => {
+        setModalRakeId(id);
+        setModalOpen(true);
+        setModalUnderloadThreshold(1);
+    };
+
+    return (
+        <div className="dashboard-card rounded-xl border-0 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <SectionHeader
+                    icon={Train}
+                    title="Rake-wise performance"
+                    subtitle="Click a row to view weighment charts and details"
+                    action={
+                        <Select
+                            value={rakePenaltyScope}
+                            onValueChange={(v) =>
+                                onRakePenaltyScopeChange(
+                                    v === 'with_penalties'
+                                        ? 'with_penalties'
+                                        : 'all',
+                                )
+                            }
+                        >
+                            <SelectTrigger className="min-w-[160px] rounded-lg border border-gray-200 bg-white text-sm">
+                                <SelectValue placeholder="Penalty scope" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="with_penalties">
+                                    With penalties
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    }
+                />
+            </div>
+
+            <div
+                role="group"
+                aria-label="Rake performance view"
+                className="mt-4 inline-flex items-center rounded-md border border-input bg-background p-0.5 shadow-sm"
+            >
+                <button
+                    type="button"
+                    onClick={() => setSectionTab('list')}
+                    aria-pressed={sectionTab === 'list'}
+                    className={cn(
+                        'flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                        sectionTab === 'list'
+                            ? 'bg-foreground text-background'
+                            : 'text-muted-foreground hover:text-foreground',
+                    )}
+                >
+                    <TableIcon className="size-3.5" aria-hidden="true" />
+                    Rake list
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setSectionTab('trends')}
+                    aria-pressed={sectionTab === 'trends'}
+                    className={cn(
+                        'flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                        sectionTab === 'trends'
+                            ? 'bg-foreground text-background'
+                            : 'text-muted-foreground hover:text-foreground',
+                    )}
+                >
+                    <BarChart3 className="size-3.5" aria-hidden="true" />
+                    Load trends
+                </button>
+            </div>
+
+            {sectionTab === 'list' && listError != null && (
+                <p className="mt-4 text-sm text-red-600" role="alert">
+                    {listError}
+                </p>
+            )}
+
+            {sidings.length > 0 && (
+                <div className="mt-4">
+                    <p className="mb-2 text-xs font-medium text-gray-600">
+                        Siding
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedSidingTab('all');
+                            }}
+                            className={
+                                'rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ' +
+                                (selectedSidingTab === 'all'
+                                    ? 'bg-[#111827] text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
+                            }
+                        >
+                            All
+                        </button>
+                        {sidings.map((s) => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                    setSelectedSidingTab(s.id);
+                                }}
+                                className={
+                                    'rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ' +
+                                    (selectedSidingTab === s.id
+                                        ? 'bg-[#111827] text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
+                                }
+                            >
+                                {s.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {sectionTab === 'trends' && (
+                <RakePerformanceOverloadTrends
+                    active={sectionTab === 'trends'}
+                    selectedSidingTab={selectedSidingTab}
+                    trendsPeriod={trendsPeriod}
+                    onTrendsPeriodChange={setTrendsPeriod}
+                    buildSearchParams={buildOverloadTrendsSearchParams}
+                    scopeFilterKey={[
+                        filters.siding_ids.join(','),
+                        filters.power_plant ?? '',
+                        filters.rake_number ?? '',
+                    ].join('|')}
+                />
+            )}
+
+            {sectionTab === 'list' && (
+            <>
+            <div className="mt-4 overflow-x-auto">
+                {listLoading ? (
+                    <p className="py-8 text-center text-sm text-gray-600">
+                        Loading rakes…
+                    </p>
+                ) : rows.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-gray-600">
+                        No rake performance data for this range.
+                    </p>
+                ) : (
+                    <Table className="w-full min-w-0 [border-spacing:0] text-xs [&_td]:px-1.5 [&_td]:py-1.5 sm:[&_td]:px-2 [&_th]:h-8 [&_th]:px-1.5 [&_th]:py-1.5 sm:[&_th]:px-2">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="whitespace-normal sm:whitespace-nowrap">
+                                    Rake sequence
+                                </TableHead>
+                                <TableHead className="whitespace-normal sm:whitespace-nowrap">
+                                    Rake number
+                                </TableHead>
+                                <TableHead>Dispatch</TableHead>
+                                {showSidingColumn && (
+                                    <TableHead>Siding</TableHead>
+                                )}
+                                <TableHead className="text-right">
+                                    Net (MT)
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    Pred. penalty
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    Actual penalty
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    Overload
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    Underload
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rows.map((row) => (
+                                <TableRow
+                                    key={row.id}
+                                    className="cursor-pointer"
+                                    onClick={() => {
+                                        openRake(row.id);
+                                    }}
+                                >
+                                    <TableCell className="font-medium [overflow-wrap:anywhere] sm:whitespace-nowrap">
+                                        {formatRakeSequenceForSiding(
+                                            row.siding,
+                                            row.rake_number,
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="[overflow-wrap:anywhere] sm:whitespace-nowrap">
+                                        {row.rake_serial_number != null &&
+                                        String(
+                                            row.rake_serial_number,
+                                        ).trim() !== '' ? (
+                                            <span className="text-gray-700">
+                                                {row.rake_serial_number}
+                                            </span>
+                                        ) : (
+                                            <span className="font-medium text-yellow-600 tabular-nums">
+                                                {row.rake_number}
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="[overflow-wrap:anywhere] tabular-nums sm:whitespace-nowrap">
+                                        {row.dispatch_date}
+                                    </TableCell>
+                                    {showSidingColumn && (
+                                        <TableCell className="[overflow-wrap:anywhere] text-gray-800 sm:whitespace-nowrap">
+                                            {row.siding}
+                                        </TableCell>
+                                    )}
+                                    <TableCell className="text-right text-gray-900 tabular-nums">
+                                        {row.net_weight != null
+                                            ? formatWeight(row.net_weight)
+                                            : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-gray-900 tabular-nums">
+                                        {row.predicted_penalty_amount > 0
+                                            ? formatCurrency(
+                                                  row.predicted_penalty_amount,
+                                              )
+                                            : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-gray-900 tabular-nums">
+                                        {row.actual_penalty_amount > 0
+                                            ? formatCurrency(
+                                                  row.actual_penalty_amount,
+                                              )
+                                            : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-red-700 tabular-nums">
+                                        {row.over_load != null &&
+                                        row.over_load > 0
+                                            ? row.over_load.toLocaleString()
+                                            : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-amber-800 tabular-nums">
+                                        {row.under_load != null &&
+                                        row.under_load > 0
+                                            ? row.under_load.toLocaleString()
+                                            : '—'}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </div>
+
+            {rows.length > 0 && (
+                <div className="mt-3">
+                    {(() => {
+                        const endReached =
+                            apiEndReached && prefetchedRows.length === 0;
+                        return (
+                            <div className="space-y-2">
+                                <div className="text-center text-xs text-gray-500">
+                                    {listLoadingMore
+                                        ? 'Loading more…'
+                                        : endReached
+                                          ? 'All records retrieved.'
+                                          : 'Load more records.'}
+                                </div>
+                                <div className="flex flex-col items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={
+                                            listLoading ||
+                                            listLoadingMore ||
+                                            endReached ||
+                                            listError != null
+                                        }
+                                        onClick={() => {
+                                            loadMore();
+                                        }}
+                                    >
+                                        Load more
+                                    </Button>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
+            </>
+            )}
+
+            <Dialog
+                open={modalOpen}
+                onOpenChange={(open) => {
+                    setModalOpen(open);
+                    if (!open) {
+                        setModalRakeId(null);
+                    }
+                }}
+            >
+                <DialogContent className="max-h-[95vh] w-[min(96vw,1400px)] max-w-[min(96vw,1400px)] overflow-y-auto sm:max-w-[min(96vw,1400px)]">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {detail != null
+                                ? `${detail.rake_serial_number ?? detail.rake_number} — ${detail.siding}`
+                                : 'Rake performance'}
+                        </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Weighment breakdown and wagon-wise overload and
+                            underload for the selected rake.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {detailLoading && (
+                        <p className="text-sm text-gray-600">
+                            Loading details…
+                        </p>
+                    )}
+                    {detailError != null && (
+                        <p className="text-sm text-red-600">{detailError}</p>
+                    )}
+                    {detail != null && !detailLoading && (
+                        <RakePerformanceDetailCharts
+                            r={detail}
+                            underloadThresholdPercent={modalUnderloadThreshold}
+                            onUnderloadThresholdChange={
+                                setModalUnderloadThreshold
+                            }
+                            onNavigateToLoader={onNavigateToLoader}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+const SIDING_COLORS = [
+    DASHBOARD_PALETTE.steelBlue,
+    DASHBOARD_PALETTE.successGreen,
+    DASHBOARD_PALETTE.safetyYellow,
+    DASHBOARD_PALETTE.steelBlueLight,
+    DASHBOARD_PALETTE.successGreenLight,
+];
+
+const PLANT_COLORS: Record<string, string> = {
+    PSPM: '#3B82F6',
+    STPS: '#10B981',
+    BTPC: '#F59E0B',
+    KPPS: '#8B5CF6',
+};
+
+/** Muted bars so the chart frame is visible when there is no dispatch data. */
+const POWER_PLANT_CHART_EMPTY_ROWS: PowerPlantDispatchItem[] = [
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+];
+
+/** Rakes-by-plant bar only (subset of Power plant wise dispatch). */
+function RakesPerPowerPlantExecutiveChart({
+    data,
+    period,
+    onPeriodChange,
+    metric,
+    onMetricChange,
+}: {
+    data: PowerPlantDispatchItem[];
+    period?: ExecutiveChartPeriodKey;
+    onPeriodChange?: (p: ExecutiveChartPeriodKey) => void;
+    metric?: 'rakes' | 'qty';
+    onMetricChange?: (k: 'rakes' | 'qty') => void;
+}) {
+    const valueKind = metric ?? 'rakes';
+    const sorted = useMemo(() => {
+        const copy = [...data];
+        copy.sort((a, b) =>
+            valueKind === 'qty' ? b.weight_mt - a.weight_mt : b.rakes - a.rakes,
+        );
+
+        return copy;
+    }, [data, valueKind]);
+
+    const isEmpty = data.length === 0;
+    const chartRows = isEmpty ? POWER_PLANT_CHART_EMPTY_ROWS : sorted;
+    const dataKey = valueKind === 'qty' ? 'weight_mt' : 'rakes';
+    const showControls =
+        onPeriodChange != null &&
+        period != null &&
+        onMetricChange != null &&
+        metric != null;
+
+    return (
+        <div className="dashboard-card flex h-full flex-col overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                {showControls ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <SectionHeader
+                            icon={Factory}
+                            title="Powerplant Dispatch"
+                            subtitle="Rake load dispatched to each station (anchor period)"
+                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Select
+                                value={period}
+                                onValueChange={(v) =>
+                                    onPeriodChange(v as ExecutiveChartPeriodKey)
+                                }
+                            >
+                                <SelectTrigger className="h-9 w-[160px] text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                        <SelectItem
+                                            key={o.value}
+                                            value={o.value}
+                                            className="text-xs"
+                                        >
+                                            {o.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="flex rounded-lg border border-gray-200 p-0.5">
+                                <Button
+                                    type="button"
+                                    variant={
+                                        metric === 'rakes' ? 'default' : 'ghost'
+                                    }
+                                    size="sm"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => onMetricChange('rakes')}
+                                >
+                                    Rakes
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={
+                                        metric === 'qty' ? 'default' : 'ghost'
+                                    }
+                                    size="sm"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => onMetricChange('qty')}
+                                >
+                                    Qty
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <SectionHeader
+                        icon={Factory}
+                        title="Powerplant Dispatch"
+                        subtitle="From weighment destinations for current filters"
+                    />
+                )}
+            </div>
+            <div className="relative flex min-h-0 flex-1 flex-col bg-[#fbfbfc] p-4">
+                <div className="relative min-h-[260px] flex-1">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <RechartsBarChart
+                            data={chartRows}
+                            margin={{ top: 8, right: 16, bottom: 0, left: 8 }}
+                        >
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                strokeOpacity={isEmpty ? 0.2 : 0.3}
+                            />
+                            <XAxis
+                                dataKey="name"
+                                tick={{
+                                    fontSize: 11,
+                                    fill: isEmpty ? '#94a3b8' : undefined,
+                                }}
+                            />
+                            <YAxis
+                                allowDecimals={valueKind === 'qty'}
+                                tick={{ fontSize: 11 }}
+                                tickFormatter={(v) =>
+                                    valueKind === 'qty'
+                                        ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                        : `${v}`
+                                }
+                                domain={isEmpty ? [0, 'auto'] : undefined}
+                            />
+                            <Tooltip
+                                formatter={numericTooltipFormatter((v) => {
+                                    if (isEmpty) {
+                                        return [
+                                            'No dispatch data for this period',
+                                            '',
+                                        ];
+                                    }
+
+                                    return valueKind === 'qty'
+                                        ? [
+                                              `${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`,
+                                              'Qty',
+                                          ]
+                                        : [v, 'Rakes'];
+                                })}
+                            />
+                            <Bar
+                                dataKey={dataKey}
+                                radius={[4, 4, 0, 0]}
+                                barSize={32}
+                                isAnimationActive={!isEmpty}
+                            >
+                                {chartRows.map((pp, i) => (
+                                    <Cell
+                                        key={`${pp.name}-${i}`}
+                                        fill={
+                                            isEmpty
+                                                ? '#e2e8f0'
+                                                : (PLANT_COLORS[pp.name] ??
+                                                  SIDING_COLORS[
+                                                      i % SIDING_COLORS.length
+                                                  ])
+                                        }
+                                    />
+                                ))}
+                                {!isEmpty ? (
+                                    <LabelList
+                                        dataKey={dataKey}
+                                        position="top"
+                                        formatter={(v: unknown) =>
+                                            valueKind === 'qty'
+                                                ? `${Number(v ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                : String(v ?? '')
+                                        }
+                                    />
+                                ) : null}
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                    {isEmpty ? (
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-8 text-center">
+                            <Factory className="mb-2 h-8 w-8 text-muted-foreground/35" />
+                            <p className="text-xs font-medium text-muted-foreground">
+                                No dispatch data
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                                for this period
+                            </p>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export function PowerPlantDispatchSection({
+    data,
+}: {
+    data: PowerPlantDispatchItem[];
+}) {
+    const [stacked, setStacked] = useState(true);
+    const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
+    const totalRakes = useMemo(
+        () => data.reduce((sum, pp) => sum + pp.rakes, 0),
+        [data],
+    );
+    const totalWeight = useMemo(
+        () => data.reduce((sum, pp) => sum + pp.weight_mt, 0),
+        [data],
+    );
+    const allSidingNames = useMemo(() => {
+        const names = new Set<string>();
+        data.forEach((pp) =>
+            Object.keys(pp.sidings).forEach((s) => names.add(s)),
+        );
+        return Array.from(names);
+    }, [data]);
+    const maxWeight = useMemo(
+        () => Math.max(...data.map((pp) => pp.weight_mt), 1),
+        [data],
+    );
+
+    const stackedChartData = useMemo(
+        () =>
+            data.map((pp) => {
+                const row: Record<string, unknown> = { name: pp.name };
+                allSidingNames.forEach((sn) => {
+                    row[sn] = pp.sidings[sn]?.rakes ?? 0;
+                });
+                return row;
+            }),
+        [data, allSidingNames],
+    );
+
+    const sortedByRakes = useMemo(
+        () => [...data].sort((a, b) => b.rakes - a.rakes),
+        [data],
+    );
+
+    if (data.length === 0) {
+        return (
+            <div className="dashboard-card rounded-xl border-0 p-6">
+                <SectionHeader
+                    icon={Factory}
+                    title="Power plant wise dispatch"
+                    subtitle="How many rakes sent to each power plant"
+                />
+                <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
+                    <Factory className="mb-3 h-10 w-10 opacity-30" />
+                    <p className="text-sm font-medium">
+                        No dispatch data available
+                    </p>
+                    <p className="mt-1 text-xs">
+                        Weighment data with destination stations will appear
+                        here once rakes are dispatched.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="dashboard-card rounded-xl border-0 p-6">
+            <SectionHeader
+                icon={Factory}
+                title="Power plant wise dispatch"
+                subtitle="How many rakes sent to each power plant"
+            />
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div
+                    className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4"
+                    style={{ borderTop: '4px solid #3B82F6' }}
+                >
+                    <MapPin className="size-5 text-blue-600" />
+                    <div>
+                        <div className="text-xs font-medium text-gray-600">
+                            Destinations
+                        </div>
+                        <div className="text-xl font-bold text-gray-900 tabular-nums">
+                            {data.length}
+                        </div>
+                    </div>
+                </div>
+                <div
+                    className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4"
+                    style={{ borderTop: '4px solid #3B82F6' }}
+                >
+                    <Train className="size-5 text-blue-600" />
+                    <div>
+                        <div className="text-xs font-medium text-gray-600">
+                            Total rakes
+                        </div>
+                        <div className="text-xl font-bold text-gray-900 tabular-nums">
+                            {totalRakes}
+                        </div>
+                    </div>
+                </div>
+                <div
+                    className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4"
+                    style={{ borderTop: '4px solid #3B82F6' }}
+                >
+                    <BarChart3 className="size-5 text-blue-600" />
+                    <div>
+                        <div className="text-xs font-medium text-gray-600">
+                            Total weight
+                        </div>
+                        <div className="text-xl font-bold text-gray-900 tabular-nums">
+                            {formatWeight(totalWeight)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                <div>
+                    <div className="mb-2 flex items-center justify-between">
+                        <h4 className="text-xs font-medium text-gray-600">
+                            Rakes sent to each power plant by siding
+                        </h4>
+                        <button
+                            type="button"
+                            onClick={() => setStacked(!stacked)}
+                            className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-600"
+                        >
+                            {stacked ? 'Grouped' : 'Stacked'}
+                        </button>
+                    </div>
+                    <div className="min-h-0 w-full overflow-x-auto pt-1">
+                        <ResponsiveContainer
+                            width="100%"
+                            height={Math.max(280, data.length * 52)}
+                        >
+                            <RechartsBarChart
+                                data={stackedChartData}
+                                margin={{
+                                    left: 8,
+                                    right: 12,
+                                    top: stacked ? 12 : 22,
+                                    bottom: 8,
+                                }}
+                                barCategoryGap="18%"
+                            >
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    strokeOpacity={0.3}
+                                />
+                                <XAxis
+                                    dataKey="name"
+                                    tick={{ fontSize: 10 }}
+                                    interval={0}
+                                    height={52}
+                                />
+                                <YAxis
+                                    allowDecimals={false}
+                                    tick={{ fontSize: 10 }}
+                                    width={40}
+                                    domain={[0, 'auto']}
+                                />
+                                <Tooltip />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                {allSidingNames.map((sn, i) => (
+                                    <Bar
+                                        key={sn}
+                                        dataKey={sn}
+                                        stackId={stacked ? 'stack' : undefined}
+                                        fill={
+                                            SIDING_COLORS[
+                                                i % SIDING_COLORS.length
+                                            ]
+                                        }
+                                        name={sn}
+                                        radius={[2, 2, 0, 0]}
+                                        maxBarSize={28}
+                                    >
+                                        {!stacked ? (
+                                            <LabelList
+                                                dataKey={sn}
+                                                position="top"
+                                                fill="#4b5563"
+                                                fontSize={10}
+                                                formatter={(label) => {
+                                                    const n = Number(
+                                                        label ?? 0,
+                                                    );
+
+                                                    return n > 0 &&
+                                                        !Number.isNaN(n)
+                                                        ? String(n)
+                                                        : '';
+                                                }}
+                                            />
+                                        ) : null}
+                                    </Bar>
+                                ))}
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 className="mb-2 text-xs font-medium text-gray-600">
+                        Rakes dispatched per power plant
+                    </h4>
+                    <div className="min-h-0 w-full overflow-x-auto pt-1">
+                        <ResponsiveContainer
+                            width="100%"
+                            height={Math.max(280, data.length * 44)}
+                        >
+                            <RechartsBarChart
+                                data={sortedByRakes}
+                                margin={{
+                                    top: 22,
+                                    right: 12,
+                                    bottom: 4,
+                                    left: 8,
+                                }}
+                            >
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    strokeOpacity={0.3}
+                                />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <YAxis
+                                    allowDecimals={false}
+                                    tick={{ fontSize: 10 }}
+                                    width={40}
+                                    domain={[0, 'auto']}
+                                />
+                                <Tooltip
+                                    formatter={numericTooltipFormatter(
+                                        (v) => `${v} rakes`,
+                                    )}
+                                />
+                                <Bar
+                                    dataKey="rakes"
+                                    radius={[4, 4, 0, 0]}
+                                    maxBarSize={32}
+                                    isAnimationActive
+                                >
+                                    {sortedByRakes.map((pp, i) => (
+                                        <Cell
+                                            key={pp.name}
+                                            fill={
+                                                PLANT_COLORS[pp.name] ??
+                                                SIDING_COLORS[
+                                                    i % SIDING_COLORS.length
+                                                ]
+                                            }
+                                        />
+                                    ))}
+                                    <LabelList
+                                        dataKey="rakes"
+                                        position="top"
+                                        fill="#4b5563"
+                                        fontSize={10}
+                                        formatter={(label) => {
+                                            const n = Number(label ?? 0);
+
+                                            return n > 0 && !Number.isNaN(n)
+                                                ? String(n)
+                                                : '';
+                                        }}
+                                    />
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-6">
+                <h4 className="mb-3 text-sm font-semibold text-gray-600">
+                    Destination breakdown
+                </h4>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {data.map((pp, i) => {
+                        const color =
+                            PLANT_COLORS[pp.name] ??
+                            SIDING_COLORS[i % SIDING_COLORS.length];
+                        const isExpanded = expandedIdx === i;
+                        const sidingEntries = Object.entries(pp.sidings);
+                        const maxSidingRakes = Math.max(
+                            ...sidingEntries.map(([, info]) => info.rakes),
+                            1,
+                        );
+                        return (
+                            <div
+                                key={pp.name}
+                                className="dashboard-card group min-w-0 rounded-xl border-0 p-4 transition-all hover:shadow-md"
+                                style={{ borderLeft: `4px solid ${color}` }}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setExpandedIdx(isExpanded ? null : i)
+                                    }
+                                    className="flex w-full items-center justify-between gap-2 text-left"
+                                >
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        <span
+                                            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white"
+                                            style={{ backgroundColor: color }}
+                                        >
+                                            {pp.name.slice(0, 2).toUpperCase()}
+                                        </span>
+                                        <span className="truncate text-sm font-semibold text-gray-900">
+                                            {pp.name}
+                                        </span>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                        <span className="text-xs text-gray-600 tabular-nums">
+                                            {pp.rakes} rakes
+                                        </span>
+                                        <span className="text-xs text-gray-600 tabular-nums">
+                                            {formatWeight(pp.weight_mt)}
+                                        </span>
+                                        {isExpanded ? (
+                                            <ChevronUp className="size-4 text-gray-600" />
+                                        ) : (
+                                            <ChevronDown className="size-4 text-gray-600" />
+                                        )}
+                                    </div>
+                                </button>
+                                <div
+                                    className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100"
+                                    style={{ transition: 'width 0.8s ease' }}
+                                >
+                                    <div
+                                        className="h-full rounded-full transition-[width] duration-700 ease-out"
+                                        style={{
+                                            width: `${Math.min(100, (pp.weight_mt / maxWeight) * 100)}%`,
+                                            background: `linear-gradient(90deg, ${color}, ${color}99)`,
+                                        }}
+                                    />
+                                </div>
+                                {isExpanded && sidingEntries.length > 0 && (
+                                    <div className="mt-3 border-t border-gray-100 pt-3">
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                            {sidingEntries.map(
+                                                ([sidingName, info], si) => (
+                                                    <div
+                                                        key={sidingName}
+                                                        className="min-w-0"
+                                                    >
+                                                        <span className="block truncate text-xs font-medium text-gray-600">
+                                                            {sidingName}
+                                                        </span>
+                                                        <div className="mt-0.5 h-6 w-full overflow-hidden rounded bg-gray-100">
+                                                            <div
+                                                                className="h-full rounded transition-[width] duration-500 ease-out"
+                                                                style={{
+                                                                    width: `${(info.rakes / maxSidingRakes) * 100}%`,
+                                                                    backgroundColor:
+                                                                        SIDING_COLORS[
+                                                                            si %
+                                                                                SIDING_COLORS.length
+                                                                        ],
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <span className="mt-0.5 block text-[11px] text-gray-600 tabular-nums">
+                                                            {info.rakes} rakes ·{' '}
+                                                            {formatWeight(
+                                                                info.weight_mt,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DashboardFiltersBar({
+    sidings,
+    filters,
+    filterOptions,
+    currentSection,
+    inline = false,
+    onClose,
+}: {
+    sidings: SidingOption[];
+    filters: DashboardFilters;
+    filterOptions: FilterOptions;
+    currentSection?: string;
+    inline?: boolean;
+    onClose?: () => void;
+}) {
+    const [period, setPeriod] = useState(filters.period);
+    const [customFrom, setCustomFrom] = useState(filters.from);
+    const [customTo, setCustomTo] = useState(filters.to);
+    const [showSidingDropdown, setShowSidingDropdown] = useState(false);
+    const [rakeNumberInput, setRakeNumberInput] = useState(
+        filters.rake_number ?? '',
+    );
+    useEffect(() => {
+        setRakeNumberInput(filters.rake_number ?? '');
+    }, [filters.rake_number]);
+    useEffect(() => {
+        setPeriod(filters.period);
+        setCustomFrom(filters.from);
+        setCustomTo(filters.to);
+    }, [filters.period, filters.from, filters.to]);
+
+    const sectionId =
+        (currentSection as (typeof DASHBOARD_SECTIONS)[number]['id']) ??
+        DEFAULT_DASHBOARD_SECTION;
+    const sectionFilterKeys = SECTION_FILTER_KEYS[sectionId] ?? [];
+    const sectionHasFilter = (
+        key: (typeof sectionFilterKeys)[number] | string,
+    ): boolean => (sectionFilterKeys as readonly string[]).includes(key);
+
+    const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
+
+    const [pendingSidingIds, setPendingSidingIds] = useState<number[]>(
+        filters.siding_ids,
+    );
+    const isAllPendingSelected =
+        pendingSidingIds.length === allSidingIds.length ||
+        pendingSidingIds.length === 0;
+
+    const isAllSidingsSelected =
+        filters.siding_ids.length === allSidingIds.length ||
+        filters.siding_ids.length === 0;
+
+    const hasPendingSidingChanges = useMemo(() => {
+        const appliedSet = new Set(
+            isAllSidingsSelected ? allSidingIds : filters.siding_ids,
+        );
+        const pendingSet = new Set(
+            isAllPendingSelected ? allSidingIds : pendingSidingIds,
+        );
+        if (appliedSet.size !== pendingSet.size) return true;
+        for (const id of appliedSet) {
+            if (!pendingSet.has(id)) return true;
+        }
+        return false;
+    }, [
+        filters.siding_ids,
+        pendingSidingIds,
+        allSidingIds,
+        isAllSidingsSelected,
+        isAllPendingSelected,
+    ]);
+
+    const applyFilters = useCallback(
+        (overrides: Record<string, unknown> = {}) => {
+            const params = buildDashboardGetParams({
+                overrides,
+                filters,
+                currentSection,
+                allSidingIds,
+                resolvedPeriod:
+                    (overrides.period as string | undefined) ?? period,
+                resolvedFrom:
+                    (overrides.from as string | undefined) ?? customFrom,
+                resolvedTo: (overrides.to as string | undefined) ?? customTo,
+            });
+
+            const dashboardPath =
+                dashboard().url.split('?')[0] || dashboard().url;
+            router.get(dashboardPath, params as Record<string, string>, {
+                preserveState: true,
+                preserveScroll: true,
+            });
+        },
+        [filters, customFrom, customTo, allSidingIds, currentSection, period],
+    );
+
+    const togglePendingSiding = useCallback(
+        (sidingId: number) => {
+            setPendingSidingIds((prev) => {
+                const current =
+                    prev.length === allSidingIds.length || prev.length === 0
+                        ? [...allSidingIds]
+                        : [...prev];
+                const idx = current.indexOf(sidingId);
+                if (idx >= 0) {
+                    current.splice(idx, 1);
+                } else {
+                    current.push(sidingId);
+                }
+                return current.length === 0 ? prev : current;
+            });
+        },
+        [allSidingIds],
+    );
+
+    const applySidingFilter = useCallback(() => {
+        applyFilters({
+            siding_ids: isAllPendingSelected ? allSidingIds : pendingSidingIds,
+        });
+        setShowSidingDropdown(false);
+    }, [pendingSidingIds, isAllPendingSelected, allSidingIds, applyFilters]);
+
+    const resetSidingFilter = useCallback(() => {
+        setPendingSidingIds(allSidingIds);
+        applyFilters({ siding_ids: allSidingIds });
+    }, [allSidingIds, applyFilters]);
+
+    const resetAllFilters = useCallback(() => {
+        setPeriod('month');
+        setCustomFrom(filters.from);
+        setCustomTo(filters.to);
+        setPendingSidingIds(allSidingIds);
+        setRakeNumberInput('');
+        applyFilters({
+            period: 'month',
+            siding_ids: allSidingIds,
+            power_plant: null,
+            rake_number: null,
+            loader_id: null,
+            loader_operator: null,
+            underload_threshold: 1,
+            shift: null,
+            penalty_type: null,
+            rake_penalty_scope: 'all',
+            daily_rake_date: '',
+            coal_transport_date: '',
+        });
+    }, [allSidingIds, applyFilters, filters.from, filters.to]);
+
+    const selectedSidingNames = useMemo(() => {
+        if (isAllSidingsSelected) return 'All sidings';
+        return sidings
+            .filter((s) => filters.siding_ids.includes(s.id))
+            .map((s) => s.name)
+            .join(', ');
+    }, [sidings, filters.siding_ids, isAllSidingsSelected]);
+
+    const content = (
+        <div
+            className={
+                inline
+                    ? 'flex flex-wrap items-center gap-2'
+                    : 'flex flex-wrap items-center gap-x-3 gap-y-2'
+            }
+        >
+            {!inline && (
+                <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-gray-600">
+                    <Filter className="size-3.5" />
+                    Filters
+                </span>
+            )}
+            {/* Period: dropdown when inline, pills when not */}
+            {inline ? (
+                <Select
+                    value={period}
+                    onValueChange={(v) => {
+                        if (v === 'custom') {
+                            setPeriod('custom');
+                            return;
+                        }
+                        setPeriod(v);
+                        applyFilters({ period: v });
+                    }}
+                >
+                    <SelectTrigger className="h-7 min-w-[128px] rounded-md border text-[11px]">
+                        <SelectValue placeholder="Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {PERIODS.map((p) => (
+                            <SelectItem
+                                key={p.key}
+                                value={p.key}
+                                className="text-xs"
+                            >
+                                {p.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            ) : (
+                <div className="flex flex-wrap items-center gap-1">
+                    {PERIODS.map((p) => (
+                        <button
+                            key={p.key}
+                            type="button"
+                            onClick={() => {
+                                if (p.key === 'custom') {
+                                    setPeriod('custom');
+                                    return;
+                                }
+                                setPeriod(p.key);
+                                applyFilters({ period: p.key });
+                            }}
+                            className={
+                                'rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ' +
+                                (period === p.key
+                                    ? 'bg-[#111827] text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
+                            }
+                        >
+                            {p.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+            {period === 'custom' && (
+                <>
+                    <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+                    <input
+                        type="date"
+                        value={customFrom}
+                        onChange={(e) => setCustomFrom(e.target.value)}
+                        className="h-7 w-28 rounded border bg-background px-2 text-[11px]"
+                    />
+                    <span className="text-[11px] text-muted-foreground">→</span>
+                    <input
+                        type="date"
+                        value={customTo}
+                        onChange={(e) => setCustomTo(e.target.value)}
+                        className="h-7 w-28 rounded border bg-background px-2 text-[11px]"
+                    />
+                    {!inline && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 shrink-0 px-2 text-[11px]"
+                            onClick={() =>
+                                applyFilters({
+                                    period: 'custom',
+                                    from: customFrom,
+                                    to: customTo,
+                                })
+                            }
+                        >
+                            Apply
+                        </Button>
+                    )}
+                </>
+            )}
+            <div
+                className={
+                    inline
+                        ? 'flex flex-wrap items-center gap-2'
+                        : 'ml-auto flex flex-wrap items-center gap-2'
+                }
+            >
+                {/* <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={resetAllFilters}
+                >
+                    Reset Test
+                </Button> */}
+                {sectionHasFilter('power_plant') && (
+                    <Select
+                        value={filters.power_plant ?? ALL_FILTER_VALUE}
+                        onValueChange={(v) =>
+                            applyFilters({
+                                power_plant: v === ALL_FILTER_VALUE ? null : v,
+                            })
+                        }
+                    >
+                        <SelectTrigger className="h-7 w-[120px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Plant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                value={ALL_FILTER_VALUE}
+                                className="text-xs"
+                            >
+                                All plants
+                            </SelectItem>
+                            {filterOptions.powerPlants.map((pp) => (
+                                <SelectItem
+                                    key={pp.value}
+                                    value={pp.value}
+                                    className="text-xs"
+                                >
+                                    {pp.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+                {sectionHasFilter('rake_number') && (
+                    <input
+                        type="text"
+                        placeholder="Rake #"
+                        value={rakeNumberInput}
+                        onChange={(e) => setRakeNumberInput(e.target.value)}
+                        onBlur={() =>
+                            applyFilters({
+                                rake_number: rakeNumberInput.trim() || null,
+                            })
+                        }
+                        onKeyDown={(e) =>
+                            e.key === 'Enter' &&
+                            applyFilters({
+                                rake_number: rakeNumberInput.trim() || null,
+                            })
+                        }
+                        className="h-7 w-20 rounded-md border bg-background px-2 text-[11px]"
+                    />
+                )}
+                {sectionHasFilter('loader_id') && (
+                    <Select
+                        value={
+                            filters.loader_id != null
+                                ? String(filters.loader_id)
+                                : ALL_FILTER_VALUE
+                        }
+                        onValueChange={(v) =>
+                            applyFilters({
+                                loader_id:
+                                    v === ALL_FILTER_VALUE ? null : Number(v),
+                                loader_operator: null,
+                            })
+                        }
+                    >
+                        <SelectTrigger className="h-7 w-[120px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Loader" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                value={ALL_FILTER_VALUE}
+                                className="text-xs"
+                            >
+                                All loaders
+                            </SelectItem>
+                            {filterOptions.loaders.map((l) => (
+                                <SelectItem
+                                    key={l.id}
+                                    value={String(l.id)}
+                                    className="text-xs"
+                                >
+                                    {l.name} ({l.siding_name})
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+                {sectionHasFilter('loader_operator') &&
+                    filters.loader_id != null && (
+                        <Select
+                            value={filters.loader_operator ?? ALL_FILTER_VALUE}
+                            onValueChange={(v) =>
+                                applyFilters({
+                                    loader_operator:
+                                        v === ALL_FILTER_VALUE ? null : v,
+                                })
+                            }
+                        >
+                            <SelectTrigger className="h-7 min-w-[140px] rounded-md border text-[11px]">
+                                <SelectValue placeholder="Operator" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    value={ALL_FILTER_VALUE}
+                                    className="text-xs"
+                                >
+                                    All operators
+                                </SelectItem>
+                                {(
+                                    filterOptions.loaderOperatorsByLoader?.[
+                                        String(filters.loader_id)
+                                    ] ?? []
+                                ).map((name) => (
+                                    <SelectItem
+                                        key={name}
+                                        value={name}
+                                        className="text-xs"
+                                    >
+                                        {name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                {sectionHasFilter('shift') && (
+                    <Select
+                        value={filters.shift ?? ALL_FILTER_VALUE}
+                        onValueChange={(v) =>
+                            applyFilters({
+                                shift: v === ALL_FILTER_VALUE ? null : v,
+                            })
+                        }
+                    >
+                        <SelectTrigger className="h-7 w-[72px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Shift" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                value={ALL_FILTER_VALUE}
+                                className="text-xs"
+                            >
+                                All
+                            </SelectItem>
+                            {filterOptions.shifts.map((s) => (
+                                <SelectItem
+                                    key={s.value}
+                                    value={s.value}
+                                    className="text-xs"
+                                >
+                                    {s.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+                {sectionHasFilter('penalty_type') && (
+                    <Select
+                        value={
+                            filters.penalty_type != null
+                                ? String(filters.penalty_type)
+                                : ALL_FILTER_VALUE
+                        }
+                        onValueChange={(v) =>
+                            applyFilters({
+                                penalty_type:
+                                    v === ALL_FILTER_VALUE ? null : Number(v),
+                            })
+                        }
+                    >
+                        <SelectTrigger className="h-7 w-[130px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Penalty type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                value={ALL_FILTER_VALUE}
+                                className="text-xs"
+                            >
+                                All types
+                            </SelectItem>
+                            {(filterOptions.penaltyTypes ?? []).map((pt) => (
+                                <SelectItem
+                                    key={pt.value}
+                                    value={pt.value}
+                                    className="text-xs"
+                                >
+                                    {pt.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setPendingSidingIds(
+                                isAllSidingsSelected
+                                    ? allSidingIds
+                                    : filters.siding_ids,
+                            );
+                            setShowSidingDropdown(!showSidingDropdown);
+                        }}
+                        className="flex h-7 min-w-0 items-center gap-1.5 rounded-md border bg-background px-2.5 text-[11px] font-medium transition-colors hover:bg-muted"
+                    >
+                        <span className="max-w-24 truncate">
+                            {selectedSidingNames}
+                        </span>
+                        <ChevronDown className="size-3 shrink-0 opacity-50" />
+                        {!isAllSidingsSelected && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    resetSidingFilter();
+                                }}
+                                className="rounded p-0.5 hover:bg-muted-foreground/20"
+                            >
+                                <X className="size-3" />
+                            </button>
+                        )}
+                    </button>
+                    {showSidingDropdown && (
+                        <>
+                            <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => setShowSidingDropdown(false)}
+                            />
+                            <div className="absolute top-full right-0 z-50 mt-1 w-52 rounded-lg border bg-card p-2 shadow-lg">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setPendingSidingIds(allSidingIds)
+                                    }
+                                    className={
+                                        'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[11px] transition-colors hover:bg-muted ' +
+                                        (isAllPendingSelected
+                                            ? 'font-semibold text-primary'
+                                            : 'text-muted-foreground')
+                                    }
+                                >
+                                    <div
+                                        className={
+                                            'flex size-3.5 items-center justify-center rounded border ' +
+                                            (isAllPendingSelected
+                                                ? 'border-primary bg-primary'
+                                                : 'border-muted-foreground/30')
+                                        }
+                                    >
+                                        {isAllPendingSelected && (
+                                            <span className="text-[8px] text-primary-foreground">
+                                                ✓
+                                            </span>
+                                        )}
+                                    </div>
+                                    All sidings
+                                </button>
+                                {sidings.map((s) => {
+                                    const isSelected =
+                                        isAllPendingSelected ||
+                                        pendingSidingIds.includes(s.id);
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            onClick={() =>
+                                                togglePendingSiding(s.id)
+                                            }
+                                            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[11px] transition-colors hover:bg-muted"
+                                        >
+                                            <div
+                                                className={
+                                                    'flex size-3.5 items-center justify-center rounded border ' +
+                                                    (isSelected
+                                                        ? 'border-primary bg-primary'
+                                                        : 'border-muted-foreground/30')
+                                                }
+                                            >
+                                                {isSelected && (
+                                                    <span className="text-[8px] text-primary-foreground">
+                                                        ✓
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="truncate">
+                                                {s.name}
+                                            </span>
+                                            <span className="ml-auto shrink-0 text-muted-foreground">
+                                                {s.code}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                                <div className="mt-1.5 border-t pt-1.5">
+                                    <Button
+                                        size="sm"
+                                        className="h-7 w-full text-[11px]"
+                                        disabled={!hasPendingSidingChanges}
+                                        onClick={applySidingFilter}
+                                    >
+                                        Apply
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+                {inline && (
+                    <Button
+                        size="sm"
+                        className="h-7 shrink-0 rounded-md text-[11px]"
+                        onClick={() => {
+                            applyFilters();
+                            onClose?.();
+                        }}
+                    >
+                        Apply
+                    </Button>
+                )}
+            </div>
+        </div>
+    );
+
+    if (inline) {
+        return content;
+    }
+    return (
+        <div className="dashboard-card rounded-xl border-0 p-3">
+            {content}
+            {filters.period !== 'custom' && (
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    Showing data from {filters.from} to {filters.to}
+                </p>
+            )}
+        </div>
+    );
 }
 
 export default function Dashboard() {
-    const { auth, features } = usePage<SharedData>().props;
-    const props = usePage<SharedData & DashboardProps>().props;
+    const page = usePage<DashboardProps>();
+    const props = page.props;
+    const pageUrl = page.url;
+    const userId = props.auth?.user?.id as number | undefined;
 
-    const f = features ?? {};
-    const showPdfExport = f.profile_pdf_export ?? false;
-    const showApiDocs = f.scramble_api_docs ?? false;
-    const showContact = f.contact ?? false;
-    const isSuperAdmin = auth.roles?.includes('super-admin') ?? false;
-    const canAccessAdmin =
-        (auth.permissions?.includes('access admin panel') ?? false) ||
-        auth.can_bypass === true;
+    const canWidget = useCallback(
+        (name: string) => {
+            if (props.auth?.can_bypass) {
+                return true;
+            }
+            const allowed = props.allowedDashboardWidgets;
+            if (allowed === undefined) {
+                return true;
+            }
 
-    const weeklyStats: WeeklyStat[] = props.weeklyStats ?? [];
+            return new Set(allowed).has(name);
+        },
+        [props.auth?.can_bypass, props.allowedDashboardWidgets],
+    );
+
+    const visibleSections = useMemo(
+        () =>
+            DASHBOARD_SECTIONS.filter((s) =>
+                dashboardSectionVisible(s.id, canWidget),
+            ),
+        [canWidget],
+    );
+
+    const executiveYesterdayTableAllowed = useMemo(
+        () => EXEC_TABLE_WIDGETS.some((n) => canWidget(n)),
+        [canWidget],
+    );
+    const executiveYesterdayChartsAllowed = useMemo(
+        () => EXEC_CHART_WIDGETS.some((n) => canWidget(n)),
+        [canWidget],
+    );
+    const showExecutiveYesterdayViewToggle =
+        executiveYesterdayTableAllowed && executiveYesterdayChartsAllowed;
+
+    const [activeSection, setActiveSection] = useState<string>(() => {
+        const allowedList = props.allowedDashboardWidgets;
+        const can = (name: string) =>
+            props.auth?.can_bypass === true ||
+            allowedList === undefined ||
+            new Set(allowedList).has(name);
+        const fromUrl = props.section ?? DEFAULT_DASHBOARD_SECTION;
+        const firstPermitted = DASHBOARD_SECTIONS.find((s) =>
+            dashboardSectionVisible(s.id, can),
+        )?.id;
+        const fromUrlOk =
+            DASHBOARD_SECTIONS.some((sec) => sec.id === fromUrl) &&
+            dashboardSectionVisible(
+                fromUrl as (typeof DASHBOARD_SECTIONS)[number]['id'],
+                can,
+            );
+        if (fromUrlOk) {
+            return fromUrl;
+        }
+
+        return firstPermitted ?? DEFAULT_DASHBOARD_SECTION;
+    });
+    const [executiveYesterdayViewMode, setExecutiveYesterdayViewMode] =
+        useState<'table' | 'charts'>(() => {
+            const allowedList = props.allowedDashboardWidgets;
+            const can = (name: string) =>
+                props.auth?.can_bypass === true ||
+                allowedList === undefined ||
+                new Set(allowedList).has(name);
+            const table = EXEC_TABLE_WIDGETS.some((n) => can(n));
+            const charts = EXEC_CHART_WIDGETS.some((n) => can(n));
+            if (table && !charts) {
+                return 'table';
+            }
+            if (!table && charts) {
+                return 'charts';
+            }
+
+            return 'charts';
+        });
+    const [alertsOpen, setAlertsOpen] = useState(false);
+    const [notifications, setNotifications] = useState(
+        props.notifications ?? [],
+    );
+    const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(
+        props.notificationsUnreadCount ?? 0,
+    );
+    const [filtersExpanded, setFiltersExpanded] = useState(false);
+    const sidings = props.sidings ?? [];
+    const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
+    const [stockOverrides, setStockOverrides] = useState<
+        Record<number, number>
+    >({});
+    useSidingStockBroadcast(allSidingIds, (sidingId, closingBalanceMt) => {
+        setStockOverrides((prev) => ({
+            ...prev,
+            [sidingId]: closingBalanceMt,
+        }));
+    });
+
+    useEffect(() => {
+        if (!userId || typeof window === 'undefined' || !window.Echo) return;
+        const channelName = `App.Models.User.${userId}`;
+        const channel = window.Echo.private(channelName);
+
+        channel.notification((notification: any) => {
+            setNotificationsUnreadCount((c) => c + 1);
+            setNotifications((prev) =>
+                [
+                    {
+                        id: notification.id ?? crypto.randomUUID(),
+                        type: notification.type ?? 'notification',
+                        data: notification,
+                        read_at: null,
+                        created_at: new Date().toISOString(),
+                    },
+                    ...prev,
+                ].slice(0, 20),
+            );
+        });
+
+        return () => {
+            window.Echo?.leaveChannel(channelName);
+        };
+    }, [userId]);
+
+    useEffect(() => {
+        if (visibleSections.length === 0) {
+            return;
+        }
+        if (!visibleSections.some((s) => s.id === activeSection)) {
+            setActiveSection(visibleSections[0].id);
+        }
+    }, [visibleSections, activeSection]);
+
+    useEffect(() => {
+        if (
+            executiveYesterdayTableAllowed &&
+            !executiveYesterdayChartsAllowed
+        ) {
+            setExecutiveYesterdayViewMode('table');
+        } else if (
+            !executiveYesterdayTableAllowed &&
+            executiveYesterdayChartsAllowed
+        ) {
+            setExecutiveYesterdayViewMode('charts');
+        }
+    }, [executiveYesterdayTableAllowed, executiveYesterdayChartsAllowed]);
+
+    const csrfToken = useMemo(() => {
+        if (typeof document === 'undefined') return null;
+        return (
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') ?? null
+        );
+    }, []);
+
+    const markAllNotificationsRead = useCallback(async () => {
+        if (!csrfToken) return;
+        await fetch('/notifications/read-all', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+        });
+        setNotificationsUnreadCount(0);
+        setNotifications((prev) =>
+            prev.map((n) =>
+                n.read_at ? n : { ...n, read_at: new Date().toISOString() },
+            ),
+        );
+    }, [csrfToken]);
+
+    const markOneNotificationRead = useCallback(
+        async (id: string) => {
+            if (!csrfToken) return;
+            await fetch(`/notifications/${encodeURIComponent(id)}/read`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            });
+            setNotificationsUnreadCount((c) => Math.max(0, c - 1));
+            setNotifications((prev) =>
+                prev.map((n) =>
+                    n.id === id
+                        ? {
+                              ...n,
+                              read_at: n.read_at ?? new Date().toISOString(),
+                          }
+                        : n,
+                ),
+            );
+        },
+        [csrfToken],
+    );
+    const defaultFilters: DashboardFilters = {
+        period: 'month',
+        from: '',
+        to: '',
+        siding_ids: [],
+        power_plant: null,
+        rake_number: null,
+        loader_id: null,
+        loader_operator: null,
+        underload_threshold: 1,
+        shift: null,
+        penalty_type: null,
+        rake_penalty_scope: 'all',
+        daily_rake_date: undefined,
+        coal_transport_date: undefined,
+    };
+    const filters: DashboardFilters = {
+        ...defaultFilters,
+        ...(props.filters ?? {}),
+        power_plant: props.filters?.power_plant ?? null,
+        rake_number: props.filters?.rake_number ?? null,
+        loader_id: props.filters?.loader_id ?? null,
+        loader_operator: props.filters?.loader_operator ?? null,
+        underload_threshold:
+            props.filters?.underload_threshold != null &&
+            !Number.isNaN(Number(props.filters.underload_threshold))
+                ? Number(props.filters.underload_threshold)
+                : 1,
+        shift: props.filters?.shift ?? null,
+        penalty_type: props.filters?.penalty_type ?? null,
+        rake_penalty_scope:
+            props.filters?.rake_penalty_scope === 'with_penalties'
+                ? 'with_penalties'
+                : 'all',
+    };
+    const visibleSectionIds = useMemo(
+        () => new Set(visibleSections.map((s) => s.id)),
+        [visibleSections],
+    );
+
+    const emptyBundleSections = useMemo(
+        () => new Set<string>(['rake-performance', 'loader-overload']),
+        [],
+    );
+
+    const buildSectionDataUrl = useCallback(
+        (section: string) => {
+            const params = buildDashboardGetParams({
+                overrides: { section },
+                filters,
+                currentSection: section,
+                allSidingIds,
+                resolvedPeriod: filters.period,
+                resolvedFrom: filters.from,
+                resolvedTo: filters.to,
+            });
+            const u = new URLSearchParams();
+            for (const [k, v] of Object.entries(params)) {
+                if (v === undefined || v === null) {
+                    continue;
+                }
+                u.set(k, String(v));
+            }
+            const base =
+                dashboard().url.split('?')[0] || dashboard().url;
+            return `${base.replace(/\/$/, '')}/section-data?${u.toString()}`;
+        },
+        [filters, allSidingIds],
+    );
+
+    const filterSignature = useMemo(
+        () =>
+            JSON.stringify({
+                period: filters.period,
+                from: filters.from,
+                to: filters.to,
+                siding_ids: filters.siding_ids,
+                power_plant: filters.power_plant,
+                rake_number: filters.rake_number,
+                loader_id: filters.loader_id,
+                loader_operator: filters.loader_operator,
+                underload_threshold: filters.underload_threshold,
+                shift: filters.shift,
+                penalty_type: filters.penalty_type,
+                rake_penalty_scope: filters.rake_penalty_scope,
+                daily_rake_date: filters.daily_rake_date,
+                coal_transport_date: filters.coal_transport_date,
+                url: pageUrl,
+            }),
+        [filters, pageUrl],
+    );
+
+    const { sectionDeferredPatch, isSectionLoading } =
+        useDashboardSectionPayload({
+            activeSection,
+            serverSection: props.section ?? DEFAULT_DASHBOARD_SECTION,
+            visibleSectionIds,
+            filterSignature,
+            buildSectionDataUrl,
+            emptyBundleSections,
+        });
+
+    const dataProps = useMemo(
+        () => ({ ...props, ...(sectionDeferredPatch ?? {}) }),
+        [props, sectionDeferredPatch],
+    );
+
+    const periodLabel = useMemo(() => {
+        switch (filters.period) {
+            case 'yesterday':
+                return 'yesterday';
+            case 'today':
+                return 'today';
+            case 'week':
+                return 'this week';
+            case 'last_week':
+                return 'last week';
+            case 'month':
+                return 'this month';
+            case 'last_month':
+                return 'last month';
+            case 'custom':
+                return 'selected period';
+            default:
+                return 'this month';
+        }
+    }, [filters.period, filters.from, filters.to]);
+
+    const formatDate = useCallback((value: string | undefined | null) => {
+        if (!value) {
+            return '';
+        }
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) {
+            return value;
+        }
+        return d.toLocaleDateString(undefined, {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+    }, []);
+
+    const mainDateRangeLabel = useMemo(() => {
+        const from = formatDate(filters.from);
+        const to = formatDate(filters.to);
+        if (!from || !to) {
+            return '';
+        }
+        if (from === to) {
+            return `Data for ${from}`;
+        }
+        return `Data from ${from} to ${to}`;
+    }, [filters.from, filters.to, formatDate]);
+
+    // When period is not custom, URL must not contain from/to or backend can receive stale range from shared links or history.
+    const dashboardPath = useMemo(
+        () => dashboard().url.split('?')[0] || dashboard().url,
+        [],
+    );
+    useEffect(() => {
+        if (sidings.length === 0 || filters.period === 'custom') return;
+        const search =
+            typeof window !== 'undefined' ? window.location.search : '';
+        if (!search || (!search.includes('from=') && !search.includes('to=')))
+            return;
+        const params: Record<string, string | number | number[] | null> = {
+            period: filters.period,
+        };
+        if (
+            filters.siding_ids.length > 0 &&
+            filters.siding_ids.length < sidings.length
+        ) {
+            params.siding_ids = filters.siding_ids;
+        }
+        if (filters.power_plant) params.power_plant = filters.power_plant;
+        if (filters.rake_number) params.rake_number = filters.rake_number;
+        if (filters.loader_id) params.loader_id = filters.loader_id;
+        if (filters.loader_operator)
+            params.loader_operator = filters.loader_operator;
+        if (filters.shift) params.shift = filters.shift;
+        if (filters.penalty_type != null)
+            params.penalty_type = filters.penalty_type;
+        if (filters.rake_penalty_scope === 'with_penalties') {
+            params.rake_penalty_scope = 'with_penalties';
+        }
+        router.get(dashboardPath, params as Record<string, string>, {
+            replace: true,
+            preserveState: false,
+        });
+    }, [
+        dashboardPath,
+        filters.period,
+        filters.siding_ids,
+        filters.power_plant,
+        filters.rake_number,
+        filters.loader_id,
+        filters.loader_operator,
+        filters.shift,
+        filters.penalty_type,
+        filters.rake_penalty_scope,
+        sidings.length,
+    ]);
+
+    const applyDailyRakeDate = useCallback(
+        (date: string) => {
+            const params: Record<string, unknown> = {
+                period: filters.period,
+                section: activeSection,
+            };
+            if (date !== '') params.daily_rake_date = date;
+            if (
+                filters.siding_ids.length > 0 &&
+                filters.siding_ids.length < allSidingIds.length
+            ) {
+                params.siding_ids = filters.siding_ids;
+            }
+            if (filters.power_plant) params.power_plant = filters.power_plant;
+            if (filters.rake_number) params.rake_number = filters.rake_number;
+            if (filters.loader_id) params.loader_id = filters.loader_id;
+            if (filters.loader_operator)
+                params.loader_operator = filters.loader_operator;
+            if (filters.shift) params.shift = filters.shift;
+            if (filters.penalty_type != null)
+                params.penalty_type = filters.penalty_type;
+            if (filters.rake_penalty_scope === 'with_penalties') {
+                params.rake_penalty_scope = 'with_penalties';
+            }
+            router.get(dashboardPath, params as Record<string, string>, {
+                preserveState: true,
+                preserveScroll: true,
+            });
+        },
+        [dashboardPath, filters, activeSection, allSidingIds.length],
+    );
+
+    const applyCoalTransportDate = useCallback(
+        (date: string) => {
+            const params: Record<string, unknown> = {
+                period: filters.period,
+                section: activeSection,
+            };
+            if (date !== '') params.coal_transport_date = date;
+            if (
+                filters.siding_ids.length > 0 &&
+                filters.siding_ids.length < allSidingIds.length
+            ) {
+                params.siding_ids = filters.siding_ids;
+            }
+            if (filters.power_plant) params.power_plant = filters.power_plant;
+            if (filters.rake_number) params.rake_number = filters.rake_number;
+            if (filters.loader_id) params.loader_id = filters.loader_id;
+            if (filters.loader_operator)
+                params.loader_operator = filters.loader_operator;
+            if (filters.shift) params.shift = filters.shift;
+            if (filters.penalty_type != null)
+                params.penalty_type = filters.penalty_type;
+            if (filters.rake_penalty_scope === 'with_penalties') {
+                params.rake_penalty_scope = 'with_penalties';
+            }
+            if (filters.daily_rake_date)
+                params.daily_rake_date = filters.daily_rake_date;
+            router.get(dashboardPath, params as Record<string, string>, {
+                preserveState: true,
+                preserveScroll: true,
+            });
+        },
+        [dashboardPath, filters, activeSection, allSidingIds.length],
+    );
+
+    const filterOptions = dataProps.filterOptions ?? {
+        powerPlants: [],
+        loaders: [],
+        shifts: [],
+        penaltyTypes: [],
+        loaderOperatorsByLoader: {},
+    };
+    const kpis = dataProps.kpis;
+    const penaltyTrendDaily = dataProps.penaltyTrendDaily ?? {
+        series: [],
+        points: [],
+    };
+    const penaltyByType = dataProps.penaltyByType ?? [];
+    const penaltyControlRrCoverage = dataProps.penaltyControlRrCoverage;
+    const penaltyBySiding = dataProps.penaltyBySiding ?? [];
+    const liveRakeStatus = dataProps.liveRakeStatus ?? [];
+    const dailyRakeDetails = dataProps.dailyRakeDetails;
+    const coalTransportReport = dataProps.coalTransportReport;
+    const truckReceiptTrend = dataProps.truckReceiptTrend ?? [];
+    const shiftWiseVehicleReceipt = dataProps.shiftWiseVehicleReceipt ?? [];
+    const stockGauge = dataProps.stockGauge;
+    const baseSidingStocks = dataProps.sidingStocks ?? {};
+    const operatorRake = dataProps.operatorRake ?? null;
+    const penaltyPredictions = dataProps.penaltyPredictions ?? [];
+    const allowedWidgets = dataProps.allowedDashboardWidgets ?? [];
+    const isExecutive = allowedWidgets.some((w) =>
+        [
+            'penalty_exposure_command',
+            'rake_pipeline_command',
+            'siding_risk_score',
+        ].includes(w),
+    );
+    const sidingStocks = useMemo(() => {
+        if (Object.keys(stockOverrides).length === 0) return baseSidingStocks;
+        const merged: Record<number, SidingStock> = {};
+        for (const [idStr, st] of Object.entries(baseSidingStocks)) {
+            const id = Number(idStr);
+            merged[id] = {
+                ...st,
+                closing_balance_mt: stockOverrides[id] ?? st.closing_balance_mt,
+            };
+        }
+        for (const id of Object.keys(stockOverrides).map(Number)) {
+            if (!(id in merged)) {
+                merged[id] = {
+                    siding_id: id,
+                    opening_balance_mt: 0,
+                    closing_balance_mt: stockOverrides[id],
+                    total_rakes: 0,
+                    received_mt: 0,
+                    dispatched_mt: 0,
+                    last_receipt_at: null,
+                    last_dispatch_at: null,
+                    e_demand_raised: 0,
+                };
+            }
+        }
+        return merged;
+    }, [baseSidingStocks, stockOverrides]);
+    const sidingPerformance = dataProps.sidingPerformance ?? [];
+    const sidingWiseMonthly = dataProps.sidingWiseMonthly ?? [];
+    const sidingRadar = dataProps.sidingRadar ?? { sidings: [] };
+    const dispatchSummaryByPeriod = dataProps.dispatchSummaryByPeriod;
+    const loaderOverloadFilterKey = useMemo(
+        () =>
+            JSON.stringify({
+                period: filters.period,
+                from: filters.from,
+                to: filters.to,
+                siding_ids: filters.siding_ids,
+                power_plant: filters.power_plant,
+                rake_number: filters.rake_number,
+                loader_id: filters.loader_id,
+                loader_operator: filters.loader_operator,
+                underload_threshold: filters.underload_threshold,
+                shift: filters.shift,
+                penalty_type: filters.penalty_type,
+                rake_penalty_scope: filters.rake_penalty_scope,
+            }),
+        [
+            filters.period,
+            filters.from,
+            filters.to,
+            filters.siding_ids,
+            filters.power_plant,
+            filters.rake_number,
+            filters.loader_id,
+            filters.loader_operator,
+            filters.underload_threshold,
+            filters.shift,
+            filters.penalty_type,
+            filters.rake_penalty_scope,
+        ],
+    );
+
+    const buildLoaderOverloadApiParams = useCallback(
+        (args: { page?: number; perPage?: number }) =>
+            buildLoaderOverloadApiSearchParams({
+                filters,
+                allSidingIds,
+                page: args.page,
+                perPage: args.perPage,
+            }),
+        [filters, allSidingIds],
+    );
+
+    const navigateDashboard = useCallback(
+        (overrides: Record<string, unknown> = {}) => {
+            const params = buildDashboardGetParams({
+                overrides,
+                filters,
+                currentSection: activeSection,
+                allSidingIds,
+                resolvedPeriod:
+                    (overrides.period as string | undefined) ?? filters.period,
+                resolvedFrom:
+                    (overrides.from as string | undefined) ?? filters.from,
+                resolvedTo: (overrides.to as string | undefined) ?? filters.to,
+            });
+            const dashboardPath =
+                dashboard().url.split('?')[0] || dashboard().url;
+            router.get(dashboardPath, params as Record<string, string>, {
+                preserveState: true,
+                preserveScroll: true,
+            });
+        },
+        [filters, activeSection, allSidingIds],
+    );
+
+    const onRakePenaltyScopeChange = useCallback(
+        (scope: 'all' | 'with_penalties') => {
+            navigateDashboard({ rake_penalty_scope: scope });
+        },
+        [navigateDashboard],
+    );
+
+    const powerPlantDispatch = dataProps.powerPlantDispatch ?? [];
+    const executiveYesterday = dataProps.executiveYesterday;
+
+    const executiveOverviewExportHref = useMemo((): string | null => {
+        const roles = props.auth?.roles ?? [];
+        const isSuperAdmin =
+            roles.includes('super-admin') || roles.includes('super_admin');
+        if (
+            !isSuperAdmin ||
+            !executiveYesterday ||
+            !executiveYesterdayTableAllowed
+        ) {
+            return null;
+        }
+        const cr = executiveYesterday.customRanges;
+        const params = buildDashboardGetParams({
+            overrides: {
+                section: 'executive-overview',
+                executive_yesterday_date: executiveYesterday.anchorDate,
+                executive_road_from: cr.roadDispatch.from,
+                executive_road_to: cr.roadDispatch.to,
+                executive_rail_from: cr.railDispatch.from,
+                executive_rail_to: cr.railDispatch.to,
+                executive_ob_from: cr.obProduction.from,
+                executive_ob_to: cr.obProduction.to,
+                executive_coal_from: cr.coalProduction.from,
+                executive_coal_to: cr.coalProduction.to,
+            },
+            filters,
+            currentSection: 'executive-overview',
+            allSidingIds,
+            resolvedPeriod: filters.period,
+            resolvedFrom: filters.from,
+            resolvedTo: filters.to,
+        });
+
+        const qs = new URLSearchParams();
+        for (const [key, value] of Object.entries(params)) {
+            if (value === undefined || value === null) {
+                continue;
+            }
+            qs.set(key, String(value));
+        }
+
+        const dashPath =
+            dashboard().url.split('?')[0] || dashboard().url;
+        const base = `${dashPath.replace(/\/$/, '')}/executive-overview/export`;
+
+        return `${base}?${qs.toString()}`;
+    }, [
+        props.auth?.roles,
+        executiveYesterday,
+        executiveYesterdayTableAllowed,
+        filters,
+        allSidingIds,
+    ]);
+
+    const filteredSidings = useMemo(() => {
+        if (
+            filters.siding_ids.length === 0 ||
+            filters.siding_ids.length === sidings.length
+        ) {
+            return sidings;
+        }
+        const idSet = new Set(filters.siding_ids);
+        return sidings.filter((s) => idSet.has(s.id));
+    }, [sidings, filters.siding_ids]);
+
+    const hasActiveFilters = useMemo(() => {
+        if (filters.period !== 'month') return true;
+        if (filters.power_plant) return true;
+        if (filters.rake_number?.trim()) return true;
+        if (filters.loader_id != null) return true;
+        if (filters.loader_operator) return true;
+        if (filters.shift) return true;
+        if (filters.penalty_type != null) return true;
+        if (filters.rake_penalty_scope === 'with_penalties') return true;
+        if (
+            sidings.length > 0 &&
+            filters.siding_ids.length > 0 &&
+            filters.siding_ids.length < sidings.length
+        )
+            return true;
+        return false;
+    }, [
+        filters.period,
+        filters.power_plant,
+        filters.rake_number,
+        filters.loader_id,
+        filters.loader_operator,
+        filters.shift,
+        filters.penalty_type,
+        filters.rake_penalty_scope,
+        filters.siding_ids.length,
+        sidings.length,
+    ]);
+
+    const activeFilterCount = useMemo(() => {
+        let n = 0;
+        if (filters.period !== 'month') n += 1;
+        if (filters.power_plant) n += 1;
+        if (filters.rake_number?.trim()) n += 1;
+        if (filters.loader_id != null) n += 1;
+        if (filters.loader_operator) n += 1;
+        if (filters.shift) n += 1;
+        if (filters.penalty_type != null) n += 1;
+        if (filters.rake_penalty_scope === 'with_penalties') n += 1;
+        if (
+            sidings.length > 0 &&
+            filters.siding_ids.length > 0 &&
+            filters.siding_ids.length < sidings.length
+        )
+            n += 1;
+        return n;
+    }, [
+        filters.period,
+        filters.power_plant,
+        filters.rake_number,
+        filters.loader_id,
+        filters.loader_operator,
+        filters.shift,
+        filters.penalty_type,
+        filters.rake_penalty_scope,
+        filters.siding_ids.length,
+        sidings.length,
+    ]);
+
+    const navigateToLoaderTrends = useCallback(
+        (loaderId: number, rakeUnderloadThresholdPercent?: number) => {
+            const dashboardPath =
+                dashboard().url.split('?')[0] || dashboard().url;
+            // New tab URL is built from scratch; omit loader_operator so drill-down is not scoped to a prior operator filter.
+            const params: Record<string, unknown> = {
+                period: filters.period,
+                section: 'loader-overload',
+                loader_id: loaderId,
+            };
+            if (filters.period === 'custom') {
+                params.from = filters.from;
+                params.to = filters.to;
+            }
+            if (
+                filters.siding_ids.length > 0 &&
+                filters.siding_ids.length < sidings.length
+            ) {
+                params.siding_ids = filters.siding_ids.join(',');
+            }
+            if (filters.power_plant) {
+                params.power_plant = filters.power_plant;
+            }
+            if (filters.rake_number) {
+                params.rake_number = filters.rake_number;
+            }
+            if (filters.shift) {
+                params.shift = filters.shift;
+            }
+            if (filters.penalty_type != null) {
+                params.penalty_type = filters.penalty_type;
+            }
+            if (filters.rake_penalty_scope === 'with_penalties') {
+                params.rake_penalty_scope = filters.rake_penalty_scope;
+            }
+            if (filters.daily_rake_date) {
+                params.daily_rake_date = filters.daily_rake_date;
+            }
+            if (filters.coal_transport_date) {
+                params.coal_transport_date = filters.coal_transport_date;
+            }
+            const effectiveUnderloadThreshold =
+                rakeUnderloadThresholdPercent !== undefined
+                    ? Math.max(0, Math.min(100, rakeUnderloadThresholdPercent))
+                    : filters.underload_threshold;
+            if (
+                effectiveUnderloadThreshold != null &&
+                !Number.isNaN(effectiveUnderloadThreshold) &&
+                effectiveUnderloadThreshold !== 1
+            ) {
+                params.underload_threshold = effectiveUnderloadThreshold;
+            }
+            if (typeof window === 'undefined') {
+                return;
+            }
+            const url = new URL(dashboardPath, window.location.origin);
+            for (const [key, value] of Object.entries(params)) {
+                if (value === undefined || value === null || value === '') {
+                    continue;
+                }
+                url.searchParams.set(key, String(value));
+            }
+            window.open(url.toString(), '_blank', 'noopener,noreferrer');
+        },
+        [filters, sidings.length],
+    );
+
+    const sidingStackKeys = useMemo(
+        () => filteredSidings.map((s) => s.name),
+        [filteredSidings],
+    );
+
+    const kpiCards =
+        sidings.length > 0 &&
+        kpis &&
+        canWidget('dashboard.widgets.global_kpi_sidebar')
+            ? [
+                  {
+                      label: `Rakes dispatched ${periodLabel}`,
+                      value: String(kpis.rakesDispatchedToday),
+                      borderColor: '#3B82F6',
+                      Icon: Train,
+                  },
+                  {
+                      label: `Coal dispatched ${periodLabel}`,
+                      value: formatWeight(kpis.coalDispatchedToday),
+                      borderColor: '#10B981',
+                      Icon: Flame,
+                  },
+                  {
+                      label: `Penalty ${periodLabel}`,
+                      value: formatCurrency(kpis.totalPenaltyThisMonth),
+                      borderColor: '#EF4444',
+                      Icon: AlertTriangle,
+                  },
+                  // Temporarily hidden per client request:
+                  // { label: 'Predicted penalty risk', value: formatCurrency(kpis.predictedPenaltyRisk), borderColor: '#F59E0B', Icon: TrendingUp },
+                  // { label: `Avg loading time (${periodLabel})`, value: kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—', borderColor: '#8B5CF6', Icon: Clock },
+                  // { label: `Trucks received ${periodLabel}`, value: String(kpis.trucksReceivedToday), borderColor: '#14B8A6', Icon: Truck },
+              ]
+            : [];
+
+    const canExportCoalTransport = useMemo(() => {
+        if (props.auth?.can_bypass) {
+            return true;
+        }
+        if (
+            props.auth?.permissions?.includes(
+                'sections.mines_dispatch_data.view',
+            )
+        ) {
+            return true;
+        }
+
+        return canWidget('dashboard.widgets.operations_coal_transport');
+    }, [props.auth?.can_bypass, props.auth?.permissions, canWidget]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-xl font-mono font-semibold tracking-tight">
-                        {getGreeting()}, {auth.user.name}
-                    </h2>
-                    {showApiDocs && (
-                        <Button variant="outline" size="sm" asChild>
-                            <a
-                                href="/docs/api"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                API documentation
-                            </a>
-                        </Button>
-                    )}
-                </div>
+            {/* AppSidebarLayout adds p-4/sm:p-6/lg:p-8 around pages; cancel it for dashboard full-bleed layout. */}
+            <div className="-m-4 sm:-m-6 lg:-m-8">
+                <div className="dashboard-page flex h-full flex-1 flex-col overflow-x-auto">
+                    {/* ── Header ── */}
+                    <div className="sticky top-0 z-10 flex flex-col border-b bg-background">
+                        {/* Title row */}
+                        <div className="flex items-center justify-between px-4 py-3 lg:px-6">
+                            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                                Management Dashboard
+                            </h2>
+                            <div className="flex items-center gap-2">
+                                {activeSection !== 'executive-overview' && (
+                                    <div className="flex items-center gap-2">
+                                        {mainDateRangeLabel && (
+                                            <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-400">
+                                                {mainDateRangeLabel} (
+                                                {periodLabel})
+                                            </span>
+                                        )}
+                                        {hasActiveFilters &&
+                                            !filtersExpanded && (
+                                                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                                    {activeFilterCount} filter
+                                                    {activeFilterCount !== 1
+                                                        ? 's'
+                                                        : ''}{' '}
+                                                    applied
+                                                </span>
+                                            )}
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                                setFiltersExpanded((v) => !v)
+                                            }
+                                        >
+                                            <Filter className="size-4 shrink-0" />
+                                            <span className="ml-1.5">
+                                                Filters
+                                            </span>
+                                            {hasActiveFilters && (
+                                                <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-foreground">
+                                                    {activeFilterCount > 9
+                                                        ? '9+'
+                                                        : activeFilterCount}
+                                                </span>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                const basePath =
+                                                    dashboard().url.split(
+                                                        '?',
+                                                    )[0] || dashboard().url;
+                                                router.get(
+                                                    basePath,
+                                                    { section: activeSection },
+                                                    {
+                                                        preserveState: false,
+                                                        preserveScroll: true,
+                                                    },
+                                                );
+                                            }}
+                                        >
+                                            Reset
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                {isSuperAdmin ? (
-                    <SuperAdminDashboard
-                        usersCount={props.usersCount}
-                        orgsCount={props.orgsCount}
-                        contactSubmissionsCount={props.contactSubmissionsCount}
-                        weeklyStats={weeklyStats}
-                        recentActivity={props.recentActivity ?? []}
-                        showContact={showContact}
-                        usersGrowthPercent={props.usersGrowthPercent}
-                        orgsGrowthPercent={props.orgsGrowthPercent}
-                    />
-                ) : (
-                    <UserDashboard
-                        showPdfExport={showPdfExport}
-                        showContact={showContact}
-                        canAccessAdmin={canAccessAdmin}
-                        weeklyStats={weeklyStats}
-                    />
-                )}
+                        {/* Section nav row */}
+                        <div className="flex flex-wrap gap-1 border-t bg-muted/30 px-4 lg:px-6">
+                            {visibleSections.length === 0 ? (
+                                <span className="px-1 py-2 text-xs text-muted-foreground">
+                                    No dashboard sections enabled for your role.
+                                </span>
+                            ) : (
+                                visibleSections.map((s) => (
+                                    <button
+                                        key={s.id}
+                                        type="button"
+                                        aria-current={
+                                            s.id === activeSection
+                                                ? 'page'
+                                                : undefined
+                                        }
+                                        onClick={() => setActiveSection(s.id)}
+                                        className={
+                                            s.id === activeSection
+                                                ? 'cursor-pointer border-b-2 border-emerald-700 px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:outline-none dark:border-emerald-400'
+                                                : 'cursor-pointer border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:outline-none'
+                                        }
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Inline filters bar (non-executive sections) */}
+                        {filtersExpanded && sidings.length > 0 && (
+                            <div className="border-t bg-muted/30 px-4 pt-3 pb-3 lg:px-6">
+                                <DashboardFiltersBar
+                                    sidings={sidings}
+                                    filters={filters}
+                                    filterOptions={filterOptions}
+                                    currentSection={activeSection}
+                                    inline
+                                    onClose={() => setFiltersExpanded(false)}
+                                />
+                            </div>
+                        )}
+                    </div>
+                    {/* ── End Dark Header ── */}
+
+                    <div className="flex min-w-0 flex-1 gap-3 bg-[#F4F5F7] p-4 lg:p-5">
+                        <div className="min-w-0 flex-1 space-y-6">
+                            {sidings.length === 0 ? (
+                                <div className="dashboard-card rounded-xl border-0 p-8 text-center text-sm text-gray-600">
+                                    <p>
+                                        No sidings assigned to your account.
+                                        Contact your administrator to get
+                                        access.
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="min-w-0 space-y-6">
+                                        {activeSection ===
+                                            'executive-overview' &&
+                                            (isSectionLoading ? (
+                                                <div className="space-y-4">
+                                                    <Skeleton className="h-56 w-full rounded-xl md:h-72" />
+                                                    <Skeleton className="h-40 w-full rounded-xl" />
+                                                </div>
+                                            ) : (
+                                            <ExecutiveOverview
+                                                isExecutive={isExecutive}
+                                                operatorRake={operatorRake}
+                                                penaltyPredictions={
+                                                    penaltyPredictions
+                                                }
+                                                filteredSidings={
+                                                    filteredSidings
+                                                }
+                                                sidingStocks={sidingStocks}
+                                                canWidget={canWidget}
+                                                dispatchSummaryByPeriod={
+                                                    dispatchSummaryByPeriod
+                                                }
+                                                executiveYesterday={
+                                                    executiveYesterday
+                                                }
+                                                executiveYesterdaySection={
+                                                    executiveYesterday ? (
+                                                        <ExecutiveYesterdaySection
+                                                            data={
+                                                                executiveYesterday
+                                                            }
+                                                            viewMode={
+                                                                executiveYesterdayViewMode
+                                                            }
+                                                            onViewModeChange={
+                                                                setExecutiveYesterdayViewMode
+                                                            }
+                                                            showViewToggle={
+                                                                showExecutiveYesterdayViewToggle
+                                                            }
+                                                            penaltyBySiding={
+                                                                penaltyBySiding
+                                                            }
+                                                            powerPlantDispatch={
+                                                                powerPlantDispatch
+                                                            }
+                                                            sidingStocks={
+                                                                sidingStocks
+                                                            }
+                                                            filteredSidings={
+                                                                filteredSidings
+                                                            }
+                                                            canWidget={
+                                                                canWidget
+                                                            }
+                                                            exportReportHref={
+                                                                executiveOverviewExportHref
+                                                            }
+                                                            dispatchSummaryAside={
+                                                                canWidget(
+                                                                    'dispatch_summary_command',
+                                                                ) ? (
+                                                                    <DispatchSummary
+                                                                        data={
+                                                                            dispatchSummaryByPeriod ??
+                                                                            undefined
+                                                                        }
+                                                                    />
+                                                                ) : null
+                                                            }
+                                                        />
+                                                    ) : undefined
+                                                }
+                                            />
+                                            ))}
+                                        {activeSection ===
+                                            'siding-overview' &&
+                                            (isSectionLoading ? (
+                                                <div className="space-y-4">
+                                                    <Skeleton className="h-52 w-full rounded-xl" />
+                                                    <Skeleton className="h-52 w-full rounded-xl" />
+                                                </div>
+                                            ) : (
+                                            <SidingOverview
+                                                canWidget={canWidget}
+                                                sidingPerformance={
+                                                    sidingPerformance
+                                                }
+                                                penaltyTrendDaily={
+                                                    penaltyTrendDaily
+                                                }
+                                                penaltyControlRrCoverage={
+                                                    penaltyControlRrCoverage
+                                                }
+                                                powerPlantDispatch={
+                                                    powerPlantDispatch
+                                                }
+                                                filters={filters}
+                                            />
+                                            ))}
+                                        {activeSection === 'operations' &&
+                                            (isSectionLoading ? (
+                                                <div className="space-y-4">
+                                                    <Skeleton className="h-64 w-full rounded-xl" />
+                                                    <Skeleton className="h-48 w-full rounded-xl" />
+                                                </div>
+                                            ) : (
+                                            <Operations
+                                                canWidget={canWidget}
+                                                coalTransportReport={
+                                                    coalTransportReport
+                                                }
+                                                canExportCoalTransport={
+                                                    canExportCoalTransport
+                                                }
+                                                dailyRakeDetails={
+                                                    dailyRakeDetails
+                                                }
+                                                truckReceiptTrend={
+                                                    truckReceiptTrend
+                                                }
+                                                shiftWiseVehicleReceipt={
+                                                    shiftWiseVehicleReceipt
+                                                }
+                                                liveRakeStatus={liveRakeStatus}
+                                                filters={filters}
+                                                applyCoalTransportDate={
+                                                    applyCoalTransportDate
+                                                }
+                                                applyDailyRakeDate={
+                                                    applyDailyRakeDate
+                                                }
+                                                />
+                                            ))}
+                                        {activeSection ===
+                                            'penalty-control' &&
+                                            (isSectionLoading ? (
+                                                <div className="space-y-4">
+                                                    <Skeleton className="h-56 w-full rounded-xl" />
+                                                    <Skeleton className="h-44 w-full rounded-xl" />
+                                                </div>
+                                            ) : (
+                                            <PenaltyControl
+                                                canWidget={canWidget}
+                                                penaltyByType={penaltyByType}
+                                                penaltyBySiding={
+                                                    penaltyBySiding
+                                                }
+                                                penaltyControlRrCoverage={
+                                                    penaltyControlRrCoverage
+                                                }
+                                                executiveYesterday={
+                                                    executiveYesterday
+                                                }
+                                            />
+                                            ))}
+
+                                        {activeSection ===
+                                            'rake-performance' && (
+                                            <RakePerformance
+                                                canWidget={canWidget}
+                                                filters={filters}
+                                                allSidingIds={allSidingIds}
+                                                filteredSidings={
+                                                    filteredSidings
+                                                }
+                                                onRakePenaltyScopeChange={
+                                                    onRakePenaltyScopeChange
+                                                }
+                                                navigateToLoaderTrends={
+                                                    navigateToLoaderTrends
+                                                }
+                                            />
+                                        )}
+
+                                        {activeSection ===
+                                            'loader-overload' && (
+                                            <LoaderOverloading
+                                                canWidget={canWidget}
+                                                buildLoaderOverloadApiParams={
+                                                    buildLoaderOverloadApiParams
+                                                }
+                                                defaultDetailUnderloadPercent={
+                                                    filters.underload_threshold
+                                                }
+                                                mainDateRangeLabel={
+                                                    mainDateRangeLabel
+                                                }
+                                                loaderIdFromUrl={
+                                                    filters.loader_id
+                                                }
+                                                loaderOverloadFilterKey={
+                                                    loaderOverloadFilterKey
+                                                }
+                                            />
+                                        )}
+
+                                        {activeSection === 'power-plant' &&
+                                            (isSectionLoading ? (
+                                                <div className="space-y-4">
+                                                    <Skeleton className="h-52 w-full rounded-xl" />
+                                                    <Skeleton className="h-40 w-full rounded-xl" />
+                                                </div>
+                                            ) : (
+                                            <PowerPlant
+                                                canWidget={canWidget}
+                                                powerPlantDispatch={
+                                                    powerPlantDispatch
+                                                }
+                                            />
+                                            ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {false && kpiCards.length > 0 && (
+                            <aside className="group sticky top-20 h-[calc(100vh-6rem)] shrink-0 self-start">
+                                <div className="flex h-full w-14 flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-[width] duration-200 ease-out group-hover:w-72">
+                                    <div className="flex flex-1 flex-col gap-2 p-2">
+                                        {kpiCards.map(
+                                            ({
+                                                label,
+                                                value,
+                                                borderColor,
+                                                Icon,
+                                            }) => (
+                                                <div
+                                                    key={label}
+                                                    className="flex items-center gap-2 rounded-lg border border-gray-100 bg-white px-2 py-2 shadow-[0_1px_0_rgba(0,0,0,0.02)]"
+                                                    style={{
+                                                        borderLeft: `4px solid ${borderColor}`,
+                                                    }}
+                                                >
+                                                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-50">
+                                                        <Icon
+                                                            className="size-5"
+                                                            style={{
+                                                                color: borderColor,
+                                                            }}
+                                                            aria-hidden
+                                                        />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1 overflow-hidden opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                                        <div className="truncate text-[11px] font-semibold text-gray-600">
+                                                            {label}
+                                                        </div>
+                                                        <div className="truncate text-lg font-extrabold text-gray-900 tabular-nums">
+                                                            {value}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            </aside>
+                        )}
+                    </div>
+
+                    {/* Floating notifications button: always visible (superadmin only) */}
+                    <button
+                        type="button"
+                        onClick={() => setAlertsOpen(true)}
+                        className="fixed right-6 bottom-24 z-40 flex size-14 items-center justify-center rounded-full bg-amber-500 shadow-lg ring-2 ring-amber-600/50 transition hover:bg-amber-600 hover:shadow-xl focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:outline-none"
+                        aria-label={`Notifications${notificationsUnreadCount > 0 ? ` (${notificationsUnreadCount})` : ''}`}
+                    >
+                        <Bell className="size-6 text-white" />
+                        {notificationsUnreadCount > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 flex size-5 min-w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow ring-2 ring-white">
+                                {notificationsUnreadCount > 99
+                                    ? '99+'
+                                    : notificationsUnreadCount}
+                            </span>
+                        )}
+                    </button>
+                    <Dialog open={alertsOpen} onOpenChange={setAlertsOpen}>
+                        <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Bell className="size-5" />
+                                    Notifications
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="text-xs text-muted-foreground">
+                                    {notificationsUnreadCount > 0
+                                        ? `${notificationsUnreadCount} unread`
+                                        : 'All caught up'}
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-[11px]"
+                                    disabled={notificationsUnreadCount === 0}
+                                    onClick={markAllNotificationsRead}
+                                >
+                                    Mark all read
+                                </Button>
+                            </div>
+                            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                                {notifications.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-[#FEF3C7] py-8 text-center">
+                                        <CheckCircle
+                                            className="size-10 text-amber-600"
+                                            aria-hidden
+                                        />
+                                        <p className="text-sm font-medium text-amber-800">
+                                            No notifications
+                                        </p>
+                                    </div>
+                                ) : (
+                                    notifications.map((n) => (
+                                        <div
+                                            key={n.id}
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => {
+                                                if (!n.read_at)
+                                                    void markOneNotificationRead(
+                                                        n.id,
+                                                    );
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    e.key === 'Enter' &&
+                                                    !n.read_at
+                                                )
+                                                    void markOneNotificationRead(
+                                                        n.id,
+                                                    );
+                                            }}
+                                            className={`cursor-pointer rounded-lg border p-2.5 text-xs ${n.read_at ? 'border-gray-200 bg-gray-50' : 'border-amber-200 bg-amber-50'}`}
+                                        >
+                                            <span className="font-medium">
+                                                {(n.data?.title as string) ??
+                                                    'Notification'}
+                                            </span>
+                                            <div className="mt-0.5 text-gray-700">
+                                                {(n.data?.message as string) ??
+                                                    ''}
+                                            </div>
+                                            <div className="mt-1 text-gray-600">
+                                                {new Date(
+                                                    n.created_at,
+                                                ).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </AppLayout>
     );

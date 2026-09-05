@@ -1,8 +1,8 @@
-import PageController from '@/actions/Modules/PageBuilder/Http/Controllers/PageController';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { OrganizationSwitcher } from '@/components/organization-switcher';
+import { SidingSwitcher } from '@/components/siding-switcher';
 import {
     Sidebar,
     SidebarContent,
@@ -12,152 +12,357 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { chat, dashboard } from '@/routes';
-import organizations from '@/routes/organizations';
-import { type ModuleNavItem, type NavItem, type SharedData } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { dashboard } from '@/routes';
+import { analytics as penaltiesAnalytics } from '@/routes/penalties';
+import { type NavGroup, type NavItem, type SharedData } from '@/types';
+import { usePage } from '@inertiajs/react';
 import {
-    Bell,
-    BookOpen,
-    Box,
-    Building2,
-    ExternalLink,
+    AlertTriangle,
+    BarChart3,
+    BriefcaseBusiness,
+    ClipboardList,
+    CreditCard,
+    Factory,
     FileText,
-    Folder,
-    FolderTree,
+    History,
     LayoutGrid,
-    MailPlus,
-    MessageCircle,
-    ShieldCheck,
-    Users,
-    type LucideIcon,
+    MapPin,
+    Mountain,
+    Package,
+    Radio,
+    Route,
+    Scale,
+    Settings,
+    Timer,
+    Train,
+    Truck,
 } from 'lucide-react';
-import * as Icons from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
-function resolveIcon(name: string): LucideIcon {
-    const pascalName = name
-        .split('-')
-        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-        .join('');
-    return (Icons as unknown as Record<string, LucideIcon>)[pascalName] ?? Box;
-}
-
-const coreNavItems: NavItem[] = [
-    // ── Platform ──
+/**
+ * Section-based permissions (sections.{slug}.{action}).
+ * Must match config/section_permissions.php nav_permission and backend checks.
+ */
+const platformNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard().url,
         icon: LayoutGrid,
-        group: 'Platform',
+        permission: 'sections.dashboard.view',
         dataPan: 'nav-dashboard',
     },
     {
-        title: 'Chat',
-        href: chat().url,
-        icon: MessageCircle,
-        group: 'Platform',
-        dataPan: 'nav-chat',
-    },
-    // ── Organization ──
-    {
-        title: 'Users',
-        href: '/users',
-        icon: Users,
-        group: 'Organization',
-        permission: ['view users', 'org.members.view'],
-        dataPan: 'nav-users',
+        title: 'Manager Brief',
+        href: '/manager-brief',
+        icon: BriefcaseBusiness,
+        permission: 'sections.manager_brief.view',
+        dataPan: 'nav-manager-brief',
     },
     {
-        title: 'Organizations',
-        href: organizations.index.url(),
-        icon: Building2,
-        group: 'Organization',
-        tenancyRequired: true,
-        dataPan: 'nav-organizations',
+        // The live monitor. Points at the rebuilt /control-panel surface;
+        // the legacy /control-room and /control-panel-2 paths still resolve
+        // for old bookmarks but are intentionally not linked in the nav.
+        title: 'Control Room',
+        href: '/control-panel',
+        icon: Radio,
+        permission: 'sections.live_monitor.view',
+        dataPan: 'nav-control-room',
     },
     {
-        title: 'Organizations (table)',
-        href: '/organizations/list',
-        icon: Building2,
-        group: 'Organization',
-        tenancyRequired: true,
-        dataPan: 'nav-organizations-table',
+        title: 'Settings',
+        href: '#',
+        icon: Settings,
+        collapsible: true,
+        subItems: [
+            {
+                title: 'Power Plants',
+                href: '/master-data/power-plants',
+                icon: Factory,
+                permission: 'sections.power_plants.view',
+                dataPan: 'nav-power-plants',
+            },
+            {
+                title: 'Sidings',
+                href: '/master-data/sidings',
+                icon: MapPin,
+                permission: 'sections.sidings.view',
+                dataPan: 'nav-sidings',
+            },
+            {
+                title: 'Loaders',
+                href: '/master-data/loaders',
+                icon: Package,
+                permission: 'sections.loaders.view',
+                dataPan: 'nav-loaders',
+            },
+            {
+                title: 'Penalty Types',
+                href: '/master-data/penalty-types',
+                icon: AlertTriangle,
+                permission: 'sections.penalty_types.view',
+                dataPan: 'nav-penalty-types',
+            },
+            {
+                title: 'Section Timers',
+                href: '/master-data/section-timers',
+                icon: Timer,
+                permission: 'sections.section_timers.view',
+                dataPan: 'nav-section-timers',
+            },
+            {
+                title: 'Shift Timings',
+                href: '/master-data/shift-timings',
+                icon: Timer,
+                permission: 'sections.shift_timings.view',
+                dataPan: 'nav-shift-timings',
+            },
+            {
+                title: 'Opening Coal Stock',
+                href: '/master-data/opening-coal-stock',
+                icon: Scale,
+                permission: 'sections.opening_coal_stock.view',
+                dataPan: 'nav-opening-coal-stock',
+            },
+            {
+                title: 'Daily Stock Details',
+                href: '/master-data/daily-stock-details',
+                icon: Scale,
+                permission: 'sections.daily_stock_details.view',
+                dataPan: 'nav-daily-stock-details',
+            },
+            {
+                title: 'Distance Matrix',
+                href: '/master-data/distance-matrix',
+                icon: Route,
+                permission: 'sections.distance_matrix.view',
+                dataPan: 'nav-distance-matrix',
+            },
+            {
+                title: 'Billing',
+                href: '/billing',
+                icon: CreditCard,
+                tenancyRequired: true,
+                permission: 'sections.billing.view',
+                dataPan: 'nav-billing',
+            },
+            {
+                title: 'Production - Coal',
+                href: '/production/coal',
+                icon: Factory,
+                permission: 'sections.production_coal.view',
+                dataPan: 'nav-production-coal',
+            },
+            {
+                title: 'Production - OB',
+                href: '/production/ob',
+                icon: Mountain,
+                permission: 'sections.production_ob.view',
+                dataPan: 'nav-production-ob',
+            },
+            {
+                title: 'Transpoters',
+                href: '/vehicle-workorders',
+                icon: FileText,
+                permission: 'sections.transport.view',
+                dataPan: 'nav-vehicle-workorders',
+            },
+            {
+                title: 'Reports',
+                href: '/reports',
+                icon: BarChart3,
+                permission: 'sections.reports.view',
+                dataPan: 'nav-reports',
+            },
+        ],
     },
     {
-        title: 'Categories',
-        href: '/categories',
-        icon: FolderTree,
-        group: 'Organization',
-        tenancyRequired: true,
-        dataPan: 'nav-categories',
+        title: 'Historic',
+        href: '#',
+        icon: History,
+        collapsible: true,
+        permission: [
+            'sections.historical_mines.view',
+            'sections.historical_railway_siding.view',
+        ],
+        subItems: [
+            {
+                title: 'Mines historical',
+                href: '/historical/mines',
+                icon: Train,
+                permission: 'sections.historical_mines.view',
+                dataPan: 'nav-historical-mines',
+            },
+            {
+                title: 'Railway siding historical',
+                href: '/historical/railway-siding',
+                icon: Train,
+                permission: 'sections.historical_railway_siding.view',
+                dataPan: 'nav-historical-railway-siding',
+            },
+        ],
     },
     {
-        title: 'Announcements',
-        href: '/announcements',
-        icon: Bell,
-        group: 'Organization',
-        permission: ['announcements.manage_global', 'announcements.manage'],
-        dataPan: 'nav-announcements',
+        title: 'Indent',
+        href: '/siding-pre-indent-reports',
+        icon: ClipboardList,
+        permission: 'sections.siding_pre_indent_reports.view',
+        dataPan: 'nav-siding-pre-indent-reports',
     },
-    // ── Content ──
     {
-        title: 'Pages',
-        href: PageController.index().url,
+        title: 'E-Demand',
+        href: '/indents',
         icon: FileText,
-        group: 'Content',
-        permission: 'org.pages.manage',
-        tenancyRequired: true,
-        dataPan: 'nav-pages',
+        permission: 'sections.indents.view',
+        dataPan: 'nav-indents',
     },
+    {
+        title: 'Rake Weighments',
+        href: '/weighments',
+        icon: Scale,
+        permission: 'sections.weighments.view',
+        dataPan: 'nav-weighments',
+    },
+    {
+        title: 'Rake Loader',
+        href: '/rake-loader',
+        icon: Package,
+        permission: 'sections.rake_loader.view',
+        dataPan: 'nav-rake-loader',
+    },
+    {
+        title: 'Rake Progress',
+        href: '/rakes',
+        icon: Train,
+        permission: 'sections.rakes.view',
+        dataPan: 'nav-rakes',
+    },
+    {
+        title: 'Railway Receipts',
+        href: '/railway-receipts',
+        icon: FileText,
+        permission: 'sections.railway_receipts.view',
+        dataPan: 'nav-railway-receipts',
+    },
+    {
+        title: 'Railway Siding Record Data',
+        href: '/road-dispatch/daily-vehicle-entries',
+        icon: Truck,
+        permission: 'sections.railway_siding_record_data.view',
+        dataPan: 'nav-road-dispatch',
+    },
+    {
+        title: 'Railway Siding Empty Weighment',
+        href: '/railway-siding-empty-weighment',
+        icon: Scale,
+        permission: 'sections.railway_siding_empty_weighment.view',
+        dataPan: 'nav-railway-siding-empty-weighment',
+    },
+    {
+        title: 'Mines Dispatch Data',
+        href: '/vehicle-dispatch',
+        icon: Truck,
+        permission: 'sections.mines_dispatch_data.view',
+        dataPan: 'nav-vehicle-dispatch',
+    },
+    // {
+    //     title: 'Penalties',
+    //     href: '/penalties',
+    //     icon: AlertTriangle,
+    //     permission: 'sections.penalties.view',
+    //     dataPan: 'nav-penalties',
+    // },
+    {
+        title: 'Penalty Analytics',
+        href: penaltiesAnalytics().url,
+        icon: BarChart3,
+        permission: 'sections.penalties.view',
+        dataPan: 'nav-penalty-analytics',
+    },
+    // {
+    //     title: 'Alerts',
+    //     href: '/alerts',
+    //     icon: AlertTriangle,
+    //     permission: 'sections.alerts.view',
+    //     dataPan: 'nav-alerts',
+    // },
+    // {
+    //     title: 'Reconciliation',
+    //     href: '/reconciliation',
+    //     icon: Scale,
+    //     permission: 'sections.reconciliation.view',
+    //     dataPan: 'nav-reconciliation',
+    // },
+
+    // {
+    //     title: 'Changelog',
+    //     href: changelogIndex().url,
+    //     icon: Megaphone,
+    //     permission: 'sections.changelog.view',
+    //     feature: 'changelog',
+    //     dataPan: 'nav-changelog',
+    // },
+    // {
+    //     title: 'Help',
+    //     href: helpIndex().url,
+    //     icon: LifeBuoy,
+    //     permission: 'sections.help.view',
+    //     feature: 'help',
+    //     dataPan: 'nav-help',
+    // },
+    // {
+    //     title: 'Contact',
+    //     href: contactCreate().url,
+    //     icon: Mail,
+    //     permission: 'sections.contact.create',
+    //     feature: 'contact',
+    //     dataPan: 'nav-contact',
+    // },
 ];
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'API docs',
-        href: '/docs/api',
-        icon: BookOpen,
-        feature: 'scramble_api_docs',
-        dataPan: 'nav-api-docs',
-    },
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-        dataPan: 'nav-repository',
-        superAdminOnly: true,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-        dataPan: 'nav-documentation',
-        superAdminOnly: true,
-    },
+    // {
+    //     title: 'API docs',
+    //     href: '/docs/api',
+    //     icon: BookOpen,
+    //     feature: 'scramble_api_docs',
+    //     dataPan: 'nav-api-docs',
+    // },
+    // {
+    //     title: 'Repository',
+    //     href: 'https://github.com/laravel/react-starter-kit',
+    //     icon: Folder,
+    //     dataPan: 'nav-repository',
+    // },
+    // {
+    //     title: 'Documentation',
+    //     href: 'https://laravel.com/docs/starter-kits#react',
+    //     icon: BookOpen,
+    //     dataPan: 'nav-documentation',
+    // },
 ];
 
 /** Hide item when it has a feature key and that feature is inactive (shared from server). */
 function canShowNavItem(
     item: NavItem,
     permissions: string[],
+    roles: string[],
     canBypass: boolean,
     features: SharedData['features'],
     tenancyEnabled: boolean,
-    isSuperAdmin: boolean,
 ): boolean {
-    if (item.superAdminOnly && !isSuperAdmin) {
-        return false;
-    }
-    // Super-admin sees every nav entry regardless of feature flags, tenancy, or permissions
-    if (isSuperAdmin) {
-        return true;
-    }
     if (item.tenancyRequired && !tenancyEnabled) {
         return false;
     }
     if (item.feature && !features?.[item.feature]) {
         return false;
+    }
+    if (item.roles && item.roles.length > 0 && !canBypass) {
+        const hasRole = item.roles.some((role) => roles.includes(role));
+
+        if (!hasRole) {
+            return false;
+        }
     }
     if (canBypass || !item.permission) {
         return true;
@@ -168,138 +373,151 @@ function canShowNavItem(
     return required.some((p) => permissions.includes(p));
 }
 
-function moduleNavItemToNavItem(item: ModuleNavItem): NavItem {
-    return {
-        title: item.label,
-        href: item.route,
-        icon: resolveIcon(item.icon),
-        group: item.group,
-        feature: item.module,
-        permission: item.permission,
-        dataPan: `nav-module-${item.module}`,
-    };
-}
-
 export function AppSidebar() {
-    const { auth, features, moduleNavItems = {}, pending_invitations_count = 0 } = usePage<SharedData>().props;
-    const permissions = auth.permissions ?? [];
-    const canBypass = auth.can_bypass ?? false;
-    const resolvedFeatures = features ?? {};
-    const tenancyEnabled = auth.tenancy_enabled ?? true;
-    const isSuperAdmin = auth.roles?.includes('super-admin') ?? false;
+    const { auth, features } = usePage<SharedData>().props;
+    const canShow = useMemo(
+        () => (item: NavItem) =>
+            canShowNavItem(
+                item,
+                auth.permissions ?? [],
+                auth.roles ?? [],
+                auth.can_bypass ?? false,
+                features ?? {},
+                auth.tenancy_enabled ?? true,
+            ),
+        [
+            auth.permissions,
+            auth.roles,
+            auth.can_bypass,
+            auth.tenancy_enabled,
+            features,
+        ],
+    );
 
-    const currentOrg = auth.current_organization;
+    const navGroups = useMemo((): NavGroup[] => {
+        // Helper to filter a list and return only visible items
+        const visible = (items: NavItem[]) => items.filter(canShow);
 
-    const dynamicNavItems = useMemo<NavItem[]>(() => {
-        return Object.values(moduleNavItems)
-            .flat()
-            .map(moduleNavItemToNavItem);
-    }, [moduleNavItems]);
+        // Filter Settings sub-items
+        const settingsItem = platformNavItems.find(
+            (i) => i.title === 'Settings' && i.collapsible,
+        );
+        const visibleSettingsSubItems = settingsItem?.subItems
+            ? settingsItem.subItems.filter(canShow)
+            : [];
+        const settingsNavItem: NavItem | null =
+            visibleSettingsSubItems.length > 0 && settingsItem
+                ? { ...settingsItem, subItems: visibleSettingsSubItems }
+                : null;
 
-    const orgNavItems = useMemo<NavItem[]>(() => {
-        if (!currentOrg) return [];
-        return [
-            {
-                title: 'Invitations',
-                href: `/organizations/${currentOrg.id}/invitations`,
-                icon: MailPlus,
-                group: 'Organization',
-                tenancyRequired: true,
-                permission: 'org.members.invite',
-                dataPan: 'nav-invitations',
-                badge: pending_invitations_count,
-            },
+        // Helper to find a named item from the flat list
+        const byTitle = (title: string) =>
+            platformNavItems.find((i) => i.title === title) ?? null;
+
+        // --- Group 1: Overview ---
+        const overviewItems: NavItem[] = visible(
+            [
+                byTitle('Dashboard'),
+                byTitle('Manager Brief'),
+                byTitle('Control Room'),
+            ].filter(Boolean) as NavItem[],
+        );
+
+        // --- Group 2: Loading Operations ---
+        const loadingItems: NavItem[] = visible(
+            [
+                byTitle('Rake Loader'),
+                byTitle('Rake Progress'),
+                byTitle('Rake Weighments'),
+                byTitle('Railway Siding Record Data'),
+                byTitle('Railway Siding Empty Weighment'),
+                byTitle('Mines Dispatch Data'),
+            ].filter(Boolean) as NavItem[],
+        );
+
+        // --- Group 3: Finance & Compliance ---
+        const financeItems: NavItem[] = visible(
+            [
+                byTitle('Railway Receipts'),
+                byTitle('Indent'),
+                byTitle('E-Demand'),
+            ].filter(Boolean) as NavItem[],
+        );
+
+        // --- Group 4: Analytics ---
+        const historyItem = platformNavItems.find(
+            (i) => i.title === 'Historic' && i.collapsible,
+        );
+        const visibleHistorySubItems = historyItem?.subItems
+            ? historyItem.subItems.filter(canShow)
+            : [];
+        const historyNavItem: NavItem | null =
+            visibleHistorySubItems.length > 0 && historyItem
+                ? { ...historyItem, subItems: visibleHistorySubItems }
+                : null;
+
+        const analyticsItems: NavItem[] = [
+            ...(historyNavItem ? [historyNavItem] : []),
+            ...visible(
+                [byTitle('Penalty Analytics')].filter(Boolean) as NavItem[],
+            ),
         ];
-    }, [currentOrg, pending_invitations_count]);
 
-    const allMainNavItems = useMemo<NavItem[]>(
-        () => [...coreNavItems, ...orgNavItems, ...dynamicNavItems],
-        [orgNavItems, dynamicNavItems],
-    );
+        // --- Group 5: Settings ---
+        const settingsItems: NavItem[] = settingsNavItem
+            ? [settingsNavItem]
+            : [];
 
-    const visibleMainNavItems = useMemo(
-        () =>
-            allMainNavItems.filter((item) =>
-                canShowNavItem(
-                    item,
-                    permissions,
-                    canBypass,
-                    resolvedFeatures,
-                    tenancyEnabled,
-                    isSuperAdmin,
-                ),
-            ),
-        [
-            allMainNavItems,
-            permissions,
-            canBypass,
-            resolvedFeatures,
-            tenancyEnabled,
-            isSuperAdmin,
-        ],
-    );
+        const groups: NavGroup[] = [
+            { title: 'Overview', items: overviewItems },
+            { title: 'Loading Operations', items: loadingItems },
+            { title: 'Finance & Compliance', items: financeItems },
+            { title: 'Analytics', items: analyticsItems },
+            { title: 'Settings', items: settingsItems },
+        ];
 
-    const visibleFooterNavItems = useMemo(
-        () =>
-            footerNavItems.filter((item) =>
-                canShowNavItem(
-                    item,
-                    permissions,
-                    canBypass,
-                    resolvedFeatures,
-                    tenancyEnabled,
-                    isSuperAdmin,
-                ),
-            ),
-        [
-            permissions,
-            canBypass,
-            resolvedFeatures,
-            tenancyEnabled,
-            isSuperAdmin,
-        ],
-    );
+        return groups.filter((g) => g.items.length > 0);
+    }, [canShow]);
 
-    const adminPanelHref = isSuperAdmin ? '/system' : '/admin';
-    const adminPanelLabel = isSuperAdmin ? 'System Panel' : 'Admin Panel';
-    const canSeeAdminPanel =
-        isSuperAdmin || permissions.includes('access admin panel');
+    const visibleFooterNavItems = useMemo(() => {
+        const f = features ?? {};
+        return footerNavItems.filter(
+            (item) =>
+                !item.feature || Boolean(f[item.feature as keyof typeof f]),
+        );
+    }, [features]);
 
     return (
-        <Sidebar collapsible="icon" variant="sidebar">
+        <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard().url} prefetch="click">
-                                <AppLogo />
-                            </Link>
+                        <SidebarMenuButton
+                            size="lg"
+                            type="button"
+                            tooltip="SHAReReport"
+                            className="cursor-default"
+                        >
+                            <AppLogo />
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                    {tenancyEnabled && (
+                    {/* Hidden for now (keep code, hide UI) */}
+                    {false && (auth.tenancy_enabled ?? true) && (
                         <SidebarMenuItem>
                             <OrganizationSwitcher />
+                        </SidebarMenuItem>
+                    )}
+                    {/* Hidden for now (keep code, hide UI) */}
+                    {false && (
+                        <SidebarMenuItem>
+                            <SidingSwitcher />
                         </SidebarMenuItem>
                     )}
                 </SidebarMenu>
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={visibleMainNavItems} />
-                {canSeeAdminPanel && (
-                    <div className="px-2 pb-2">
-                        <a
-                            href={adminPanelHref}
-                            data-pan="nav-admin-panel"
-                            title={adminPanelLabel}
-                            className="flex min-h-11 cursor-pointer items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-                        >
-                            <ShieldCheck className="size-4 shrink-0" />
-                            <span className="truncate group-data-[collapsible=icon]:hidden">{adminPanelLabel}</span>
-                            <ExternalLink className="ml-auto size-3 shrink-0 opacity-50 group-data-[collapsible=icon]:hidden" />
-                        </a>
-                    </div>
-                )}
+                <NavMain groups={navGroups} />
             </SidebarContent>
 
             <SidebarFooter>

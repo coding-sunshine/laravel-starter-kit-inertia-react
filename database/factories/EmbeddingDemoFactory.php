@@ -20,7 +20,7 @@ final class EmbeddingDemoFactory extends Factory
     public function definition(): array
     {
         return [
-            'content' => fake()->sentence(),
+            'content' => $this->faker->sentence(),
         ];
     }
 }

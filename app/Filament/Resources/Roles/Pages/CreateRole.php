@@ -21,6 +21,11 @@ final class CreateRole extends CreateRecord
             }
         }
 
+        $teamKey = config('permission.column_names.team_foreign_key', 'organization_id');
+        if (! array_key_exists($teamKey, $data) || $data[$teamKey] === null) {
+            $data[$teamKey] = 0;
+        }
+
         return $data;
     }
 

@@ -1,0 +1,75 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Mattiverse\Userstamps\Traits\Userstamps;
+
+final class VehicleUnload extends Model
+{
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+    use SoftDeletes, Userstamps;
+
+    protected $table = 'vehicle_unloads';
+
+    protected $fillable = [
+        'vehicle_arrival_id',
+        'siding_id',
+        'vehicle_id',
+        'jimms_challan_number',
+        'arrival_time',
+        'shift',
+        'unload_start_time',
+        'unload_end_time',
+        'mine_weight_mt',
+        'weighment_weight_mt',
+        'variance_mt',
+        'state',
+        'remarks',
+    ];
+
+    protected $casts = [
+        'arrival_time' => 'datetime',
+        'unload_start_time' => 'datetime',
+        'unload_end_time' => 'datetime',
+    ];
+
+    public function siding(): BelongsTo
+    {
+        return $this->belongsTo(Siding::class);
+    }
+
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class);
+    }
+
+    public function vehicleArrival(): BelongsTo
+    {
+        return $this->belongsTo(VehicleArrival::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function steps(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(VehicleUnloadStep::class);
+    }
+
+    public function weighments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(VehicleUnloadWeighment::class);
+    }
+}

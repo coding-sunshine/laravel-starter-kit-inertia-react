@@ -9,19 +9,19 @@ use Spatie\Permission\Contracts\PermissionsTeamResolver;
 
 /**
  * Resolves the current organization (team) ID for Spatie Permission.
- * Uses explicitly set team id (e.g. in tests or CreateOrganizationAction), otherwise TenantContext::id(), or 0 for global.
+ * Defaults to the global team (organization_id = 0) so getAllPermissions() /
+ * can() use global role assignments unless code explicitly switches the team
+ * (policies, actions, and Organization::addMember use a set/restore pattern).
  */
 final class OrganizationTeamResolver implements PermissionsTeamResolver
 {
-    private int|string|null $overrideTeamId = null;
+    private const int GLOBAL_TEAM_ID = 0;
+
+    private int|string|null $teamId = null;
 
     public function getPermissionsTeamId(): int|string
     {
-        if ($this->overrideTeamId !== null) {
-            return $this->overrideTeamId;
-        }
-
-        return TenantContext::id() ?? 0;
+        return $this->teamId ?? self::GLOBAL_TEAM_ID;
     }
 
     public function setPermissionsTeamId(int|string|Model|null $id): void
@@ -30,6 +30,6 @@ final class OrganizationTeamResolver implements PermissionsTeamResolver
             $id = $id->getKey();
         }
 
-        $this->overrideTeamId = $id;
+        $this->teamId = $id;
     }
 }

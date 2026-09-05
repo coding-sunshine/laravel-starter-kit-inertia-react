@@ -21,7 +21,7 @@ test('user model update creates activity log and does not store password in prop
         'name' => 'Original',
         'email' => 'original@example.com',
     ]);
-    assignRoleForTestUser($user, 'user');
+    $user->assignRole('user');
 
     $user->update(['name' => 'Updated Name']);
 
@@ -33,7 +33,7 @@ test('user model update creates activity log and does not store password in prop
         ->first();
 
     expect($activity)->not->toBeNull()
-        ->and($activity->attribute_changes->get('attributes'))->not->toHaveKey('password')
+        ->and($activity->attribute_changes?->toArray() ?? [])->not->toHaveKey('password')
         ->and($activity->attribute_changes->get('attributes'))->toHaveKey('name')
         ->and($activity->attribute_changes->get('attributes')['name'])->toBe('Updated Name');
 });
@@ -54,14 +54,14 @@ test('embedding demo update creates activity log and does not store embedding in
         ->first();
 
     expect($activity)->not->toBeNull()
-        ->and($activity->attribute_changes->get('attributes'))->not->toHaveKey('embedding')
+        ->and($activity->attribute_changes?->toArray() ?? [])->not->toHaveKey('embedding')
         ->and($activity->attribute_changes->get('attributes'))->toHaveKey('content')
         ->and($activity->attribute_changes->get('attributes')['content'])->toBe('Updated content');
 });
 
 test('two factor enable logs activity', function (): void {
     $user = User::factory()->withoutTwoFactor()->create();
-    assignRoleForTestUser($user, 'user');
+    $user->assignRole('user');
 
     $enable = resolve(EnableTwoFactorAuthentication::class);
     $enable($user, true);
@@ -89,7 +89,7 @@ test('CreateUser logs roles_assigned when default role is assigned', function ()
 
 test('role creation logs role_created activity', function (): void {
     $admin = User::factory()->withoutTwoFactor()->create();
-    assignRoleForTestUser($admin, 'super-admin');
+    $admin->assignRole('super-admin');
     $this->actingAs($admin);
 
     $role = Role::query()->create(['name' => 'test-role-activity', 'guard_name' => 'web']);
@@ -127,7 +127,6 @@ test('make model full injects LogsActivity and getActivitylogOptions into genera
     if ($migration !== []) {
         unlink($migration[0]);
     }
-
     $specPath = database_path('seeders/specs/ActivityLogInjectedModel.json');
     if (file_exists($specPath)) {
         unlink($specPath);

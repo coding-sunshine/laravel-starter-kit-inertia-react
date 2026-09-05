@@ -1,0 +1,1567 @@
+import InputError from '@/components/input-error';
+import { RakeTimelineChip } from '@/components/rake/rake-timeline-chip';
+import { EditWagonsDialog } from '@/components/rakes/EditWagonsDialog';
+import { WagonOverviewDialog } from '@/components/rakes/WagonOverviewDialog';
+import { RakeWorkflow } from '@/components/rakes/workflow/RakeWorkflow';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/app-layout';
+import { postFormDataExpectJson } from '@/lib/laravel-json-fetch';
+import { parseLaravel422ResponseBody } from '@/lib/laravel-validation-errors';
+import { parseSafeReturnTo } from '@/lib/safe-return-url';
+import { type BreadcrumbItem } from '@/types';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Edit, Flag } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+
+interface Siding {
+    id: number;
+    name: string;
+    code: string;
+    loaders?: { id: number; loader_name: string; code: string }[];
+}
+
+interface Wagon {
+    id: number;
+    wagon_sequence: number;
+    wagon_number: string;
+    wagon_type: string | null;
+    tare_weight_mt: string | null;
+    loaded_weight_mt: string | null;
+    pcc_weight_mt: string | null;
+    loader_recorded_qty_mt: string | null;
+    weighment_qty_mt: string | null;
+    is_unfit: boolean;
+    is_overloaded: boolean;
+    state: string | null;
+}
+
+interface TxrRecord {
+    id: number;
+    inspection_time: string;
+    inspection_end_time?: string | null;
+    status: string;
+    remarks: string | null;
+}
+
+interface RakeWagonLoading {
+    id: number;
+    wagon_id: number;
+    loader_id: number | null;
+    loaded_quantity_mt: string;
+    wagon?: {
+        id: number;
+        wagon_number: string;
+        wagon_sequence: number;
+    };
+    loader?: {
+        id: number;
+        loader_name: string;
+        code: string;
+    };
+}
+
+interface GuardInspectionRecord {
+    id: number;
+    inspection_time: string;
+    movement_permission_time: string;
+    is_approved: boolean;
+    remarks: string | null;
+}
+
+interface WeighmentRecord {
+    id: number;
+    weighment_time: string;
+    total_weight_mt: string | number | null;
+    status: string | null;
+    train_speed_kmph: number | string | null;
+    attempt_no: number;
+    wagonWeights?: Array<{
+        wagon_id: number;
+        gross_weight_mt: string | number | null;
+        net_weight_mt: string | number | null;
+        wagon: {
+            id: number;
+            wagon_number: string;
+            wagon_sequence: number;
+            pcc_weight_mt: string | number | null;
+        } | null;
+    }>;
+}
+
+interface RrDocumentRecord {
+    id: number;
+    rr_number: string;
+    rr_received_date: string;
+    rr_weight_mt: string | null;
+    document_status: string;
+    diverrt_destination_id?: number | null;
+}
+
+interface PenaltyBreakdown {
+    formula?: string;
+    demurrage_hours?: number;
+    weight_mt?: number;
+    rate_per_mt_hour?: number;
+    free_hours?: number | null;
+    dwell_hours?: number | null;
+}
+
+interface PenaltyRecord {
+    id: number;
+    penalty_type: string;
+    penalty_amount: string;
+    penalty_status: string;
+    penalty_date: string;
+    description: string | null;
+    calculation_breakdown?: PenaltyBreakdown | null;
+}
+
+interface AppliedPenaltyRecord {
+    id: number;
+    amount: string | number;
+    quantity?: string | number | null;
+    wagon_id?: number | null;
+    penalty_type?: {
+        id: number;
+        code: string;
+        name: string;
+        calculation_type: string;
+    };
+    wagon?: {
+        id: number;
+        wagon_number: string;
+        overload_weight_mt?: string | number | null;
+    };
+}
+
+interface RakeChargeRecord {
+    id: number;
+    charge_type: string;
+    is_actual_charges: boolean;
+    amount: string | number;
+    appliedPenalties?: Array<{ amount: string | number }>;
+    rrPenaltySnapshots?: Array<{ amount: string | number }>;
+}
+
+interface RakeData {
+    id: number;
+    rake_number: string;
+    rake_serial_number: string | null;
+    rake_type: string | null;
+    wagon_count: number | null;
+    state: string;
+    placement_time: string | null;
+    loading_start_time: string | null;
+    loading_end_time: string | null;
+    weighment_end_time: string | null;
+    drawn_out: string | null;
+    rr_actual_date: string | null;
+    dispatch_time: string | null;
+    rr_expected_date?: string | null;
+    remarks?: string | null;
+    destination?: string | null;
+    loading_date?: string | null;
+    loading_free_minutes: number | null;
+    is_diverted?: boolean;
+    destination_code?: string | null;
+    rakeCharges?: RakeChargeRecord[];
+    powerPlantReceipts?: Array<{
+        id: number;
+        power_plant_id: number;
+        receipt_date: string | null;
+        weight_mt: string | number;
+        rr_reference: string | null;
+        status: string;
+        file_url: string | null;
+        file_name?: string | null;
+        powerPlant?: { id: number; name: string; code: string } | null;
+    }>;
+    siding?: Siding | null;
+    wagons: Wagon[];
+    txr: TxrRecord | null;
+    wagonLoadings?: RakeWagonLoading[];
+    guardInspections?: GuardInspectionRecord[];
+    weighments?: WeighmentRecord[];
+    rrDocuments?: RrDocumentRecord[];
+    diverrtDestinations?: Array<{ id: number; location: string }>;
+    penalties?: PenaltyRecord[];
+    appliedPenalties?: AppliedPenaltyRecord[];
+    indent?: {
+        id: number;
+        indent_number: string | null;
+    } | null;
+}
+
+interface RakeEditFormData {
+    rake_number: string;
+    rake_serial_number: string;
+    rake_type: string;
+    dispatch_time: string;
+    status: string;
+    rr_expected_date: string;
+    placement_time: string;
+    loading_date: string;
+    destination_code: string;
+    remarks: string;
+}
+
+const RAKE_EDIT_KNOWN_KEYS = new Set<string>([
+    'rake_serial_number',
+    'rake_number',
+    'rake_type',
+    'dispatch_time',
+    'status',
+    'rr_expected_date',
+    'placement_time',
+    'loading_date',
+    'destination_code',
+    'remarks',
+]);
+
+function buildRakeEditFormData(r: RakeData): RakeEditFormData {
+    return {
+        rake_number: r.rake_number ?? '',
+        rake_serial_number: r.rake_serial_number ?? r.rake_number ?? '',
+        rake_type: r.rake_type ?? '',
+        dispatch_time: r.dispatch_time
+            ? new Date(r.dispatch_time).toISOString().slice(0, 16)
+            : '',
+        status: r.state ?? 'pending',
+        rr_expected_date: r.rr_expected_date
+            ? new Date(r.rr_expected_date).toISOString().slice(0, 10)
+            : '',
+        placement_time: r.placement_time
+            ? new Date(r.placement_time).toISOString().slice(0, 10)
+            : '',
+        loading_date:
+            r.loading_date != null && String(r.loading_date).length > 0
+                ? String(r.loading_date).slice(0, 10)
+                : '',
+        destination_code: r.destination_code ?? '',
+        remarks: r.remarks ?? '',
+    };
+}
+
+function appendRakeEditFormData(data: RakeEditFormData, fd: FormData): void {
+    fd.append('rake_serial_number', data.rake_serial_number);
+    fd.append('rake_number', data.rake_number);
+    fd.append('rake_type', data.rake_type);
+    fd.append('dispatch_time', data.dispatch_time);
+    fd.append('status', data.status);
+    fd.append('rr_expected_date', data.rr_expected_date);
+    fd.append('placement_time', data.placement_time);
+    fd.append('loading_date', data.loading_date);
+    fd.append('destination_code', data.destination_code);
+    fd.append('remarks', data.remarks);
+}
+
+interface Reconciliation {
+    penalty_code: string;
+    predicted_amount: number;
+    billed_amount: number;
+    variance: number;
+    variance_pct: number | null;
+    dispute_candidate: boolean;
+}
+
+interface Props {
+    rake: RakeData;
+    powerPlants: Array<{
+        id: number;
+        name: string;
+        code: string;
+    }>;
+    demurrageRemainingMinutes: number | null;
+    demurrage_rate_per_mt_hour: number;
+    reconciliations: Reconciliation[];
+}
+
+function formatRemaining(m: number): string {
+    if (m <= 0) return '0m 0s';
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    if (h > 0) return `${h}h ${min}m 0s`;
+    return `${min}m 0s`;
+}
+
+function formatRemainingWithSeconds(totalSeconds: number): string {
+    if (totalSeconds <= 0) return '0m 0s';
+    const h = Math.floor(totalSeconds / 3600);
+    const min = Math.floor((totalSeconds % 3600) / 60);
+    const sec = totalSeconds % 60;
+    if (h > 0) return `${h}h ${min}m ${sec}s`;
+    return `${min}m ${sec}s`;
+}
+
+function formatDemurrageTime(
+    elapsedMinutes: number,
+    freeTimeMinutes: number,
+): string {
+    if (elapsedMinutes <= freeTimeMinutes) return '0h 0m';
+    const extraMinutes = elapsedMinutes - freeTimeMinutes;
+    const h = Math.floor(extraMinutes / 60);
+    const min = extraMinutes % 60;
+    return `${h}h ${min}m`;
+}
+
+function getUnfitWagonInfo(wagons: Wagon[]): {
+    count: number;
+    numbers: string;
+} {
+    const unfitWagons = wagons.filter((wagon) => wagon.is_unfit);
+    const count = unfitWagons.length;
+    const numbers = unfitWagons.map((wagon) => wagon.wagon_number).join(', ');
+    return { count, numbers };
+}
+
+function WagonLoadingForm({ rake }: { rake: RakeData }) {
+    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+    const { data, setData, post, processing, reset } = useForm({
+        wagon_id: '',
+        loader_id: '',
+        loaded_quantity_mt: '',
+    });
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        post(`/rakes/${rake.id}/load/wagon`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+            },
+        });
+    };
+
+    // Get unloaded wagons
+    const unloadedWagons = rake.wagons.filter(
+        (wagon) =>
+            !rake.wagonLoadings?.some(
+                (loading) => loading.wagon_id === wagon.id,
+            ),
+    );
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <Label htmlFor="wagon_id">Select Wagon</Label>
+                <select
+                    id="wagon_id"
+                    name="wagon_id"
+                    value={data.wagon_id}
+                    onChange={(e) => setData('wagon_id', e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                >
+                    <option value="">Select a wagon</option>
+                    {unloadedWagons.map((wagon) => (
+                        <option key={wagon.id} value={wagon.id}>
+                            {wagon.wagon_number} (Position{' '}
+                            {wagon.wagon_sequence})
+                        </option>
+                    ))}
+                </select>
+                <InputError message={errors?.wagon_id} />
+            </div>
+            <div>
+                <Label htmlFor="loader_id">Select Loader</Label>
+                <select
+                    id="loader_id"
+                    name="loader_id"
+                    value={data.loader_id}
+                    onChange={(e) => setData('loader_id', e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                >
+                    <option value="">Select a loader</option>
+                    {rake.siding?.loaders?.map((loader) => (
+                        <option key={loader.id} value={loader.id}>
+                            {loader.loader_name} ({loader.code})
+                        </option>
+                    ))}
+                </select>
+                <InputError message={errors?.loader_id} />
+            </div>
+            <div>
+                <Label htmlFor="loaded_quantity_mt">Loaded Quantity (MT)</Label>
+                <Input
+                    id="loaded_quantity_mt"
+                    name="loaded_quantity_mt"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={data.loaded_quantity_mt}
+                    onChange={(e) =>
+                        setData('loaded_quantity_mt', e.target.value)
+                    }
+                    required
+                />
+                <InputError message={errors?.loaded_quantity_mt} />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => reset()}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={processing}>
+                    Load Wagon
+                </Button>
+            </div>
+        </form>
+    );
+}
+
+function GuardInspectionForm({ rake }: { rake: RakeData }) {
+    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+    const { data, setData, post, processing, reset } = useForm({
+        inspection_time: new Date().toISOString().slice(0, 16),
+        movement_permission_time: new Date().toISOString().slice(0, 16),
+        is_approved: false,
+        remarks: '',
+    });
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        post(`/rakes/${rake.id}/load/guard-inspection`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+            },
+        });
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <Label htmlFor="inspection_time">Inspection Time</Label>
+                <Input
+                    id="inspection_time"
+                    name="inspection_time"
+                    type="datetime-local"
+                    value={data.inspection_time}
+                    onChange={(e) => setData('inspection_time', e.target.value)}
+                    required
+                />
+                <InputError message={errors?.inspection_time} />
+            </div>
+            <div>
+                <Label htmlFor="movement_permission_time">
+                    Movement Permission Time
+                </Label>
+                <Input
+                    id="movement_permission_time"
+                    name="movement_permission_time"
+                    type="datetime-local"
+                    value={data.movement_permission_time}
+                    onChange={(e) =>
+                        setData('movement_permission_time', e.target.value)
+                    }
+                    required
+                />
+                <InputError message={errors?.movement_permission_time} />
+            </div>
+            <div className="flex items-center space-x-2">
+                <input
+                    type="checkbox"
+                    id="is_approved"
+                    checked={data.is_approved}
+                    onChange={(e) => setData('is_approved', e.target.checked)}
+                    className="rounded"
+                />
+                <Label htmlFor="is_approved">Approved for movement</Label>
+            </div>
+            <div>
+                <Label htmlFor="remarks">Remarks</Label>
+                <textarea
+                    id="remarks"
+                    name="remarks"
+                    value={data.remarks}
+                    onChange={(e) => setData('remarks', e.target.value)}
+                    rows={3}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Any inspection remarks..."
+                />
+                <InputError message={errors?.remarks} />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => reset()}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={processing}>
+                    Record Inspection
+                </Button>
+            </div>
+        </form>
+    );
+}
+
+function InMotionWeighmentForm({ rake }: { rake: RakeData }) {
+    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+    const { data, setData, post, processing, reset } = useForm({
+        train_speed_kmph: '',
+        wagon_weights: [] as Array<{
+            wagon_id: number;
+            gross_weight_mt: string;
+        }>,
+    });
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        post(`/rakes/${rake.id}/load/weighment`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+            },
+        });
+    };
+
+    const handleWagonWeightChange = (wagonId: number, weight: string) => {
+        const newWeights = data.wagon_weights.filter(
+            (w) => w.wagon_id !== wagonId,
+        );
+        if (weight) {
+            newWeights.push({ wagon_id: wagonId, gross_weight_mt: weight });
+        }
+        setData('wagon_weights', newWeights);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <Label htmlFor="train_speed_kmph">
+                    Train Speed (km/h) - Must be 5-7 km/h
+                </Label>
+                <Input
+                    id="train_speed_kmph"
+                    name="train_speed_kmph"
+                    type="number"
+                    step="0.1"
+                    min="5"
+                    max="7"
+                    value={data.train_speed_kmph}
+                    onChange={(e) =>
+                        setData('train_speed_kmph', e.target.value)
+                    }
+                    required
+                />
+                <InputError message={errors?.train_speed_kmph} />
+            </div>
+
+            <div>
+                <Label>Wagon Weights (MT)</Label>
+                <div className="max-h-60 space-y-2 overflow-y-auto rounded-lg border p-3">
+                    {rake.wagons.map((wagon) => (
+                        <div key={wagon.id} className="flex items-center gap-3">
+                            <span className="w-24 text-sm font-medium">
+                                {wagon.wagon_number}
+                            </span>
+                            <Input
+                                placeholder="Gross weight"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={
+                                    data.wagon_weights.find(
+                                        (w) => w.wagon_id === wagon.id,
+                                    )?.gross_weight_mt || ''
+                                }
+                                onChange={(e) =>
+                                    handleWagonWeightChange(
+                                        wagon.id,
+                                        e.target.value,
+                                    )
+                                }
+                                className="flex-1"
+                                required
+                            />
+                            {wagon.pcc_weight_mt && (
+                                <span className="w-20 text-xs text-muted-foreground">
+                                    PCC: {wagon.pcc_weight_mt} MT
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                <InputError message={errors?.wagon_weights} />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => reset()}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={processing}>
+                    Record Weighment
+                </Button>
+            </div>
+        </form>
+    );
+}
+
+function TxrEndForm({ rake }: { rake: RakeData }) {
+    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+    const { data, setData, post, processing, reset } = useForm({
+        remarks: '',
+    });
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('remarks', data.remarks);
+
+        post(`/rakes/${rake.id}/txr/end`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+            },
+        });
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <Label htmlFor="remarks">Remarks</Label>
+                <textarea
+                    id="remarks"
+                    name="remarks"
+                    value={data.remarks}
+                    onChange={(e) => setData('remarks', e.target.value)}
+                    rows={3}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Any additional remarks..."
+                />
+                <InputError message={errors?.remarks} />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => reset()}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={processing}>
+                    End TXR
+                </Button>
+            </div>
+        </form>
+    );
+}
+
+function TxrEditForm({ rake }: { rake: RakeData }) {
+    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+    const { data, setData, put, processing, reset } = useForm({
+        inspection_time: rake.txr?.inspection_time
+            ? new Date(rake.txr.inspection_time).toISOString().slice(0, 16)
+            : '',
+        inspection_end_time: rake.txr?.inspection_end_time
+            ? new Date(rake.txr.inspection_end_time).toISOString().slice(0, 16)
+            : '',
+        status: rake.txr?.status || 'completed',
+        remarks: rake.txr?.remarks || '',
+    });
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        put(`/rakes/${rake.id}/txr`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+            },
+        });
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <Label htmlFor="inspection_time">Inspection Start Time</Label>
+                <Input
+                    id="inspection_time"
+                    name="inspection_time"
+                    type="datetime-local"
+                    value={data.inspection_time}
+                    onChange={(e) => setData('inspection_time', e.target.value)}
+                    required
+                />
+                <InputError message={errors?.inspection_time} />
+            </div>
+            <div>
+                <Label htmlFor="inspection_end_time">Inspection End Time</Label>
+                <Input
+                    id="inspection_end_time"
+                    name="inspection_end_time"
+                    type="datetime-local"
+                    value={data.inspection_end_time}
+                    onChange={(e) =>
+                        setData('inspection_end_time', e.target.value)
+                    }
+                />
+                <InputError message={errors?.inspection_end_time} />
+            </div>
+            <div>
+                <Label htmlFor="status">Status</Label>
+                <select
+                    id="status"
+                    name="status"
+                    value={data.status}
+                    onChange={(e) => setData('status', e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                >
+                    <option value="completed">Completed</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <InputError message={errors?.status} />
+            </div>
+            <div>
+                <Label htmlFor="remarks">Remarks</Label>
+                <textarea
+                    id="remarks"
+                    name="remarks"
+                    value={data.remarks}
+                    onChange={(e) => setData('remarks', e.target.value)}
+                    rows={3}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Any additional remarks..."
+                />
+                <InputError message={errors?.remarks} />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => reset()}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={processing}>
+                    Save Changes
+                </Button>
+            </div>
+        </form>
+    );
+}
+
+export default function RakesShow({
+    rake,
+    powerPlants,
+    demurrageRemainingMinutes,
+    demurrage_rate_per_mt_hour,
+    reconciliations,
+}: Props) {
+    const page = usePage<{ errors?: { template?: string } }>();
+    const returnToQuerySuffix = useMemo((): string => {
+        const u = page.url;
+        const idx = u.indexOf('?');
+        return idx >= 0 ? u.slice(idx) : '';
+    }, [page.url]);
+
+    const eDemandBackHref = useMemo((): string => {
+        const idx = page.url.indexOf('?');
+        if (idx < 0) {
+            return '/indents';
+        }
+        const params = new URLSearchParams(page.url.slice(idx + 1));
+        return parseSafeReturnTo(params.get('return_to')) ?? '/indents';
+    }, [page.url]);
+
+    const backLinkLabel = useMemo((): string => {
+        const idx = page.url.indexOf('?');
+        if (idx < 0) {
+            return '← Back to e-demands';
+        }
+        const params = new URLSearchParams(page.url.slice(idx + 1));
+        const path = parseSafeReturnTo(params.get('return_to'));
+        if (path != null) {
+            return '← Back';
+        }
+        return '← Back to e-demands';
+    }, [page.url]);
+
+    const [selectedWagon, setSelectedWagon] = useState<Wagon | null>(null);
+    const [wagonDialogOpen, setWagonDialogOpen] = useState(false);
+    const [wagons, setWagons] = useState(rake.wagons);
+    const [editRakeOpen, setEditRakeOpen] = useState(false);
+    const [editData, setEditData] = useState<RakeEditFormData>(() =>
+        buildRakeEditFormData(rake),
+    );
+    const [editFieldErrors, setEditFieldErrors] = useState<
+        Record<string, string>
+    >({});
+    const [editFormBanner, setEditFormBanner] = useState<string | null>(null);
+    const [editSubmitting, setEditSubmitting] = useState(false);
+
+    const editErr = (name: string): string | undefined => editFieldErrors[name];
+
+    useEffect(() => {
+        if (!editRakeOpen) {
+            setEditData(buildRakeEditFormData(rake));
+        }
+    }, [
+        editRakeOpen,
+        rake.id,
+        rake.rake_number,
+        rake.rake_serial_number,
+        rake.rake_type,
+        rake.dispatch_time,
+        rake.state,
+        rake.rr_expected_date,
+        rake.placement_time,
+        rake.loading_date,
+        rake.destination_code,
+        rake.remarks,
+    ]);
+
+    const handleEditRakeOpenChange = (open: boolean): void => {
+        setEditRakeOpen(open);
+        if (open) {
+            setEditFieldErrors({});
+            setEditFormBanner(null);
+            setEditData(buildRakeEditFormData(rake));
+        } else {
+            setEditFieldErrors({});
+            setEditFormBanner(null);
+        }
+    };
+
+    // (Removed) auto-redirect to /rakes/{id}/edit when wagon list was empty.
+    // The target Inertia page `pages/rakes/edit.tsx` does not exist; wagon
+    // editing is handled inline via <EditWagonsDialog />. The redirect was
+    // throwing "Page not found: ./pages/rakes/edit.tsx" in the console.
+
+    useEffect(() => {
+        setWagons(rake.wagons);
+    }, [rake.wagons]);
+
+    useEffect(() => {
+        if (selectedWagon) {
+            // no-op: wagon editing is handled in EditWagonsDialog
+        }
+    }, [selectedWagon]);
+
+    const displayRakeNumber = rake.rake_serial_number || rake.rake_number;
+    const showRakeNumberFallback =
+        !rake.rake_serial_number && !!rake.rake_number;
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Rakes', href: '/rakes', interactive: false },
+        {
+            title: displayRakeNumber,
+            href: `/rakes/${rake.id}`,
+            interactive: false,
+        },
+    ];
+    const isLow =
+        demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 30;
+    const isCritical =
+        demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 0;
+    const missingWagonNumberCount = wagons.filter(
+        (wagon) => (wagon.wagon_number ?? '').trim().length <= 4,
+    ).length;
+    const missingWagonTypeCount = wagons.filter(
+        (wagon) => (wagon.wagon_type ?? '').trim() === '',
+    ).length;
+    const hasWagonDataGaps =
+        missingWagonNumberCount > 0 || missingWagonTypeCount > 0;
+
+    const rakeForWorkflow = useMemo(
+        () => ({ ...rake, wagons }),
+        [rake, wagons],
+    );
+
+    const latestWeighmentTotalMt = useMemo((): number | null => {
+        const latest = (rake.weighments ?? [])[0];
+        if (!latest || latest.total_weight_mt === null) {
+            return null;
+        }
+        const n = Number(latest.total_weight_mt);
+        return Number.isFinite(n) ? n : null;
+    }, [rake.weighments]);
+
+    const predictedPenaltyAmount = useMemo((): number => {
+        const predicted = (rake.rakeCharges ?? []).find(
+            (c) => c.charge_type === 'PENALTY' && !c.is_actual_charges,
+        );
+        return (predicted?.appliedPenalties ?? []).reduce(
+            (sum, row) => sum + Number(row.amount ?? 0),
+            0,
+        );
+    }, [rake.rakeCharges]);
+
+    const actualPenaltyAmount = useMemo((): number => {
+        const actual = (rake.rakeCharges ?? []).find(
+            (c) => c.charge_type === 'PENALTY' && c.is_actual_charges,
+        );
+        return (actual?.rrPenaltySnapshots ?? []).reduce(
+            (sum, row) => sum + Number(row.amount ?? 0),
+            0,
+        );
+    }, [rake.rakeCharges]);
+
+    const templateDownloadError = page.props.errors?.template;
+    const indentPriorityNumber = rake.indent?.indent_number ?? '—';
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title={`Rake ${displayRakeNumber}`} />
+            <div className="space-y-6">
+                {templateDownloadError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                        {templateDownloadError}
+                    </div>
+                )}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="mb-6 space-y-0.5">
+                        <h2 className="text-xl font-semibold tracking-tight">
+                            Rake{' '}
+                            {showRakeNumberFallback ? (
+                                <span className="text-amber-600 dark:text-amber-400">
+                                    {rake.rake_number}
+                                </span>
+                            ) : (
+                                displayRakeNumber
+                            )}{' '}
+                            ({indentPriorityNumber})
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                            {rake.siding
+                                ? `${rake.siding.name} (${rake.siding.code})`
+                                : 'Railway rake detail'}
+                        </p>
+                        <div className="mt-3">
+                            <RakeTimelineChip
+                                rake={{
+                                    placement_time: rake.placement_time,
+                                    loading_start_time: rake.loading_start_time,
+                                    loading_end_time: rake.loading_end_time,
+                                    weighment_end_time: rake.weighment_end_time,
+                                    drawn_out: rake.drawn_out,
+                                    rr_actual_date: rake.rr_actual_date,
+                                }}
+                                size="detailed"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <WagonOverviewDialog wagons={wagons} />
+                        <EditWagonsDialog
+                            wagons={wagons}
+                            rakeId={rake.id}
+                            onWagonSaved={(updatedWagon) =>
+                                setWagons((prev) =>
+                                    prev.map((wagon) =>
+                                        wagon.id === updatedWagon.id
+                                            ? {
+                                                  ...wagon,
+                                                  ...updatedWagon,
+                                                  tare_weight_mt:
+                                                      updatedWagon.tare_weight_mt !=
+                                                      null
+                                                          ? String(
+                                                                updatedWagon.tare_weight_mt,
+                                                            )
+                                                          : null,
+                                                  pcc_weight_mt:
+                                                      updatedWagon.pcc_weight_mt !=
+                                                      null
+                                                          ? String(
+                                                                updatedWagon.pcc_weight_mt,
+                                                            )
+                                                          : null,
+                                              }
+                                            : wagon,
+                                    ),
+                                )
+                            }
+                        />
+                        <Dialog
+                            open={editRakeOpen}
+                            onOpenChange={handleEditRakeOpenChange}
+                        >
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <Edit className="mr-2 size-4" />
+                                    Edit rake
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle>Edit rake</DialogTitle>
+                                </DialogHeader>
+                                <form
+                                    className="grid gap-4 sm:grid-cols-2"
+                                    onSubmit={async (event) => {
+                                        event.preventDefault();
+                                        setEditFieldErrors({});
+                                        setEditFormBanner(null);
+                                        setEditSubmitting(true);
+                                        try {
+                                            const fd = new FormData();
+                                            appendRakeEditFormData(
+                                                editData,
+                                                fd,
+                                            );
+                                            fd.append('_method', 'PUT');
+                                            const result =
+                                                await postFormDataExpectJson<{
+                                                    redirect?: string;
+                                                }>(`/rakes/${rake.id}`, fd);
+                                            if (!result.ok) {
+                                                if (result.status === 422) {
+                                                    const { fields, banner } =
+                                                        parseLaravel422ResponseBody(
+                                                            result.body,
+                                                            RAKE_EDIT_KNOWN_KEYS,
+                                                        );
+                                                    setEditFieldErrors(fields);
+                                                    setEditFormBanner(banner);
+                                                } else {
+                                                    const msg =
+                                                        typeof result.body ===
+                                                            'object' &&
+                                                        result.body !== null &&
+                                                        'message' in result.body
+                                                            ? String(
+                                                                  (
+                                                                      result.body as {
+                                                                          message: unknown;
+                                                                      }
+                                                                  ).message,
+                                                              )
+                                                            : 'Could not save the rake.';
+                                                    setEditFormBanner(msg);
+                                                }
+
+                                                return;
+                                            }
+
+                                            setEditRakeOpen(false);
+                                            router.reload();
+                                        } finally {
+                                            setEditSubmitting(false);
+                                        }
+                                    }}
+                                >
+                                    {editFormBanner ? (
+                                        <div
+                                            id="rake-edit-form-server-errors"
+                                            role="alert"
+                                            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm whitespace-pre-wrap text-destructive sm:col-span-2"
+                                        >
+                                            {editFormBanner}
+                                        </div>
+                                    ) : null}
+                                    <div>
+                                        <Label htmlFor="rake_number">
+                                            Rake sequence
+                                        </Label>
+                                        <Input
+                                            id="rake_number"
+                                            value={editData.rake_number}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    rake_number: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError
+                                            message={editErr('rake_number')}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="rake_serial_number">
+                                            Rake number *
+                                        </Label>
+                                        <Input
+                                            id="rake_serial_number"
+                                            name="rake_serial_number"
+                                            value={editData.rake_serial_number}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    rake_serial_number:
+                                                        e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError
+                                            message={editErr(
+                                                'rake_serial_number',
+                                            )}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="rake_type">
+                                            Rake Type
+                                        </Label>
+                                        <Input
+                                            id="rake_type"
+                                            value={editData.rake_type}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    rake_type: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError
+                                            message={editErr('rake_type')}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="dispatch_time">
+                                            Dispatch Time
+                                        </Label>
+                                        <Input
+                                            id="dispatch_time"
+                                            type="datetime-local"
+                                            value={editData.dispatch_time}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    dispatch_time:
+                                                        e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError
+                                            message={editErr('dispatch_time')}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="status">Status</Label>
+                                        <select
+                                            id="status"
+                                            value={editData.status}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    status: e.target.value,
+                                                }))
+                                            }
+                                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        >
+                                            <option value="pending">
+                                                Pending
+                                            </option>
+                                            <option value="txr_in_progress">
+                                                TXR In Progress
+                                            </option>
+                                            <option value="txr_completed">
+                                                TXR Completed
+                                            </option>
+                                            <option value="loading">
+                                                Loading
+                                            </option>
+                                            <option value="loading_completed">
+                                                Loading Completed
+                                            </option>
+                                            <option value="guard_approved">
+                                                Guard Approved
+                                            </option>
+                                            <option value="guard_rejected">
+                                                Guard Rejected
+                                            </option>
+                                            <option value="weighment_completed">
+                                                Weighment Completed
+                                            </option>
+                                            <option value="rr_generated">
+                                                RR Generated
+                                            </option>
+                                            <option value="closed">
+                                                Closed
+                                            </option>
+                                        </select>
+                                        <InputError
+                                            message={editErr('status')}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="rr_expected_date">
+                                            RR Expected Date
+                                        </Label>
+                                        <Input
+                                            id="rr_expected_date"
+                                            type="date"
+                                            value={editData.rr_expected_date}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    rr_expected_date:
+                                                        e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError
+                                            message={editErr(
+                                                'rr_expected_date',
+                                            )}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="placement_time">
+                                            Placement Date
+                                        </Label>
+                                        <Input
+                                            id="placement_time"
+                                            type="date"
+                                            value={editData.placement_time}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    placement_time:
+                                                        e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError
+                                            message={editErr('placement_time')}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="loading_date">
+                                            Loading date
+                                        </Label>
+                                        <Input
+                                            id="loading_date"
+                                            name="loading_date"
+                                            type="date"
+                                            value={editData.loading_date}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    loading_date:
+                                                        e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError
+                                            message={editErr('loading_date')}
+                                        />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <Label htmlFor="destination_code">
+                                            Destination (power plant)
+                                        </Label>
+                                        <select
+                                            id="destination_code"
+                                            name="destination_code"
+                                            value={editData.destination_code}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    destination_code:
+                                                        e.target.value,
+                                                }))
+                                            }
+                                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        >
+                                            <option value="">— None —</option>
+                                            {powerPlants.map((p) => (
+                                                <option
+                                                    key={p.code}
+                                                    value={p.code}
+                                                >
+                                                    {p.name} ({p.code})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <InputError
+                                            message={editErr(
+                                                'destination_code',
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <Label htmlFor="remarks">Remarks</Label>
+                                        <textarea
+                                            id="remarks"
+                                            value={editData.remarks}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    remarks: e.target.value,
+                                                }))
+                                            }
+                                            rows={3}
+                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        />
+                                        <InputError
+                                            message={editErr('remarks')}
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-2 sm:col-span-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                                handleEditRakeOpenChange(false)
+                                            }
+                                            disabled={editSubmitting}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            disabled={editSubmitting}
+                                        >
+                                            {editSubmitting
+                                                ? 'Saving...'
+                                                : 'Save'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                        <Link
+                            href={eDemandBackHref}
+                            className="text-sm font-medium text-muted-foreground underline underline-offset-4"
+                        >
+                            {backLinkLabel}
+                        </Link>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-xs">
+                                Status
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold capitalize">
+                                {rake.state}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-xs">
+                                Wagons
+                            </CardDescription>
+                            <div className="flex items-end justify-between gap-2">
+                                <CardTitle className="text-sm font-semibold tabular-nums">
+                                    {rake.wagon_count ?? 0}
+                                </CardTitle>
+                                {hasWagonDataGaps ? (
+                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                                        Needs update
+                                    </span>
+                                ) : (
+                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
+                                        OK
+                                    </span>
+                                )}
+                            </div>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-xs">
+                                Destination
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold">
+                                {rake.destination ??
+                                    rake.destination_code ??
+                                    '—'}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-xs">
+                                Coal (MT)
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold tabular-nums">
+                                {latestWeighmentTotalMt !== null
+                                    ? latestWeighmentTotalMt.toFixed(2)
+                                    : '—'}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-xs">
+                                Predicted (₹)
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold tabular-nums">
+                                {predictedPenaltyAmount.toFixed(2)}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-xs">
+                                Actual (₹)
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold tabular-nums">
+                                {actualPenaltyAmount.toFixed(2)}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                </div>
+
+                {reconciliations.length > 0 && (
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardTitle className="text-sm font-semibold">
+                                Penalty reconciliation
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                Predicted vs billed by head
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="px-0 sm:px-6">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b text-left text-xs font-medium text-muted-foreground">
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 font-medium"
+                                            >
+                                                Head
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 text-right font-medium"
+                                            >
+                                                Predicted
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 text-right font-medium"
+                                            >
+                                                Billed
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 text-right font-medium"
+                                            >
+                                                Variance
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-3 py-2 text-center font-medium"
+                                            >
+                                                Dispute
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {reconciliations.map((r) => (
+                                            <tr
+                                                key={r.penalty_code}
+                                                className="border-b transition-colors last:border-b-0 hover:bg-muted/40"
+                                            >
+                                                <td className="px-3 py-2">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="font-mono text-[11px]"
+                                                    >
+                                                        {r.penalty_code}
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    ₹
+                                                    {r.predicted_amount.toLocaleString(
+                                                        'en-IN',
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    ₹
+                                                    {r.billed_amount.toLocaleString(
+                                                        'en-IN',
+                                                    )}
+                                                </td>
+                                                <td
+                                                    className={
+                                                        'px-3 py-2 text-right font-medium tabular-nums ' +
+                                                        (r.variance > 0
+                                                            ? 'text-destructive'
+                                                            : r.variance < 0
+                                                              ? 'text-emerald-600 dark:text-emerald-400'
+                                                              : 'text-muted-foreground')
+                                                    }
+                                                >
+                                                    {r.variance >= 0 ? '+' : ''}
+                                                    ₹
+                                                    {r.variance.toLocaleString(
+                                                        'en-IN',
+                                                    )}
+                                                    {r.variance_pct !==
+                                                        null && (
+                                                        <span className="ml-1 text-[11px] opacity-70">
+                                                            ({r.variance_pct}%)
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-center">
+                                                    {r.dispute_candidate ? (
+                                                        <span
+                                                            className="inline-flex items-center gap-1 text-destructive"
+                                                            title="Flagged as dispute candidate"
+                                                            aria-label="Dispute candidate"
+                                                        >
+                                                            <Flag
+                                                                className="h-3.5 w-3.5"
+                                                                aria-hidden="true"
+                                                            />
+                                                            <span className="text-xs font-medium">
+                                                                Yes
+                                                            </span>
+                                                        </span>
+                                                    ) : (
+                                                        <span
+                                                            className="text-muted-foreground"
+                                                            aria-label="Not a dispute candidate"
+                                                        >
+                                                            —
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Workflow steps (TXR, Loading, Guard, Weighment, etc.) */}
+                <RakeWorkflow
+                    rake={rakeForWorkflow}
+                    powerPlants={powerPlants}
+                    demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour}
+                    onUnfitWagonIdsSynced={(unfitWagonIds) => {
+                        const set = new Set(unfitWagonIds);
+                        setWagons((prev) =>
+                            prev.map((w) => ({
+                                ...w,
+                                is_unfit: set.has(w.id),
+                            })),
+                        );
+                    }}
+                />
+
+                {!rake.txr && wagons.length === 0 && (
+                    <Card>
+                        <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                            No TXR or wagon data yet. Use the rail dispatch
+                            flows to record TXR, loading, and weighment.
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+        </AppLayout>
+    );
+}

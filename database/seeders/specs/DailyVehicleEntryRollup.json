@@ -1,0 +1,69 @@
+{
+    "model": "DailyVehicleEntryRollup",
+    "table": "daily_vehicle_entry_rollups",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "rollup_day": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "shift": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "entries_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "completed_entries_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "pending_entries_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "completed_net_wt_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "pending_gross_wt_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

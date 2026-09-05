@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! config('permission.teams', false)) {
+            return;
+        }
+
         $tableNames = config('permission.table_names');
         $teamKey = config('permission.column_names.team_foreign_key');
         $guard = 'web';

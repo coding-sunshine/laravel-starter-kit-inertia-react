@@ -25,27 +25,14 @@ List endpoints (index, search) return Laravel API Resource format: `{ "data": [ 
 
 For the complete list of routes, see [Routes Documentation](./routes.md).
 
-### API routes summary
+## Integration guides
 
-| Method | URI | Name | Auth |
-|--------|-----|------|------|
-| GET | `api` | api | — |
-| POST | `api/chat` | api.chat | Sanctum |
-| GET | `api/chat/memories` | chat.memories | Sanctum |
-| GET | `api/conversations` | conversations.index | Sanctum |
-| GET | `api/conversations/{id}` | conversations.show | Sanctum |
-| PATCH | `api/conversations/{id}` | conversations.update | Sanctum |
-| DELETE | `api/conversations/{id}` | conversations.destroy | Sanctum |
-| GET | `api/v1` | api.v1.info | — |
-| GET | `api/v1/users` | api.v1.users.index | Sanctum, feature:api_access |
-| POST | `api/v1/users/batch` | api.v1.users.batch | Sanctum, feature:api_access |
-| POST | `api/v1/users/search` | api.v1.users.search | Sanctum, feature:api_access |
-| GET | `api/v1/users/{user}` | api.v1.users.show | Sanctum, feature:api_access |
-| POST | `api/v1/users` | api.v1.users.store | Sanctum, feature:api_access |
-| PUT/PATCH | `api/v1/users/{user}` | api.v1.users.update | Sanctum, feature:api_access |
-| DELETE | `api/v1/users/{user}` | api.v1.users.destroy | Sanctum, feature:api_access |
-
-All `/api` and `/api/v1/*` routes use the `api` middleware group. V1 routes are throttled at 60 requests per minute per client. Interactive API docs: `/docs/api`.
+- **[Railway Receipt import preview (multipart)](./railway-receipt-import-preview-api.md)** — Developer copy; same specification as **[mobile handoff: `docs/mobile/railway-receipt-import-preview-api.md`](../../mobile/railway-receipt-import-preview-api.md)** (`POST /api/v1/railway-receipts/import-preview`): auth, multipart `pdf`, success and all error scenarios. Success responses return a plain JSON body (fields at top level), not necessarily the **`essa/api-toolkit`** `{ status, message, data }` envelope used by many other JSON endpoints — see each guide.
+- **[Mobile dashboard RR upload coverage](./mobile-dashboard-rr-upload-coverage-api.md)** — `GET /api/v1/dashboard/rr-upload-coverage`: all dashboard filter query parameters, what affects RR coverage vs echo-only fields, success JSON, **401/403/404/429**, and edge cases.
+- **[Dashboard siding overview & performance metrics](./dashboard-siding-performance.md)** — Filters (including `sp_*` split-chart overrides), date formats, and success/error responses for the dashboard siding endpoints used by web and mobile.
+- **[Dashboard rake-wise performance](./dashboard-rake-performance.md)** — Web + mobile rake performance routes and legacy monolithic mobile endpoint.
+- **[Mobile rake performance rakes API](./mobile-rake-performance-rakes-api.md)** — Only `GET /api/v1/dashboard/rake-performance/rakes` and `GET /api/v1/dashboard/rake-performance/rakes/{rake}`: every query parameter (names and formats), success JSON, and HTTP errors.
+- **[Mobile loader overload API](./mobile-loader-overload-api.md)** — Full reference for the four `GET /api/v1/dashboard/loader-overload/*` endpoints: every query parameter, success JSON field-by-field, **401/403/404/422/429**, and operator-name matching notes; legacy aggregate endpoint noted.
 
 ## Filter, sort, include, and fields (v1 list endpoints)
 

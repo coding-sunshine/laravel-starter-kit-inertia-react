@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/input-otp';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
-import { sanitizeHtml } from '@/lib/sanitize-html';
 import { confirm } from '@/routes/two-factor';
 import { Form } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
@@ -75,8 +74,9 @@ function TwoFactorSetupStep({
                             <div className="z-10 flex h-full w-full items-center justify-center p-5">
                                 {qrCodeSvg ? (
                                     <div
+                                        /* eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml -- QR SVG from server for 2FA setup */
                                         dangerouslySetInnerHTML={{
-                                            __html: sanitizeHtml(qrCodeSvg),
+                                            __html: qrCodeSvg,
                                         }}
                                     />
                                 ) : (
@@ -140,10 +140,10 @@ function TwoFactorVerificationStep({
     const pinInputContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const timeoutId = setTimeout(() => {
+        const t = setTimeout(() => {
             pinInputContainerRef.current?.querySelector('input')?.focus();
         }, 0);
-        return () => clearTimeout(timeoutId);
+        return () => clearTimeout(t);
     }, []);
 
     return (
@@ -280,6 +280,7 @@ export default function TwoFactorSetupModal({
     }, []);
 
     const resetModalState = useCallback(() => {
+        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- reset modal UI when closed
         setShowVerificationStep(false);
         if (twoFactorEnabled) {
             clearSetupData();

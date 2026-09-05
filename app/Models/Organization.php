@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Services\TenantContext;
-use Askedio\SoftCascade\Traits\SoftCascadeTrait;
+use App\Traits\Billing\HasBilling;
+use App\Traits\Billing\HasCredits;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,12 +18,9 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Laravelcm\Subscriptions\Traits\HasPlanSubscriptions;
 use Mattiverse\Userstamps\Traits\Userstamps;
-use Modules\Billing\Traits\HasBilling;
-use Modules\Billing\Traits\HasCredits;
-use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Permission\Models\Role;
-use Spatie\SchemalessAttributes\SchemalessAttributesTrait;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -46,7 +44,6 @@ use function setPermissionsTeamId;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $members
  * @property-read \Illuminate\Database\Eloquent\Collection<int, OrganizationInvitation> $invitations
  * @property-read \Illuminate\Database\Eloquent\Collection<int, OrganizationInvitation> $pendingInvitations
- * @property \Spatie\SchemalessAttributes\SchemalessAttributes $extra_attributes
  */
 final class Organization extends Model
 {
@@ -58,8 +55,6 @@ final class Organization extends Model
     use HasPlanSubscriptions;
     use HasSlug;
     use LogsActivity;
-    use SchemalessAttributesTrait;
-    use SoftCascadeTrait;
     use SoftDeletes;
     use Userstamps;
 
@@ -69,14 +64,6 @@ final class Organization extends Model
      * @var list<string>
      */
     public const array ASSIGNABLE_ORG_ROLES = ['admin', 'member'];
-
-    /**
-     * @var list<string>
-     */
-    protected $softCascade = ['domains', 'invitations'];
-
-    /** @var list<string> */
-    protected $schemalessAttributes = ['extra_attributes'];
 
     /**
      * @var list<string>
@@ -136,14 +123,6 @@ final class Organization extends Model
     }
 
     /**
-     * @return HasMany<OrganizationDomain, $this>
-     */
-    public function domains(): HasMany
-    {
-        return $this->hasMany(OrganizationDomain::class);
-    }
-
-    /**
      * @return HasMany<OrganizationInvitation, $this>
      */
     public function invitations(): HasMany
@@ -157,7 +136,7 @@ final class Organization extends Model
     public function pendingInvitations(): HasMany
     {
         return $this->invitations()
-            ->whereState('status', \App\States\OrganizationInvitation\Pending::class)
+            ->where('status', OrganizationInvitation::STATUS_PENDING)
             ->where('expires_at', '>', now());
     }
 
@@ -204,14 +183,13 @@ final class Organization extends Model
      */
     public function addMember(User $user, string $role, ?User $invitedBy = null): void
     {
-        $isStandardRole = in_array($role, self::ASSIGNABLE_ORG_ROLES, true);
-        $isCustomRole = str_starts_with($role, 'custom_');
-
-        if (! $isStandardRole && ! $isCustomRole) {
-            throw new InvalidArgumentException(sprintf("Invalid role '%s'. Must be one of: ", $role).implode(', ', self::ASSIGNABLE_ORG_ROLES).' — or a custom role.');
+        if (! in_array($role, self::ASSIGNABLE_ORG_ROLES, true)) {
+            throw new InvalidArgumentException(sprintf("Invalid role '%s'. Must be one of: ", $role).implode(', ', self::ASSIGNABLE_ORG_ROLES));
         }
 
-        $this->ensureOrgRolesExist();
+        if (config('permission.teams', false)) {
+            $this->ensureOrgRolesExist();
+        }
 
         $this->users()->syncWithoutDetaching([
             $user->id => [
@@ -221,38 +199,23 @@ final class Organization extends Model
             ],
         ]);
 
-        $previousContext = TenantContext::get();
-        TenantContext::set($this);
-        $previousTeamId = getPermissionsTeamId();
-        setPermissionsTeamId($this->id);
-        try {
-            $teamKey = config('permission.column_names.team_foreign_key');
-            $guard = 'web';
-            $roleModel = Role::query()
-                ->where('name', $role)
-                ->where('guard_name', $guard)
-                ->where($teamKey, $this->id)
-                ->first();
-            if ($roleModel instanceof Role) {
-                // Insert by role id so model_has_roles always receives bigint (Spatie attach can mis-bind on PostgreSQL).
-                $tableNames = config('permission.table_names');
-                $pivotRole = config('permission.column_names.role_pivot_key') ?? 'role_id';
-                $modelMorphKey = config('permission.column_names.model_morph_key') ?? 'model_id';
-                DB::table($tableNames['model_has_roles'])->insertOrIgnore([
-                    $pivotRole => $roleModel->getKey(),
-                    'model_type' => User::class,
-                    $modelMorphKey => $user->getKey(),
-                    $teamKey => $this->id,
-                ]);
-                $user->unsetRelation('roles');
+        if (config('permission.teams', false)) {
+            $previousContext = TenantContext::get();
+            TenantContext::set($this);
+            $previousTeamId = getPermissionsTeamId();
+            setPermissionsTeamId($this->id);
+            try {
+                $user->assignRole($role);
+            } finally {
+                setPermissionsTeamId($previousTeamId);
+                if ($previousContext instanceof self) {
+                    TenantContext::set($previousContext);
+                } else {
+                    TenantContext::forget();
+                }
             }
-        } finally {
-            setPermissionsTeamId($previousTeamId);
-            if ($previousContext instanceof self) {
-                TenantContext::set($previousContext);
-            } else {
-                TenantContext::forget();
-            }
+        } else {
+            $user->assignRole($role === 'member' ? 'user' : $role);
         }
     }
 
@@ -261,13 +224,15 @@ final class Organization extends Model
      */
     public function removeMember(User $user): void
     {
-        $tableNames = config('permission.table_names');
-        $teamKey = config('permission.column_names.team_foreign_key');
-        DB::table($tableNames['model_has_roles'])
-            ->where('model_id', $user->id)
-            ->where('model_type', User::class)
-            ->where($teamKey, $this->id)
-            ->delete();
+        if (config('permission.teams', false)) {
+            $tableNames = config('permission.table_names');
+            $teamKey = config('permission.column_names.team_foreign_key');
+            DB::table($tableNames['model_has_roles'])
+                ->where('model_id', $user->id)
+                ->where('model_type', User::class)
+                ->where($teamKey, $this->id)
+                ->delete();
+        }
         $this->users()->detach($user->id);
     }
 
@@ -291,6 +256,9 @@ final class Organization extends Model
      */
     private function ensureOrgRolesExist(): void
     {
+        if (! config('permission.teams', false)) {
+            return;
+        }
         $teamKey = config('permission.column_names.team_foreign_key');
         $guard = 'web';
 

@@ -1,0 +1,82 @@
+{
+    "model": "LoadingOverride",
+    "table": "loading_overrides",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_loading_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "operator_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "reason": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "overload_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "estimated_penalty_at_time": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "supervisor_review_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "operator": {
+            "type": "belongsTo",
+            "model": "Operator"
+        },
+        "wagonLoading": {
+            "type": "belongsTo",
+            "model": "WagonLoading"
+        }
+    },
+    "value_hints": {
+        "supervisor_review_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

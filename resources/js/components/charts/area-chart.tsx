@@ -1,7 +1,9 @@
+import { cn } from '@/lib/utils';
 import {
     Area,
     CartesianGrid,
-    Legend,
+    type DataKey,
+    Line,
     AreaChart as RechartsAreaChart,
     ResponsiveContainer,
     Tooltip,
@@ -9,99 +11,150 @@ import {
     YAxis,
 } from 'recharts';
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { cn } from '@/lib/utils';
-import { CHART_COLORS } from './chart-colors';
-
-export interface AreaChartProps {
-    data: Record<string, unknown>[];
-    dataKeys: string[];
-    xKey: string;
-    stacked?: boolean;
-    showGrid?: boolean;
-    showLegend?: boolean;
-    showTooltip?: boolean;
-    skeleton?: boolean;
+interface AreaChartProps<T extends Record<string, unknown>> {
+    data: T[];
+    xKey: keyof T & string;
+    yKey: keyof T & string;
+    secondaryYKey?: keyof T & string;
+    secondaryLabel?: string;
+    yLabel?: string;
     height?: number;
+    color?: string;
+    secondaryColor?: string;
+    gradientOpacity?: number;
+    formatY?: (value: number) => string;
+    formatTooltip?: (value: number) => string;
     className?: string;
+    /** Enable dot + area animation for smoother dashboard feel. */
+    animated?: boolean;
 }
 
-export function AreaChart({
+export function AreaChart<T extends Record<string, unknown>>({
     data,
-    dataKeys,
     xKey,
-    stacked = false,
-    showGrid = true,
-    showLegend = false,
-    showTooltip = true,
-    skeleton = false,
-    height = 300,
+    yKey,
+    secondaryYKey,
+    secondaryLabel,
+    yLabel,
+    height = 280,
+    color = 'var(--chart-1)',
+    secondaryColor = 'var(--chart-3)',
+    gradientOpacity = 0.15,
+    formatY,
+    formatTooltip,
     className,
-}: AreaChartProps) {
-    const reducedMotion = useReducedMotion();
-
-    if (skeleton) {
-        return (
-            <Skeleton
-                className={cn('rounded-md', className)}
-                style={{ height }}
-            />
-        );
-    }
+    animated = true,
+}: AreaChartProps<T>) {
+    const gradientId = `area-gradient-${yKey}`;
 
     return (
-        <div className={cn('w-full', className)} style={{ height }}>
-            <ResponsiveContainer width="100%" height="100%">
+        <div className={cn('w-full', className)}>
+            <ResponsiveContainer width="100%" height={height}>
                 <RechartsAreaChart
                     data={data}
-                    margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                    margin={{ top: 4, right: 4, bottom: 0, left: -12 }}
                 >
-                    {showGrid && (
-                        <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="var(--border)"
-                            vertical={false}
-                        />
-                    )}
+                    <defs>
+                        <linearGradient
+                            id={gradientId}
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                        >
+                            <stop
+                                offset="0%"
+                                stopColor={color}
+                                stopOpacity={gradientOpacity}
+                            />
+                            <stop
+                                offset="95%"
+                                stopColor={color}
+                                stopOpacity={0}
+                            />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                        strokeDasharray="3 3"
+                        className="stroke-border/50"
+                    />
                     <XAxis
-                        dataKey={xKey}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                        axisLine={{ stroke: 'var(--border)' }}
+                        dataKey={xKey as DataKey<T>}
+                        tick={{ fontSize: 11 }}
+                        className="fill-muted-foreground"
                         tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
                     />
                     <YAxis
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                        axisLine={false}
+                        tick={{ fontSize: 12 }}
+                        className="fill-muted-foreground"
                         tickLine={false}
+                        axisLine={false}
+                        tickFormatter={formatY}
+                        label={
+                            yLabel
+                                ? {
+                                      value: yLabel,
+                                      angle: -90,
+                                      position: 'insideLeft',
+                                      className: 'fill-muted-foreground',
+                                      style: { fontSize: 11 },
+                                  }
+                                : undefined
+                        }
                     />
-                    {showTooltip && (
-                        <Tooltip
-                            contentStyle={{
-                                background: 'var(--popover)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '8px',
-                                color: 'var(--popover-foreground)',
-                                fontSize: 12,
-                            }}
-                            cursor={{ stroke: 'var(--border)' }}
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: 'var(--card)',
+                            borderColor: 'var(--border)',
+                            borderRadius: 8,
+                            fontSize: 12,
+                        }}
+                        formatter={(value, name) => [
+                            formatTooltip
+                                ? formatTooltip(Number(value))
+                                : Number(value).toLocaleString(),
+                            name === yKey
+                                ? (yLabel ?? yKey)
+                                : (secondaryLabel ?? String(name)),
+                        ]}
+                    />
+                    <Area
+                        type="monotone"
+                        dataKey={yKey as DataKey<T>}
+                        stroke={color}
+                        strokeWidth={2}
+                        fill={`url(#${gradientId})`}
+                        dot={
+                            animated
+                                ? { r: 3, fill: color, strokeWidth: 0 }
+                                : false
+                        }
+                        activeDot={
+                            animated
+                                ? {
+                                      r: 5,
+                                      fill: color,
+                                      strokeWidth: 2,
+                                      stroke: 'var(--card)',
+                                  }
+                                : undefined
+                        }
+                        isAnimationActive={animated}
+                        animationDuration={550}
+                        animationEasing="ease-out"
+                    />
+                    {secondaryYKey && (
+                        <Line
+                            type="monotone"
+                            dataKey={secondaryYKey}
+                            stroke={secondaryColor}
+                            strokeWidth={1.5}
+                            strokeDasharray="5 5"
+                            dot={false}
                         />
                     )}
-                    {showLegend && <Legend />}
-                    {dataKeys.map((key, index) => (
-                        <Area
-                            key={key}
-                            type="monotone"
-                            dataKey={key}
-                            stackId={stacked ? 'stack' : undefined}
-                            stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                            fill={CHART_COLORS[index % CHART_COLORS.length]}
-                            fillOpacity={0.2}
-                            strokeWidth={2}
-                            dot={false}
-                            isAnimationActive={!reducedMotion}
-                        />
-                    ))}
                 </RechartsAreaChart>
             </ResponsiveContainer>
         </div>

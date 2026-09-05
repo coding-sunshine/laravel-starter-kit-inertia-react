@@ -4,48 +4,50 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Ai\Tools\SemanticSearchTool;
+use App\Events\DemurrageThresholdCrossed;
+use App\Events\OrganizationMemberAdded;
+use App\Events\OrganizationMemberRemoved;
 use App\Events\User\UserCreated;
+use App\Http\Controllers\Filament\RedirectAdminHomeController;
+use App\Http\Responses\Filament\LoginResponse as FilamentLoginResponse;
+use App\Listeners\Billing\AddCreditsFromLemonSqueezyOrder;
+use App\Listeners\Billing\SyncSubscriptionSeatsOnMemberChange;
 use App\Listeners\CreatePersonalOrganizationOnUserCreated;
+use App\Listeners\Gamification\GrantGamificationOnUserCreated;
 use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
-use App\Listeners\RecordWebhookFailure;
-use App\Listeners\RecordWebhookSuccess;
-use App\Listeners\ScheduleOnboardingReminderOnUserCreated;
+use App\Listeners\SendDemurrageEscalation;
 use App\Listeners\SendSlackAlertOnJobFailed;
 use App\Models\Shareable;
 use App\Models\User;
 use App\Observers\ActivityLogObserver;
+use App\Observers\PenaltyObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Observers\UserObserver;
 use App\Policies\ShareablePolicy;
+use App\Services\ForceMajeure\Contracts\DowntimePenaltyMatcherContract;
+use App\Services\ForceMajeure\DowntimePenaltyMatcher;
+use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
-use App\Settings\AuthSettings;
+use App\Services\Railway\Contracts\RrPdfTextExtractorContract;
+use App\Services\Railway\RrPdfTextExtractor;
 use App\Settings\SeoSettings;
-use App\Support\ModuleLoader;
-use App\Support\ModuleToolRegistry;
-use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Debug\ExceptionHandler;
-use Illuminate\Database\Eloquent\Model;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse as FilamentLoginResponseContract;
+use Filament\Http\Controllers\RedirectToHomeController;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Validation\Rules\Password;
+use LemonSqueezy\Laravel\Events\OrderCreated;
+use Pan\PanConfiguration;
 use Spatie\Activitylog\ActivitylogServiceProvider;
-use Spatie\Activitylog\Support\CauserResolver as ActivitylogCauserResolver;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Spatie\WebhookServer\Events\WebhookCallFailedEvent;
-use Spatie\WebhookServer\Events\WebhookCallSucceededEvent;
 use STS\FilamentImpersonate\Events\EnterImpersonation;
 use STS\FilamentImpersonate\Events\LeaveImpersonation;
 use Throwable;
@@ -54,55 +56,37 @@ final class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Alias for machour/laravel-data-table: package may resolve ColumnBuilder to root namespace.
-        // Guard: only alias if the short name is not already defined (avoids redeclare in paratest/workers).
-        if (
-            class_exists(\Machour\DataTable\Columns\ColumnBuilder::class)
-            && ! class_exists(\Machour\DataTable\ColumnBuilder::class, false)
-        ) {
-            class_alias(\Machour\DataTable\Columns\ColumnBuilder::class, \Machour\DataTable\ColumnBuilder::class);
-        }
-
         $this->app->singleton(PrismService::class, fn (): PrismService => new PrismService);
-        $this->app->singleton(ModuleToolRegistry::class);
 
-        if (class_exists(\Essa\APIToolKit\Exceptions\Handler::class)) {
-            $this->app->singleton(ExceptionHandler::class, \Essa\APIToolKit\Exceptions\Handler::class);
-        }
+        $this->app->singleton(PaymentGatewayManager::class);
+
+        $this->app->bind(DowntimePenaltyMatcherContract::class, DowntimePenaltyMatcher::class);
+
+        $this->app->bind(RrPdfTextExtractorContract::class, RrPdfTextExtractor::class);
 
         config(['filament-impersonate.redirect_to' => '/dashboard']);
 
-        foreach (ModuleLoader::providers() as $provider) {
-            $this->app->register($provider);
-        }
+        $this->app->bind(FilamentLoginResponseContract::class, FilamentLoginResponse::class);
+
+        $this->app->bind(RedirectToHomeController::class, RedirectAdminHomeController::class);
     }
 
     public function boot(): void
     {
-        $this->bootStrictDefaults();
-
-        $this->ensureSqliteDatabaseExists();
-        $this->runMigrationsIfNeededForInstaller();
-
-        $this->configurePasswordDefaults();
+        $this->configurePan();
 
         $this->registerSeoViewComposer();
         $this->registerActivityLogTaps();
-        $this->registerActivityLogImpersonationCauser();
 
         Gate::policy(Shareable::class, ShareablePolicy::class);
-
-        Gate::define('viewPulse', fn (?User $user = null): bool => $user instanceof User && $user->can('access admin panel'));
 
         Gate::before(function ($user, string $ability, array $arguments): ?bool {
             if (! $user) {
                 return null;
             }
-
             if (! $this->userHasBypassPermissions($user)) {
                 return null;
             }
-
             if ($this->isUserModelDangerousOperation($ability, $arguments)) {
                 return null;
             }
@@ -117,29 +101,18 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(EnterImpersonation::class, [LogImpersonationEvents::class, 'handleEnterImpersonation']);
         Event::listen(LeaveImpersonation::class, [LogImpersonationEvents::class, 'handleLeaveImpersonation']);
         Event::listen(JobFailed::class, SendSlackAlertOnJobFailed::class);
+        Event::listen(UserCreated::class, GrantGamificationOnUserCreated::class);
         Event::listen(UserCreated::class, CreatePersonalOrganizationOnUserCreated::class);
-        Event::listen(UserCreated::class, ScheduleOnboardingReminderOnUserCreated::class);
-        Event::listen(WebhookCallSucceededEvent::class, RecordWebhookSuccess::class);
-        Event::listen(WebhookCallFailedEvent::class, RecordWebhookFailure::class);
-
-        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event): void {
-            $event->extendSocialite('google', \SocialiteProviders\Google\Provider::class);
-            $event->extendSocialite('github', \SocialiteProviders\GitHub\Provider::class);
-        });
-
+        Event::listen(OrganizationMemberAdded::class, SyncSubscriptionSeatsOnMemberChange::class);
+        Event::listen(OrganizationMemberRemoved::class, SyncSubscriptionSeatsOnMemberChange::class);
+        Event::listen(OrderCreated::class, AddCreditsFromLemonSqueezyOrder::class);
+        Event::listen(DemurrageThresholdCrossed::class, SendDemurrageEscalation::class);
         User::observe(UserObserver::class);
-
-        $this->app->make(ModuleToolRegistry::class)->registerBaseTool(SemanticSearchTool::class);
+        \App\Models\Penalty::observe(PenaltyObserver::class);
     }
 
     private function userHasBypassPermissions(object $user): bool
     {
-        // Use isSuperAdmin() which does a direct DB query with organization_id=0,
-        // bypassing Spatie's team-scoped hasRole() that fails when a tenant is active.
-        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
-            return true;
-        }
-
         return (bool) DB::table('model_has_permissions')
             ->join('permissions', 'model_has_permissions.permission_id', '=', 'permissions.id')
             ->where('permissions.name', 'bypass-permissions')
@@ -163,55 +136,296 @@ final class AppServiceProvider extends ServiceProvider
         if (! in_array($ability, ['delete', 'forceDelete'], true)) {
             return false;
         }
-
         $model = $arguments[0] ?? null;
 
         return $model instanceof User;
     }
 
-    /**
-     * Configure Password::defaults() based on the DB-backed password policy in AuthSettings.
-     * All form requests that use Password::defaults() will automatically pick up this policy.
-     */
-    private function configurePasswordDefaults(): void
+    private function configurePan(): void
     {
-        Password::defaults(function (): Password {
-            try {
-                $auth = resolve(AuthSettings::class);
-                $rule = Password::min($auth->password_min_length > 0 ? $auth->password_min_length : 8);
-
-                if ($auth->password_require_uppercase) {
-                    $rule = $rule->mixedCase();
-                }
-
-                if ($auth->password_require_numbers) {
-                    $rule = $rule->numbers();
-                }
-
-                if ($auth->password_require_symbols) {
-                    return $rule->symbols();
-                }
-
-                return $rule;
-            } catch (Throwable) {
-                return Password::min(8);
-            }
-        });
+        PanConfiguration::allowedAnalytics([
+            'settings-nav-profile',
+            'settings-nav-password',
+            'settings-password-save',
+            'settings-nav-two-factor',
+            'settings-nav-appearance',
+            'settings-nav-data-export',
+            'settings-nav-achievements',
+            'settings-nav-onboarding',
+            'appearance-tab-light',
+            'appearance-tab-dark',
+            'appearance-tab-system',
+            'auth-login-button',
+            'auth-sign-up-link',
+            'auth-register-button',
+            'auth-log-in-link',
+            'auth-forgot-password-button',
+            'welcome-dashboard',
+            'welcome-log-in',
+            'welcome-register',
+            'welcome-blog',
+            'welcome-changelog',
+            'welcome-help',
+            'welcome-contact',
+            'nav-dashboard',
+            'nav-control-room',
+            'nav-organizations',
+            'nav-billing',
+            'nav-blog',
+            'nav-changelog',
+            'nav-help',
+            'nav-contact',
+            'nav-api-docs',
+            'nav-repository',
+            'nav-documentation',
+            'nav-rake-loader',
+            'rake-loader-siding-select',
+            'rake-loader-back-to-list',
+            'rake-loader-open-loading-link',
+            'rake-loader-date-filter-select',
+            'rake-loader-date-filter-custom-apply',
+            'rake-loader-period-today',
+            'rake-loader-period-yesterday',
+            'rake-loader-period-this_week',
+            'rake-loader-period-this_month',
+            'rake-loader-period-financial_year',
+            'dashboard-quick-edit-profile',
+            'dashboard-quick-settings',
+            'dashboard-quick-export-pdf',
+            'dashboard-quick-contact',
+            'dashboard-quick-email-templates',
+            'dashboard-quick-product-analytics',
+            'dashboard-card-view-analytics',
+            'siding-perf-rakes-period-select',
+            'siding-perf-rakes-period-select-custom-from',
+            'siding-perf-rakes-period-select-custom-to',
+            'siding-perf-rakes-period-select-custom-apply',
+            'siding-perf-penalty-period-select',
+            'siding-perf-penalty-period-select-custom-from',
+            'siding-perf-penalty-period-select-custom-to',
+            'siding-perf-penalty-period-select-custom-apply',
+            'chat-open',
+            'chat-new-chat',
+            'chat-send',
+            'chat-conversation-item',
+            'chat-suggested-question',
+            'penalty-assign-responsibility',
+            'penalty-set-root-cause',
+            'penalty-analytics-tab',
+            'penalty-index-charts',
+            'penalty-drill-down',
+            'penalty-analytics-date-from',
+            'penalty-analytics-date-to',
+            'penalty-analytics-date-apply',
+            'report-select-type',
+            'report-generate',
+            'report-download-csv',
+            'report-download-xlsx',
+            'reports-sidebar-section-core-toggle',
+            'reports-sidebar-section-advance-toggle',
+            'reports-sidebar-section-reports-toggle',
+            'report-pagination-prev',
+            'report-pagination-next',
+            'reports-sidebar-core-report-select',
+            'report-filter-power-plant',
+            'report-filter-penalty-stage',
+            'report-filter-underload-threshold',
+            'report-filter-loader-performance-loader',
+            'report-filter-loader-performance-operator',
+            'siding-switcher',
+            'penalty-ask-ai',
+            'penalty-root-cause-drill',
+            'penalty-dispute-drill',
+            'penalty-cost-savings',
+            'vehicle-dispatch-tab-main-data',
+            'vehicle-dispatch-import-preview-accordion',
+            'vehicle-dispatch-tab-dpr',
+            'vehicle-dispatch-generate-dpr',
+            'dashboard-coal-transport-export-xlsx',
+            'daily-stock-details-export-xlsx',
+            'daily-stock-details-date-preset',
+            'daily-stock-details-filter-siding',
+            'daily-stock-details-search',
+            'vehicle-dispatch-coal-transport-export',
+            'vehicle-dispatch-dpr-export',
+            'vehicle-dispatch-reconciliation-report',
+            'vehicle-dispatch-reconciliation-report-tab-pkur',
+            'vehicle-dispatch-reconciliation-report-tab-kurwa',
+            'vehicle-dispatch-reconciliation-report-tab-dumk',
+            'vehicle-dispatch-reconciliation-report-apply-range',
+            'vehicle-dispatch-reconciliation-report-refresh',
+            'vehicle-dispatch-reconciliation-report-close',
+            'nav-railway-siding-empty-weighment',
+            'nav-siding-pre-indent-reports',
+            'siding-pre-indent-report-new',
+            'siding-pre-indent-report-index-row',
+            'siding-pre-indent-report-create-submit',
+            'siding-pre-indent-report-edit-submit',
+            'siding-pre-indent-report-delete',
+            'siding-pre-indent-report-copy',
+            'siding-pre-indent-report-filter-apply',
+            'siding-pre-indent-report-filter-clear',
+            'nav-shift-timings',
+            'shift-timings-edit',
+            'nav-opening-coal-stock',
+            'opening-coal-stock-edit',
+            'opening-coal-stock-fix',
+            'nav-vehicle-workorders',
+            'vehicle-workorders-transport-registrations-create',
+            'vehicle-workorders-transport-registrations-create-header',
+            'vehicle-workorders-transport-registrations-create-submit',
+            'vehicle-workorders-transport-registrations-edit',
+            'vehicle-workorders-transport-registrations-edit-submit',
+            'vehicle-workorders-transport-registrations-delete',
+            'vehicle-workorders-transport-registrations-media-delete',
+            'vehicle-workorders-transport-registrations-table',
+            'vehicle-workorders-transporters-column-picker',
+            'vehicle-workorders-filters',
+            'vehicle-workorders-filters-vehicles',
+            'vehicle-workorders-filters-transporters',
+            'vehicle-workorders-filter-transport-name-search',
+            'vehicle-workorders-filter-transport-name-search-vehicles',
+            'vehicle-workorders-export-xlsx',
+            'vehicle-workorders-export-transporters-xlsx',
+            'vehicle-workorders-table',
+            'vehicle-workorders-table-transporter-id',
+            'vehicle-workorders-tab-vehicles',
+            'vehicle-workorders-tab-transporters',
+            'vehicle-workorder-edit',
+            'vehicle-workorder-update',
+            'vehicle-workorders-vehicle-document-media-delete',
+            'vehicle-workorder-transporter-registration-combobox',
+            'vehicle-workorder-transporter-registration-search',
+            'vehicle-workorder-transporter-registration-clear',
+            'rr-details-tabs',
+            'rr-tab-overview',
+            'rr-tab-wagons',
+            'rr-tab-charges',
+            'rr-tab-penalties',
+            'rr-tab-raw',
+            'rr-upload-pdf-button',
+            'rr-rake-hub-dialog-content',
+            'rr-hub-diverted-mode-checkbox',
+            'rr-hub-diversion-destination-add',
+            'rr-hub-diversion-destination-remove',
+            'rr-hub-upload-primary-pdf-button',
+            'rr-hub-upload-diversion-pdf-button',
+            'railway-receipts-tab-rakes',
+            'railway-receipts-tab-standalone',
+            'railway-receipts-upload-rr',
+            'railway-receipts-fnr-preview-dialog',
+            'railway-receipts-fnr-preview-cancel',
+            'railway-receipts-fnr-preview-confirm',
+            'weighments-upload-pdf-button',
+            'weighments-upload-first-document',
+            'weighments-upload-dialog-cancel',
+            'weighments-upload-with-rake-button',
+            'weighments-download-xlsx-template-button',
+            'weighments-download-xlsx-dialog-cancel',
+            'weighments-download-xlsx-template-confirm',
+            'weighments-manual-entry-button',
+            'weighments-empty-manual-entry',
+            'weighments-manual-dialog-cancel',
+            'weighments-dialog-file-input',
+            'weighments-dialog-save-manual',
+            'weighments-fetch-from-rr',
+            'weighments-dialog-manual-net-mt',
+            'weighments-hub-saved-summary',
+            'weighments-dialog-update-manual',
+            'weighments-hub-view-weighment',
+            'weighments-hub-delete-weighment-file',
+            'weighments-show-delete-weighment',
+            'rake-weighment-manual-net-mt',
+            'rake-weighment-manual-submit',
+            'rake-weighment-edit-net-mt',
+            'rake-weighment-edit-manual-submit',
+            'rake-weighment-upload-document-submit',
+            'rake-rr-upload-pdf-button',
+            'rake-rr-upload-primary-pdf-button',
+            'rake-rr-diverted-mode-checkbox',
+            'rake-rr-diversion-destination-add',
+            'rake-rr-diversion-destination-remove',
+            'rake-rr-upload-diversion-pdf-button',
+            'rake-weighment-download-xlsx-template',
+            'rakes-create-rake-button',
+            'indents-upload-pdf-button',
+            'indents-create-button',
+            'indents-create-submit',
+            'indents-create-cancel',
+            'indents-create-back',
+            'indents-create-modal-submit',
+            'indents-create-modal-cancel',
+            'indents-edit-submit',
+            'indents-edit-cancel',
+            'indents-edit-download-pdf',
+            'nav-production-coal',
+            'nav-production-ob',
+            'production-add-entry',
+            'production-edit-entry',
+            'production-delete-entry',
+            'shift-lock-overlay',
+            'daily-vehicle-entries-table-fullscreen',
+            'daily-vehicle-entries-add-five-rows-pack',
+            'daily-vehicle-entries-hourly-record',
+            'daily-vehicle-entries-hourly-record-export',
+            'daily-vehicle-entries-shift-report',
+            'daily-vehicle-entries-shift-report-tab-pkur',
+            'daily-vehicle-entries-shift-report-tab-kurwa',
+            'daily-vehicle-entries-shift-report-tab-dumk',
+            'daily-vehicle-entries-shift-report-apply-range',
+            'daily-vehicle-entries-shift-report-refresh',
+            'daily-vehicle-entries-shift-report-close',
+            'stock-ledger-stock-report-open',
+            'stock-ledger-stock-report-tab-pkur',
+            'stock-ledger-stock-report-tab-kurwa',
+            'stock-ledger-stock-report-tab-dumk',
+            'stock-ledger-stock-report-apply-range',
+            'stock-ledger-stock-report-refresh',
+            'stock-ledger-stock-report-close',
+            'railway-empty-weighment-table-fullscreen',
+            'railway-empty-weighment-add-five-rows-pack',
+            'railway-empty-weighment-hourly-record',
+            'historical-mines-filter-apply',
+            'historical-mines-filter-clear',
+            'historical-railway-siding-filter-search',
+            'historical-railway-siding-filter-clear',
+            'historical-railway-siding-export-xlsx',
+            'master-data-add-loader',
+            'master-data-add-loader-operator',
+            'master-data-loader-operator-duplicate-cancel',
+            'master-data-loader-operator-duplicate-confirm',
+            'master-data-loaders-tab-loaders',
+            'master-data-loaders-tab-operators',
+            'nav-penalty-analytics',
+            'sidings-quick-placement-placed',
+            'sidings-quick-placement-released',
+            'nav-manager-brief',
+            'manager-brief-action-card',
+            'manager-brief-widget-failed',
+            'manager-brief-refresh-now',
+        ]);
     }
 
     private function registerSeoViewComposer(): void
     {
         View::composer('app', function ($view): void {
-            $settings = rescue(fn () => resolve(SeoSettings::class));
-
-            $seo = [
-                'meta_title' => $settings?->meta_title ?: config('app.name'),
-                'meta_description' => $settings?->meta_description ?? '',
-                'og_image' => $settings?->og_image,
-                'app_url' => mb_rtrim(config('app.url'), '/'),
-                'current_url' => request()->url(),
-            ];
-
+            try {
+                $settings = resolve(SeoSettings::class);
+                $seo = [
+                    'meta_title' => $settings->meta_title ?: config('app.name'),
+                    'meta_description' => $settings->meta_description ?? '',
+                    'og_image' => $settings->og_image,
+                    'app_url' => mb_rtrim(config('app.url'), '/'),
+                ];
+            } catch (Throwable) {
+                $seo = [
+                    'meta_title' => config('app.name'),
+                    'meta_description' => '',
+                    'og_image' => null,
+                    'app_url' => mb_rtrim(config('app.url'), '/'),
+                ];
+            }
+            $seo['current_url'] = request()->url();
             $view->with('seo', $seo);
         });
     }
@@ -229,104 +443,5 @@ final class AppServiceProvider extends ServiceProvider
 
         Role::observe(RoleActivityObserver::class);
         Permission::observe(PermissionActivityObserver::class);
-    }
-
-    /**
-     * When impersonating, use the impersonator as activity log causer so the real actor is recorded.
-     */
-    private function registerActivityLogImpersonationCauser(): void
-    {
-        if (! class_exists(\STS\FilamentImpersonate\Facades\Impersonation::class)) {
-            return;
-        }
-
-        $resolver = $this->app->make(ActivitylogCauserResolver::class);
-        $resolver->resolveUsing(function (Model|int|string|null $subject): ?Model {
-            if ($subject instanceof Model) {
-                if (\STS\FilamentImpersonate\Facades\Impersonation::isImpersonating()) {
-                    $current = $this->app->make(\Illuminate\Contracts\Auth\Factory::class)->guard(config('activitylog.default_auth_driver'))->user();
-                    if ($current instanceof Model && $subject->is($current)) {
-                        $impersonator = \STS\FilamentImpersonate\Facades\Impersonation::getImpersonator();
-
-                        return $impersonator instanceof Model ? $impersonator : $subject;
-                    }
-                }
-
-                return $subject;
-            }
-
-            if (is_int($subject) || is_string($subject)) {
-                $driver = config('activitylog.default_auth_driver');
-                $guard = $this->app->make(\Illuminate\Contracts\Auth\Factory::class)->guard($driver);
-                $provider = $guard->getProvider();
-                $model = $provider?->retrieveById($subject);
-
-                return $model instanceof Model ? $model : null;
-            }
-
-            if (\STS\FilamentImpersonate\Facades\Impersonation::isImpersonating()) {
-                $impersonator = \STS\FilamentImpersonate\Facades\Impersonation::getImpersonator();
-
-                return $impersonator instanceof Model ? $impersonator : null;
-            }
-
-            return $this->app->make(\Illuminate\Contracts\Auth\Factory::class)->guard(config('activitylog.default_auth_driver'))->user();
-        });
-    }
-
-    /**
-     * Create the SQLite database file if the default connection is SQLite and the file does not exist.
-     * Allows the app (and installer) to boot when .env has no DB_* and Laravel falls back to sqlite.
-     */
-    private function bootStrictDefaults(): void
-    {
-        Model::shouldBeStrict(! $this->app->isProduction());
-        Model::automaticallyEagerLoadRelationships();
-        Date::use(CarbonImmutable::class);
-        DB::prohibitDestructiveCommands($this->app->isProduction());
-
-        if ($this->app->isProduction()) {
-            URL::forceHttps();
-        }
-    }
-
-    private function ensureSqliteDatabaseExists(): void
-    {
-        if (config('database.default') !== 'sqlite') {
-            return;
-        }
-
-        $path = config('database.connections.sqlite.database');
-        if ($path === null || $path === ':memory:') {
-            return;
-        }
-
-        if (! file_exists($path)) {
-            touch($path);
-        }
-    }
-
-    /**
-     * Run migrations when in local with a fresh SQLite DB so the installer can load (middleware needs cache table).
-     */
-    private function runMigrationsIfNeededForInstaller(): void
-    {
-        if (! $this->app->environment('local')) {
-            return;
-        }
-
-        if (config('database.default') !== 'sqlite') {
-            return;
-        }
-
-        try {
-            if (Schema::hasTable('migrations')) {
-                return;
-            }
-        } catch (Throwable) {
-            return;
-        }
-
-        Artisan::call('migrate', ['--force' => true]);
     }
 }

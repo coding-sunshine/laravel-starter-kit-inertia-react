@@ -1,0 +1,366 @@
+{
+    "model": "Rake",
+    "table": "rakes",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "indent_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "rake_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "rake_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "placement_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "dispatch_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "loaded_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "predicted_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rr_expected_date": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "rr_actual_date": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "loading_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "loading_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "loading_free_minutes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "guard_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "guard_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "data_source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "loading_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "priority_number": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "destination_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "under_load_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "over_load_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rr_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "overload_wagon_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "detention_hours": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "shunting_hours": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total_amount_rs": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "destination": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "pakur_imwb_period": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "chargeable_weight": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "e_mining_chalan": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_place": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "arrival_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "drawn_out": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "out_ward_wt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "is_diverted": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "loader_weighment_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "rake_serial_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "commodity_grade": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "indent": {
+            "type": "belongsTo",
+            "model": "Indent"
+        },
+        "wagons": {
+            "type": "hasMany",
+            "model": "Wagon"
+        },
+        "rakeWeighments": {
+            "type": "hasMany",
+            "model": "RakeWeighment"
+        },
+        "weighments": {
+            "type": "hasMany",
+            "model": "Weighment"
+        },
+        "rakeWagonWeighments": {
+            "type": "hasMany",
+            "model": "RakeWagonWeighment"
+        },
+        "txr": {
+            "type": "hasOne",
+            "model": "Txr"
+        },
+        "wagonLoadings": {
+            "type": "hasMany",
+            "model": "WagonLoading"
+        },
+        "rrPredictions": {
+            "type": "hasMany",
+            "model": "RrPrediction"
+        },
+        "rakeLoad": {
+            "type": "hasOne",
+            "model": "RakeLoad"
+        },
+        "guardInspections": {
+            "type": "hasMany",
+            "model": "GuardInspection"
+        },
+        "rrDocument": {
+            "type": "hasOne",
+            "model": "RrDocument"
+        },
+        "rrDocuments": {
+            "type": "hasMany",
+            "model": "RrDocument"
+        },
+        "powerPlantReceipts": {
+            "type": "hasMany",
+            "model": "PowerPlantReceipt"
+        },
+        "penalties": {
+            "type": "hasMany",
+            "model": "Penalty"
+        },
+        "appliedPenalties": {
+            "type": "hasMany",
+            "model": "AppliedPenalty"
+        },
+        "rakeCharges": {
+            "type": "hasMany",
+            "model": "RakeCharge"
+        },
+        "reconciliations": {
+            "type": "hasMany",
+            "model": "Reconciliation"
+        },
+        "diverrtDestinations": {
+            "type": "hasMany",
+            "model": "DiverrtDestination"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "model": "CreatedBy"
+        },
+        "updatedBy": {
+            "type": "belongsTo",
+            "model": "UpdatedBy"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        },
+        "editor": {
+            "type": "belongsTo",
+            "model": "Editor"
+        },
+        "destroyer": {
+            "type": "belongsTo",
+            "model": "Destroyer"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}
