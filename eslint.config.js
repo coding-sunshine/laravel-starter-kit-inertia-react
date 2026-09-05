@@ -3,10 +3,6 @@ import eslintReact from '@eslint-react/eslint-plugin';
 import prettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
 import typescript from 'typescript-eslint';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-
 /** @type {import('eslint').Linter.Config[]} */
 export default [
     js.configs.recommended,
