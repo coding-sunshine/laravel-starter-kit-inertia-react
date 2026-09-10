@@ -1,3 +1,376 @@
+# FusionCRM v4
+
+## Project Overview
+- Property/real-estate CRM rebuilt from v3 (MySQL) to v4 (PostgreSQL)
+- Starter kit base: laravel-starter-kit-inertia-react
+- Stack: Laravel 13, PostgreSQL 16, Inertia + React, Filament 5
+
+## Critical Rules
+- NEVER touch sites/default/sqlconf.php
+- NEVER commit without human approval
+- ALL CRM code in modules/module-crm/ (namespace Cogneiss\ModuleCrm)
+- ALL CRM models MUST have organization_id (use BelongsToOrganization trait)
+- ALL syncable models MUST implement SyncableContract
+- Use Eloquent only — no DB::raw() in CRM code (sync depends on observers)
+- Use laravel/ai (not prism-php/prism directly)
+- **Filament = superadmin system settings ONLY** (at `/admin` and `/system`)
+- **ALL user/org-admin/agent/builder-facing features = Inertia + React** (never Filament)
+- Roles/permissions use `spatie/laravel-permission` (Governor was removed from starter kit April 2026)
+
+## Companion Docs (in `v4-schema/` directory)
+- `v4-schema/newdb.md` — full DDL schema (source of truth for all tables, including §3.31-3.42 builder portal tables)
+- `v4-schema/newdb-simple.md` — visual column migration map
+- `v4-schema/sync-architecture.md` — bidirectional sync design
+- `v4-schema/dbissues.md` — v3 problems to avoid
+- `v4/specs/kenekt-competitive-feature-spec.md` — Kenekt competitive analysis (22 features)
+
+When PRDs reference "newdb.md §3.1" or "sync-architecture.md §5", look in `v4-schema/`.
+
+## Launch Strategy (2026-03-25)
+
+**Phase 1 — Builder Portal (SHIP FIRST):**
+- Builder Portal launches first. Subscriber migration happens later.
+- Builders self-signup → create stock → agents browse portal
+- Stock auto-pushes to v3 as enriched projects + lots (zero v3 code changes)
+- Subscribers see builder stock in their existing v3 project/lot views
+- Design doc: `v4/specs/2026-03-25-builder-portal-fast-track-design.md`
+- Competitive spec: `v4/specs/kenekt-competitive-feature-spec.md`
+
+**Phase 2 — Subscriber Migration:** Import v3 data, full sync, subscriber CRM features.
+**Phase 3 — Advanced Features:** AI, analytics, marketing, Xero, R&D.
+
+### Builder Portal Key Facts
+- **Competing with Kenekt** ($799-990/mo) — Fusion offers builder portal FREE
+- **PRD 12** = the product (20 user stories, 3 tiers)
+- **Two systems**: Builder Workbench (stock management) + Agent Portal (stock consumption)
+- **13 new tables**: construction_designs, construction_facades, construction_inclusions, construction_inclusion_items, commission_templates, packages, package_inclusions, package_distributions, agent_favorites, agent_saved_searches, sale_commission_payments, enquiries, stock_imports
+- **v3 Push**: `PackageV3PushObserver` writes to v3 projects + lots on create/update/delete
+- **Self-signup**: Builder registers → User + Organization (type='developer') + subdomain
+
+### Phase 1 Build Order
+```
+Pre-Flight → Step 0a (full) → Step 0b (full) → Step 2-slim (models+auth)
+→ Step 3-slim (models only) → Step 4-slim (models only)
+→ Step 1.5-slim (v3 push only) → PRD 12 Tier 1 → LAUNCH
+```
+
+### What is SKIPPED in Phase 1
+- Step 1 (Contacts — 9,735 imports) → Phase 2
+- Step 1.5 full sync (bidirectional) → Phase 2
+- Steps 2/3/4 v3 data imports → Phase 2
+- Steps 5-7 (notes, AI, dashboards) → Phase 2
+- PRD 12 Tiers 2-3 → Phase 3
+- **Construction Library** = relational engine (designs -> facades -> inclusions), NOT a media folder
+- **Packages** = lot + design + facade + inclusions with auto-calculated pricing
+- **Distribution** = open (all agents) or exclusive (selected agents only)
+
+## Design System
+
+### Brand Tokens
+| Token        | Hex       | Use |
+|-------------|-----------|-----|
+| Primary     | `#f28036` | Warm orange — buttons, links, active states, focus rings |
+| Body bg     | `#f3f1ee` | Warm off-white, not clinical pure white |
+| Nav / card  | `#f9f8f7` | Barely-warm white |
+| Text body   | `#727E8C` | Blue-gray body |
+| Headings    | `#475F7B` | Dark blue-gray |
+| Border      | `#DFE3E7` | Light gray |
+
+### Tailwind v4 CSS Variables
+```css
+:root {
+  --color-primary: oklch(70% 0.18 48);           /* #f28036 */
+  --color-primary-foreground: oklch(98% 0 0);
+  --color-background: oklch(96% 0.005 70);       /* #f3f1ee */
+  --color-card: oklch(98% 0.003 70);             /* #f9f8f7 */
+  --color-foreground: oklch(45% 0.05 240);       /* #475F7B */
+  --color-muted-foreground: oklch(55% 0.04 240); /* #727E8C */
+  --color-border: oklch(88% 0.02 240);           /* #DFE3E7 */
+  --color-status-new: oklch(65% 0.15 240);
+  --color-status-qualified: oklch(65% 0.18 160);
+  --color-status-proposal: oklch(70% 0.18 48);
+  --color-status-converted: oklch(60% 0.20 145);
+  --color-status-archived: oklch(70% 0.02 240);
+  --color-status-reserved: oklch(65% 0.18 30);
+  --color-status-sold: oklch(55% 0.20 145);
+  --color-status-cancelled: oklch(55% 0.18 15);
+}
+```
+
+Use CSS variables everywhere — no hardcoded hex or `text-gray-*` classes.
+
+### Typography
+- **Font:** Geist Sans (`THEME_FONT=geist-sans`). Never Inter, Roboto, or Arial.
+- Page title: `text-xl font-semibold`
+- Section heading: `text-base font-medium`
+- Body: `text-sm font-normal` (14px minimum)
+- Small/meta: `text-xs font-normal`
+- KPI stat: `text-2xl font-bold`
+- No uppercase labels with `tracking-widest`. Sentence case only.
+- No eyebrow labels above headings.
+
+### Spacing & Density
+- shadcn base color: zinc, CSS vars: true, radius: 0.5rem
+- CRM tables: compact rows (`text-sm`, `py-1.5`), data-first density
+- Status indicators: 8px colored dot + label (StatusDot), NOT Badge pills
+- Days-Since-Contact color coding: 0-6d green, 7-29d amber, 30-89d orange, 90+d red
+
+### Design Principles
+| Principle | Rule |
+|-----------|------|
+| Data-first density | Compact tables, not spacious cards |
+| Orange primary | All CTAs use `--color-primary` (#f28036) |
+| Warm neutral surfaces | bg #f3f1ee, not pure white |
+| Left-anchored layouts | Sidebar + content, never top-only nav |
+| Status as dots | Colored dot + label, not Badge pills |
+| Dark mode parity | CSS vars only, no hardcoded colors |
+| AI as natural affordance | Floating AI panel on every page |
+
+### Logo
+- File: `public/images/logo/logo.png`
+- Sidebar: `<img src="/images/logo/logo.png" alt="Fusion CRM" className="h-9 w-auto" />`
+- Filament: `->brandLogo(asset('images/logo/logo.png'))->brandLogoHeight('36px')`
+
+## Component Map
+
+### File Structure
+```
+resources/js/
+  Pages/
+    Dashboard/       Index.tsx
+    Contacts/        Index.tsx  Show.tsx  Create.tsx  Edit.tsx
+    Projects/        Index.tsx  Show.tsx
+    Lots/            Show.tsx   (slide-over inside Projects)
+    Reservations/    Index.tsx  Show.tsx
+    Sales/           Index.tsx  Show.tsx
+    Tasks/           Index.tsx
+    Reports/         Index.tsx  Show.tsx
+    Flyers/          Index.tsx  Show.tsx
+    MailLists/       Index.tsx  Show.tsx
+    BotInABox/       Index.tsx  Run.tsx
+    Websites/        Index.tsx
+    Settings/        ApiKeys.tsx
+  Components/
+    Layout/
+      AppLayout.tsx         — main shell: sidebar + page-header slot
+      PageHeader.tsx        — breadcrumb + title + right-actions slot
+      AppSidebar.tsx        — 220px sidebar, collapsible to 56px icon-only
+    Ui/                     — shadcn generated components (do not edit)
+    Shared/
+      SmartListSidebar.tsx  — contact list left panel
+      DataTable.tsx         — reusable table with HasAi NLQ + pagination
+      StatusDot.tsx         — 8px dot + label (never Badge)
+      DaysSinceBadge.tsx    — color-coded recency badge
+      LeadScoreBadge.tsx    — 0-100 score badge
+      AiChatPanel.tsx       — floating AI assistant (Sheet, 400px)
+      ActivityTimeline.tsx  — unified chronological feed
+      MilestoneTimeline.tsx — vertical step tracker
+      ThesysC1Renderer.tsx  — renders AI responses via @thesys/client
+```
+
+### shadcn Install Checklist (Step 0)
+```bash
+npx shadcn@latest add card sheet separator breadcrumb
+npx shadcn@latest add button input textarea label select checkbox form combobox
+npx shadcn@latest add badge toast sonner skeleton
+npx shadcn@latest add table
+npx shadcn@latest add dialog dropdown-menu popover tooltip
+npx shadcn@latest add toggle-group tabs
+```
+
+### Key Pages
+- Dashboard: 3 action-required counts + priority work queue + pipeline funnel + KPI cards
+- Contact List: SmartListSidebar (220px) + HasAi NLQ bar + DataTable (compact 40px rows)
+- Contact Detail: 2-col (60/40) — unified timeline (NO tabs) + sidebar with stage stepper
+- Project List: Grid default (photo cards), slide-over for lots (no page nav)
+- Reservation Detail: 6-step milestone timeline (Enquiry > Qualified > Reservation > Contract > Unconditional > Settled)
+- Tasks: Grouped by Due Today / Overdue / Upcoming, inline complete checkbox
+
+## UI Pattern: DataTable
+
+Every CRM list page uses this stack:
+
+```
+Backend:
+  DataTable class  -> modules/module-crm/src/DataTables/{Entity}DataTable.php
+                      extends AbstractDataTable (machour/laravel-data-table)
+                      defines: tableColumns(), inertiaProps(), showProps()
+  Controller       -> modules/module-crm/src/Http/Controllers/{Entity}Controller.php
+                      index() calls {Entity}DataTable::inertiaProps($request)
+                      returns Inertia::render('crm/{entity}/index', $props)
+  Routes           -> modules/module-crm/routes/web.php
+
+Frontend:
+  Index page       -> resources/js/pages/crm/{entity}/index.tsx
+                      <AppSidebarLayout> + <DataTable<EntityRow>>
+  Show page        -> resources/js/pages/crm/{entity}/show.tsx
+  Create/Edit      -> resources/js/pages/crm/{entity}/create.tsx, edit.tsx
+  TypeScript types -> resources/js/types/crm/{entity}.ts
+```
+
+DataTable column definition:
+```php
+ColumnBuilder::make('first_name', 'First Name')->searchable()->sortable()->type('text')->build(),
+ColumnBuilder::make('stage', 'Stage')->type('option')->options([...])->filterable()->build(),
+```
+
+Key frontend components: `<DataTable<T>>`, `<AppSidebarLayout>`, `useForm()` from `@inertiajs/react`, Wayfinder typed route helpers.
+
+## Import Command Pattern
+
+### Base Structure
+All `fusion:import-*` commands follow this pattern:
+- Flags: `--dry-run`, `--chunk=500`, `--since=`, `--force`
+- Connection: `mysql_legacy` from `config/database.php`
+- Progress bar, chunked transactions, per-row error logging
+- `mapRow(array $row): ?array` — return null to skip
+- `upsertRow(array $data, bool $force): void` — updateOrInsert by legacy key
+
+### Lead ID -> Contact ID Map
+```php
+protected function buildLeadContactMap(): array
+{
+    return DB::table('contacts')
+        ->whereNotNull('legacy_lead_id')
+        ->pluck('id', 'legacy_lead_id')
+        ->all();
+}
+```
+All import commands after Step 1 MUST use this map. Stored via `contacts.legacy_lead_id` column (indexed).
+
+### Idempotency Rules
+1. `updateOrCreate` on stable business key (legacy_id / legacy_lead_id / email / slug)
+2. Never raw INSERT — always `updateOrInsert` or `upsert`
+3. Map rebuilt fresh from DB each run
+4. Failed rows logged and skipped; next run retries
+5. `--dry-run` never writes to DB
+
+### Verification Commands
+Every import has a paired `fusion:verify-import-*` command that:
+- Compares row counts against expected values
+- Checks for orphan FKs
+- Outputs PASS/FAIL per check with exit code 0/non-zero
+
+### Import Order
+```bash
+php artisan fusion:import-projects-lots          # Step 3
+php artisan fusion:import-contacts               # Step 1
+php artisan fusion:import-users                  # Step 2
+php artisan fusion:import-reservations-sales     # Step 4
+php artisan fusion:import-tasks-relationships-marketing  # Step 5
+php artisan fusion:import-ai-bot-config          # Step 6
+```
+
+## AI Configuration
+
+### Credit System
+- **AI Credit**: One unit per AI interaction. Deducted per action.
+- **Plan Credits**: Default 100 per org per billing period (configurable by superadmin)
+- **BYOK**: Bring Your Own Key (OpenAI/OpenRouter) — bypasses credit system entirely
+- **Credit Period**: Monthly reset, no rollover
+
+Credit costs per action (configured in `config/ai-credits.php`):
+| Action | Credits |
+|--------|---------|
+| Chat message | 1 |
+| DataTable NLQ query | 1 |
+| DataTable AI insight | 2 |
+| Email draft generation | 2 |
+| Lead score computation | 1 |
+| Property match suggestion | 1 |
+| Dashboard AI insight | 2 |
+| Bulk AI enrich (per 10 rows) | 5 |
+
+Key service: `AiCreditService` with methods: `canUse()`, `deduct()`, `getBalance()`, `resetPeriod()`, `getByokKey()`, `setByokKey()`
+
+Frontend: Credit widget in AppSidebar bottom, per-page tooltip on NLQ bar, upgrade modal on exhaustion, BYOK badge for own-key users.
+
+### Thesys C1 Generative UI
+Thesys C1 renders AI responses as interactive UI components instead of plain text.
+
+- **API style**: OpenAI-compatible (drop-in replacement)
+- **Frontend SDK**: `@thesys/client` React SDK
+- **Auth**: `THESYS_API_KEY` in `.env`
+- **DataTable HasAi**: Automatically wired via `THESYS_API_KEY` — NLQ + Visualize on every HasAi DataTable
+
+**CRITICAL**: Never render AI responses as plain `<p>` text. Always use `<ThesysC1Renderer>` or `<C1 />` wrapper.
+
+Custom CRM components registered with C1:
+- `ContactCard` — contact summary with stage dot + actions
+- `PropertyCard` — lot/project card with photo + price
+- `PipelineFunnel` — funnel chart from stage counts
+- `EmailCompose` — email card with subject/body/send
+- `CommissionTable` — sale commission breakdown
+- `TaskChecklist` — task card with check/assign actions
+
+Env vars:
+```env
+THESYS_API_KEY=your-thesys-api-key
+DATA_TABLE_AI_MODEL=gpt-4o-mini
+OPENAI_API_KEY=...
+```
+
+### AI Execution Rules (Human-in-the-Loop)
+- One step at a time. Implement only the step you were asked to do.
+- Starter kit is source of truth for patterns and conventions.
+- After completing a step: run verification + `composer test:quick`, then STOP for human approval.
+- Chief/autonomous mode: skip human approval between steps if verification passes.
+- Self-healing protocol: diagnose -> fix -> re-run, up to 3 attempts per failure.
+- Mid-build stops only for: destructive actions not in plan, or genuinely missing credentials.
+- All `fusion:import-*` commands must support `--dry-run` and `--chunk`.
+- All `fusion:verify-import-*` commands must produce machine-parseable output with exit code 0 (PASS) or non-zero (FAIL).
+
+## Visual QA Protocol
+
+Run after every task that produces Inertia pages. Uses Playwright MCP for screenshots.
+
+### Universal Checks (every page)
+| Check | Pass condition |
+|-------|---------------|
+| U1: No console errors | `getConsoleErrors` returns [] |
+| U2: No network errors | No 4xx/5xx responses (except 404 favicon) |
+| U3: Brand orange applied | `--color-primary` resolves to oklch near #f28036 |
+| U4: Font is Geist Sans | Computed font-family contains "Geist" |
+| U5: Page title set | Not "Laravel" or empty |
+| U6: Accessibility score | >= 85 (70-84 = WARN, <70 = FAIL) |
+| U7: No emoji icons | No emoji characters in button/icon elements |
+
+### Self-Healing Protocol
+1. Read console errors / laravel.log
+2. Identify root cause from stack trace
+3. Fix and reload
+4. Re-run failing check
+5. Up to 3 attempts; if still failing, log as `VISUAL QA FAIL` and continue
+
+Screenshots saved to `storage/app/qa/`.
+
+## Multi-Tenancy
+- Each v3 subscriber -> v4 Organization
+- PIAB org = platform superadmin org for shared data
+- contact_origin: 'saas_product' (PIAB) | 'property' (subscriber)
+- Project visibility: PIAB org = shared marketplace, subscriber org = scoped
+- `BelongsToOrganization` trait + `OrganizationScope` global scope on all CRM models
+- Superadmin/piab_admin bypass org scope via `withoutGlobalScope`
+- Organization types: 'platform' (PIAB, 1 org), 'developer' (creates projects/lots), 'agency' (sells properties)
+- Developers get own subdomain via organization_domains (e.g., metricon.fusioncrm.com)
+- Agencies get own subdomain (e.g., flexiproperty.fusioncrm.com)
+- Stock view = developer manages their projects/lots
+- Portal view = agents browse available stock from developers
+
+## Sync
+- Bidirectional during parallel run, see sync-architecture.md
+- 8 bidirectional entities, 4 one-way, event-driven + polled + batch
+- All sync code in modules/module-crm/src/Sync/
+- Config: `config/sync.php` — piab_organization_id, tiebreaker_source (v3), batch_chunk_size, poll_interval
+
+
+---
+
+# Laravel Boost / Starter Kit Guidelines
+
+> Auto-generated by Laravel Boost. Regenerate with `php artisan boost:install` (update mode).
+> FusionCRM-specific rules above take precedence on conflict.
+
 <laravel-boost-guidelines>
 === .ai/app.actions rules ===
 
