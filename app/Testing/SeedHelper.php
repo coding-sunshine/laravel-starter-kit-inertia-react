@@ -5,14 +5,23 @@ declare(strict_types=1);
 namespace App\Testing;
 
 use App\Services\SeedScenarioManager;
+use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
+use ReflectionClass;
 use RuntimeException;
 
 final class SeedHelper
 {
     private static ?SeedScenarioManager $scenarioManager = null;
+
+    /**
+     * Models currently being seeded, to break belongsTo cycles (e.g. User <-> Organization).
+     *
+     * @var array<class-string<Model>, true>
+     */
+    private static array $seedingInProgress = [];
 
     /**
      * Auto-seed a model and its relationships.
@@ -22,21 +31,25 @@ final class SeedHelper
      */
     public static function seedFor(string $modelClass, int $count = 1)
     {
-        throw_unless(class_exists($modelClass), InvalidArgumentException::class, sprintf('Model class %s does not exist', $modelClass));
+        throw_unless(class_exists($modelClass), InvalidArgumentException::class, "Model class {$modelClass} does not exist");
 
-        throw_unless(is_subclass_of($modelClass, Model::class), InvalidArgumentException::class, $modelClass.' is not an Eloquent model');
+        throw_unless(is_subclass_of($modelClass, Model::class), InvalidArgumentException::class, "{$modelClass} is not an Eloquent model");
 
         $model = new $modelClass;
         $table = $model->getTable();
 
-        throw_unless(Schema::hasTable($table), RuntimeException::class, sprintf('Table %s does not exist. Run migrations first.', $table));
+        throw_unless(Schema::hasTable($table), RuntimeException::class, "Table {$table} does not exist. Run migrations first.");
 
-        // Create the models — factory() handles resolution via newFactory() override on module models
-        try {
-            return $modelClass::factory()->count($count)->create();
-        } catch (\Illuminate\Contracts\Container\BindingResolutionException $e) {
-            throw new RuntimeException(sprintf('Factory for %s not found. Ensure the model has a newFactory() override.', $modelClass), 0, $e);
-        }
+        // Check if model has factory
+        $factoryClass = 'Database\\Factories\\'.class_basename($modelClass).'Factory';
+
+        throw_unless(class_exists($factoryClass), RuntimeException::class, "Factory {$factoryClass} does not exist. Create it first.");
+
+        // Seed parent relationships first
+        self::seedRelationships($modelClass);
+
+        // Create the models
+        return $modelClass::factory()->count($count)->create();
     }
 
     /**
@@ -89,5 +102,71 @@ final class SeedHelper
         }
 
         return self::$scenarioManager;
+    }
+
+    /**
+     * Seed relationships for a model.
+     *
+     * @param  class-string<Model>  $modelClass
+     */
+    private static function seedRelationships(string $modelClass): void
+    {
+        if (isset(self::$seedingInProgress[$modelClass])) {
+            return;
+        }
+
+        self::$seedingInProgress[$modelClass] = true;
+
+        try {
+            self::seedBelongsToParents($modelClass);
+        } finally {
+            unset(self::$seedingInProgress[$modelClass]);
+        }
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     */
+    private static function seedBelongsToParents(string $modelClass): void
+    {
+        $model = new $modelClass;
+        $reflection = new ReflectionClass($modelClass);
+
+        // Get all belongsTo relationships
+        foreach ($reflection->getMethods() as $method) {
+            if ($method->getNumberOfRequiredParameters() > 0) {
+                continue;
+            }
+
+            $returnType = $method->getReturnType();
+
+            if ($returnType === null) {
+                continue;
+            }
+
+            $returnTypeName = $returnType->getName();
+
+            // Check if it's a relationship method
+            if (! method_exists($returnTypeName, 'getRelated')) {
+                continue;
+            }
+
+            // For belongsTo relationships, seed the parent
+            try {
+                $relationship = $model->{$method->getName()}();
+
+                if (method_exists($relationship, 'getForeignKeyName')) {
+                    $relatedModel = $relationship->getRelated();
+
+                    // Check if related model exists and has records
+                    if ($relatedModel::query()->count() === 0) {
+                        self::seedFor($relatedModel::class, 1);
+                    }
+                }
+            } catch (Exception) {
+                // Skip if relationship can't be resolved
+                continue;
+            }
+        }
     }
 }

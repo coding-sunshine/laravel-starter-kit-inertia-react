@@ -18,7 +18,29 @@ return [
     |
     */
 
-    'default' => 'openai',
+    'default' => 'openrouter',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chat model (OpenRouter)
+    |--------------------------------------------------------------------------
+    | Model used by the in-app AI chatbot. Use a free model id from
+    | https://openrouter.ai/collections/free-models (e.g. stepfun/step-3.5-flash:free).
+    | Override with AI_CHAT_MODEL in .env if the default is rate-limited.
+    */
+    'chat_model' => env('AI_CHAT_MODEL', 'stepfun/step-3.5-flash:free'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Daily automated AI request budget
+    |--------------------------------------------------------------------------
+    | Cap on scheduled/automatic LLM calls per day (manager-brief refresh etc.,
+    | NOT the user-facing chatbot). Keeps automation inside the OpenRouter
+    | free-tier quota (~50 requests/day) with headroom for chat. 0 disables
+    | the cap.
+    */
+    'daily_auto_request_limit' => (int) env('AI_DAILY_AUTO_REQUEST_LIMIT', 40),
+
     'default_for_images' => 'gemini',
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',

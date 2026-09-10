@@ -13,14 +13,15 @@ use function setPermissionsTeamId;
 
 final class OrganizationInvitationPolicy
 {
+    /**
+     * When called with only the user (e.g. by Filament for sidebar), allow if the user
+     * can access the admin panel. When called with organization (tenant context),
+     * allow if the user belongs to that organization.
+     */
     public function viewAny(User $user, ?Organization $organization = null): bool
     {
         if (! $organization instanceof Organization) {
-            if ($user->isSuperAdmin()) {
-                return true;
-            }
-
-            return $user->organizations()->exists();
+            return $user->can('access admin panel');
         }
 
         return $user->belongsToOrganization($organization->id);
@@ -31,9 +32,22 @@ final class OrganizationInvitationPolicy
         return $user->belongsToOrganization($organizationInvitation->organization_id);
     }
 
+    /**
+     * Authorize creating an invitation for the given organization.
+     */
     public function create(User $user, Organization $organization): bool
     {
-        return $this->isOwnerSuperAdminOrRole($user, $organization, 'admin');
+        if ($organization->isOwner($user) || $user->isSuperAdmin()) {
+            return true;
+        }
+
+        $previousTeamId = getPermissionsTeamId();
+        setPermissionsTeamId($organization->id);
+        try {
+            return $user->hasRole('admin');
+        } finally {
+            setPermissionsTeamId($previousTeamId);
+        }
     }
 
     public function update(User $user, OrganizationInvitation $organizationInvitation): bool
@@ -42,35 +56,22 @@ final class OrganizationInvitationPolicy
             return true;
         }
 
-        return $this->isOwnerSuperAdminOrRole($user, $organizationInvitation->organization, 'admin');
+        $org = $organizationInvitation->organization;
+        if ($org->isOwner($user)) {
+            return true;
+        }
+
+        $previousTeamId = getPermissionsTeamId();
+        setPermissionsTeamId($org->id);
+        try {
+            return $user->hasRole('admin');
+        } finally {
+            setPermissionsTeamId($previousTeamId);
+        }
     }
 
     public function delete(User $user, OrganizationInvitation $organizationInvitation): bool
     {
         return $this->update($user, $organizationInvitation);
-    }
-
-    private function isOwnerSuperAdminOrRole(User $user, Organization $organization, string $role): bool
-    {
-        if ($organization->isOwner($user)) {
-            return true;
-        }
-
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
-
-        return $this->userHasOrgRole($user, $organization, $role);
-    }
-
-    private function userHasOrgRole(User $user, Organization $organization, string $role): bool
-    {
-        $previousTeamId = getPermissionsTeamId();
-        setPermissionsTeamId($organization->id);
-        try {
-            return $user->hasRole($role);
-        } finally {
-            setPermissionsTeamId($previousTeamId);
-        }
     }
 }

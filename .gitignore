@@ -26,29 +26,13 @@ yarn-error.log
 /.zed
 /tmp/
 /.kreuzberg
-/prd
 /.playwright-mcp
-
-# Agent skills (symlinks from boost:update; canonical source is .ai/skills/)
-/.agents/skills/
-/.claude/skills/
-/.cursor/skills/
-/.github/skills/
-/.junie/skills/
-.chief/
-
-# Install progress
-storage/app/.install-progress.json
-/storage/debugbar
-
-# PNG files in root folder only
-/*.png
-polyscope.json
-/screenshots
-
-# Storybook build output
-/storybook-static
 .gstack/
-.worktrees
-.superpowers/
+.playwright-mcp/
+.claude/
+*.png
+!resources/**/*.png
+!public/**/*.png
+!docs/**/*.png
 config.bat
+live.md

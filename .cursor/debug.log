@@ -1,0 +1,11 @@
+{"location":"ChatController.php:message","message":"message_entry","data":{"hasUser":true},"timestamp":1771504212795,"hypothesisId":"C"}
+{"location":"ChatController.php:message","message":"message_validated","data":[],"timestamp":1771504212797,"hypothesisId":"A"}
+{"location":"ChatController.php:message","message":"message_catch","data":{"exception":"TypeError","msg":"number_format(): Argument #1 ($num) must be of type int|float, string given","code":0},"timestamp":1771504212859,"hypothesisId":"C"}
+{"location":"ChatController.php:message","message":"message_entry","data":{"hasUser":true},"timestamp":1771504478972,"hypothesisId":"C"}
+{"location":"ChatController.php:message","message":"message_validated","data":[],"timestamp":1771504478975,"hypothesisId":"A"}
+{"location":"ChatController.php:message","message":"message_catch","data":{"exception":"Laravel\\Ai\\Exceptions\\RateLimitedException","msg":"Application rate limited by AI provider [openrouter].","code":0},"timestamp":1771504480841,"hypothesisId":"C"}
+{"location":"ChatController.php:message","message":"message_entry","data":{"hasUser":true},"timestamp":1771504597534,"hypothesisId":"C"}
+{"location":"ChatController.php:message","message":"message_validated","data":[],"timestamp":1771504597545,"hypothesisId":"A"}
+{"location":"ChatController.php:message","message":"message_catch","data":{"exception":"Laravel\\Ai\\Exceptions\\RateLimitedException","msg":"Application rate limited by AI provider [openrouter].","code":0},"timestamp":1771504599722,"hypothesisId":"C"}
+{"location":"ChatController.php:message","message":"message_entry","data":{"hasUser":true},"timestamp":1771504867462,"hypothesisId":"C"}
+{"location":"ChatController.php:message","message":"message_validated","data":[],"timestamp":1771504867463,"hypothesisId":"A"}

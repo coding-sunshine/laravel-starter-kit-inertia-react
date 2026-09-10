@@ -14,7 +14,10 @@ it('discovers seeders in category directories', function (): void {
 });
 
 it('runs seeders in correct order', function (): void {
-    $seeder = new DatabaseSeeder([SeederCategory::Development]);
+    // Development\UsersSeeder is intentionally a no-op (RRMMS uses only
+    // Essential\UserSeeder); seed both categories together, matching how
+    // DatabaseSeeder::getDefaultCategories() and SeedEnvironmentCommand run it.
+    $seeder = new DatabaseSeeder([SeederCategory::Essential, SeederCategory::Development]);
 
     $seeder->run();
 

@@ -12,6 +12,8 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionNamedType;
+use ReflectionType;
+use ReflectionUnionType;
 
 final class SeedSpecGenerator
 {
@@ -22,8 +24,8 @@ final class SeedSpecGenerator
      */
     public function generateSpec(string $modelClass): array
     {
-        throw_unless(class_exists($modelClass), InvalidArgumentException::class, sprintf('Model class %s does not exist', $modelClass));
-        throw_unless(is_subclass_of($modelClass, Model::class), InvalidArgumentException::class, sprintf('Class %s is not an Eloquent model', $modelClass));
+        throw_unless(class_exists($modelClass), InvalidArgumentException::class, "Model class {$modelClass} does not exist");
+        throw_unless(is_subclass_of($modelClass, Model::class), InvalidArgumentException::class, "Class {$modelClass} is not an Eloquent model");
 
         $model = new $modelClass;
         $table = $model->getTable();
@@ -47,7 +49,7 @@ final class SeedSpecGenerator
     public function loadSpec(string $modelClass): ?array
     {
         $modelName = class_basename($modelClass);
-        $specPath = database_path(sprintf('seeders/specs/%s.json', $modelName));
+        $specPath = database_path("seeders/specs/{$modelName}.json");
 
         if (! File::exists($specPath)) {
             return null;
@@ -70,7 +72,7 @@ final class SeedSpecGenerator
             File::makeDirectory($specsDir, 0755, true);
         }
 
-        $specPath = sprintf('%s/%s.json', $specsDir, $modelName);
+        $specPath = "{$specsDir}/{$modelName}.json";
 
         File::put($specPath, json_encode($spec, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
@@ -101,7 +103,7 @@ final class SeedSpecGenerator
 
                 // If new field is non-nullable without default, needs approval
                 if (! $fieldSpec['nullable'] && $fieldSpec['default'] === null) {
-                    $diff['needs_approval'][] = sprintf("New non-nullable field '%s' without default", $field);
+                    $diff['needs_approval'][] = "New non-nullable field '{$field}' without default";
                 }
             } elseif ($oldFields[$field] !== $fieldSpec) {
                 $diff['changed_fields'][$field] = [
@@ -111,7 +113,7 @@ final class SeedSpecGenerator
 
                 // If field became non-nullable, needs approval
                 if ($oldFields[$field]['nullable'] && ! $fieldSpec['nullable']) {
-                    $diff['needs_approval'][] = sprintf("Field '%s' became non-nullable", $field);
+                    $diff['needs_approval'][] = "Field '{$field}' became non-nullable";
                 }
             }
         }
@@ -164,12 +166,12 @@ final class SeedSpecGenerator
                 $default = $columnInfo->getDefault();
             } catch (Exception) {
                 // Fallback for SQLite or other drivers that don't support Doctrine introspection
-                $nullable = true;
+                $nullable = true; // Default to nullable if we can't determine
                 $default = null;
             }
 
             $fields[$column] = [
-                'type' => $this->normalizeColumnType($type, $column),
+                'type' => $this->normalizeColumnType($type),
                 'nullable' => $nullable,
                 'default' => $default,
             ];
@@ -190,14 +192,10 @@ final class SeedSpecGenerator
      * Normalize driver-specific column types to canonical names so spec JSON
      * does not flip between e.g. datetime/timestamp or integer/int8 when
      * running in different environments or after migrations.
-     *
-     * SQLite reports both integer() and bigInteger() as "integer", so we infer
-     * bigint for id and *_id columns (Laravel convention: id, foreignId).
      */
-    private function normalizeColumnType(string $type, string $column): string
+    private function normalizeColumnType(string $type): string
     {
-        $lower = mb_strtolower($type);
-        $normalized = match ($lower) {
+        return match (mb_strtolower($type)) {
             'datetime', 'timestamp', 'timestamps' => 'timestamp',
             'int8', 'bigint' => 'bigint',
             'int', 'int4', 'integer' => 'integer',
@@ -209,21 +207,6 @@ final class SeedSpecGenerator
             'json', 'jsonb' => 'json',
             default => $type,
         };
-
-        // SQLite reports integer for both integer and bigint. Laravel uses bigint
-        // for id, foreignId, *_id, and reference columns like cloned_from.
-        if ($normalized === 'integer' && $this->isSqlite()) {
-            if ($column === 'id' || Str::endsWith($column, '_id') || Str::endsWith($column, '_from')) {
-                return 'bigint';
-            }
-        }
-
-        return $normalized;
-    }
-
-    private function isSqlite(): bool
-    {
-        return Schema::getConnection()->getDriverName() === 'sqlite';
     }
 
     /**
@@ -238,24 +221,28 @@ final class SeedSpecGenerator
 
         foreach ($methods as $method) {
             $returnType = $method->getReturnType();
+
             if ($returnType === null) {
                 continue;
             }
 
-            if (! $returnType instanceof ReflectionNamedType) {
+            $returnTypeName = $this->getReturnTypeName($returnType);
+            if ($returnTypeName === null) {
                 continue;
             }
 
-            $returnTypeName = $returnType->getName();
-
+            // Check if it's a relationship method
             if (! is_subclass_of($returnTypeName, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
                 continue;
             }
 
             $methodName = $method->getName();
-            $type = $this->inferRelationshipType($returnTypeName);
+
+            // Infer relationship type from method name or return type
+            $type = $this->inferRelationshipType($returnTypeName, $methodName);
 
             if ($type !== null) {
+                // Try to extract related model from return type
                 $relatedModel = $this->extractRelatedModelFromReturnType($methodName);
 
                 $relationships[$methodName] = [
@@ -269,22 +256,63 @@ final class SeedSpecGenerator
     }
 
     /**
-     * Infer relationship type from return type name.
-     *
-     * More specific types (e.g. BelongsToMany) must be checked before their
-     * substring matches (e.g. BelongsTo) to avoid incorrect classification.
+     * Get the return type name, supporting ReflectionNamedType and ReflectionUnionType.
+     * For union types, returns the first type name or null so the caller can skip.
      */
-    private function inferRelationshipType(string $returnType): ?string
+    private function getReturnTypeName(ReflectionType $returnType): ?string
     {
-        return match (true) {
-            Str::contains($returnType, 'BelongsToMany') => 'belongsToMany',
-            Str::contains($returnType, 'BelongsTo') => 'belongsTo',
-            Str::contains($returnType, 'HasManyThrough') => 'hasManyThrough',
-            Str::contains($returnType, 'HasOneThrough') => 'hasOneThrough',
-            Str::contains($returnType, 'HasMany') => 'hasMany',
-            Str::contains($returnType, 'HasOne') => 'hasOne',
-            default => null,
-        };
+        if ($returnType instanceof ReflectionNamedType) {
+            return $returnType->getName();
+        }
+
+        if ($returnType instanceof ReflectionUnionType) {
+            $types = $returnType->getTypes();
+
+            return $types !== [] ? $types[0]->getName() : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Infer relationship type from return type and method name.
+     */
+    private function inferRelationshipType(string $returnType, string $methodName): ?string
+    {
+        if (Str::contains($returnType, 'BelongsTo')) {
+            return 'belongsTo';
+        }
+
+        if (Str::contains($returnType, 'HasMany')) {
+            return 'hasMany';
+        }
+
+        if (Str::contains($returnType, 'HasOne')) {
+            return 'hasOne';
+        }
+
+        if (Str::contains($returnType, 'BelongsToMany')) {
+            return 'belongsToMany';
+        }
+
+        if (Str::contains($returnType, 'HasOneThrough')) {
+            return 'hasOneThrough';
+        }
+
+        if (Str::contains($returnType, 'HasManyThrough')) {
+            return 'hasManyThrough';
+        }
+
+        // Fallback: infer from method name
+        if (Str::startsWith($methodName, 'belongsTo')) {
+            return 'belongsTo';
+        }
+
+        if (Str::startsWith($methodName, 'hasMany')) {
+            return 'hasMany';
+        }
+
+        return null;
     }
 
     /**
@@ -292,6 +320,8 @@ final class SeedSpecGenerator
      */
     private function extractRelatedModelFromReturnType(string $methodName): ?string
     {
+        // For now, infer from method name
+        // Enhanced analyzer will get actual model from relationship instance
         $name = $methodName;
 
         if (Str::startsWith($name, 'belongsTo')) {
@@ -314,6 +344,7 @@ final class SeedSpecGenerator
     {
         $hints = [];
 
+        // Check casts for hints
         if ($reflection->hasMethod('casts')) {
             $castsMethod = $reflection->getMethod('casts');
 
@@ -337,6 +368,7 @@ final class SeedSpecGenerator
             }
         }
 
+        // Add common field hints
         if (Schema::hasTable($table)) {
             $columns = Schema::getColumnListing($table);
 

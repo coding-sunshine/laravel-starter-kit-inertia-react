@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'name' => 'Laravel',
+    'name' => env('APP_NAME', 'SHAReReport'),
 
     /*
     |--------------------------------------------------------------------------
@@ -54,7 +54,7 @@ return [
     |
     */
 
-    'url' => 'http://localhost',
+    'url' => env('APP_URL', 'http://localhost'),
 
     /*
     |--------------------------------------------------------------------------
@@ -67,7 +67,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Asia/Kolkata',
 
     /*
     |--------------------------------------------------------------------------
@@ -80,11 +80,11 @@ return [
     |
     */
 
-    'locale' => 'en',
+    'locale' => env('APP_LOCALE', 'en'),
 
-    'fallback_locale' => 'en',
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
-    'faker_locale' => 'en_US',
+    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
     /*
     |--------------------------------------------------------------------------
@@ -121,8 +121,8 @@ return [
     */
 
     'maintenance' => [
-        'driver' => 'file',
-        'store' => 'database',
+        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
+        'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
     /*
@@ -137,6 +137,6 @@ return [
     |
     */
 
-    'ip_whitelist' => [],
+    'ip_whitelist' => array_filter(array_map(trim(...), explode(',', (string) env('IP_WHITELIST', '')))),
 
 ];

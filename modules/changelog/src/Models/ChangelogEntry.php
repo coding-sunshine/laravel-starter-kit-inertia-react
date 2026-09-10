@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Modules\Changelog\Models;
+namespace App\Models;
 
+use App\Enums\ChangelogType;
 use App\Models\Concerns\BelongsToOrganization;
+use Database\Factories\ChangelogEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,12 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
 use Mattiverse\Userstamps\Traits\Userstamps;
-use Modules\Changelog\Database\Factories\ChangelogEntryFactory;
-use Modules\Changelog\Enums\ChangelogType;
-use Pgvector\Laravel\HasNeighbors;
-use Pgvector\Laravel\Vector;
-use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Tags\HasTags;
 
 /**
@@ -39,7 +37,6 @@ final class ChangelogEntry extends Model
     use BelongsToOrganization;
 
     use HasFactory;
-    use HasNeighbors;
     use HasTags;
     use LogsActivity;
     use Searchable;
@@ -56,7 +53,6 @@ final class ChangelogEntry extends Model
         'type',
         'is_published',
         'released_at',
-        'embedding',
     ];
 
     public function getActivitylogOptions(): LogOptions
@@ -83,27 +79,12 @@ final class ChangelogEntry extends Model
         ];
     }
 
-    protected static function booted(): void
-    {
-        self::saved(function (self $model): void {
-            if ($model->wasChanged(['title', 'description']) || $model->wasRecentlyCreated) {
-                \App\Jobs\GenerateEmbedding::dispatch($model, 'description')->onQueue('embeddings');
-            }
-        });
-    }
-
-    protected static function newFactory(): ChangelogEntryFactory
-    {
-        return ChangelogEntryFactory::new();
-    }
-
     protected function casts(): array
     {
         return [
             'type' => ChangelogType::class,
             'is_published' => 'boolean',
             'released_at' => 'immutable_datetime',
-            'embedding' => Vector::class,
         ];
     }
 

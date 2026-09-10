@@ -21,15 +21,15 @@ final class PostFactory extends Factory
      */
     public function definition(): array
     {
-        $title = fake()->sentence();
+        $title = $this->faker->sentence();
         $slug = Str::slug($title);
 
         return [
             'author_id' => User::factory(),
             'title' => $title,
             'slug' => $slug,
-            'excerpt' => fake()->paragraph(),
-            'content' => fake()->paragraphs(4, true),
+            'excerpt' => $this->faker->paragraph(),
+            'content' => $this->faker->paragraphs(4, true),
             'is_published' => false,
             'published_at' => null,
             'meta_title' => null,
@@ -58,9 +58,9 @@ final class PostFactory extends Factory
     public function withSeo(): self
     {
         return $this->state(fn (array $attributes): array => [
-            'meta_title' => $attributes['title'] ?? fake()->sentence(),
-            'meta_description' => fake()->paragraph(),
-            'meta_keywords' => implode(', ', fake()->words(5)),
+            'meta_title' => $attributes['title'] ?? $this->faker->sentence(),
+            'meta_description' => $this->faker->paragraph(),
+            'meta_keywords' => implode(', ', $this->faker->words(5)),
         ]);
     }
 }

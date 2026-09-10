@@ -55,5 +55,7 @@ return [
         Modules\Billing\Events\DunningFailedPaymentReminder::class,
         Modules\Billing\Events\InvoicePaid::class,
         App\Events\NewTermsVersionPublished::class,
+        App\Events\DemurrageThresholdCrossed::class,
+        App\Events\WeeklyPenaltyReportReady::class,
     ],
 ];

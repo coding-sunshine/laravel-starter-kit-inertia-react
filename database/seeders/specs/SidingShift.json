@@ -1,0 +1,73 @@
+{
+    "model": "SidingShift",
+    "table": "siding_shifts",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "shift_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "start_time": {
+            "type": "time",
+            "nullable": true,
+            "default": null
+        },
+        "end_time": {
+            "type": "time",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "sort_order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "users": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": {
+        "shift_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

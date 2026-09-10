@@ -1,0 +1,59 @@
+{
+    "model": "VehicleUnloadStep",
+    "table": "vehicle_unload_steps",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_unload_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "step_number": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "completed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

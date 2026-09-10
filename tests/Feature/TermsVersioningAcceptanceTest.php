@@ -8,6 +8,7 @@ use App\Enums\TermsType;
 use App\Models\TermsVersion;
 use App\Models\User;
 use App\Models\UserTermsAcceptance;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
@@ -16,6 +17,7 @@ use function Pest\Laravel\post;
 
 beforeEach(function (): void {
     App\Services\TenantContext::forget();
+    $this->seed(RolesAndPermissionsSeeder::class);
 });
 
 test('guest can view legal terms and privacy pages', function (): void {
@@ -53,6 +55,7 @@ test('user who accepted required version is not redirected', function (): void {
     ]);
 
     $user = User::factory()->withoutTwoFactor()->create(['onboarding_completed' => true]);
+    $user->assignRole('super-admin');
     UserTermsAcceptance::query()->create([
         'user_id' => $user->id,
         'terms_version_id' => $version->id,
@@ -147,6 +150,7 @@ test('submitting acceptance records and allows access', function (): void {
         'is_required' => true,
     ]);
     $user = User::factory()->withoutTwoFactor()->create(['onboarding_completed' => true]);
+    $user->assignRole('super-admin');
 
     resolve(RecordTermsAcceptance::class)->handle($user, $version, request());
 

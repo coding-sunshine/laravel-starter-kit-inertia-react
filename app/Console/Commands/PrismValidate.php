@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Services\PrismService;
 use Exception;
 use Illuminate\Console\Command;
 use Prism\Prism\Enums\Provider;
@@ -12,11 +13,24 @@ use ValueError;
 
 final class PrismValidate extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'prism:validate';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Validate Prism and Relay configuration';
 
-    public function handle(): int
+    /**
+     * Execute the console command.
+     */
+    public function handle(PrismService $prism): int
     {
         $this->info('Validating Prism and Relay configuration...');
         $this->newLine();
@@ -24,6 +38,7 @@ final class PrismValidate extends Command
         $errors = [];
         $warnings = [];
 
+        // Validate Prism configuration
         $this->line('Checking Prism configuration...');
 
         $defaultProvider = config('prism.defaults.provider');
@@ -34,19 +49,20 @@ final class PrismValidate extends Command
         } else {
             try {
                 Provider::from($defaultProvider);
-                $this->info('  ✓ Default provider: '.$defaultProvider);
+                $this->info("  ✓ Default provider: {$defaultProvider}");
             } catch (ValueError) {
-                $errors[] = 'Invalid default provider: '.$defaultProvider;
+                $errors[] = "Invalid default provider: {$defaultProvider}";
             }
         }
 
         if (! $defaultModel) {
-            $fallbackModel = config('prism.defaults.model', 'deepseek/deepseek-r1-0528:free');
-            $warnings[] = sprintf('No default model configured. Using "%s" as fallback.', $fallbackModel);
+            $fallbackModel = config('prism.defaults.model', 'nvidia/nemotron-3-super-120b-a12b:free');
+            $warnings[] = "No default model configured. Using \"{$fallbackModel}\" as fallback.";
         } else {
-            $this->info('  ✓ Default model: '.$defaultModel);
+            $this->info("  ✓ Default model: {$defaultModel}");
         }
 
+        // Validate OpenRouter configuration
         $this->newLine();
         $this->line('Checking OpenRouter configuration...');
 
@@ -62,9 +78,10 @@ final class PrismValidate extends Command
         if (empty($openRouterUrl)) {
             $warnings[] = 'OPENROUTER_URL is not set. Using default: https://openrouter.ai/api/v1';
         } else {
-            $this->info('  ✓ OpenRouter URL: '.$openRouterUrl);
+            $this->info("  ✓ OpenRouter URL: {$openRouterUrl}");
         }
 
+        // Validate Relay configuration
         $this->newLine();
         $this->line('Checking Relay configuration...');
 
@@ -78,30 +95,29 @@ final class PrismValidate extends Command
             foreach ($relayServers as $serverName => $serverConfig) {
                 try {
                     $tools = Relay::tools($serverName);
-                    $this->info(sprintf('    ✓ %s: ', $serverName).count($tools).' tools available');
+                    $this->info("    ✓ {$serverName}: ".count($tools).' tools available');
                 } catch (Exception $e) {
-                    $warnings[] = sprintf('Could not load tools for %s: %s', $serverName, $e->getMessage());
+                    $warnings[] = "Could not load tools for {$serverName}: {$e->getMessage()}";
                 }
             }
         }
 
+        // Display results
         $this->newLine();
 
         if ($warnings !== []) {
             $this->warn('Warnings:');
             foreach ($warnings as $warning) {
-                $this->line('  ⚠ '.$warning);
+                $this->line("  ⚠ {$warning}");
             }
-
             $this->newLine();
         }
 
         if ($errors !== []) {
             $this->error('Errors found:');
             foreach ($errors as $error) {
-                $this->line('  ✗ '.$error);
+                $this->line("  ✗ {$error}");
             }
-
             $this->newLine();
             $this->error('Configuration validation failed.');
 

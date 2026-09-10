@@ -4,20 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Models\Organization;
-use App\Services\OrganizationBrandingService;
-use App\Services\TenantContext;
 use App\Settings\SeoSettings;
 use App\Support\FeatureHelper;
-use App\Support\ModuleFeatureRegistry;
-use App\Support\ModuleNavigationRegistry;
-use Closure;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\View;
 use Inertia\Middleware;
-use Modules\Announcements\Models\Announcement;
 use Spatie\Honeypot\Honeypot;
 use Throwable;
 
@@ -48,9 +39,6 @@ final class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $theme = $this->resolveTheme($request);
-        View::share('theme', $theme);
-
         $quote = Inspiring::quotes()->random();
         assert(is_string($quote));
 
@@ -60,24 +48,53 @@ final class HandleInertiaRequests extends Middleware
 
         $honeypot = resolve(Honeypot::class);
 
-        [$authPayload, $features] = $this->resolveAuthAndFeaturesForInertia($user);
+        $features = [];
+        foreach (config('feature-flags.inertia_features', []) as $name => $featureClass) {
+            $features[$name] = FeatureHelper::isActiveForKey($name, $user);
+        }
 
         $tenancyEnabled = config('tenancy.enabled', true);
-        $currentOrganization = $user ? TenantContext::get() : null;
+        $currentOrganization = $user ? \App\Services\TenantContext::get() : null;
         $userOrganizations = $user
             ? $user->organizations()->orderBy('name')->get(['id', 'name', 'slug'])
             : [];
 
+        $currentSiding = $user ? \App\Services\SidingContext::get() : null;
+        $userSidings = $user
+            ? $user->sidings()->get(['sidings.id', 'sidings.name', 'sidings.code'])
+            : [];
+
+        $permissions = [];
+        $canBypass = false;
+        $roleNames = [];
+        if ($user) {
+            $previousTeamId = getPermissionsTeamId();
+            setPermissionsTeamId(0);
+            try {
+                $permissions = $user->getAllPermissions()->pluck('name')->all();
+                $canBypass = $user->can('bypass-permissions');
+                $roleNames = $user->getRoleNames()->all();
+            } finally {
+                setPermissionsTeamId($previousTeamId);
+            }
+        }
+
         return [
             ...parent::share($request),
-            'flash' => fn () => $request->session()->get('flash'),
             'name' => config('app.name'),
             'quote' => ['message' => mb_trim((string) $message), 'author' => mb_trim((string) $author)],
-            'auth' => array_merge($authPayload, [
+            'auth' => [
+                'user' => $user,
+                'permissions' => $permissions,
+                'roles' => $roleNames,
+                'can_bypass' => $canBypass,
                 'tenancy_enabled' => $tenancyEnabled,
                 'current_organization' => $currentOrganization?->only(['id', 'name', 'slug']),
                 'organizations' => $tenancyEnabled ? $userOrganizations : [],
-            ]),
+                'sidings' => $userSidings,
+                'current_siding' => $currentSiding?->only(['id', 'name', 'code']),
+                'can_view_all_sidings' => $user?->isManagement() ?? false,
+            ],
             'features' => $features,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'honeypot' => $honeypot->enabled() ? $honeypot->toArray() : null,
@@ -87,347 +104,7 @@ final class HandleInertiaRequests extends Middleware
                 'lifetimeDays' => (int) config('cookie-consent.cookie_lifetime', 365 * 20),
             ] : null,
             'seo' => $this->seoSharedData(),
-            'setup_complete' => $this->resolveSetupState(...),
-            'theme' => $theme,
-            'branding' => $this->resolveBranding(...),
-            'notifications' => [
-                'unread_count' => $user?->unreadNotifications()->count() ?? 0,
-            ],
-            'pending_invitations_count' => fn () => $currentOrganization
-                ? \App\Models\OrganizationInvitation::query()
-                    ->where('organization_id', $currentOrganization->id)
-                    ->whereState('status', \App\States\OrganizationInvitation\Pending::class)
-                    ->count()
-                : 0,
-            'announcements' => $this->resolveAnnouncements($user),
-            'onboarding' => $this->resolveOnboarding($user, $features),
-            'moduleNavItems' => fn () => ModuleNavigationRegistry::groupedBySection(),
         ];
-    }
-
-    /**
-     * Build auth (roles/permissions/can_bypass) and shared features for Inertia.
-     *
-     * Spatie teams scope getRoleNames()/getAllPermissions() to the current team. Super-admin
-     * and bypass-permissions live in team 0; when TenantContext has an org, the resolver
-     * returns that org id and global roles disappear. We therefore resolve with team id 0
-     * when the user has super-admin globally so the sidebar and useCan see full access.
-     * For super-admins we also force all inertia_features to true so org overrides do not
-     * hide modules in the UI.
-     *
-     * @return array{0: array{user: mixed, permissions: array<string>, roles: array<string>, can_bypass: bool}, 1: array<string, bool>}
-     */
-    private function resolveAuthAndFeaturesForInertia(mixed $user): array
-    {
-        if (! $user) {
-            return [
-                ['user' => null, 'permissions' => [], 'roles' => [], 'can_bypass' => false],
-                $this->buildFeatureMap(forceAll: false, user: null),
-            ];
-        }
-
-        // Clear cached roles/permissions — earlier middleware may have loaded them
-        // before SetTenantContext set the correct team ID, causing stale team-0 data.
-        $user->unsetRelation('roles');
-        $user->unsetRelation('permissions');
-
-        $isSuperAdmin = $this->withGlobalTeam(fn () => $user->hasRole('super-admin'));
-
-        if ($isSuperAdmin) {
-            [$permissions, $roles] = $this->withGlobalTeam(fn () => [
-                $user->getAllPermissions()->pluck('name')->all(),
-                $user->getRoleNames()->all(),
-            ]);
-
-            return [
-                ['user' => $user, 'permissions' => $permissions, 'roles' => $roles, 'can_bypass' => true],
-                $this->buildFeatureMap(forceAll: true, user: $user),
-            ];
-        }
-
-        // Clear again after withGlobalTeam which loaded roles for team 0.
-        $user->unsetRelation('roles');
-        $user->unsetRelation('permissions');
-
-        return [
-            [
-                'user' => $user,
-                'permissions' => $user->getAllPermissions()->pluck('name')->all(),
-                'roles' => $user->getRoleNames()->all(),
-                'can_bypass' => $user->can('bypass-permissions'),
-            ],
-            $this->buildFeatureMap(forceAll: false, user: $user),
-        ];
-    }
-
-    /**
-     * Build the shared feature map for Inertia.
-     *
-     * @return array<string, bool>
-     */
-    private function buildFeatureMap(bool $forceAll, mixed $user): array
-    {
-        $features = [];
-        foreach (ModuleFeatureRegistry::allInertiaFeatures() as $name => $featureClass) {
-            $features[$name] = $forceAll || ($user !== null && FeatureHelper::isActiveForKey($name, $user));
-        }
-
-        return $features;
-    }
-
-    /**
-     * Execute a callback with the permissions team scoped to the global team (0).
-     */
-    private function withGlobalTeam(Closure $callback): mixed
-    {
-        $previousTeamId = getPermissionsTeamId();
-        setPermissionsTeamId(0);
-
-        try {
-            return $callback();
-        } finally {
-            setPermissionsTeamId($previousTeamId);
-        }
-    }
-
-    /**
-     * Resolve theme from DB (settings table) so Manage Theme changes take effect immediately.
-     * Bypasses Settings class cache by reading directly. Falls back to config when unavailable.
-     *
-     * @return array{preset: string, base_color: string, radius: string, font: string, default_appearance: string, dark: string, primary: string, light: string, skin: string, layout: string, menuColor: string, menuAccent: string, canCustomize: bool, allowUserThemeCustomization: bool, userMode: string, lockedSettings: string[]}
-     */
-    private function resolveTheme(Request $request): array
-    {
-        $defaults = [
-            'preset' => config('theme.preset', 'default'),
-            'base_color' => config('theme.base_color', 'neutral'),
-            'radius' => config('theme.radius', 'default'),
-            'font' => config('theme.font', 'ibm-plex-sans'),
-            'default_appearance' => config('theme.default_appearance', 'system'),
-            'dark' => '',
-            'primary' => '',
-            'light' => '',
-            'skin' => 'shadow',
-            'layout' => 'main',
-            'menuColor' => 'default',
-            'menuAccent' => 'subtle',
-            'canCustomize' => false,
-            'userMode' => 'system',
-        ];
-
-        $user = $request->user();
-
-        try {
-            $rows = DB::table('settings')->where('group', 'theme')->get(['name', 'payload']);
-
-            $db = [];
-            foreach ($rows as $row) {
-                $db[$row->name] = is_string($row->payload) ? json_decode($row->payload, true) : $row->payload;
-            }
-
-            // Org overrides take precedence over global settings.
-            $organization = TenantContext::get();
-            if ($organization instanceof Organization) {
-                $orgRows = DB::table('organization_settings')
-                    ->where('organization_id', $organization->id)
-                    ->where('group', 'theme')
-                    ->get(['name', 'payload']);
-
-                foreach ($orgRows as $orgRow) {
-                    $db[$orgRow->name] = json_decode((string) $orgRow->payload, true);
-                }
-            }
-
-            $allowUserCustomization = (bool) ($db['allow_user_theme_customization'] ?? true);
-            $isOrgAdmin = $user !== null && $organization instanceof Organization && (
-                $user->isOrganizationAdmin()
-                || $user->canInOrganization('org.settings.manage', $organization)
-            );
-            $isAdmin = $user !== null && ($isOrgAdmin || $user->isSuperAdmin());
-
-            // Load org-level branding user controls
-            $orgBranding = [];
-            if ($organization instanceof Organization) {
-                $brandingRows = DB::table('organization_settings')
-                    ->where('organization_id', $organization->id)
-                    ->where('group', 'branding')
-                    ->whereIn('name', ['user_can_change_colors', 'user_can_change_font', 'user_can_change_layout', 'user_can_change_logo'])
-                    ->get(['name', 'payload']);
-                foreach ($brandingRows as $row) {
-                    $orgBranding[$row->name] = json_decode((string) $row->payload, true);
-                }
-            }
-
-            $canCustomize = $user !== null && ($isAdmin || $allowUserCustomization);
-
-            $userMode = 'system';
-            if ($user !== null) {
-                try {
-                    $userMode = $user->theme_mode ?? 'system';
-                } catch (Throwable) {
-                    $userMode = 'system';
-                }
-            }
-
-            return [
-                'preset' => $db['preset'] ?? $defaults['preset'],
-                'base_color' => $db['base_color'] ?? $defaults['base_color'],
-                'radius' => $db['border_radius'] ?? $db['radius'] ?? $defaults['radius'],
-                'font' => $db['font'] ?? $defaults['font'],
-                'default_appearance' => $db['default_appearance'] ?? $defaults['default_appearance'],
-                'dark' => $db['dark_color_scheme'] ?? $defaults['dark'],
-                'primary' => $db['primary_color'] ?? $defaults['primary'],
-                'light' => $db['light_color_scheme'] ?? $defaults['light'],
-                'skin' => $db['card_skin'] ?? $defaults['skin'],
-                'layout' => $db['sidebar_layout'] ?? $defaults['layout'],
-                'menuColor' => $db['menu_color'] ?? $defaults['menuColor'],
-                'menuAccent' => $db['menu_accent'] ?? $defaults['menuAccent'],
-                'canCustomize' => $canCustomize,
-                'canCustomizeGranular' => [
-                    'colors' => $isAdmin || ($allowUserCustomization && (bool) ($orgBranding['user_can_change_colors'] ?? true)),
-                    'font' => $isAdmin || ($allowUserCustomization && (bool) ($orgBranding['user_can_change_font'] ?? true)),
-                    'layout' => $isAdmin || ($allowUserCustomization && (bool) ($orgBranding['user_can_change_layout'] ?? true)),
-                    'logo' => $organization instanceof Organization && $user !== null && (
-                        $isAdmin
-                        || (($db['allow_user_logo_upload'] ?? false) && $allowUserCustomization && (bool) ($orgBranding['user_can_change_logo'] ?? false))
-                    ),
-                ],
-                'allowUserThemeCustomization' => $allowUserCustomization,
-                'userMode' => $userMode,
-                'lockedSettings' => $db['locked_settings'] ?? [],
-                'canManageBranding' => $organization instanceof Organization && $user !== null && (
-                    $user->isOrganizationAdmin()
-                    || $user->canInOrganization('org.settings.manage', $organization)
-                    || (
-                        ($db['allow_user_logo_upload'] ?? false)
-                        && ($db['allow_user_theme_customization'] ?? true)
-                    )
-                ),
-            ];
-        } catch (Throwable) {
-            return $defaults;
-        }
-    }
-
-    private function resolveSetupState(): bool
-    {
-        // Super-admins always see the app as "setup complete" so they are never blocked
-        // by the frontend "Setup in Progress" screen — they need full access to finish setup.
-        $user = request()->user();
-        if ($user !== null && $user->isSuperAdmin()) {
-            return true;
-        }
-
-        try {
-            return resolve(\App\Settings\SetupWizardSettings::class)->setup_completed;
-        } catch (Throwable) {
-            return true; // Fail open when settings table unavailable (e.g. fresh install)
-        }
-    }
-
-    /**
-     * Resolve branding at response time (after SetTenantContext / ApplyOrganizationSettings).
-     *
-     * @return array{logoUrl: string|null, themePreset: string|null, themeRadius: string|null, themeFont: string|null, allowUserCustomization: bool}
-     */
-    /**
-     * Active announcements for the current user: global + current org, within start/end and active.
-     *
-     * @return array<int, array{id: int, title: string, body: string, level: string}>
-     */
-    private function resolveAnnouncements($user): array
-    {
-        if ($user === null) {
-            return [];
-        }
-
-        $tenantId = TenantContext::id();
-
-        $query = Announcement::query()
-            ->active()
-            ->where(function ($q) use ($tenantId): void {
-                $q->whereNull('organization_id');
-                if ($tenantId !== null) {
-                    $q->orWhere('organization_id', $tenantId);
-                }
-            })
-            ->orderByRaw('CASE WHEN organization_id IS NULL THEN 0 ELSE 1 END')
-            ->orderBy('position')
-            ->orderBy('created_at', 'desc');
-
-        return $query->get(['id', 'title', 'body', 'level'])
-            ->map(fn (Announcement $a): array => [
-                'id' => $a->id,
-                'title' => $a->title,
-                'body' => $a->body,
-                'level' => $a->level->value,
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Onboarding state for Inertia (steps, progress, next step). Only when user is present and onboarding feature is active.
-     *
-     * @param  array<string, bool>  $features
-     * @return array{steps: array<int, array{title: string, cta: string, link: string, complete: bool}>, inProgress: bool, percentageCompleted: float, nextStep: array{title: string, link: string, cta: string}|null}
-     */
-    private function resolveOnboarding(mixed $user, array $features): array
-    {
-        $default = [
-            'steps' => [],
-            'inProgress' => false,
-            'percentageCompleted' => 100.0,
-            'nextStep' => null,
-        ];
-
-        if ($user === null || ! ($features['onboarding'] ?? false)) {
-            return $default;
-        }
-
-        try {
-            $onboarding = $user->onboarding();
-            $stepsCollection = $onboarding->steps();
-            $stepCount = $stepsCollection->count();
-            $steps = $stepsCollection->map(fn ($step): array => [
-                'title' => $step->title,
-                'cta' => $step->cta,
-                'link' => $step->link,
-                'complete' => $step->complete(),
-            ])->values()->all();
-
-            $percentageCompleted = $stepCount > 0 ? $onboarding->percentageCompleted() : 100.0;
-            $nextStep = $onboarding->nextUnfinishedStep();
-
-            return [
-                'steps' => $steps,
-                'inProgress' => $onboarding->inProgress(),
-                'percentageCompleted' => $percentageCompleted,
-                'nextStep' => $nextStep !== null
-                    ? ['title' => $nextStep->title, 'link' => $nextStep->link, 'cta' => $nextStep->cta]
-                    : null,
-            ];
-        } catch (Throwable) {
-            return $default;
-        }
-    }
-
-    private function resolveBranding(): array
-    {
-        $organization = TenantContext::get();
-
-        if (! $organization instanceof Organization) {
-            return [
-                'logoUrl' => null,
-                'logoUrlDark' => null,
-                'themePreset' => null,
-                'themeRadius' => null,
-                'themeFont' => null,
-                'allowUserCustomization' => true,
-            ];
-        }
-
-        return resolve(OrganizationBrandingService::class)->getBranding($organization);
     }
 
     /**
@@ -435,13 +112,22 @@ final class HandleInertiaRequests extends Middleware
      */
     private function seoSharedData(): array
     {
-        $settings = rescue(fn () => resolve(SeoSettings::class));
+        try {
+            $settings = resolve(SeoSettings::class);
 
-        return [
-            'meta_title' => $settings?->meta_title ?: config('app.name'),
-            'meta_description' => $settings?->meta_description ?? '',
-            'og_image' => $settings?->og_image,
-            'app_url' => mb_rtrim(config('app.url'), '/'),
-        ];
+            return [
+                'meta_title' => $settings->meta_title ?: config('app.name'),
+                'meta_description' => $settings->meta_description ?? '',
+                'og_image' => $settings->og_image,
+                'app_url' => mb_rtrim(config('app.url'), '/'),
+            ];
+        } catch (Throwable) {
+            return [
+                'meta_title' => config('app.name'),
+                'meta_description' => '',
+                'og_image' => null,
+                'app_url' => mb_rtrim(config('app.url'), '/'),
+            ];
+        }
     }
 }

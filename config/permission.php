@@ -214,7 +214,6 @@ return [
         'verification.*',
         'home',
         'favicon',
-        'dashboard',
         'up',
         'settings',
         'user-profile.edit',
@@ -228,6 +227,9 @@ return [
         'storage.*',
         'boost.*',
         'scramble.*',
+        'exports.coal-transport-report',
+        // Sub-step of RR upload: authorize via sections.railway_receipts.upload in RrUploadController; no separate route permission.
+        'railway-receipts.import-preview',
     ],
 
     /*

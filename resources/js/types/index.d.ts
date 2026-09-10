@@ -7,6 +7,12 @@ export interface OrganizationSummary {
     slug: string;
 }
 
+export interface SidingSummary {
+    id: number;
+    name: string;
+    code: string;
+}
+
 export interface Auth {
     user: User;
     /** Permission names for the current user (empty when guest). Use with useCan() or <Can>. */
@@ -21,11 +27,19 @@ export interface Auth {
     current_organization?: OrganizationSummary | null;
     /** Organizations the user belongs to (when tenancy enabled; empty when single-tenant). */
     organizations?: OrganizationSummary[];
+    /** Sidings the user can access (RRMCS). */
+    sidings?: SidingSummary[];
+    /** Currently selected siding context (null = "All sidings"). */
+    current_siding?: SidingSummary | null;
+    /** Whether the user can switch to "All sidings" (super admin / management). */
+    can_view_all_sidings?: boolean;
 }
 
 export interface BreadcrumbItem {
     title: string;
     href: string;
+    /** When false, crumb is plain text (not a link). Defaults to true. */
+    interactive?: boolean;
 }
 
 export interface NavGroup {
@@ -48,8 +62,14 @@ export interface NavItem {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    /** When true, renders as a collapsible dropdown; subItems are shown as submenu. */
+    collapsible?: boolean;
+    /** Sub-items for collapsible dropdown (e.g. Settings). */
+    subItems?: NavItem[];
     /** Permission name(s) required to show this item (user must have any). Omit to show to all authenticated users. */
     permission?: string | string[];
+    /** Role name(s) required to show this item (user must have any). Typically used for super-admin only items. */
+    roles?: string[];
     /** Feature flag key (e.g. 'blog'). Item is hidden when this feature is inactive. */
     feature?: string;
     /** When true, item is hidden in single-tenant mode (MULTI_ORGANIZATION_ENABLED=false). */

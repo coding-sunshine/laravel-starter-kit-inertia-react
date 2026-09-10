@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Features\ImpersonationFeature;
 use App\Models\Concerns\Categorizable;
-use App\Models\Concerns\HasAdminCapabilities;
-use App\Models\Concerns\HasMediaProfile;
-use App\Models\Concerns\HasOrganizationMembership;
 use App\Models\Concerns\HasOrganizationPermissions;
-use Askedio\SoftCascade\Traits\SoftCascadeTrait;
+use App\Models\Concerns\HasRRMCSAuthorization;
+use App\Support\FeatureHelper;
+use App\Traits\Billing\HasAffiliate;
 use BeyondCode\Vouchers\Traits\CanRedeemVouchers;
 use Carbon\CarbonInterface;
+use Database\Factories\UserFactory;
 use DateTimeInterface;
-use Deligoez\LaravelModelHashId\Traits\HasHashId;
-use Deligoez\LaravelModelHashId\Traits\HasHashIdRouting;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -31,18 +31,16 @@ use Laravel\Sanctum\NewAccessToken;
 use Laravel\Scout\Searchable;
 use LevelUp\Experience\Concerns\GiveExperience;
 use LevelUp\Experience\Concerns\HasAchievements;
-use Modules\Billing\Traits\HasAffiliate;
-use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\Onboard\Concerns\GetsOnboarded;
-use Spatie\Onboard\Concerns\Onboardable;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\PersonalDataExport\ExportsPersonalData;
 use Spatie\PersonalDataExport\PersonalDataSelection;
 use Spatie\Tags\HasTags;
-use Thomasjohnkane\Snooze\Traits\SnoozeNotifiable;
 
 /**
  * @property-read int $id
@@ -57,70 +55,17 @@ use Thomasjohnkane\Snooze\Traits\SnoozeNotifiable;
  * @property-read string|null $two_factor_recovery_codes
  * @property-read CarbonInterface|null $two_factor_confirmed_at
  * @property bool $onboarding_completed
- * @property string $theme_mode
+ * @property bool $access_to_siding_shift_data
+ * @property array<string>|null $onboarding_steps_completed
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
- * @property-read CarbonInterface|null $deleted_at
- * @property-read string $hashId
- * @property string|null $phone
  */
-final class User extends Authenticatable implements ExportsPersonalData, FilamentUser, HasMedia, MustVerifyEmail, Onboardable
+final class User extends Authenticatable implements ExportsPersonalData, FilamentUser, HasMedia, MustVerifyEmail
 {
-    use CanRedeemVouchers;
-    use Categorizable;
-    use GetsOnboarded;
-    use GiveExperience;
-    use HasAchievements;
-    use HasAdminCapabilities;
-    use HasAffiliate;
-    use HasApiTokens;
-    use HasFactory;
-    use HasHashId;
-    use HasHashIdRouting;
-    use HasMediaProfile;
-    use HasOrganizationMembership;
-    use HasOrganizationPermissions;
-    use HasRoles;
-    use HasTags;
-    use InteractsWithMedia {
-        HasMediaProfile::registerMediaCollections insteadof InteractsWithMedia;
-        HasMediaProfile::registerMediaConversions insteadof InteractsWithMedia;
-    }
-    use LogsActivity;
-    use Notifiable;
-    use Referrable;
-    use Searchable;
-    use SnoozeNotifiable;
-    use SoftCascadeTrait;
-    use SoftDeletes;
-    use TwoFactorAuthenticatable;
-
     /**
-     * @var list<string>
+     * @use HasFactory<UserFactory>
      */
-    protected $softCascade = [
-        'ownedOrganizations',
-        'socialAccounts',
-        'termsAcceptances',
-        'notificationPreferences',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'email_verified_at',
-        'remember_token',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
-        'two_factor_confirmed_at',
-        'onboarding_completed',
-        'theme_mode',
-        'phone',
-    ];
+    use CanRedeemVouchers, Categorizable, GiveExperience, HasAchievements, HasAffiliate, HasApiTokens, HasFactory, HasOrganizationPermissions, HasRoles, HasRRMCSAuthorization, HasTags, InteractsWithMedia, LogsActivity, Notifiable, Referrable, Searchable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>
@@ -128,7 +73,6 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     protected $appends = [
         'avatar',
         'avatar_profile',
-        'hash_id',
     ];
 
     /**
@@ -157,6 +101,25 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
         ];
     }
 
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('avatar')
+            ->singleFile();
+    }
+
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->performOnCollections('avatar')
+            ->fit(Fit::Crop, 48, 48)
+            ->nonQueued();
+
+        $this->addMediaConversion('profile')
+            ->performOnCollections('avatar')
+            ->fit(Fit::Crop, 192, 192)
+            ->nonQueued();
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -166,11 +129,7 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return match ($panel->getId()) {
-            'system' => $this->isSuperAdmin(),
-            'admin' => $this->isSuperAdmin() || $this->isAdminInAnyOrganization(),
-            default => false,
-        };
+        return $this->can('access admin panel');
     }
 
     /**
@@ -187,48 +146,47 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     }
 
     /**
-     * @return HasMany<SocialAccount, $this>
+     * @return array<string, string>
      */
-    public function socialAccounts(): HasMany
+    public function casts(): array
     {
-        return $this->hasMany(SocialAccount::class);
+        return [
+            'id' => 'integer',
+            'name' => 'string',
+            'email' => 'string',
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'remember_token' => 'string',
+            'two_factor_secret' => 'string',
+            'two_factor_recovery_codes' => 'string',
+            'two_factor_confirmed_at' => 'datetime',
+            'onboarding_completed' => 'boolean',
+            'access_to_siding_shift_data' => 'boolean',
+            'onboarding_steps_completed' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
     }
 
     /**
-     * @return HasMany<UserTermsAcceptance, $this>
+     * Only super-admins may impersonate, and only when Impersonation feature is active.
      */
-    public function termsAcceptances(): HasMany
+    public function canImpersonate(): bool
     {
-        return $this->hasMany(UserTermsAcceptance::class);
+        return $this->hasRole('super-admin')
+            && FeatureHelper::isActiveForClass(ImpersonationFeature::class, $this);
     }
 
     /**
-     * @return HasMany<NotificationPreference, $this>
+     * Super-admins cannot be impersonated.
      */
-    public function notificationPreferences(): HasMany
+    public function canBeImpersonated(): bool
     {
-        return $this->hasMany(NotificationPreference::class);
-    }
-
-    public function prefersChannel(string $notificationType, string $channel): bool
-    {
-        $pref = $this->notificationPreferences()
-            ->where('notification_type', $notificationType)
-            ->first();
-
-        if (! $pref) {
-            return true; // Default: all channels enabled
-        }
-
-        return match ($channel) {
-            'database' => $pref->via_database,
-            'email' => $pref->via_email,
-            default => false,
-        };
+        return ! $this->hasRole('super-admin');
     }
 
     /**
-     * Select the personal data to be exported for GDPR compliance.
+     * Whether this user is the only one with the super-admin role (cannot remove or delete).
      */
     public function selectPersonalData(PersonalDataSelection $personalDataSelection): void
     {
@@ -247,20 +205,223 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
         return 'personal-data-'.Str::slug($this->name).'.zip';
     }
 
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    public function isLastSuperAdmin(): bool
     {
+        $superAdminRole = \Spatie\Permission\Models\Role::query()
+            ->where('name', 'super-admin')
+            ->first();
+
+        if ($superAdminRole === null) {
+            return false;
+        }
+
+        $userIdsWithSuperAdmin = $superAdminRole->users()->pluck('id')->all();
+
+        return count($userIdsWithSuperAdmin) === 1 && in_array($this->getKey(), $userIdsWithSuperAdmin, true);
+    }
+
+    /**
+     * Organizations this user belongs to.
+     *
+     * @return BelongsToMany<Organization, $this>
+     */
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'organization_user')
+            ->withPivot(['is_default', 'joined_at', 'invited_by'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Organizations this user owns.
+     *
+     * @return HasMany<Organization, $this>
+     */
+    public function ownedOrganizations(): HasMany
+    {
+        return $this->hasMany(Organization::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<UserTermsAcceptance>
+     */
+    public function termsAcceptances(): HasMany
+    {
+        return $this->hasMany(UserTermsAcceptance::class);
+    }
+
+    /**
+     * The user's default organization (is_default = true on pivot).
+     */
+    public function defaultOrganization(): ?Organization
+    {
+        return $this->organizations()->wherePivot('is_default', true)->first();
+    }
+
+    /**
+     * The user's primary siding, when explicitly assigned via siding_id.
+     *
+     * @return BelongsTo<Siding, $this>
+     */
+    public function siding(): BelongsTo
+    {
+        return $this->belongsTo(Siding::class);
+    }
+
+    /**
+     * Shifts (per siding) this user is assigned to.
+     *
+     * @return BelongsToMany<SidingShift, $this>
+     */
+    public function sidingShifts(): BelongsToMany
+    {
+        return $this->belongsToMany(SidingShift::class, 'siding_shift_user')
+            ->withPivot(['assigned_at', 'is_active'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Active siding shifts for this user.
+     *
+     * @return BelongsToMany<SidingShift, $this>
+     */
+    public function activeSidingShifts(): BelongsToMany
+    {
+        return $this->sidingShifts()->wherePivot('is_active', true);
+    }
+
+    /**
+     * Assigned shift context for Railway Siding Record Data (road dispatch).
+     * Used to restrict shift users to only their assigned siding and shift.
+     *
+     * @return array{siding_id: int, shift: int}|null null when user has no single assigned shift
+     */
+    public function getAssignedRoadDispatchShift(): ?array
+    {
+        $shift = $this->activeSidingShifts()->with('siding')->first();
+
+        if ($shift === null) {
+            return null;
+        }
+
         return [
-            'email_verified_at' => 'datetime',
-            'deleted_at' => 'datetime',
-            'password' => 'hashed',
-            'two_factor_confirmed_at' => 'datetime',
-            'onboarding_completed' => 'boolean',
-            'theme_mode' => 'string',
-            'tags' => 'array',
-            'position' => 'integer',
+            'siding_id' => $shift->siding_id,
+            'shift' => (int) $shift->sort_order,
         ];
+    }
+
+    /**
+     * Whether this user is a shift user (has role "user" and an assigned siding shift).
+     */
+    public function isShiftUser(): bool
+    {
+        if (! $this->hasRole('user')) {
+            return false;
+        }
+
+        return $this->activeSidingShifts()->exists();
+    }
+
+    /**
+     * Whether this user is an empty-weighment shift user (has role "empty-weighment-shift" and an assigned siding shift).
+     */
+    public function isEmptyWeighmentShiftUser(): bool
+    {
+        if (! $this->hasRole('empty-weighment-shift')) {
+            return false;
+        }
+
+        return $this->activeSidingShifts()->exists();
+    }
+
+    /**
+     * Switch the current tenant context to the given organization.
+     * Validates the user is a member. Use for web (session) or API (stateless for request).
+     */
+    public function switchOrganization(Organization|int $organization): bool
+    {
+        $org = $organization instanceof Organization
+            ? $organization
+            : Organization::query()->find($organization);
+
+        if (! $org instanceof Organization || ! $this->belongsToOrganization($org->id)) {
+            return false;
+        }
+
+        \App\Services\TenantContext::set($org);
+
+        return true;
+    }
+
+    /**
+     * Whether the user belongs to the given organization (by ID).
+     */
+    public function belongsToOrganization(int $organizationId): bool
+    {
+        return $this->organizations()->where('organizations.id', $organizationId)->exists();
+    }
+
+    /**
+     * Whether this user has the super-admin role (application-wide, global team).
+     *
+     * Checks both 'super-admin' (Filament/Shield) and 'super_admin' (RRMCS)
+     * role names at the global team level (organization_id = 0).
+     */
+    public function isSuperAdmin(): bool
+    {
+        $tableNames = config('permission.table_names');
+        $teamKey = config('permission.column_names.team_foreign_key');
+
+        return (bool) \Illuminate\Support\Facades\DB::table($tableNames['model_has_roles'])
+            ->join($tableNames['roles'], $tableNames['roles'].'.id', '=', $tableNames['model_has_roles'].'.role_id')
+            ->where($tableNames['model_has_roles'].'.model_id', $this->id)
+            ->where($tableNames['model_has_roles'].'.model_type', self::class)
+            ->where($tableNames['model_has_roles'].'.'.$teamKey, 0)
+            ->whereIn($tableNames['roles'].'.name', ['super-admin', 'super_admin'])
+            ->exists();
+    }
+
+    /**
+     * Road dispatch / railway siding empty weighment: see every operator's rows (vs. only own {@see DailyVehicleEntry::$created_by}),
+     * when super-admin, dispatch-manage-admin, or {@see $access_to_siding_shift_data} is enabled.
+     */
+    public function canViewAllRoadDispatchDailyVehicleEntries(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        if ($this->access_to_siding_shift_data) {
+            return true;
+        }
+        $tableNames = config('permission.table_names');
+        $teamKey = config('permission.column_names.team_foreign_key');
+
+        return (bool) \Illuminate\Support\Facades\DB::table($tableNames['model_has_roles'])
+            ->join($tableNames['roles'], $tableNames['roles'].'.id', '=', $tableNames['model_has_roles'].'.role_id')
+            ->where($tableNames['model_has_roles'].'.model_id', $this->id)
+            ->where($tableNames['model_has_roles'].'.model_type', self::class)
+            ->where($tableNames['model_has_roles'].'.'.$teamKey, 0)
+            ->where($tableNames['roles'].'.name', 'dispatch-manage-admin')
+            ->exists();
+    }
+
+    /**
+     * Avatar URL (thumb conversion) for nav/header, or null when no avatar.
+     */
+    protected function getAvatarAttribute(): ?string
+    {
+        $url = $this->getFirstMediaUrl('avatar', 'thumb');
+
+        return $url !== '' ? $url : null;
+    }
+
+    /**
+     * Avatar URL (profile conversion) for profile/settings preview, or null when no avatar.
+     */
+    protected function getAvatarProfileAttribute(): ?string
+    {
+        $url = $this->getFirstMediaUrl('avatar', 'profile');
+
+        return $url !== '' ? $url : null;
     }
 }

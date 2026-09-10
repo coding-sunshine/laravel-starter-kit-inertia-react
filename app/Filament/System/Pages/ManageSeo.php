@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Filament\System\Pages;
+namespace App\Filament\Pages;
 
 use App\Settings\SeoSettings;
 use BackedEnum;
@@ -15,19 +15,19 @@ use UnitEnum;
 
 final class ManageSeo extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Settings · App';
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Settings';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMagnifyingGlass;
 
     protected static ?string $navigationLabel = 'SEO';
 
-    protected static ?int $navigationSort = 40;
-
     protected static string $settings = SeoSettings::class;
 
-    public static function canAccess(): bool
+    public static function getNavigationLabel(): string
     {
-        return filament()->getCurrentPanel()?->getId() === 'system';
+        return 'SEO';
     }
 
     public function form(Schema $schema): Schema

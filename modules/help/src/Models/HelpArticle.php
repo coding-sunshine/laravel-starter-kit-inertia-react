@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Modules\Help\Models;
+namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
 use App\Models\Concerns\Categorizable;
+use Database\Factories\HelpArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,16 +14,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
 use Mattiverse\Userstamps\Traits\Userstamps;
-use Modules\Help\Database\Factories\HelpArticleFactory;
-use Pgvector\Laravel\HasNeighbors;
-use Pgvector\Laravel\Vector;
-use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 use Spatie\EloquentSortable\Sortable;
 use Spatie\EloquentSortable\SortableTrait;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\ModelFlags\Models\Concerns\HasFlags;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 use Spatie\Tags\HasTags;
@@ -40,6 +37,7 @@ use Spatie\Tags\HasTags;
  * @property int $not_helpful_count
  * @property int $order
  * @property bool $is_published
+ * @property bool $is_featured
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at
@@ -51,8 +49,6 @@ final class HelpArticle extends Model implements HasMedia, Sortable
 
     use Categorizable;
     use HasFactory;
-    use HasFlags;
-    use HasNeighbors;
     use HasSlug;
     use HasTags;
     use InteractsWithMedia;
@@ -83,7 +79,7 @@ final class HelpArticle extends Model implements HasMedia, Sortable
         'not_helpful_count',
         'order',
         'is_published',
-        'embedding',
+        'is_featured',
     ];
 
     public function getSlugOptions(): SlugOptions
@@ -117,7 +113,7 @@ final class HelpArticle extends Model implements HasMedia, Sortable
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['title', 'category', 'is_published', 'order'])
+            ->logOnly(['title', 'category', 'is_published', 'is_featured', 'order'])
             ->logOnlyDirty()
             ->dontLogEmptyChanges()
             ->useLogName('help_article');
@@ -126,30 +122,6 @@ final class HelpArticle extends Model implements HasMedia, Sortable
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('images');
-        $this->addMediaCollection('og_image')->singleFile();
-    }
-
-    protected static function newFactory(): HelpArticleFactory
-    {
-        return HelpArticleFactory::new();
-    }
-
-    protected static function booted(): void
-    {
-        self::saved(function (self $model): void {
-            if ($model->wasChanged(['title', 'content']) || $model->wasRecentlyCreated) {
-                \App\Jobs\GenerateEmbedding::dispatch($model, 'content')->onQueue('embeddings');
-            }
-
-            if ($model->wasChanged(['title', 'excerpt', 'category']) || $model->wasRecentlyCreated) {
-                \App\Jobs\GenerateOgImageJob::dispatch(
-                    $model,
-                    $model->title,
-                    $model->excerpt,
-                    $model->category,
-                )->onQueue('og-images');
-            }
-        });
     }
 
     protected function casts(): array
@@ -160,7 +132,7 @@ final class HelpArticle extends Model implements HasMedia, Sortable
             'not_helpful_count' => 'integer',
             'order' => 'integer',
             'is_published' => 'boolean',
-            'embedding' => Vector::class,
+            'is_featured' => 'boolean',
         ];
     }
 
@@ -173,8 +145,6 @@ final class HelpArticle extends Model implements HasMedia, Sortable
     #[Scope]
     protected function featured(Builder $query): Builder
     {
-        $query->flagged('featured');
-
-        return $query;
+        return $query->where('is_featured', true);
     }
 }

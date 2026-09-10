@@ -5,13 +5,8 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Enums\SeederCategory;
-use App\Services\AISeederCodeGenerator;
-use App\Services\AISeedGenerator;
-use App\Services\EnhancedRelationshipAnalyzer;
-use App\Services\PrismService;
 use App\Services\RelationshipAnalyzer;
 use App\Services\SeedSpecGenerator;
-use App\Services\TraditionalSeedGenerator;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
@@ -20,6 +15,11 @@ use Illuminate\Support\Str;
 
 final class MakeModelFullCommand extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'make:model:full
                             {name : The name of the model}
                             {--category=development : Seeder category (essential, development, production)}
@@ -31,19 +31,26 @@ final class MakeModelFullCommand extends Command
                             {--api : Indicates if the generated controller should be an API resource controller}
                             {--requests : Create Form Request classes for the model}
                             {--policy : Create a new policy for the model}
-                            {--panel= : Generate a Filament resource in the specified panel (admin or system)}
                             {--all : Generate a migration, factory, seeder, and resource controller}
                             {--no-ai : Skip AI generation even if available}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Create a new Eloquent model with factory, seeder, and JSON data file';
 
+    /**
+     * Execute the console command.
+     */
     public function handle(): int
     {
         $name = $this->argument('name');
         $category = $this->getCategory();
         $all = $this->option('all');
 
-        $this->info('Creating full model setup for: '.$name);
+        $this->info("Creating full model setup for: {$name}");
 
         // Create model with migration
         $this->createModel($name, $all);
@@ -85,16 +92,14 @@ final class MakeModelFullCommand extends Command
             $this->createRequests($name);
         }
 
-        // Create Filament resource if --panel is specified
-        if ($this->option('panel')) {
-            $this->createFilamentResource($name);
-        }
-
-        $this->info('Model setup complete for: '.$name);
+        $this->info("Model setup complete for: {$name}");
 
         return self::SUCCESS;
     }
 
+    /**
+     * Create the model.
+     */
     private function createModel(string $name, bool $all): void
     {
         $options = ['--no-interaction' => true];
@@ -180,43 +185,60 @@ PHP;
         );
     }
 
+    /**
+     * Create the factory.
+     */
     private function createFactory(string $name): void
     {
         Artisan::call('make:factory', [
-            'name' => $name.'Factory',
+            'name' => "{$name}Factory",
             '--model' => $name,
             '--no-interaction' => true,
         ]);
         $this->info('✓ Factory created');
     }
 
+    /**
+     * Create the seeder.
+     */
     private function createSeeder(string $name, SeederCategory $category): void
     {
-        $seederName = $name.'Seeder';
-        $categoryPath = database_path('seeders/'.$category->value);
+        $seederName = "{$name}Seeder";
+        $folder = ucfirst($category->value);
+        $categoryPath = database_path("seeders/{$folder}");
 
+        // Ensure category directory exists
         if (! File::isDirectory($categoryPath)) {
             File::makeDirectory($categoryPath, 0755, true);
         }
 
-        $seederPath = sprintf('%s/%s.php', $categoryPath, $seederName);
+        // Create seeder file directly (Laravel's make:seeder doesn't support subdirectories)
+        $seederPath = "{$categoryPath}/{$seederName}.php";
 
         if (File::exists($seederPath)) {
-            $this->warn('Seeder already exists: '.$seederPath);
+            $this->warn("Seeder already exists: {$seederPath}");
         } else {
+            // Create the seeder file with our patterns
             $this->updateSeederFile($name, $seederName, $category);
         }
 
-        $this->info(sprintf('✓ Seeder created in %s category', $category->value));
+        $this->info("✓ Seeder created in {$category->value} category");
     }
 
+    /**
+     * Update seeder file with our patterns.
+     */
     private function updateSeederFile(string $modelName, string $seederName, SeederCategory $category): void
     {
-        $seederPath = database_path(sprintf('seeders/%s/%s.php', $category->value, $seederName));
-        $modelClass = 'App\Models\\'.$modelName;
-        $namespace = 'Database\Seeders\\'.$category->value;
+        $folder = ucfirst($category->value);
+        $seederPath = database_path("seeders/{$folder}/{$seederName}.php");
+        $modelClass = "App\\Models\\{$modelName}";
+        $namespace = "Database\\Seeders\\{$folder}";
+        Str::snake(Str::plural($modelName));
 
+        // Analyze relationships using enhanced analyzer
         $enhancedAnalyzer = resolve(EnhancedRelationshipAnalyzer::class);
+        $modelClass = "App\\Models\\{$modelName}";
 
         // Try enhanced analyzer first (uses model reflection)
         $relationships = class_exists($modelClass)
@@ -283,6 +305,9 @@ PHP;
         File::put($seederPath, $content);
     }
 
+    /**
+     * Create JSON data file.
+     */
     private function createJsonDataFile(string $modelName): void
     {
         $jsonKey = $this->getJsonKey($modelName);
@@ -301,6 +326,9 @@ PHP;
         $this->info('✓ JSON data file created');
     }
 
+    /**
+     * Update manifest.json.
+     */
     private function updateManifest(string $modelName, SeederCategory $category): void
     {
         $manifestPath = database_path('seeders/manifest.json');
@@ -316,9 +344,9 @@ PHP;
         }
 
         $seederEntry = [
-            'name' => $modelName.'Seeder',
+            'name' => "{$modelName}Seeder",
             'category' => $category->value,
-            'description' => sprintf('Seeds %s data', $modelName),
+            'description' => "Seeds {$modelName} data",
             'dependencies' => [],
             'data_files' => [$jsonFileName],
         ];
@@ -329,6 +357,9 @@ PHP;
         $this->info('✓ Manifest updated');
     }
 
+    /**
+     * Create controller.
+     */
     private function createController(string $name, bool $all): void
     {
         $options = ['--no-interaction' => true];
@@ -341,54 +372,44 @@ PHP;
             $options['--api'] = true;
         }
 
-        Artisan::call('make:controller', array_merge(['name' => $name.'Controller'], $options));
+        Artisan::call('make:controller', array_merge(['name' => "{$name}Controller"], $options));
         $this->info('✓ Controller created');
     }
 
+    /**
+     * Create policy.
+     */
     private function createPolicy(string $name): void
     {
         Artisan::call('make:policy', [
-            'name' => $name.'Policy',
+            'name' => "{$name}Policy",
             '--model' => $name,
             '--no-interaction' => true,
         ]);
         $this->info('✓ Policy created');
     }
 
+    /**
+     * Create form requests.
+     */
     private function createRequests(string $name): void
     {
         Artisan::call('make:request', [
-            'name' => sprintf('Store%sRequest', $name),
+            'name' => "Store{$name}Request",
             '--no-interaction' => true,
         ]);
 
         Artisan::call('make:request', [
-            'name' => sprintf('Update%sRequest', $name),
+            'name' => "Update{$name}Request",
             '--no-interaction' => true,
         ]);
 
         $this->info('✓ Form requests created');
     }
 
-    private function createFilamentResource(string $name): void
-    {
-        $panel = mb_strtolower($this->option('panel'));
-
-        if (! in_array($panel, ['admin', 'system'], true)) {
-            $this->error("Invalid panel '{$panel}'. Use 'admin' or 'system'.");
-
-            return;
-        }
-
-        Artisan::call('make:filament-resource', [
-            'name' => $name.'Resource',
-            '--panel' => $panel,
-            '--no-interaction' => true,
-        ]);
-
-        $this->info("✓ Filament resource created in {$panel} panel");
-    }
-
+    /**
+     * Get category from option.
+     */
     private function getCategory(): SeederCategory
     {
         $category = $this->option('category') ?? 'development';
@@ -400,14 +421,20 @@ PHP;
         };
     }
 
+    /**
+     * Get JSON key for model name.
+     */
     private function getJsonKey(string $modelName): string
     {
         return Str::snake(Str::plural($modelName));
     }
 
+    /**
+     * Generate seed spec for model.
+     */
     private function generateSeedSpec(string $name): void
     {
-        $modelClass = 'App\Models\\'.$name;
+        $modelClass = "App\\Models\\{$name}";
 
         if (! class_exists($modelClass)) {
             return;
@@ -418,11 +445,14 @@ PHP;
             $spec = $generator->generateSpec($modelClass);
             $generator->saveSpec($modelClass, $spec);
             $this->info('✓ Seed spec created');
-        } catch (Exception $exception) {
-            $this->warn('Could not generate seed spec: '.$exception->getMessage());
+        } catch (Exception $e) {
+            $this->warn("Could not generate seed spec: {$e->getMessage()}");
         }
     }
 
+    /**
+     * Smart JSON generation - auto-generate if missing/empty and AI available.
+     */
     private function autoGenerateJsonIfNeeded(string $name): void
     {
         if ($this->option('no-ai')) {
@@ -430,7 +460,7 @@ PHP;
         }
 
         $jsonKey = $this->getJsonKey($name);
-        $jsonPath = database_path(sprintf('seeders/data/%s.json', $jsonKey));
+        $jsonPath = database_path("seeders/data/{$jsonKey}.json");
 
         // Check if JSON file exists and has data
         $hasData = false;
@@ -445,7 +475,7 @@ PHP;
             return;
         }
 
-        $modelClass = 'App\Models\\'.$name;
+        $modelClass = "App\\Models\\{$name}";
 
         if (! class_exists($modelClass)) {
             return;
@@ -475,17 +505,19 @@ PHP;
     }
 
     /**
+     * Generate JSON using AI (structured output first, then text fallback).
+     *
      * @param  array<string, mixed>  $spec
      */
     private function generateJsonWithAI(string $name, array $spec, PrismService $prismService): void
     {
         try {
             $aiGenerator = resolve(AISeedGenerator::class);
-            $profile = $aiGenerator->loadProfile('App\Models\\'.$name);
+            $profile = $aiGenerator->loadProfile("App\\Models\\{$name}");
 
             if ($profile === null) {
-                $profile = $aiGenerator->generateProfile('App\Models\\'.$name, $spec);
-                $aiGenerator->saveProfile('App\Models\\'.$name, $profile);
+                $profile = $aiGenerator->generateProfile("App\\Models\\{$name}", $spec);
+                $aiGenerator->saveProfile("App\\Models\\{$name}", $profile);
             }
 
             $prompt = $aiGenerator->buildPrompt($spec, $profile, 'basic_demo');
@@ -501,7 +533,7 @@ PHP;
                     '_generated_at' => now()->toIso8601String(),
                 ];
 
-                File::put(database_path(sprintf('seeders/data/%s.json', $jsonKey)), json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                File::put(database_path("seeders/data/{$jsonKey}.json"), json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
                 $this->info('  ✓ JSON auto-generated with AI');
             } else {
                 $this->generateJsonWithFaker($name, $spec);
@@ -512,6 +544,8 @@ PHP;
     }
 
     /**
+     * Call Prism: structured output first, then text + parse fallback.
+     *
      * @return array<int, array<string, mixed>>|null
      */
     private function generateSeedJsonViaPrism(string $prompt, string $model, PrismService $prismService): ?array
@@ -533,12 +567,12 @@ PHP;
         } catch (Exception) {
             $response = $prismService->generate($prompt, $model);
             $text = $response->text;
-            $jsonData = json_decode($text, true);
+            $jsonData = json_decode((string) $text, true);
 
             if (json_last_error() !== JSON_ERROR_NONE) {
-                if (preg_match('/```(?:json)?\s*(\[.*?\])/s', $text, $matches)) {
+                if (preg_match('/```(?:json)?\s*(\[.*?\])/s', (string) $text, $matches)) {
                     $jsonData = json_decode($matches[1], true);
-                } elseif (preg_match('/\[.*\]/s', $text, $matches)) {
+                } elseif (preg_match('/\[.*\]/s', (string) $text, $matches)) {
                     $jsonData = json_decode($matches[0], true);
                 }
             }
@@ -552,6 +586,8 @@ PHP;
     }
 
     /**
+     * Normalize AI JSON response to array of record arrays.
+     *
      * @param  array<int, array<string, mixed>>|array<string, mixed>  $jsonData
      * @return array<int, array<string, mixed>>
      */
@@ -573,6 +609,8 @@ PHP;
     }
 
     /**
+     * Generate JSON using Faker.
+     *
      * @param  array<string, mixed>  $spec
      */
     private function generateJsonWithFaker(string $name, array $spec): void
@@ -589,7 +627,7 @@ PHP;
                 '_generated_at' => now()->toIso8601String(),
             ];
 
-            File::put(database_path(sprintf('seeders/data/%s.json', $jsonKey)), json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            File::put(database_path("seeders/data/{$jsonKey}.json"), json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             $this->info('  ✓ JSON auto-generated with Faker');
         } catch (Exception) {
             // Silently fail

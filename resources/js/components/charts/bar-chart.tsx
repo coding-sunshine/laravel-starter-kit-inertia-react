@@ -1,142 +1,136 @@
+import { cn } from '@/lib/utils';
 import {
     Bar,
-    CartesianGrid,
-    Legend,
     BarChart as RechartsBarChart,
+    CartesianGrid,
+    type DataKey,
     ResponsiveContainer,
     Tooltip,
     XAxis,
     YAxis,
 } from 'recharts';
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { cn } from '@/lib/utils';
-import { CHART_COLORS } from './chart-colors';
-
-export interface BarChartProps {
-    data: Record<string, unknown>[];
-    dataKeys: string[];
-    xKey: string;
-    horizontal?: boolean;
-    stacked?: boolean;
-    showGrid?: boolean;
-    showLegend?: boolean;
-    showTooltip?: boolean;
-    skeleton?: boolean;
+interface BarChartProps<T extends Record<string, unknown>> {
+    data: T[];
+    xKey: keyof T & string;
+    yKey: keyof T & string;
+    yLabel?: string;
     height?: number;
+    color?: string;
+    layout?: 'horizontal' | 'vertical';
+    formatY?: (value: number) => string;
+    formatTooltip?: (value: number) => string;
+    barSize?: number;
     className?: string;
+    /** Enable subtle entrance animation for bars (dashboard default). */
+    animated?: boolean;
 }
 
-export function BarChart({
+export function BarChart<T extends Record<string, unknown>>({
     data,
-    dataKeys,
     xKey,
-    horizontal = false,
-    stacked = false,
-    showGrid = true,
-    showLegend = false,
-    showTooltip = true,
-    skeleton = false,
-    height = 300,
+    yKey,
+    yLabel,
+    height = 280,
+    color = 'var(--chart-2)',
+    layout = 'horizontal',
+    formatY,
+    formatTooltip,
+    barSize,
     className,
-}: BarChartProps) {
-    const reducedMotion = useReducedMotion();
-
-    if (skeleton) {
-        return (
-            <Skeleton
-                className={cn('rounded-md', className)}
-                style={{ height }}
-            />
-        );
-    }
-
-    const layout = horizontal ? 'vertical' : 'horizontal';
+    animated = true,
+}: BarChartProps<T>) {
+    const isVertical = layout === 'vertical';
 
     return (
-        <div className={cn('w-full', className)} style={{ height }}>
-            <ResponsiveContainer width="100%" height="100%">
+        <div className={cn('w-full', className)}>
+            <ResponsiveContainer width="100%" height={height}>
                 <RechartsBarChart
                     data={data}
-                    layout={layout}
-                    margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                    layout={layout === 'vertical' ? 'vertical' : 'horizontal'}
+                    margin={
+                        isVertical
+                            ? { top: 4, right: 4, bottom: 0, left: 0 }
+                            : { top: 4, right: 4, bottom: 0, left: -12 }
+                    }
                 >
-                    {showGrid && (
-                        <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="var(--border)"
-                            horizontal={!horizontal}
-                            vertical={horizontal}
-                        />
-                    )}
-                    {horizontal ? (
+                    <CartesianGrid
+                        strokeDasharray="3 3"
+                        className="stroke-border/50"
+                    />
+                    {isVertical ? (
                         <>
                             <XAxis
                                 type="number"
-                                tick={{
-                                    fill: 'var(--muted-foreground)',
-                                    fontSize: 12,
-                                }}
-                                axisLine={false}
+                                tick={{ fontSize: 12 }}
+                                className="fill-muted-foreground"
                                 tickLine={false}
+                                axisLine={false}
+                                tickFormatter={formatY}
                             />
                             <YAxis
-                                dataKey={xKey}
                                 type="category"
-                                tick={{
-                                    fill: 'var(--muted-foreground)',
-                                    fontSize: 12,
-                                }}
-                                axisLine={{ stroke: 'var(--border)' }}
+                                dataKey={xKey as DataKey<T>}
+                                tick={{ fontSize: 12 }}
+                                className="fill-muted-foreground"
                                 tickLine={false}
-                                width={80}
+                                axisLine={false}
+                                width={100}
                             />
                         </>
                     ) : (
                         <>
                             <XAxis
-                                dataKey={xKey}
-                                tick={{
-                                    fill: 'var(--muted-foreground)',
-                                    fontSize: 12,
-                                }}
-                                axisLine={{ stroke: 'var(--border)' }}
+                                dataKey={xKey as DataKey<T>}
+                                tick={{ fontSize: 12 }}
+                                className="fill-muted-foreground"
                                 tickLine={false}
+                                axisLine={false}
                             />
                             <YAxis
-                                tick={{
-                                    fill: 'var(--muted-foreground)',
-                                    fontSize: 12,
-                                }}
-                                axisLine={false}
+                                tick={{ fontSize: 12 }}
+                                className="fill-muted-foreground"
                                 tickLine={false}
+                                axisLine={false}
+                                tickFormatter={formatY}
+                                label={
+                                    yLabel
+                                        ? {
+                                              value: yLabel,
+                                              angle: -90,
+                                              position: 'insideLeft',
+                                              className:
+                                                  'fill-muted-foreground',
+                                              style: { fontSize: 11 },
+                                          }
+                                        : undefined
+                                }
                             />
                         </>
                     )}
-                    {showTooltip && (
-                        <Tooltip
-                            contentStyle={{
-                                background: 'var(--popover)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '8px',
-                                color: 'var(--popover-foreground)',
-                                fontSize: 12,
-                            }}
-                            cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
-                        />
-                    )}
-                    {showLegend && <Legend />}
-                    {dataKeys.map((key, index) => (
-                        <Bar
-                            key={key}
-                            dataKey={key}
-                            stackId={stacked ? 'stack' : undefined}
-                            fill={CHART_COLORS[index % CHART_COLORS.length]}
-                            radius={[4, 4, 0, 0]}
-                            isAnimationActive={!reducedMotion}
-                        />
-                    ))}
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: 'var(--card)',
+                            borderColor: 'var(--border)',
+                            borderRadius: 8,
+                            fontSize: 12,
+                        }}
+                        formatter={(value) => [
+                            formatTooltip
+                                ? formatTooltip(Number(value))
+                                : Number(value).toLocaleString(),
+                            yLabel ?? yKey,
+                        ]}
+                    />
+                    <Bar
+                        dataKey={yKey as DataKey<T>}
+                        fill={color}
+                        radius={[6, 6, 0, 0]}
+                        barSize={barSize}
+                        isAnimationActive={animated}
+                        animationDuration={500}
+                        animationEasing="ease-out"
+                    />
                 </RechartsBarChart>
             </ResponsiveContainer>
         </div>

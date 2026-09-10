@@ -1,7 +1,5 @@
 import TextLink from '@/components/text-link';
 import AppLayout from '@/layouts/app-layout';
-import { sanitizeHtml } from '@/lib/sanitize-html';
-import { dashboard } from '@/routes';
 import {
     index as helpIndex,
     rate as helpRate,
@@ -34,7 +32,6 @@ export default function HelpShow({ article, related }: Props) {
     const { flash } = usePage<{ flash?: { status?: string } }>().props;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Help', href: helpIndex().url },
         {
             title: article.title,
@@ -50,7 +47,7 @@ export default function HelpShow({ article, related }: Props) {
                     <TextLink href={helpIndex().url}>Back to help</TextLink>
                 </p>
                 <article>
-                    <h1 className="mb-2 text-2xl font-mono font-semibold tracking-tight">
+                    <h1 className="mb-2 text-2xl font-semibold">
                         {article.title}
                     </h1>
                     {article.excerpt && (
@@ -60,8 +57,9 @@ export default function HelpShow({ article, related }: Props) {
                     )}
                     <div
                         className="prose prose-neutral dark:prose-invert max-w-none"
+                        /* eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml -- article content from CMS */
                         dangerouslySetInnerHTML={{
-                            __html: sanitizeHtml(article.content),
+                            __html: article.content,
                         }}
                     />
                 </article>
@@ -89,7 +87,7 @@ export default function HelpShow({ article, related }: Props) {
                                 />
                                 <button
                                     type="submit"
-                                    className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+                                    className="rounded-md border bg-background px-4 py-2.5 text-sm font-medium hover:bg-muted"
                                 >
                                     Yes
                                 </button>
@@ -118,7 +116,7 @@ export default function HelpShow({ article, related }: Props) {
                 </section>
                 {related.length > 0 && (
                     <section className="mt-8 border-t pt-6">
-                        <h2 className="mb-3 font-mono text-lg font-medium tracking-tight">
+                        <h2 className="mb-3 text-lg font-medium">
                             Related articles
                         </h2>
                         <ul className="space-y-2">

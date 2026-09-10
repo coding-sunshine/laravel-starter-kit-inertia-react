@@ -1,0 +1,57 @@
+{
+    "model": "RakeLoad",
+    "table": "rake_loads",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "placement_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "free_time_minutes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "wagonLoadings": {
+            "type": "hasMany",
+            "model": "WagonLoading"
+        },
+        "weighments": {
+            "type": "hasMany",
+            "model": "Weighment"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

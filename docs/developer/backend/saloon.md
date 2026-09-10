@@ -1,25 +1,33 @@
 # Saloon HTTP Client
 
-Third-party API integrations use **Saloon** (`saloonphp/saloon` v3) for a consistent, testable HTTP client layer.
+Third-party API integrations use **Saloon** (`saloonphp/saloon` v4) for a consistent, testable HTTP client layer.
 
 ## Where integrations live
 
 - **Connectors**: `App\Http\Integrations\{ApiName}\{ApiName}Connector.php` — base URL, default headers, optional auth.
 - **Requests**: `App\Http\Integrations\{ApiName}\Requests\*.php` — one class per endpoint (method + path).
 
-## Integrations in this app
+## Example (included)
 
-### Paddle (billing)
+An example integration targets the public [JSONPlaceholder](https://jsonplaceholder.typicode.com) API:
 
-- **Connector**: `App\Http\Integrations\Paddle\PaddleConnector` — base URL from `config('paddle.sandbox')` (sandbox vs production), Bearer token from `config('paddle.vendor_auth_code')`.
-- **Requests**: `PaddleGetRequest` (GET), `PaddleApiRequest` (POST/PATCH with JSON body).
-- **Usage**: Injected into `Modules\Billing\Services\PaymentGateway\Gateways\PaddleGateway`; the gateway calls `$this->connector->send(new PaddleGetRequest('/subscriptions/'.$id))` or `$this->connector->send(new PaddleApiRequest(Method::POST, '/customers', $data))` and uses `$response->json()`.
+- **Connector**: `App\Http\Integrations\ExampleApi\ExampleApiConnector`
+- **Request**: `App\Http\Integrations\ExampleApi\Requests\GetPostRequest`
 
-### Typesense (search health check)
+Usage:
 
-- **Connector**: `App\Http\Integrations\Typesense\TypesenseConnector` — base URL and API key passed in the constructor (used with dynamic host/port during install).
-- **Request**: `HealthCheckRequest` — GET `/health`.
-- **Usage**: `AppInstallCommand::verifyTypesense()` builds the connector with the user-provided host/port/key and sends `HealthCheckRequest`.
+```php
+use App\Http\Integrations\ExampleApi\ExampleApiConnector;
+use App\Http\Integrations\ExampleApi\Requests\GetPostRequest;
+
+$connector = new ExampleApiConnector;
+$response = $connector->send(new GetPostRequest(1));
+
+$response->successful(); // true/false
+$data = $response->json(); // decoded JSON
+```
+
+Base URL is configurable via `config('services.example_api.url')` (default: `https://jsonplaceholder.typicode.com`). Optional env: `EXAMPLE_API_URL`.
 
 ## Adding a new integration
 
@@ -33,7 +41,17 @@ Third-party API integrations use **Saloon** (`saloonphp/saloon` v3) for a consis
 - Use Saloon’s `FakeResponse` or `MockClient` to avoid real HTTP calls in tests.
 - See [Saloon testing docs](https://docs.saloon.dev/testing/overview) for mocking and fixtures.
 
+## External APIs (RRMCS / future)
+
+For future integrations (e.g. FBD e-Demand, RR status, or weighment-vendor APIs):
+
+1. Add a **Saloon connector** under `App\Http\Integrations\{Name}\` (e.g. `FbdApi`, `WeighmentVendorApi`).
+2. Put base URL and API keys in `config/services.php` and `.env` (e.g. `FBD_API_URL`, `FBD_API_KEY`).
+3. Call the connector from an **Action** or **job** (e.g. `ProcessIndentDocument`, sync RR status). Prefer Actions for reuse from HTTP, console, and MCP.
+
+No new connector is added until a specific API contract (base URL, auth, endpoints) is available.
+
 ## References
 
-- [Saloon v3 docs](https://docs.saloon.dev)
-- Paddle: `config/paddle.php`; Typesense: CLI installer and Scout settings.
+- [Saloon docs](https://docs.saloon.dev)
+- Config: `config/services.php` → `example_api` (and your API keys as needed)

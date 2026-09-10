@@ -1,0 +1,72 @@
+{
+    "model": "CommodityUtilisationThreshold",
+    "table": "commodity_utilisation_thresholds",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "commodity_grade": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "utilisation_threshold": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "effective_from": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "effective_to": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        },
+        "editor": {
+            "type": "belongsTo",
+            "model": "Editor"
+        },
+        "destroyer": {
+            "type": "belongsTo",
+            "model": "Destroyer"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

@@ -1,0 +1,58 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0" version="29.3.8">
+  <diagram name="Rake Operational State Transition" id="YrIyY4OMBnJic3RwhJ-m">
+    <mxGraphModel dx="1426" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-1" parent="1" style="rounded=1;" value="TXR_COMPLETED" vertex="1">
+          <mxGeometry height="60" width="220" x="400" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-2" parent="1" style="rounded=1;fillColor=#dae8fc;" value="DISPATCHED\n(Timer Started)" vertex="1">
+          <mxGeometry height="80" width="240" x="390" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-3" parent="1" style="rounded=1;" value="LOADING" vertex="1">
+          <mxGeometry height="60" width="200" x="410" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-4" parent="1" style="rounded=1;" value="GUARD_INSPECTION" vertex="1">
+          <mxGeometry height="60" width="240" x="390" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-5" parent="1" style="rounded=1;" value="WEIGHMENT_IN_PROGRESS" vertex="1">
+          <mxGeometry height="60" width="260" x="380" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-6" parent="1" style="rounded=1;fillColor=#fff2cc;" value="RELOADING\n(Remove Extra Coal)" vertex="1">
+          <mxGeometry height="80" width="260" x="10" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-7" parent="1" style="rounded=1;" value="READY_FOR_FINAL_DISPATCH" vertex="1">
+          <mxGeometry height="60" width="260" x="380" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-8" parent="1" style="rounded=1;fillColor=#d5e8d4;" value="COMPLETED\n(Dispatched to Power Plant)" vertex="1">
+          <mxGeometry height="80" width="300" x="360" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-9" edge="1" parent="1" source="Bo-6GpGgBu1XCyzeSkwM-1" target="Bo-6GpGgBu1XCyzeSkwM-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-10" edge="1" parent="1" source="Bo-6GpGgBu1XCyzeSkwM-2" target="Bo-6GpGgBu1XCyzeSkwM-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-11" edge="1" parent="1" source="Bo-6GpGgBu1XCyzeSkwM-3" target="Bo-6GpGgBu1XCyzeSkwM-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-12" edge="1" parent="1" source="Bo-6GpGgBu1XCyzeSkwM-4" target="Bo-6GpGgBu1XCyzeSkwM-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-13" edge="1" parent="1" source="Bo-6GpGgBu1XCyzeSkwM-5" target="Bo-6GpGgBu1XCyzeSkwM-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-14" edge="1" parent="1" source="Bo-6GpGgBu1XCyzeSkwM-6" target="Bo-6GpGgBu1XCyzeSkwM-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-15" edge="1" parent="1" source="Bo-6GpGgBu1XCyzeSkwM-5" target="Bo-6GpGgBu1XCyzeSkwM-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Bo-6GpGgBu1XCyzeSkwM-16" edge="1" parent="1" source="Bo-6GpGgBu1XCyzeSkwM-7" target="Bo-6GpGgBu1XCyzeSkwM-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

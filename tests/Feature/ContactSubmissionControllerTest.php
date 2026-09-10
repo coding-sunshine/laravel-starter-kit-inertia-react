@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\ContactSubmission;
 use App\Models\User;
-use Modules\Contact\Models\ContactSubmission;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 
 /**
  * Valid honeypot fields for contact.store (same as register when ProtectAgainstSpam is enabled).
@@ -49,7 +50,9 @@ it('stores a contact submission', function (): void {
 });
 
 it('sets userstamps when user is authenticated', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
     $user = User::factory()->create();
+    $user->givePermissionTo('sections.contact.create');
 
     $response = $this->actingAs($user)
         ->fromRoute('contact.create')

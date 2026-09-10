@@ -1,0 +1,101 @@
+import React from 'react';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import HistoricalRakeRow from '@/components/historical/historical-rake-row';
+import type { HistoricalRake } from '@/components/historical/historical-rake-row';
+import { useCan } from '@/hooks/use-can';
+
+interface HistoricalRakeTableProps {
+  rakes: HistoricalRake[];
+  editingId: number | null;
+  onEditingChange: (id: number | null) => void;
+  onRakeUpdated?: (rake: HistoricalRake) => void;
+  onRakeDeleted?: (id: number) => void;
+  onAddRow?: () => void;
+  isAddingRow?: boolean;
+}
+
+export default function HistoricalRakeTable({
+  rakes,
+  editingId,
+  onEditingChange,
+  onRakeUpdated,
+  onRakeDeleted,
+  onAddRow,
+  isAddingRow = false,
+}: HistoricalRakeTableProps) {
+  const canCreate = useCan('sections.historical_railway_siding.create');
+  const rowCount = rakes.length;
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="border border-gray-300 border-b-0 px-2 py-1 flex flex-wrap items-center justify-between gap-4 text-[11px] bg-white">
+        <span>
+          Rows on this page: <span className="font-semibold">{rowCount}</span>
+        </span>
+        {onAddRow && canCreate && (
+          <Button
+            size="sm"
+            onClick={() => onAddRow()}
+            disabled={isAddingRow}
+            className="h-7 px-3 text-[11px]"
+          >
+            {isAddingRow ? 'Adding...' : 'Add Row'}
+          </Button>
+        )}
+      </div>
+
+      <Table className="text-xs border border-gray-300 border-collapse">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12 min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">SL NO</TableHead>
+            <TableHead className="w-32 min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Siding</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Loading Date</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Rake No</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Priority No</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">RR No</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Wagons</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Loaded WT (MT)</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Under Load (MT)</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Over Load (MT)</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">O/L Wagons</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Detention Hrs</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Shunting Hrs</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Total Amount (Rs)</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Destination</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">IMWB Period</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Remarks</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rakes.map((rake, index) => (
+            <HistoricalRakeRow
+              key={rake.id}
+              rake={rake}
+              index={index}
+              isEditing={editingId === rake.id}
+              onEditClick={() => onEditingChange(rake.id)}
+              onSaveSuccess={() => onEditingChange(null)}
+              onRakeUpdated={onRakeUpdated}
+              onRakeDeleted={onRakeDeleted}
+            />
+          ))}
+        </TableBody>
+      </Table>
+
+      <div className="border border-gray-300 border-t-0 px-2 py-2 flex items-center justify-center bg-white">
+        {onAddRow && canCreate && (
+          <Button
+            onClick={() => onAddRow()}
+            disabled={isAddingRow}
+            className="flex items-center gap-2"
+          >
+            {isAddingRow ? 'Adding...' : 'Add Row'}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+

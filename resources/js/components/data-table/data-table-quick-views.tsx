@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { DataTableTranslations } from "./i18n";
 import type { LucideIcon } from "lucide-react";
 import {
     Bookmark,
@@ -78,7 +77,6 @@ interface DataTableQuickViewsProps {
     onApplyColumns: (columnIds: string[]) => void;
     onApplyColumnOrder: (order: ColumnOrderState) => void;
     enableCustom?: boolean;
-    t: DataTableTranslations;
 }
 
 export function DataTableQuickViews({
@@ -92,7 +90,6 @@ export function DataTableQuickViews({
     onApplyColumns,
     onApplyColumnOrder,
     enableCustom = true,
-    t,
 }: DataTableQuickViewsProps) {
     const [savedViews, setSavedViews] = useState<SavedQuickView[]>(() =>
         loadSavedViews(tableName),
@@ -165,11 +162,11 @@ export function DataTableQuickViews({
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8">
                         <Eye className="h-4 w-4" />
-                        {activeLabel ?? t.view}
+                        {activeLabel ?? "View"}
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>{t.quickViews}</DropdownMenuLabel>
+                    <DropdownMenuLabel>Quick views</DropdownMenuLabel>
                     <DropdownMenuSeparator />
 
                     {!editing ? (
@@ -195,7 +192,7 @@ export function DataTableQuickViews({
                                 <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-                                        {t.savedViews}
+                                        Saved views
                                     </DropdownMenuLabel>
                                     {savedViews.map((sv) => (
                                         <DropdownMenuItem
@@ -223,7 +220,7 @@ export function DataTableQuickViews({
                                     }}
                                 >
                                     <Save className="h-4 w-4" />
-                                    {t.saveFilters}
+                                    Save filters
                                 </DropdownMenuItem>
                             )}
 
@@ -236,7 +233,7 @@ export function DataTableQuickViews({
                                     }}
                                 >
                                     <Pencil className="h-4 w-4" />
-                                    {t.manageViews}
+                                    Manage views
                                 </DropdownMenuItem>
                             )}
                         </>
@@ -274,7 +271,7 @@ export function DataTableQuickViews({
                                 }}
                             >
                                 <X className="h-4 w-4" />
-                                {t.done}
+                                Done
                             </DropdownMenuItem>
                         </>
                     )}
@@ -284,19 +281,19 @@ export function DataTableQuickViews({
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>{t.saveFilters}</DialogTitle>
+                        <DialogTitle>Save filters</DialogTitle>
                         <DialogDescription>
-                            {t.filtersWillBeSavedLocally}
+                            Active filters will be saved locally.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-3 py-2">
                         <div className="grid gap-2">
-                            <Label htmlFor="qv-name">{t.viewName}</Label>
+                            <Label htmlFor="qv-name">View name</Label>
                             <Input
                                 id="qv-name"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
-                                placeholder={t.viewNamePlaceholder}
+                                placeholder="e.g. Recent items without photo"
                                 onKeyDown={(e) => e.key === "Enter" && handleSave()}
                                 autoFocus
                             />
@@ -320,20 +317,20 @@ export function DataTableQuickViews({
                             return (
                                 <div className="space-y-1 rounded border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                                     <div>
-                                        <span className="font-medium text-foreground">{t.filtersLabel}</span>{" "}
-                                        {filters.length > 0 ? filters.join(" · ") : t.none}
+                                        <span className="font-medium text-foreground">Filters:</span>{" "}
+                                        {filters.length > 0 ? filters.join(" · ") : "None"}
                                     </div>
                                     {sortParam && (
                                         <div>
-                                            <span className="font-medium text-foreground">{t.sortLabel}</span>{" "}
+                                            <span className="font-medium text-foreground">Sort:</span>{" "}
                                             {sortParam.split(",").map((s) =>
                                                 s.startsWith("-") ? `${s.slice(1)} ↓` : `${s} ↑`
                                             ).join(", ")}
                                         </div>
                                     )}
                                     <div>
-                                        <span className="font-medium text-foreground">{t.columns}:</span>{" "}
-                                        {t.columnsCount(visibleCount, totalCount)}
+                                        <span className="font-medium text-foreground">Columns:</span>{" "}
+                                        {visibleCount}/{totalCount} visible
                                     </div>
                                 </div>
                             );
@@ -341,11 +338,11 @@ export function DataTableQuickViews({
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                            {t.cancel}
+                            Cancel
                         </Button>
                         <Button onClick={handleSave} disabled={!newName.trim()}>
                             <Save className="mr-2 h-4 w-4" />
-                            {t.save}
+                            Save
                         </Button>
                     </DialogFooter>
                 </DialogContent>

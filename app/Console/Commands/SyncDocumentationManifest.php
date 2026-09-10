@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Services\DocumentationCrossReference;
+use App\Services\DocumentationPrismGenerator;
+use App\Services\DocumentationPromptGenerator;
+use App\Services\DocumentationTemplateSelector;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use ReflectionClass;
@@ -15,18 +18,36 @@ use ReflectionParameter;
 
 final class SyncDocumentationManifest extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'docs:sync
                             {--check : Only check for undocumented items, do not update manifest}
-                            {--generate : Generate documentation stubs for undocumented items}';
+                            {--generate : Generate documentation stubs for undocumented items}
+                            {--ai : Use AI (Prism) to generate full documentation}
+                            {--auto : Call Prism to generate and write docs (requires --ai); without --auto only writes prompts to docs/.ai-prompts/}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Sync documentation manifest with actual codebase';
 
     public function __construct(
-        private readonly DocumentationCrossReference $crossReference
+        private readonly DocumentationCrossReference $crossReference,
+        private readonly DocumentationTemplateSelector $templateSelector,
+        private readonly DocumentationPromptGenerator $promptGenerator,
+        private readonly DocumentationPrismGenerator $prismGenerator
     ) {
         parent::__construct();
     }
 
+    /**
+     * Execute the console command.
+     */
     public function handle(): int
     {
         $manifestPath = base_path('docs/.manifest.json');
@@ -45,6 +66,7 @@ final class SyncDocumentationManifest extends Command
         $controllers = $this->scanControllers();
         $pages = $this->scanPages();
 
+        // Discover relationships using cross-reference service
         $this->info('Discovering relationships...');
         $actionRelationships = $this->crossReference->discoverActionRelationships($actions);
         $controllerRelationships = $this->crossReference->discoverControllerRelationships($controllers);
@@ -56,6 +78,7 @@ final class SyncDocumentationManifest extends Command
             'pages' => [],
         ];
 
+        // Sync Actions (now returns array with details)
         foreach (array_keys($actions) as $actionName) {
             if (! isset($manifest['actions'][$actionName])) {
                 $manifest['actions'][$actionName] = [
@@ -69,10 +92,12 @@ final class SyncDocumentationManifest extends Command
                 ];
             }
 
+            // Check if documented
             if (! ($manifest['actions'][$actionName]['documented'] ?? false)) {
                 $undocumented['actions'][] = $actionName;
             }
 
+            // Always update relationships (they may have changed)
             if (isset($actionRelationships[$actionName])) {
                 $manifest['actions'][$actionName]['relationships'] = $actionRelationships[$actionName];
             } elseif (! isset($manifest['actions'][$actionName]['relationships'])) {
@@ -84,6 +109,7 @@ final class SyncDocumentationManifest extends Command
             }
         }
 
+        // Sync Controllers (now returns array with details)
         foreach (array_keys($controllers) as $controllerName) {
             if (! isset($manifest['controllers'][$controllerName])) {
                 $manifest['controllers'][$controllerName] = [
@@ -98,10 +124,12 @@ final class SyncDocumentationManifest extends Command
                 ];
             }
 
+            // Check if documented
             if (! ($manifest['controllers'][$controllerName]['documented'] ?? false)) {
                 $undocumented['controllers'][] = $controllerName;
             }
 
+            // Always update relationships (they may have changed)
             if (isset($controllerRelationships[$controllerName])) {
                 $manifest['controllers'][$controllerName]['relationships'] = $controllerRelationships[$controllerName];
             } elseif (! isset($manifest['controllers'][$controllerName]['relationships'])) {
@@ -114,6 +142,7 @@ final class SyncDocumentationManifest extends Command
             }
         }
 
+        // Sync Pages (now returns array with details)
         foreach (array_keys($pages) as $pagePath) {
             if (! isset($manifest['pages'][$pagePath])) {
                 $manifest['pages'][$pagePath] = [
@@ -127,10 +156,12 @@ final class SyncDocumentationManifest extends Command
                 ];
             }
 
+            // Check if documented
             if (! ($manifest['pages'][$pagePath]['documented'] ?? false)) {
                 $undocumented['pages'][] = $pagePath;
             }
 
+            // Always update relationships (they may have changed)
             if (isset($pageRelationships[$pagePath])) {
                 $manifest['pages'][$pagePath]['relationships'] = $pageRelationships[$pagePath];
             } elseif (! isset($manifest['pages'][$pagePath]['relationships'])) {
@@ -141,6 +172,7 @@ final class SyncDocumentationManifest extends Command
             }
         }
 
+        // Update lastGenerated
         $manifest['lastGenerated'] = now()->format('Y-m-d');
 
         if ($this->option('check')) {
@@ -151,20 +183,37 @@ final class SyncDocumentationManifest extends Command
                 : self::FAILURE;
         }
 
+        // Write updated manifest
         File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
 
         $this->info('Manifest synced successfully!');
 
+        // Auto-update index files
         $this->updateIndexFiles($manifest);
 
-        if ($undocumented['actions'] !== [] || $undocumented['controllers'] !== [] || $undocumented['pages'] !== []) {
+        if (isset($undocumented['actions']) && $undocumented['actions'] !== [] || isset($undocumented['controllers']) && $undocumented['controllers'] !== [] || isset($undocumented['pages']) && $undocumented['pages'] !== []) {
             $this->displayUndocumented($undocumented);
 
             if ($this->option('generate')) {
-                $this->generateStubs($undocumented);
-                $this->markStubsAsDocumented($undocumented, $manifest, $manifestPath);
+                if ($this->option('ai')) {
+                    $usePrism = $this->option('auto') && $this->prismGenerator->isAvailable();
+                    if ($usePrism) {
+                        $this->generateWithPrism($undocumented, $actions, $controllers, $pages, $actionRelationships, $controllerRelationships, $pageRelationships, $manifest, $manifestPath);
+                    } else {
+                        $this->generateWithAI($undocumented, $actions, $controllers, $pages, $actionRelationships, $controllerRelationships, $pageRelationships);
+                        if ($this->option('auto') && ! $this->prismGenerator->isAvailable()) {
+                            $this->warn('Prism/OpenRouter not configured. Set OPENROUTER_API_KEY for --auto. Prompts written to docs/.ai-prompts/');
+                        }
+                    }
+                } else {
+                    $this->generateStubs($undocumented);
+                    $this->markStubsAsDocumented($undocumented, $manifest, $manifestPath);
+                }
             } else {
                 $this->warn('Run with --generate to create documentation stubs for undocumented items.');
+                if ($this->option('ai')) {
+                    $this->warn('Use --generate --ai to generate prompts; add --auto to call Prism and write docs.');
+                }
             }
         }
 
@@ -172,6 +221,8 @@ final class SyncDocumentationManifest extends Command
     }
 
     /**
+     * Scan Actions directory with reflection.
+     *
      * @return array<string, array<string, mixed>>
      */
     private function scanActions(): array
@@ -183,8 +234,13 @@ final class SyncDocumentationManifest extends Command
             return $actions;
         }
 
-        foreach (File::files($actionsPath) as $file) {
+        $files = collect(File::allFiles($actionsPath))->filter(fn ($f): bool => $f->getExtension() === 'php');
+
+        foreach ($files as $file) {
+            $className = $file->getFilenameWithoutExtension();
             $filePath = $file->getPathname();
+
+            $phpDoc = $this->extractPHPDoc($filePath);
             $className = $this->getClassNameFromFile($filePath);
 
             if ($className === null) {
@@ -193,20 +249,23 @@ final class SyncDocumentationManifest extends Command
 
             try {
                 $reflection = new ReflectionClass($className);
+                $handleMethod = $reflection->hasMethod('handle') ? $reflection->getMethod('handle') : null;
+
                 $shortClassName = class_basename($className);
 
                 $actionInfo = [
                     'name' => $shortClassName,
                     'fullName' => $className,
                     'filePath' => $filePath,
-                    'handleMethod' => $reflection->hasMethod('handle')
-                        ? $this->extractMethodInfo($reflection->getMethod('handle'))
-                        : null,
+                    'phpDoc' => $phpDoc,
+                    'handleMethod' => $handleMethod ? $this->extractMethodInfo($handleMethod) : null,
                     'dependencies' => [],
                 ];
 
+                // Extract constructor dependencies
                 if ($reflection->hasMethod('__construct')) {
-                    foreach ($reflection->getMethod('__construct')->getParameters() as $param) {
+                    $constructor = $reflection->getMethod('__construct');
+                    foreach ($constructor->getParameters() as $param) {
                         $type = $this->getParameterType($param);
                         if ($type !== null) {
                             $actionInfo['dependencies'][] = [
@@ -219,7 +278,8 @@ final class SyncDocumentationManifest extends Command
 
                 $actions[$shortClassName] = $actionInfo;
             } catch (ReflectionException) {
-                $actions[class_basename($className)] = ['name' => class_basename($className), 'filePath' => $filePath];
+                // Skip if reflection fails
+                $actions[$shortClassName] = ['name' => $shortClassName, 'filePath' => $filePath];
             }
         }
 
@@ -227,6 +287,8 @@ final class SyncDocumentationManifest extends Command
     }
 
     /**
+     * Scan Controllers directory with reflection.
+     *
      * @return array<string, array<string, mixed>>
      */
     private function scanControllers(): array
@@ -238,9 +300,13 @@ final class SyncDocumentationManifest extends Command
             return $controllers;
         }
 
-        foreach (File::files($controllersPath) as $file) {
+        $files = collect(File::allFiles($controllersPath))->filter(fn ($f): bool => $f->getExtension() === 'php');
+
+        foreach ($files as $file) {
             $className = $file->getFilenameWithoutExtension();
             $filePath = $file->getPathname();
+
+            $phpDoc = $this->extractPHPDoc($filePath);
             $fullClassName = $this->getClassNameFromFile($filePath);
 
             if ($fullClassName === null) {
@@ -252,7 +318,6 @@ final class SyncDocumentationManifest extends Command
                 if ($reflection->isAbstract()) {
                     continue;
                 }
-
                 $methods = [];
 
                 foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
@@ -262,6 +327,7 @@ final class SyncDocumentationManifest extends Command
 
                     $methods[$method->getName()] = $this->extractMethodInfo($method);
 
+                    // Extract Action classes used
                     $methodBody = $this->getMethodBody($filePath, $method->getName());
                     $methods[$method->getName()]['actionsUsed'] = $this->extractActionClasses($methodBody);
                     $methods[$method->getName()]['formRequestsUsed'] = $this->extractFormRequestClasses($methodBody);
@@ -271,9 +337,11 @@ final class SyncDocumentationManifest extends Command
                     'name' => $className,
                     'fullName' => $fullClassName,
                     'filePath' => $filePath,
+                    'phpDoc' => $phpDoc,
                     'methods' => $methods,
                 ];
             } catch (ReflectionException) {
+                // Skip if reflection fails
                 $controllers[$className] = ['name' => $className, 'filePath' => $filePath];
             }
         }
@@ -282,6 +350,8 @@ final class SyncDocumentationManifest extends Command
     }
 
     /**
+     * Scan Pages directory with TSDoc extraction.
+     *
      * @return array<string, array<string, mixed>>
      */
     private function scanPages(): array
@@ -293,29 +363,30 @@ final class SyncDocumentationManifest extends Command
             return $pages;
         }
 
-        foreach (File::allFiles($pagesPath) as $file) {
-            if ($file->getExtension() !== 'tsx') {
-                continue;
+        $files = File::allFiles($pagesPath);
+
+        foreach ($files as $file) {
+            if ($file->getExtension() === 'tsx') {
+                $relativePath = str_replace($pagesPath.'/', '', $file->getPathname());
+                $pagePath = str_replace('.tsx', '', $relativePath);
+                $filePath = $file->getPathname();
+
+                $tsDoc = $this->extractTSDoc($filePath);
+
+                $pages[$pagePath] = [
+                    'path' => $pagePath,
+                    'filePath' => $filePath,
+                    'tsDoc' => $tsDoc,
+                ];
             }
-
-            $relativePath = str_replace($pagesPath.'/', '', $file->getPathname());
-
-            if (str_contains($relativePath, '/_components/')) {
-                continue;
-            }
-
-            $pagePath = str_replace('.tsx', '', $relativePath);
-
-            $pages[$pagePath] = [
-                'path' => $pagePath,
-                'filePath' => $file->getPathname(),
-            ];
         }
 
         return $pages;
     }
 
     /**
+     * Display undocumented items.
+     *
      * @param  array<string, array<string>>  $undocumented
      */
     private function displayUndocumented(array $undocumented): void
@@ -323,24 +394,38 @@ final class SyncDocumentationManifest extends Command
         $total = count($undocumented['actions']) + count($undocumented['controllers']) + count($undocumented['pages']);
 
         if ($total === 0) {
-            $this->info('All items are documented!');
+            $this->info('✓ All items are documented!');
 
             return;
         }
 
-        $this->warn(sprintf('Found %d undocumented item(s):', $total));
+        $this->warn("Found {$total} undocumented item(s):");
 
-        foreach (['actions', 'controllers', 'pages'] as $type) {
-            if (! empty($undocumented[$type])) {
-                $this->line('  '.ucfirst($type).':');
-                foreach ($undocumented[$type] as $item) {
-                    $this->line('    - '.$item);
-                }
+        if (! empty($undocumented['actions'])) {
+            $this->line('  Actions:');
+            foreach ($undocumented['actions'] as $action) {
+                $this->line("    - {$action}");
+            }
+        }
+
+        if (! empty($undocumented['controllers'])) {
+            $this->line('  Controllers:');
+            foreach ($undocumented['controllers'] as $controller) {
+                $this->line("    - {$controller}");
+            }
+        }
+
+        if (! empty($undocumented['pages'])) {
+            $this->line('  Pages:');
+            foreach ($undocumented['pages'] as $page) {
+                $this->line("    - {$page}");
             }
         }
     }
 
     /**
+     * Generate documentation stubs.
+     *
      * @param  array<string, array<string>>  $undocumented
      */
     private function generateStubs(array $undocumented): void
@@ -348,43 +433,23 @@ final class SyncDocumentationManifest extends Command
         $this->info('Generating documentation stubs...');
 
         foreach ($undocumented['actions'] as $action) {
-            $this->generateStubFromTemplate('action', $action, 'docs/developer/backend/actions/', ['{ActionName}' => $action]);
+            $this->generateActionStub($action);
         }
 
         foreach ($undocumented['controllers'] as $controller) {
-            $this->generateStubFromTemplate('controller', $controller, 'docs/developer/backend/controllers/', ['{ControllerName}' => $controller]);
+            $this->generateControllerStub($controller);
         }
 
         foreach ($undocumented['pages'] as $page) {
-            $this->generateStubFromTemplate('page', basename($page), sprintf('docs/developer/frontend/pages/%s', dirname($page) === '.' ? '' : dirname($page).'/'), ['{PageName}' => basename($page), '{path}' => $page]);
+            $this->generatePageStub($page);
         }
 
         $this->info('Documentation stubs generated!');
     }
 
     /**
-     * @param  array<string, string>  $replacements
-     */
-    private function generateStubFromTemplate(string $templateName, string $itemName, string $outputDir, array $replacements): void
-    {
-        $templatePath = base_path("docs/.templates/{$templateName}.md");
-
-        if (! File::exists($templatePath)) {
-            $this->warn("Template not found: {$templatePath}");
-
-            return;
-        }
-
-        $content = str_replace(array_keys($replacements), array_values($replacements), File::get($templatePath));
-        $outputPath = base_path($outputDir.mb_strtolower($itemName).'.md');
-
-        File::ensureDirectoryExists(dirname($outputPath));
-        File::put($outputPath, $content);
-
-        $this->line("  Generated: {$outputPath}");
-    }
-
-    /**
+     * Mark generated stubs as documented in the manifest.
+     *
      * @param  array<string, array<string>>  $undocumented
      * @param  array<string, mixed>  $manifest
      */
@@ -394,31 +459,286 @@ final class SyncDocumentationManifest extends Command
             $manifest['actions'][$actionName]['documented'] = true;
             $manifest['actions'][$actionName]['path'] = './'.mb_strtolower($actionName).'.md';
         }
-
         foreach ($undocumented['controllers'] ?? [] as $controllerName) {
             $manifest['controllers'][$controllerName]['documented'] = true;
             $manifest['controllers'][$controllerName]['path'] = './'.mb_strtolower($controllerName).'.md';
         }
-
         foreach ($undocumented['pages'] ?? [] as $pagePath) {
             $manifest['pages'][$pagePath]['documented'] = true;
-            $manifest['pages'][$pagePath]['developerGuide'] = sprintf('./%s.md', $pagePath);
+            $manifest['pages'][$pagePath]['developerGuide'] = "./{$pagePath}.md";
         }
-
         File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
         $this->updateIndexFiles($manifest);
     }
 
     /**
+     * Generate Action documentation stub.
+     */
+    private function generateActionStub(string $action): void
+    {
+        $templatePath = base_path('docs/.templates/action.md');
+        $outputPath = base_path('docs/developer/backend/actions/'.mb_strtolower($action).'.md');
+
+        if (! File::exists($templatePath)) {
+            $this->warn("Template not found: {$templatePath}");
+
+            return;
+        }
+
+        $template = File::get($templatePath);
+        $content = str_replace('{ActionName}', $action, $template);
+
+        File::ensureDirectoryExists(dirname($outputPath));
+        File::put($outputPath, $content);
+
+        $this->line("  ✓ Generated: {$outputPath}");
+    }
+
+    /**
+     * Generate Controller documentation stub.
+     */
+    private function generateControllerStub(string $controller): void
+    {
+        $templatePath = base_path('docs/.templates/controller.md');
+        $outputPath = base_path('docs/developer/backend/controllers/'.mb_strtolower($controller).'.md');
+
+        if (! File::exists($templatePath)) {
+            $this->warn("Template not found: {$templatePath}");
+
+            return;
+        }
+
+        $template = File::get($templatePath);
+        $content = str_replace('{ControllerName}', $controller, $template);
+
+        File::ensureDirectoryExists(dirname($outputPath));
+        File::put($outputPath, $content);
+
+        $this->line("  ✓ Generated: {$outputPath}");
+    }
+
+    /**
+     * Generate Page documentation stub.
+     */
+    private function generatePageStub(string $page): void
+    {
+        $templatePath = base_path('docs/.templates/page.md');
+        $pageName = basename($page);
+        $outputPath = base_path("docs/developer/frontend/pages/{$page}.md");
+
+        if (! File::exists($templatePath)) {
+            $this->warn("Template not found: {$templatePath}");
+
+            return;
+        }
+
+        $template = File::get($templatePath);
+        $content = str_replace(['{PageName}', '{path}'], [$pageName, $page], $template);
+
+        File::ensureDirectoryExists(dirname($outputPath));
+        File::put($outputPath, $content);
+
+        $this->line("  ✓ Generated: {$outputPath}");
+    }
+
+    /**
+     * Extract PHPDoc from a PHP file.
+     *
+     * @return array<string, mixed>
+     */
+    private function extractPHPDoc(string $filePath): array
+    {
+        if (! File::exists($filePath)) {
+            return [];
+        }
+
+        $className = $this->getClassNameFromFile($filePath);
+
+        if ($className === null) {
+            return [];
+        }
+
+        try {
+            $reflection = new ReflectionClass($className);
+        } catch (ReflectionException) {
+            return [];
+        }
+
+        $docBlock = $reflection->getDocComment() ?: '';
+
+        $result = [
+            'class' => [
+                'docBlock' => $docBlock,
+                'parsed' => $this->parseDocBlock($docBlock),
+            ],
+            'methods' => [],
+        ];
+
+        // Extract handle() method for Actions
+        if ($reflection->hasMethod('handle')) {
+            $method = $reflection->getMethod('handle');
+            $result['methods']['handle'] = $this->extractMethodInfo($method);
+        }
+
+        // Extract constructor for dependencies
+        if ($reflection->hasMethod('__construct')) {
+            $constructor = $reflection->getMethod('__construct');
+            $result['methods']['__construct'] = $this->extractMethodInfo($constructor);
+        }
+
+        // Extract all public methods for Controllers
+        if (str_contains($className, 'Controller')) {
+            foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+                if (! $method->isConstructor()) {
+                    $result['methods'][$method->getName()] = $this->extractMethodInfo($method);
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Extract TSDoc from a TypeScript/TSX file.
+     *
+     * @return array<string, mixed>
+     */
+    private function extractTSDoc(string $filePath): array
+    {
+        if (! File::exists($filePath)) {
+            return [];
+        }
+
+        $content = File::get($filePath);
+        $result = [
+            'component' => null,
+            'props' => [],
+            'description' => null,
+        ];
+
+        // Extract JSDoc comments
+        if (preg_match('/\/\*\*([^*]|(?:\*(?!\/)))*\*\//s', $content, $matches)) {
+            $jsDoc = $matches[0];
+            $result['description'] = $this->extractJSDocDescription($jsDoc);
+        }
+
+        // Extract props from TypeScript interface or type
+        if (preg_match('/interface\s+(\w+)\s*\{([^}]+)\}/s', $content, $matches)) {
+            $interfaceName = $matches[1];
+            $interfaceBody = $matches[2];
+            $result['props'] = $this->extractPropsFromInterface($interfaceBody);
+        }
+
+        // Extract default export function
+        if (preg_match('/export\s+default\s+function\s+(\w+)/', $content, $matches)) {
+            $result['component'] = $matches[1];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Parse a docblock into structured data.
+     *
+     * @return array<string, mixed>
+     */
+    private function parseDocBlock(string $docBlock): array
+    {
+        if ($docBlock === '' || $docBlock === '0') {
+            return [];
+        }
+
+        $result = [
+            'description' => '',
+            'params' => [],
+            'return' => null,
+            'throws' => [],
+            'see' => [],
+        ];
+
+        // Remove /** and */
+        $docBlock = preg_replace('/^\/\*\*|\*\/$/', '', $docBlock);
+        $lines = explode("\n", (string) $docBlock);
+
+        $description = [];
+        $inDescription = true;
+
+        foreach ($lines as $line) {
+            $line = mb_trim($line);
+            $line = preg_replace('/^\*\s*/', '', $line);
+
+            if (empty($line)) {
+                continue;
+            }
+
+            // Parse @param
+            if (preg_match('/@param\s+([^\s]+)\s+\$(\w+)\s*(.*)/', $line, $matches)) {
+                $inDescription = false;
+                $result['params'][$matches[2]] = [
+                    'type' => $matches[1],
+                    'name' => $matches[2],
+                    'description' => mb_trim($matches[3]),
+                ];
+
+                continue;
+            }
+
+            // Parse @return
+            if (preg_match('/@return\s+([^\s]+)\s*(.*)/', $line, $matches)) {
+                $inDescription = false;
+                $result['return'] = [
+                    'type' => $matches[1],
+                    'description' => mb_trim($matches[2]),
+                ];
+
+                continue;
+            }
+
+            // Parse @throws
+            if (preg_match('/@throws\s+([^\s]+)\s*(.*)/', $line, $matches)) {
+                $inDescription = false;
+                $result['throws'][] = [
+                    'type' => $matches[1],
+                    'description' => mb_trim($matches[2]),
+                ];
+
+                continue;
+            }
+
+            // Parse @see
+            if (preg_match('/@see\s+(.+)/', $line, $matches)) {
+                $inDescription = false;
+                $result['see'][] = mb_trim($matches[1]);
+
+                continue;
+            }
+
+            if ($inDescription && ! str_starts_with($line, '@')) {
+                $description[] = $line;
+            }
+        }
+
+        $result['description'] = mb_trim(implode(' ', $description));
+
+        return $result;
+    }
+
+    /**
+     * Extract method information using reflection.
+     *
      * @return array<string, mixed>
      */
     private function extractMethodInfo(ReflectionMethod $method): array
     {
+        $docBlock = $method->getDocComment() ?: '';
+        $parsed = $this->parseDocBlock($docBlock);
+
         $parameters = [];
         foreach ($method->getParameters() as $param) {
             $paramInfo = [
                 'name' => $param->getName(),
                 'type' => $this->getParameterType($param),
+                'hasDefault' => $param->isDefaultValueAvailable(),
                 'isOptional' => $param->isOptional(),
             ];
 
@@ -430,72 +750,171 @@ final class SyncDocumentationManifest extends Command
                 }
             }
 
+            // Merge with PHPDoc param info if available
+            if (isset($parsed['params'][$param->getName()])) {
+                $paramInfo = array_merge($paramInfo, $parsed['params'][$param->getName()]);
+            }
+
             $parameters[] = $paramInfo;
         }
 
         return [
             'name' => $method->getName(),
+            'docBlock' => $docBlock,
+            'parsed' => $parsed,
             'parameters' => $parameters,
             'returnType' => $this->getReturnType($method),
+            'isPublic' => $method->isPublic(),
         ];
     }
 
+    /**
+     * Get parameter type from reflection.
+     */
     private function getParameterType(ReflectionParameter $param): ?string
     {
-        if (! $param->hasType()) {
-            return null;
+        if ($param->hasType()) {
+            $type = $param->getType();
+
+            return $type instanceof ReflectionNamedType
+                ? $type->getName()
+                : (string) $type;
         }
 
-        $type = $param->getType();
-
-        return $type instanceof ReflectionNamedType ? $type->getName() : (string) $type;
+        return null;
     }
 
+    /**
+     * Get return type from reflection.
+     */
     private function getReturnType(ReflectionMethod $method): ?string
     {
-        if (! $method->hasReturnType()) {
-            return null;
+        if ($method->hasReturnType()) {
+            $returnType = $method->getReturnType();
+
+            return $returnType instanceof ReflectionNamedType
+                ? $returnType->getName()
+                : (string) $returnType;
         }
 
-        $returnType = $method->getReturnType();
-
-        return $returnType instanceof ReflectionNamedType ? $returnType->getName() : (string) $returnType;
+        return null;
     }
 
+    /**
+     * Get class name from file path.
+     */
     private function getClassNameFromFile(string $filePath): ?string
     {
         $content = File::get($filePath);
 
+        // Extract namespace
         if (! preg_match('/namespace\s+([^;]+);/', $content, $namespaceMatch)) {
             return null;
         }
 
+        $namespace = $namespaceMatch[1];
+
+        // Extract class name
         if (! preg_match('/\b(?:final\s+)?(?:readonly\s+)?class\s+(\w+)/', $content, $classMatch)) {
             return null;
         }
 
-        return sprintf('%s\%s', $namespaceMatch[1], $classMatch[1]);
-    }
+        $className = $classMatch[1];
 
-    private function getMethodBody(string $filePath, string $methodName): string
-    {
-        $content = File::get($filePath);
-        $pattern = '/function\s+'.$methodName.'\s*\([^)]*\)\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/s';
-
-        return preg_match($pattern, $content, $matches) ? ($matches[1] ?? '') : '';
+        return "{$namespace}\\{$className}";
     }
 
     /**
+     * Extract description from JSDoc comment.
+     */
+    private function extractJSDocDescription(string $jsDoc): ?string
+    {
+        $lines = explode("\n", $jsDoc);
+        $description = [];
+
+        foreach ($lines as $line) {
+            $line = mb_trim($line);
+            $line = preg_replace('/^\/\*\*|\*\/$|\*\s*/', '', $line);
+            if (empty($line)) {
+                continue;
+            }
+            if (str_starts_with((string) $line, '@')) {
+                continue;
+            }
+
+            $description[] = $line;
+        }
+
+        return $description === [] ? null : mb_trim(implode(' ', $description));
+    }
+
+    /**
+     * Extract props from TypeScript interface body.
+     *
+     * @return array<string, mixed>
+     */
+    private function extractPropsFromInterface(string $interfaceBody): array
+    {
+        $props = [];
+        $lines = explode("\n", $interfaceBody);
+
+        foreach ($lines as $line) {
+            $line = mb_trim($line);
+            if ($line === '') {
+                continue;
+            }
+            if ($line === '0') {
+                continue;
+            }
+            if (str_starts_with($line, '//')) {
+                continue;
+            }
+
+            // Match prop: type or prop?: type
+            if (preg_match('/(\w+)\??\s*:\s*([^;]+);?/', $line, $matches)) {
+                $props[] = [
+                    'name' => $matches[1],
+                    'type' => mb_trim($matches[2]),
+                    'optional' => str_contains($line, '?'),
+                ];
+            }
+        }
+
+        return $props;
+    }
+
+    /**
+     * Get method body from file (simplified extraction).
+     */
+    private function getMethodBody(string $filePath, string $methodName): string
+    {
+        $content = File::get($filePath);
+
+        // Simple regex to extract method body (not perfect but works for most cases)
+        $pattern = '/function\s+'.$methodName.'\s*\([^)]*\)\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/s';
+
+        if (preg_match($pattern, $content, $matches)) {
+            return $matches[1] ?? '';
+        }
+
+        return '';
+    }
+
+    /**
+     * Extract Action class names from method body.
+     *
      * @return array<string>
      */
     private function extractActionClasses(string $methodBody): array
     {
         $actions = [];
 
+        // Match Action class usage: $action->handle() or app(ActionClass::class)
         if (preg_match_all('/(?:app\(|new\s+)([A-Z]\w+Action)::class/', $methodBody, $matches)) {
             $actions = array_unique($matches[1]);
         }
 
+        // Also match type hints: ActionClass $action
         if (preg_match_all('/([A-Z]\w+Action)\s+\$/', $methodBody, $matches)) {
             $actions = array_merge($actions, $matches[1]);
         }
@@ -504,10 +923,13 @@ final class SyncDocumentationManifest extends Command
     }
 
     /**
+     * Extract Form Request class names from method body.
+     *
      * @return array<string>
      */
     private function extractFormRequestClasses(string $methodBody): array
     {
+        // Match Form Request type hints: FormRequestClass $request
         if (preg_match_all('/([A-Z]\w+Request)\s+\$request/', $methodBody, $matches)) {
             return array_unique($matches[1]);
         }
@@ -516,99 +938,368 @@ final class SyncDocumentationManifest extends Command
     }
 
     /**
+     * Update index README files with tables of contents.
+     *
      * @param  array<string, mixed>  $manifest
      */
     private function updateIndexFiles(array $manifest): void
     {
+        $this->info('Updating index files...');
+
+        // Update Actions index
         $this->updateActionsIndex($manifest['actions'] ?? []);
+
+        // Update Controllers index
         $this->updateControllersIndex($manifest['controllers'] ?? []);
+
+        // Update Pages index
         $this->updatePagesIndex($manifest['pages'] ?? []);
+
+        $this->info('Index files updated!');
     }
 
     /**
-     * @param  array<string, mixed>  $items
+     * Update Actions README index.
+     *
+     * @param  array<string, mixed>  $actions
      */
-    private function updateActionsIndex(array $items): void
+    private function updateActionsIndex(array $actions): void
     {
-        $this->updateIndex(
-            base_path('docs/developer/backend/actions/README.md'),
-            'Available Actions',
-            ['Action', 'Documented'],
-            $items,
-            fn (string $name, array $info) => [
-                isset($info['path']) ? "[{$name}]({$info['path']})" : $name,
-                ($info['documented'] ?? false) ? 'Yes' : 'No',
-            ]
-        );
-    }
+        $indexPath = base_path('docs/developer/backend/actions/README.md');
 
-    /**
-     * @param  array<string, mixed>  $items
-     */
-    private function updateControllersIndex(array $items): void
-    {
-        $this->updateIndex(
-            base_path('docs/developer/backend/controllers/README.md'),
-            'Available Controllers',
-            ['Controller', 'Documented'],
-            $items,
-            fn (string $name, array $info) => [
-                isset($info['path']) ? "[{$name}]({$info['path']})" : $name,
-                ($info['documented'] ?? false) ? 'Yes' : 'No',
-            ]
-        );
-    }
-
-    /**
-     * @param  array<string, mixed>  $items
-     */
-    private function updatePagesIndex(array $items): void
-    {
-        $this->updateIndex(
-            base_path('docs/developer/frontend/pages/README.md'),
-            'Available Pages',
-            ['Page', 'Documented'],
-            $items,
-            fn (string $name, array $info) => [
-                isset($info['developerGuide']) ? "[{$name}]({$info['developerGuide']})" : $name,
-                ($info['documented'] ?? false) ? 'Yes' : 'No',
-            ]
-        );
-    }
-
-    /**
-     * @param  array<string>  $headers
-     * @param  array<string, mixed>  $items
-     */
-    private function updateIndex(string $indexPath, string $sectionTitle, array $headers, array $items, callable $rowMapper): void
-    {
         if (! File::exists($indexPath)) {
             return;
         }
 
         $content = File::get($indexPath);
 
-        $table = '| '.implode(' | ', $headers)." |\n";
-        $table .= '|'.str_repeat('------|', count($headers))."\n";
+        // Generate table
+        $table = "| Action | Purpose | Documented |\n";
+        $table .= "|--------|---------|------------|\n";
 
-        foreach ($items as $name => $info) {
-            if (is_string($info)) {
-                $name = $info;
-                $info = [];
+        foreach ($actions as $actionName => $actionInfo) {
+            // Handle both string keys (from manifest) and array values (from scan)
+            if (is_string($actionInfo)) {
+                $actionName = $actionInfo;
+                $actionInfo = [];
             }
 
-            $row = $rowMapper($name, $info);
-            $table .= '| '.implode(' | ', $row)." |\n";
+            $documented = $actionInfo['documented'] ?? false;
+            $path = $actionInfo['path'] ?? null;
+
+            // Try to extract purpose from PHPDoc if available
+            $purpose = 'N/A';
+            if (isset($actionInfo['phpDoc']['class']['parsed']['description'])) {
+                $purpose = $actionInfo['phpDoc']['class']['parsed']['description'];
+            } elseif (isset($actionInfo['parsed']['description'])) {
+                $purpose = $actionInfo['parsed']['description'];
+            }
+
+            if (mb_strlen((string) $purpose) > 60) {
+                $purpose = mb_substr((string) $purpose, 0, 57).'...';
+            }
+
+            $status = $documented ? '✅' : '❌';
+            $link = $path ? "[{$actionName}]({$path})" : $actionName;
+
+            $table .= "| {$link} | {$purpose} | {$status} |\n";
         }
 
-        $pattern = "/## {$sectionTitle}\n\n(.*?)(?=\n##|\n>|$)/s";
-
-        if (preg_match($pattern, $content, $matches)) {
-            $content = str_replace($matches[0], "## {$sectionTitle}\n\n{$table}\n", $content);
+        // Replace table section
+        if (preg_match('/## Available Actions\n\n(.*?)(?=\n##|\n>|$)/s', $content, $matches)) {
+            $newSection = "## Available Actions\n\n{$table}\n";
+            $content = str_replace($matches[0], $newSection, $content);
         } else {
-            $content .= "\n\n## {$sectionTitle}\n\n{$table}\n";
+            // Append if section doesn't exist
+            $content .= "\n\n## Available Actions\n\n{$table}\n";
         }
 
         File::put($indexPath, $content);
+    }
+
+    /**
+     * Update Controllers README index.
+     *
+     * @param  array<string, mixed>  $controllers
+     */
+    private function updateControllersIndex(array $controllers): void
+    {
+        $indexPath = base_path('docs/developer/backend/controllers/README.md');
+
+        if (! File::exists($indexPath)) {
+            // Create if doesn't exist
+            File::ensureDirectoryExists(dirname($indexPath));
+            File::put($indexPath, "# Controllers\n\n");
+        }
+
+        $content = File::get($indexPath);
+
+        // Generate table
+        $table = "| Controller | Purpose | Documented |\n";
+        $table .= "|------------|---------|------------|\n";
+
+        foreach ($controllers as $controllerName => $controllerInfo) {
+            // Handle both string keys (from manifest) and array values (from scan)
+            if (is_string($controllerInfo)) {
+                $controllerName = $controllerInfo;
+                $controllerInfo = [];
+            }
+
+            $documented = $controllerInfo['documented'] ?? false;
+            $path = $controllerInfo['path'] ?? null;
+
+            $purpose = 'N/A';
+            if (isset($controllerInfo['phpDoc']['class']['parsed']['description'])) {
+                $purpose = $controllerInfo['phpDoc']['class']['parsed']['description'];
+            } elseif (isset($controllerInfo['parsed']['description'])) {
+                $purpose = $controllerInfo['parsed']['description'];
+            }
+
+            if (mb_strlen((string) $purpose) > 60) {
+                $purpose = mb_substr((string) $purpose, 0, 57).'...';
+            }
+
+            $status = $documented ? '✅' : '❌';
+            $link = $path ? "[{$controllerName}]({$path})" : $controllerName;
+
+            $table .= "| {$link} | {$purpose} | {$status} |\n";
+        }
+
+        // Replace or add table section
+        if (preg_match('/## Available Controllers\n\n(.*?)(?=\n##|\n>|$)/s', $content, $matches)) {
+            $newSection = "## Available Controllers\n\n{$table}\n";
+            $content = str_replace($matches[0], $newSection, $content);
+        } else {
+            $content .= "\n\n## Available Controllers\n\n{$table}\n";
+        }
+
+        File::put($indexPath, $content);
+    }
+
+    /**
+     * Update Pages README index.
+     *
+     * @param  array<string, mixed>  $pages
+     */
+    private function updatePagesIndex(array $pages): void
+    {
+        $indexPath = base_path('docs/developer/frontend/pages/README.md');
+
+        if (! File::exists($indexPath)) {
+            return;
+        }
+
+        $content = File::get($indexPath);
+
+        // Generate table
+        $table = "| Page | Route | Documented |\n";
+        $table .= "|------|-------|------------|\n";
+
+        foreach ($pages as $pagePath => $pageInfo) {
+            $documented = $pageInfo['documented'] ?? false;
+            $developerGuide = $pageInfo['developerGuide'] ?? null;
+
+            // Get route from relationships
+            $routes = $pageInfo['relationships']['relatedRoutes'] ?? [];
+            $routeDisplay = empty($routes) ? 'N/A' : implode(', ', array_slice($routes, 0, 2));
+
+            $status = $documented ? '✅' : '❌';
+            $link = $developerGuide ? "[{$pagePath}]({$developerGuide})" : $pagePath;
+
+            $table .= "| {$link} | {$routeDisplay} | {$status} |\n";
+        }
+
+        // Replace table section
+        if (preg_match('/## Available Pages\n\n(.*?)(?=\n##|\n>|$)/s', $content, $matches)) {
+            $newSection = "## Available Pages\n\n{$table}\n";
+            $content = str_replace($matches[0], $newSection, $content);
+        } else {
+            $content .= "\n\n## Available Pages\n\n{$table}\n";
+        }
+
+        File::put($indexPath, $content);
+    }
+
+    /**
+     * Generate documentation using Prism (OpenRouter) and update manifest.
+     *
+     * @param  array<string, array<string>>  $undocumented
+     * @param  array<string, mixed>  $actions
+     * @param  array<string, mixed>  $controllers
+     * @param  array<string, mixed>  $pages
+     * @param  array<string, mixed>  $actionRelationships
+     * @param  array<string, mixed>  $controllerRelationships
+     * @param  array<string, mixed>  $pageRelationships
+     * @param  array<string, mixed>  $manifest
+     */
+    private function generateWithPrism(
+        array $undocumented,
+        array $actions,
+        array $controllers,
+        array $pages,
+        array $actionRelationships,
+        array $controllerRelationships,
+        array $pageRelationships,
+        array &$manifest,
+        string $manifestPath
+    ): void {
+        $this->info('Generating documentation with Prism (OpenRouter)...');
+
+        foreach ($undocumented['actions'] as $actionName) {
+            if (! isset($actions[$actionName])) {
+                continue;
+            }
+
+            $written = $this->prismGenerator->generateActionDoc(
+                $actionName,
+                $actions[$actionName],
+                $actionRelationships[$actionName] ?? []
+            );
+
+            if ($written !== null) {
+                $relativePath = str_replace(base_path().'/', '', $written);
+                $manifest['actions'][$actionName]['documented'] = true;
+                $manifest['actions'][$actionName]['path'] = $relativePath;
+                $this->line("  ✓ Generated: {$relativePath}");
+            } else {
+                $this->warn("  ✗ Failed: {$actionName}");
+            }
+        }
+
+        foreach ($undocumented['controllers'] as $controllerName) {
+            if (! isset($controllers[$controllerName])) {
+                continue;
+            }
+
+            $written = $this->prismGenerator->generateControllerDoc(
+                $controllerName,
+                $controllers[$controllerName],
+                $controllerRelationships[$controllerName] ?? []
+            );
+
+            if ($written !== null) {
+                $relativePath = str_replace(base_path().'/', '', $written);
+                $manifest['controllers'][$controllerName]['documented'] = true;
+                $manifest['controllers'][$controllerName]['path'] = $relativePath;
+                $this->line("  ✓ Generated: {$relativePath}");
+            } else {
+                $this->warn("  ✗ Failed: {$controllerName}");
+            }
+        }
+
+        foreach ($undocumented['pages'] as $pagePath) {
+            if (! isset($pages[$pagePath])) {
+                continue;
+            }
+
+            $written = $this->prismGenerator->generatePageDoc(
+                $pagePath,
+                $pages[$pagePath],
+                $pageRelationships[$pagePath] ?? []
+            );
+
+            if ($written !== null) {
+                $relativePath = str_replace(base_path().'/', '', $written);
+                $manifest['pages'][$pagePath]['documented'] = true;
+                $manifest['pages'][$pagePath]['developerGuide'] = $relativePath;
+                $this->line("  ✓ Generated: {$relativePath}");
+            } else {
+                $this->warn("  ✗ Failed: {$pagePath}");
+            }
+        }
+
+        File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+        $this->updateIndexFiles($manifest);
+        $this->info('Documentation generated with Prism.');
+    }
+
+    /**
+     * Generate documentation using AI prompts.
+     *
+     * @param  array<string, array<string>>  $undocumented
+     * @param  array<string, mixed>  $actions
+     * @param  array<string, mixed>  $controllers
+     * @param  array<string, mixed>  $pages
+     * @param  array<string, mixed>  $actionRelationships
+     * @param  array<string, mixed>  $controllerRelationships
+     * @param  array<string, mixed>  $pageRelationships
+     */
+    private function generateWithAI(
+        array $undocumented,
+        array $actions,
+        array $controllers,
+        array $pages,
+        array $actionRelationships,
+        array $controllerRelationships,
+        array $pageRelationships
+    ): void {
+        $this->info('Generating AI prompts for documentation...');
+        $this->warn('Note: This generates prompts. Use an AI agent to process these prompts and generate documentation.');
+
+        $promptsDir = base_path('docs/.ai-prompts');
+        File::ensureDirectoryExists($promptsDir);
+
+        // Generate prompts for Actions
+        foreach ($undocumented['actions'] as $actionName) {
+            if (! isset($actions[$actionName])) {
+                continue;
+            }
+
+            $actionInfo = $actions[$actionName];
+            $relationships = $actionRelationships[$actionName] ?? [];
+            $templateName = $this->templateSelector->selectActionTemplate($actionInfo);
+            $templatePath = $this->templateSelector->getTemplatePath($templateName);
+
+            $prompt = $this->promptGenerator->generateActionPrompt($actionInfo, $relationships, $templatePath);
+
+            $promptFile = "{$promptsDir}/action-{$actionName}.txt";
+            File::put($promptFile, $prompt);
+
+            $this->line("  ✓ Generated prompt: {$promptFile}");
+            $this->line("    Use this prompt with an AI agent to generate documentation for {$actionName}");
+        }
+
+        // Generate prompts for Controllers
+        foreach ($undocumented['controllers'] as $controllerName) {
+            if (! isset($controllers[$controllerName])) {
+                continue;
+            }
+
+            $controllerInfo = $controllers[$controllerName];
+            $relationships = $controllerRelationships[$controllerName] ?? [];
+            $templateName = $this->templateSelector->selectControllerTemplate($controllerInfo);
+            $templatePath = $this->templateSelector->getTemplatePath($templateName);
+
+            $prompt = $this->promptGenerator->generateControllerPrompt($controllerInfo, $relationships, $templatePath);
+
+            $promptFile = "{$promptsDir}/controller-{$controllerName}.txt";
+            File::put($promptFile, $prompt);
+
+            $this->line("  ✓ Generated prompt: {$promptFile}");
+        }
+
+        // Generate prompts for Pages
+        foreach ($undocumented['pages'] as $pagePath) {
+            if (! isset($pages[$pagePath])) {
+                continue;
+            }
+
+            $pageInfo = $pages[$pagePath];
+            $relationships = $pageRelationships[$pagePath] ?? [];
+            $templateName = $this->templateSelector->selectPageTemplate($pageInfo);
+            $templatePath = $this->templateSelector->getTemplatePath($templateName);
+
+            $prompt = $this->promptGenerator->generatePagePrompt($pageInfo, $relationships, $templatePath);
+
+            $safePageName = str_replace('/', '-', $pagePath);
+            $promptFile = "{$promptsDir}/page-{$safePageName}.txt";
+            File::put($promptFile, $prompt);
+
+            $this->line("  ✓ Generated prompt: {$promptFile}");
+        }
+
+        $this->info('AI prompts generated!');
+        $this->info('Prompts saved to: '.$promptsDir);
+        $this->warn('Use an AI agent to process these prompts and generate the actual documentation files.');
     }
 }

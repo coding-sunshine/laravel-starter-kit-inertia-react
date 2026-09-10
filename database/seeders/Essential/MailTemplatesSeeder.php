@@ -68,6 +68,14 @@ final class MailTemplatesSeeder extends Seeder
                 'recipients' => ['user'],
                 'attachments' => [],
             ],
+            [
+                'name' => 'Demurrage threshold alert',
+                'event' => \App\Events\DemurrageThresholdCrossed::class,
+                'subject' => 'Demurrage alert: rake {{ $rake->rake_number }} — {{ $remainingMinutes }} min remaining',
+                'body' => '<h1>Demurrage Alert</h1><p>Rake <strong>{{ $rake->rake_number }}</strong> at siding <strong>{{ $rake->siding->name ?? "N/A" }}</strong> has crossed the {{ $threshold }} threshold.</p><p>Remaining free time: <strong>{{ $remainingMinutes }} minutes</strong></p><p>Projected penalty: <strong>₹{{ number_format($projectedPenalty, 2) }}</strong></p><p>Please take immediate action to complete loading and dispatch this rake.</p>',
+                'recipients' => ['siding_users'],
+                'attachments' => [],
+            ],
         ];
 
         foreach ($templates as $data) {

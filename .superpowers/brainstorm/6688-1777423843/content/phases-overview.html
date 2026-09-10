@@ -1,0 +1,183 @@
+<h2>SHAReReport Overhaul — Proposed Phases</h2>
+<p class="subtitle">Ordered by business impact on penalty savings first, then UI/branding. Does this phasing match your priorities?</p>
+
+<style>
+.phase-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+.phase-row { display: flex; align-items: stretch; gap: 0; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+.phase-badge { min-width: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 12px; text-align: center; }
+.phase-badge .phase-num { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8; }
+.phase-badge .phase-title { font-size: 14px; font-weight: 700; margin-top: 4px; line-height: 1.3; }
+.phase-badge .phase-time { font-size: 11px; margin-top: 4px; opacity: 0.75; }
+.phase-body { flex: 1; padding: 14px 18px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+.phase-body h4 { margin: 0; font-size: 13px; font-weight: 600; color: #1e293b; }
+.phase-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.pill-green { background: #dcfce7; color: #166534; }
+.pill-amber { background: #fef9c3; color: #854d0e; }
+.pill-blue { background: #dbeafe; color: #1e40af; }
+.pill-purple { background: #f3e8ff; color: #6b21a8; }
+.pill-red { background: #fee2e2; color: #991b1b; }
+.business-value { font-size: 12px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.business-value strong { color: #0f172a; }
+.impact-bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.impact-label { font-size: 11px; color: #64748b; min-width: 90px; }
+.impact-dots { display: flex; gap: 3px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-filled { background: #16a34a; }
+.dot-empty { background: #e2e8f0; }
+.new-tag { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+</style>
+
+<div class="phase-grid">
+
+  <div class="phase-row" style="border-color:#bbf7d0">
+    <div class="phase-badge" style="background:#16a34a; color:white; min-width:130px">
+      <div class="phase-num">Phase 1</div>
+      <div class="phase-title">Brand &amp; Foundation</div>
+      <div class="phase-time">~1–2 weeks</div>
+    </div>
+    <div class="phase-body">
+      <h4>Global polish &amp; BGR identity</h4>
+      <div class="phase-items">
+        <span class="pill pill-green">BGR green/gold color system</span>
+        <span class="pill pill-green">SVG logo design</span>
+        <span class="pill pill-green">Sidebar reorganized (full names, grouped)</span>
+        <span class="pill pill-green">Login redesign (remove Sign Up)</span>
+        <span class="pill pill-green">Fix "Lignes par page" → Rows per page</span>
+        <span class="pill pill-green">Table hover states</span>
+        <span class="pill pill-green">Button hierarchy</span>
+        <span class="pill pill-green">Fira Code for numbers/weights</span>
+      </div>
+      <div class="business-value">🎯 <strong>Business value:</strong> Professional platform BGR managers will trust and use daily</div>
+      <div class="impact-bar">
+        <span class="impact-label">Penalty savings:</span>
+        <div class="impact-dots">
+          <div class="dot dot-filled"></div><div class="dot dot-empty"></div><div class="dot dot-empty"></div><div class="dot dot-empty"></div><div class="dot dot-empty"></div>
+        </div>
+        <span style="font-size:11px;color:#64748b">Indirect (adoption)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-row" style="border-color:#fca5a5">
+    <div class="phase-badge" style="background:#dc2626; color:white; min-width:130px">
+      <div class="phase-num">Phase 2</div>
+      <div class="phase-title">Penalty Intelligence Dashboard</div>
+      <div class="phase-time">~2–3 weeks</div>
+    </div>
+    <div class="phase-body">
+      <h4>Dashboard redesigned as Operations Command Center</h4>
+      <div class="phase-items">
+        <span class="pill pill-red">Live siding risk scores (SidingRiskScore)</span>
+        <span class="pill pill-red">Penalty prediction widgets (PenaltyPrediction)</span>
+        <span class="pill pill-red">AI suggested_remediation surfaced</span>
+        <span class="pill pill-amber">Siding coal stock with last receipt/dispatch</span>
+        <span class="pill pill-amber">Active rake pipeline (kanban board)</span>
+        <span class="pill pill-amber">Alert system surfaced (Alert model)</span>
+        <span class="pill pill-amber">Today's road + rail dispatch</span>
+        <span class="pill pill-amber">Penalty ₹ total + trend vs last period</span>
+      </div>
+      <div class="business-value">🎯 <strong>Business value:</strong> Managers see penalty risk <em>before</em> rake departs — time to intervene</div>
+      <div class="impact-bar">
+        <span class="impact-label">Penalty savings:</span>
+        <div class="impact-dots">
+          <div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-empty"></div><div class="dot dot-empty"></div>
+        </div>
+        <span style="font-size:11px;color:#64748b">High (visibility)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-row" style="border-color:#fdba74">
+    <div class="phase-badge" style="background:#ea580c; color:white; min-width:130px">
+      <div class="phase-num">Phase 3</div>
+      <div class="phase-title">Loading Workflow Intelligence</div>
+      <div class="phase-time">~2–3 weeks</div>
+    </div>
+    <div class="phase-body">
+      <h4>Stop penalties at the source — during wagon loading</h4>
+      <div class="phase-items">
+        <span class="pill pill-red">Per-wagon load meters (Net vs PCC visual gauge)</span>
+        <span class="pill pill-red">Real-time overload/underload warnings</span>
+        <span class="pill pill-red">⚠ "Stop loading" alert when approaching PCC limit</span>
+        <span class="pill pill-red">Pre-dispatch penalty prediction screen</span>
+        <span class="pill pill-red">Manager clearance required before rake departs</span>
+        <span class="pill pill-amber">Weighment upload: instant ₹ penalty calc per wagon</span>
+        <span class="pill pill-amber">Wagon-level penalty breakdown on RR upload</span>
+        <span class="pill pill-blue">LoaderOperator performance per shift</span>
+      </div>
+      <div class="business-value">🎯 <strong>Business value:</strong> Operators physically prevented from overloading — highest direct savings</div>
+      <div class="impact-bar">
+        <span class="impact-label">Penalty savings:</span>
+        <div class="impact-dots">
+          <div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div>
+        </div>
+        <span style="font-size:11px;color:#64748b">Highest (prevention)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-row" style="border-color:#a5b4fc">
+    <div class="phase-badge" style="background:#4f46e5; color:white; min-width:130px">
+      <div class="phase-num">Phase 4</div>
+      <div class="phase-title">Analytics &amp; Root Cause</div>
+      <div class="phase-time">~2–3 weeks</div>
+    </div>
+    <div class="phase-body">
+      <h4>Understand WHY penalties happen — fix systemically</h4>
+      <div class="phase-items">
+        <span class="pill pill-purple">Penalty by operator (who causes most overloads?)</span>
+        <span class="pill pill-purple">Penalty by shift (1st/2nd/3rd — which is worst?)</span>
+        <span class="pill pill-purple">Penalty by wagon type</span>
+        <span class="pill pill-purple">Penalty by siding &amp; route</span>
+        <span class="pill pill-purple">is_preventable analysis (what % was avoidable?)</span>
+        <span class="pill pill-purple">Dispute management workflow</span>
+        <span class="pill pill-blue">Loader performance leaderboard</span>
+        <span class="pill pill-blue">SectionTimer bottleneck analysis</span>
+      </div>
+      <div class="business-value">🎯 <strong>Business value:</strong> Systematic fix — identify the 20% of causes driving 80% of penalties</div>
+      <div class="impact-bar">
+        <span class="impact-label">Penalty savings:</span>
+        <div class="impact-dots">
+          <div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-empty"></div>
+        </div>
+        <span style="font-size:11px;color:#64748b">Very high (systemic)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-row" style="border-color:#67e8f9">
+    <div class="phase-badge" style="background:#0891b2; color:white; min-width:130px">
+      <div class="phase-num">Phase 5</div>
+      <div class="phase-title">Predictive AI &amp; Optimization</div>
+      <div class="phase-time">~3–4 weeks</div>
+    </div>
+    <div class="phase-body">
+      <h4>AI-powered proactive penalty prevention</h4>
+      <div class="phase-items">
+        <span class="pill pill-blue">Claude AI: optimal loading recommendations per wagon</span>
+        <span class="pill pill-blue">Penalty prediction before loading starts</span>
+        <span class="pill pill-blue">Historical pattern learning per wagon type</span>
+        <span class="pill pill-blue">Automated weekly penalty reports (email)</span>
+        <span class="pill pill-blue">RrPrediction: predict RR outcome before arrival</span>
+        <span class="pill pill-blue">Freight rate optimization suggestions</span>
+        <span class="pill pill-blue">Power plant penalty pattern analysis</span>
+      </div>
+      <div class="business-value">🎯 <strong>Business value:</strong> Proactive — AI tells operators what to load <em>before</em> wagons arrive</div>
+      <div class="impact-bar">
+        <span class="impact-label">Penalty savings:</span>
+        <div class="impact-dots">
+          <div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div><div class="dot dot-filled"></div>
+        </div>
+        <span style="font-size:11px;color:#64748b">Maximum (predictive)</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px; padding:14px 18px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+  <strong style="font-size:13px;">❓ Key question before we proceed:</strong>
+  <p style="margin:8px 0 0; font-size:13px; color:#475569;">Is Phase 3 (Loading Workflow Intelligence — real-time wagon load meters + pre-dispatch clearance) something that exists in the system today but just needs better UI? Or is the actual real-time loading guidance logic (knowing PCC per wagon and warning operators) a <em>new feature</em> we'd need to build?</p>
+  <p style="margin:8px 0 0; font-size:13px; color:#475569;">Also: Should Phase 2 and Phase 3 be <strong>swapped</strong>? (i.e. fix the loading workflow first since that directly prevents penalties, then redesign the dashboard?)</p>
+</div>

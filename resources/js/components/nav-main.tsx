@@ -4,212 +4,130 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
     SidebarGroup,
+    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarMenuSub,
     SidebarMenuSubButton,
     SidebarMenuSubItem,
-    useSidebar,
 } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
+import { type NavGroup, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronRight } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { useMemo } from 'react';
+import { ChevronDown } from 'lucide-react';
 
-interface NavGroup {
-    label: string;
-    icon: LucideIcon;
-    items: NavItem[];
-    hasActiveItem: boolean;
-}
-
-function isItemActive(href: NavItem['href'], pageUrl: string): boolean {
-    const path = typeof href === 'string' ? href : href.url;
-    return (
-        pageUrl === path ||
-        pageUrl.startsWith(path + '/') ||
-        pageUrl.startsWith(path + '?')
-    );
-}
-
-export function NavMain({ items = [] }: { items: NavItem[] }) {
+function NavMenuItems({ items }: { items: NavItem[] }) {
     const page = usePage();
-    const { state, isMobile } = useSidebar();
-    const isCollapsed = !isMobile && state === 'collapsed';
-
-    const groups = useMemo(() => {
-        const map = new Map<string, NavItem[]>();
-        for (const item of items) {
-            const group = item.group ?? 'Platform';
-            if (!map.has(group)) map.set(group, []);
-            map.get(group)!.push(item);
-        }
-
-        const result: NavGroup[] = [];
-        for (const [label, groupItems] of map) {
-            const icon = groupItems[0]?.icon;
-            const hasActiveItem = groupItems.some((item) =>
-                isItemActive(item.href, page.url),
-            );
-            if (icon) {
-                result.push({ label, icon, items: groupItems, hasActiveItem });
-            }
-        }
-        return result;
-    }, [items, page.url]);
 
     return (
-        <SidebarGroup className="px-2 py-0">
-            <SidebarMenu>
-                {groups.map((group) =>
-                    isCollapsed ? (
-                        <CollapsedGroup
-                            key={group.label}
-                            group={group}
-                            pageUrl={page.url}
-                        />
-                    ) : (
-                        <ExpandedGroup
-                            key={group.label}
-                            group={group}
-                            pageUrl={page.url}
-                        />
-                    ),
-                )}
-            </SidebarMenu>
-        </SidebarGroup>
-    );
-}
+        <>
+            {items.map((item) => {
+                const href =
+                    typeof item.href === 'string' ? item.href : item.href.url;
+                const key = `${item.title}-${href}`;
 
-function ExpandedGroup({
-    group,
-    pageUrl,
-}: {
-    group: NavGroup;
-    pageUrl: string;
-}) {
-    return (
-        <Collapsible
-            asChild
-            defaultOpen={group.hasActiveItem}
-            className="group/collapsible"
-        >
-            <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={{ children: group.label }}>
-                        <group.icon />
-                        <span>{group.label}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                    <SidebarMenuSub>
-                        {group.items.map((item) => (
-                            <SidebarMenuSubItem key={item.title}>
-                                <SidebarMenuSubButton
-                                    asChild
-                                    isActive={isItemActive(
-                                        item.href,
-                                        pageUrl,
-                                    )}
-                                >
-                                    <Link
-                                        href={item.href}
-                                        prefetch="click"
-                                        {...(item.dataPan
-                                            ? {
-                                                  'data-pan': item.dataPan,
-                                              }
-                                            : {})}
+                if (item.collapsible && item.subItems?.length) {
+                    return (
+                        <Collapsible
+                            key={key}
+                            asChild
+                            defaultOpen={false}
+                            className="group/collapsible"
+                        >
+                            <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton
+                                        tooltip={{ children: item.title }}
                                     >
+                                        {item.icon && <item.icon />}
                                         <span>{item.title}</span>
-                                        {item.badge != null && item.badge > 0 && (
-                                            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-medium text-primary">
-                                                {item.badge}
-                                            </span>
-                                        )}
-                                    </Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                        ))}
-                    </SidebarMenuSub>
-                </CollapsibleContent>
-            </SidebarMenuItem>
-        </Collapsible>
+                                        <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                    <SidebarMenuSub>
+                                        {item.subItems.map((sub) => {
+                                            const subHref =
+                                                typeof sub.href === 'string'
+                                                    ? sub.href
+                                                    : sub.href.url;
+                                            return (
+                                                <SidebarMenuSubItem
+                                                    key={`${sub.title}-${subHref}`}
+                                                >
+                                                    <SidebarMenuSubButton
+                                                        asChild
+                                                        isActive={page.url.startsWith(
+                                                            subHref,
+                                                        )}
+                                                    >
+                                                        <Link
+                                                            href={sub.href}
+                                                            prefetch
+                                                            {...(sub.dataPan
+                                                                ? {
+                                                                      'data-pan':
+                                                                          sub.dataPan,
+                                                                  }
+                                                                : {})}
+                                                        >
+                                                            {sub.icon && (
+                                                                <sub.icon />
+                                                            )}
+                                                            <span>
+                                                                {sub.title}
+                                                            </span>
+                                                        </Link>
+                                                    </SidebarMenuSubButton>
+                                                </SidebarMenuSubItem>
+                                            );
+                                        })}
+                                    </SidebarMenuSub>
+                                </CollapsibleContent>
+                            </SidebarMenuItem>
+                        </Collapsible>
+                    );
+                }
+
+                return (
+                    <SidebarMenuItem key={key}>
+                        <SidebarMenuButton
+                            asChild
+                            isActive={page.url.startsWith(href)}
+                            tooltip={{ children: item.title }}
+                        >
+                            <Link
+                                href={item.href}
+                                prefetch
+                                {...(item.dataPan
+                                    ? { 'data-pan': item.dataPan }
+                                    : {})}
+                            >
+                                {item.icon && <item.icon />}
+                                <span>{item.title}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                );
+            })}
+        </>
     );
 }
 
-function CollapsedGroup({
-    group,
-    pageUrl,
-}: {
-    group: NavGroup;
-    pageUrl: string;
-}) {
+export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
     return (
-        <DropdownMenu>
-            <SidebarMenuItem>
-                <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton
-                        tooltip={{ children: group.label }}
-                        isActive={group.hasActiveItem}
-                    >
-                        <group.icon />
-                        <span>{group.label}</span>
-                    </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                    side="right"
-                    align="start"
-                    sideOffset={4}
-                    className="min-w-[180px]"
-                >
-                    <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {group.items.map((item) => {
-                        const active = isItemActive(item.href, pageUrl);
-                        const href =
-                            typeof item.href === 'string'
-                                ? item.href
-                                : item.href.url;
-                        return (
-                            <DropdownMenuItem
-                                key={item.title}
-                                asChild
-                                className={
-                                    active
-                                        ? 'bg-accent text-accent-foreground'
-                                        : ''
-                                }
-                            >
-                                <Link
-                                    href={href}
-                                    prefetch="click"
-                                    {...(item.dataPan
-                                        ? { 'data-pan': item.dataPan }
-                                        : {})}
-                                >
-                                    {item.icon && (
-                                        <item.icon className="mr-2 size-4" />
-                                    )}
-                                    {item.title}
-                                </Link>
-                            </DropdownMenuItem>
-                        );
-                    })}
-                </DropdownMenuContent>
-            </SidebarMenuItem>
-        </DropdownMenu>
+        <>
+            {groups.map((group) => (
+                <SidebarGroup key={group.title} className="px-2 py-0">
+                    <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/50">
+                        {group.title}
+                    </SidebarGroupLabel>
+                    <SidebarMenu>
+                        <NavMenuItems items={group.items} />
+                    </SidebarMenu>
+                </SidebarGroup>
+            ))}
+        </>
     );
 }

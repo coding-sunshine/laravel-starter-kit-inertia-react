@@ -8,6 +8,7 @@
         "copilot",
         "codex"
     ],
+    "cloud": false,
     "guidelines": true,
     "herd_mcp": true,
     "mcp": true,
@@ -24,24 +25,12 @@
         "configuring-horizon",
         "mcp-development",
         "pennant-development",
-        "pulse-development",
         "scout-development",
-        "socialite-development",
         "wayfinder-development",
         "pest-testing",
         "inertia-react-development",
         "echo-development",
         "tailwindcss-development",
-        "developing-with-prism",
-        "database-mail",
-        "developing-with-ai-sdk",
-        "developing-with-fortify",
-        "documentation-automation",
-        "durable-workflow",
-        "laravel-data-table",
-        "laravel-excel",
-        "pan-product-analytics",
-        "taylor-otwell-style",
-        "visibility-sharing"
+        "developing-with-prism"
     ]
 }

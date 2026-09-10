@@ -1,0 +1,285 @@
+import { cn } from '@/lib/utils';
+import { numericTooltipFormatter } from '@/lib/chart-tooltip';
+import {
+    DashboardPenaltyBySidingChart,
+    PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS,
+    type PenaltyBySidingChartPeriodKey,
+} from '@/pages/dashboard';
+import { AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import {
+    Bar,
+    CartesianGrid,
+    Cell,
+    LabelList,
+    BarChart as RechartsBarChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts';
+import { formatCurrency, SectionHeader } from './shared';
+import type {
+    PenaltyBySidingPoint,
+    PenaltyByTypePoint,
+    PenaltyControlRrCoverage,
+} from './types';
+import { formatPenaltyControlRrCoverageLabel } from './types';
+
+interface ExecutiveYesterdayForPenalty {
+    penaltyBySidingByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
+        PenaltyBySidingPoint[]
+    >;
+    rrCoverageByPeriod?: Record<
+        'yesterday' | 'today' | 'month' | 'fy' | 'last_month',
+        PenaltyControlRrCoverage
+    >;
+}
+
+interface Props {
+    canWidget: (name: string) => boolean;
+    penaltyByType: PenaltyByTypePoint[];
+    penaltyBySiding: PenaltyBySidingPoint[];
+    penaltyControlRrCoverage?: PenaltyControlRrCoverage;
+    executiveYesterday?: ExecutiveYesterdayForPenalty;
+}
+
+const PENALTY_TYPE_COLORS: Record<string, string> = {
+    Demurrage: '#DC2626',
+    Overloading: '#F59E0B',
+    Wharfage: '#8B5CF6',
+};
+
+const PENALTY_TYPE_FALLBACK_COLORS = [
+    '#64748B',
+    '#94A3B8',
+    '#3B82F6',
+    '#10B981',
+];
+
+function PenaltiesAndChargesChart({
+    data,
+    rrCoverageLabel,
+}: {
+    data: PenaltyByTypePoint[];
+    rrCoverageLabel?: string;
+}) {
+    const totalType = data.reduce((s, p) => s + p.value, 0);
+    const barData = [...data].sort((a, b) => b.value - a.value);
+    const chartHeight = Math.min(480, Math.max(260, barData.length * 52 + 80));
+
+    return (
+        <div className="mt-4 space-y-4">
+            {rrCoverageLabel ? (
+                <p className="text-xs text-muted-foreground">
+                    {rrCoverageLabel}
+                </p>
+            ) : null}
+            <p className="text-xs text-gray-600">
+                Total:{' '}
+                <span className="font-semibold text-gray-900 tabular-nums">
+                    {formatCurrency(totalType)}
+                </span>
+            </p>
+            <ResponsiveContainer width="100%" height={chartHeight}>
+                <RechartsBarChart
+                    data={barData}
+                    layout="vertical"
+                    margin={{ top: 8, right: 72, bottom: 8, left: 8 }}
+                >
+                    <CartesianGrid
+                        strokeDasharray="3 3"
+                        strokeOpacity={0.25}
+                        horizontal={false}
+                    />
+                    <XAxis
+                        type="number"
+                        tick={{ fontSize: 11 }}
+                        tickFormatter={(v) => formatCurrency(v)}
+                    />
+                    <YAxis
+                        dataKey="name"
+                        type="category"
+                        tick={{ fontSize: 11 }}
+                        interval={0}
+                        width={220}
+                    />
+                    <Tooltip
+                        formatter={numericTooltipFormatter((v) => formatCurrency(v))}
+                    />
+                    <Bar
+                        dataKey="value"
+                        name="Amount"
+                        radius={[0, 4, 4, 0]}
+                        barSize={28}
+                        isAnimationActive
+                    >
+                        {barData.map((entry, i) => (
+                            <Cell
+                                key={entry.name}
+                                fill={
+                                    PENALTY_TYPE_COLORS[entry.name] ??
+                                    PENALTY_TYPE_FALLBACK_COLORS[
+                                        i % PENALTY_TYPE_FALLBACK_COLORS.length
+                                    ]
+                                }
+                            />
+                        ))}
+                        <LabelList
+                            dataKey="value"
+                            position="right"
+                            formatter={(v: unknown) =>
+                                formatCurrency(Number(v ?? 0))
+                            }
+                            style={{ fontSize: 11 }}
+                        />
+                    </Bar>
+                </RechartsBarChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+                {barData.map((entry, i) => (
+                    <div
+                        key={entry.name}
+                        className="flex items-center gap-2 text-sm"
+                    >
+                        <span
+                            className="size-2.5 shrink-0 rounded-full"
+                            style={{
+                                backgroundColor:
+                                    PENALTY_TYPE_COLORS[entry.name] ??
+                                    PENALTY_TYPE_FALLBACK_COLORS[
+                                        i % PENALTY_TYPE_FALLBACK_COLORS.length
+                                    ],
+                            }}
+                        />
+                        <span className="text-gray-700">{entry.name}</span>
+                        <span className="font-medium text-gray-800 tabular-nums">
+                            {formatCurrency(entry.value)}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+export function PenaltyControl({
+    canWidget,
+    penaltyByType,
+    penaltyBySiding,
+    penaltyControlRrCoverage,
+    executiveYesterday,
+}: Props) {
+    const [sidingOverviewPenaltyPeriod, setSidingOverviewPenaltyPeriod] =
+        useState<PenaltyBySidingChartPeriodKey>('month');
+
+    const penaltyBySidingForSidingOverview = useMemo(() => {
+        const slices = executiveYesterday?.penaltyBySidingByPeriod;
+        if (slices) {
+            return slices[sidingOverviewPenaltyPeriod] ?? [];
+        }
+        return penaltyBySiding;
+    }, [
+        executiveYesterday?.penaltyBySidingByPeriod,
+        penaltyBySiding,
+        sidingOverviewPenaltyPeriod,
+    ]);
+
+    const typeChartRrCoverageLabel = useMemo(() => {
+        if (!penaltyControlRrCoverage) {
+            return undefined;
+        }
+
+        return formatPenaltyControlRrCoverageLabel(penaltyControlRrCoverage);
+    }, [penaltyControlRrCoverage]);
+
+    const sidingChartRrCoverageLabel = useMemo(() => {
+        const slices = executiveYesterday?.rrCoverageByPeriod;
+        if (slices) {
+            const coverage = slices[sidingOverviewPenaltyPeriod];
+            if (coverage) {
+                return formatPenaltyControlRrCoverageLabel(coverage);
+            }
+        }
+
+        if (penaltyControlRrCoverage) {
+            return formatPenaltyControlRrCoverageLabel(
+                penaltyControlRrCoverage,
+            );
+        }
+
+        return undefined;
+    }, [
+        executiveYesterday?.rrCoverageByPeriod,
+        penaltyControlRrCoverage,
+        sidingOverviewPenaltyPeriod,
+    ]);
+
+    const showCharges = canWidget(
+        'dashboard.widgets.penalty_control_type_distribution',
+    );
+    const showSiding = canWidget(
+        'dashboard.widgets.penalty_control_penalty_by_siding',
+    );
+    const bothColumns = showCharges && showSiding;
+
+    return (
+        <div className="space-y-6">
+            {(showCharges || showSiding) && (
+                <div
+                    className={cn(
+                        'grid gap-6 lg:items-stretch',
+                        bothColumns ? 'lg:grid-cols-2' : 'grid-cols-1',
+                    )}
+                >
+                    {showCharges ? (
+                        <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
+                            <SectionHeader
+                                icon={AlertTriangle}
+                                title="Penalties and Charges"
+                                subtitle="Overloading, demurrage, wharfage, etc."
+                            />
+                            {penaltyByType.length > 0 ? (
+                                <PenaltiesAndChargesChart
+                                    data={penaltyByType}
+                                    rrCoverageLabel={typeChartRrCoverageLabel}
+                                />
+                            ) : (
+                                <div className="mt-4 space-y-4">
+                                    {typeChartRrCoverageLabel ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            {typeChartRrCoverageLabel}
+                                        </p>
+                                    ) : null}
+                                    <div className="py-8 text-center text-sm text-gray-600">
+                                        No penalty type data.
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : null}
+
+                    {showSiding ? (
+                        <div className="min-w-0">
+                            <DashboardPenaltyBySidingChart
+                                className="h-full"
+                                data={penaltyBySidingForSidingOverview}
+                                rrCoverageLabel={sidingChartRrCoverageLabel}
+                                {...(executiveYesterday?.penaltyBySidingByPeriod
+                                    ? {
+                                          period: sidingOverviewPenaltyPeriod,
+                                          onPeriodChange:
+                                              setSidingOverviewPenaltyPeriod,
+                                          periodOptions:
+                                              PENALTY_CONTROL_PENALTY_BY_SIDING_PERIOD_OPTIONS,
+                                      }
+                                    : {})}
+                            />
+                        </div>
+                    ) : null}
+                </div>
+            )}
+        </div>
+    );
+}

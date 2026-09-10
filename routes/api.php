@@ -2,11 +2,24 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\Api\ChatController;
-use App\Http\Controllers\Api\ChatMemoryController;
-use App\Http\Controllers\Api\ConversationController;
-use App\Http\Controllers\Api\DataTableSavedViewController;
+use App\Http\Controllers\Api\Dashboard\MobileDashboardController;
+use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\IndentController;
+use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\PowerPlantApiController;
+use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
+use App\Http\Controllers\Api\V1\RailwayReceiptImportPreviewController;
+use App\Http\Controllers\Api\V1\RailwayReceiptUploadController;
+use App\Http\Controllers\Api\V1\RakeController;
+use App\Http\Controllers\Api\V1\RakeRrDiversionApiController;
+use App\Http\Controllers\Api\V1\RakeRrHubStateApiController;
+use App\Http\Controllers\Api\V1\RakeWeighmentApiController;
+use App\Http\Controllers\Api\V1\RakeWeighmentWorkflowApiController;
+use App\Http\Controllers\Api\V1\RolePermissionController;
+use App\Http\Controllers\Api\V1\SidingController;
+use App\Http\Controllers\Api\V1\SidingVehicleDispatchController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WeighmentUploadController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -16,19 +29,6 @@ Route::get('/', fn (): JsonResponse => response()->json([
     'message' => 'API documentation is at /docs/api. Versioned API base is /api/v1.',
 ]))->name('api');
 
-Route::middleware(['auth:sanctum', 'throttle:30,1'])->group(function (): void {
-    Route::post('chat', ChatController::class)->name('api.chat');
-    Route::get('chat/memories', ChatMemoryController::class)->name('chat.memories');
-    Route::get('conversations', [ConversationController::class, 'index'])->name('conversations.index');
-    Route::get('conversations/{id}', [ConversationController::class, 'show'])->name('conversations.show');
-    Route::patch('conversations/{id}', [ConversationController::class, 'update'])->name('conversations.update');
-    Route::delete('conversations/{id}', [ConversationController::class, 'destroy'])->name('conversations.destroy');
-
-    Route::get('data-table-saved-views', [DataTableSavedViewController::class, 'index'])->name('data-table-saved-views.index');
-    Route::post('data-table-saved-views', [DataTableSavedViewController::class, 'store'])->name('data-table-saved-views.store');
-    Route::delete('data-table-saved-views/{dataTableSavedView}', [DataTableSavedViewController::class, 'destroy'])->name('data-table-saved-views.destroy');
-});
-
 Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(function (): void {
     Route::get('/', fn (): JsonResponse => response()->json([
         'name' => config('app.name'),
@@ -36,7 +36,22 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         'message' => 'API documentation is available at /docs/api',
     ]))->name('info');
 
+    Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
+    Route::post('auth/register', [AuthController::class, 'register'])->name('auth.register');
+    Route::post('auth/forgot-password', [PasswordResetController::class, 'sendOtp'])
+        ->middleware('throttle:password-reset-otp-send')
+        ->name('auth.forgot-password');
+    Route::post('auth/verify-reset-otp', [PasswordResetController::class, 'verifyOtp'])
+        ->middleware('throttle:password-reset-otp-verify')
+        ->name('auth.verify-reset-otp');
+    Route::post('auth/reset-password', [PasswordResetController::class, 'reset'])
+        ->name('auth.reset-password');
+
     Route::middleware(['auth:sanctum', 'feature:api_access'])->group(function (): void {
+        Route::post('auth/refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
+        Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::delete('auth/me', [AuthController::class, 'deleteMe'])->name('auth.me.delete');
+
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::post('users/batch', [UserController::class, 'batch'])->name('users.batch');
         Route::post('users/search', [UserController::class, 'search'])->name('users.search');
@@ -44,5 +59,72 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::match(['put', 'patch'], 'users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        // Indents
+        Route::get('indents', [IndentController::class, 'index'])->name('indents.index');
+        Route::post('indents/upload', [IndentController::class, 'upload'])->name('indents.upload');
+        Route::post('indents', [IndentController::class, 'store'])->name('indents.store');
+        Route::get('indents/{indent}', [IndentController::class, 'show'])->name('indents.show');
+        Route::patch('indents/{indent}/assign-rake-number', [IndentController::class, 'assignRakeNumber'])->name('indents.assign-rake-number');
+        Route::get('indents/{indent}/download', [IndentController::class, 'download'])->name('indents.download');
+
+        // Railway receipts
+        Route::post('railway-receipts/import-preview', [RailwayReceiptImportPreviewController::class, 'store'])->name('railway-receipts.import-preview');
+        Route::post('railway-receipts/upload', [RailwayReceiptUploadController::class, 'store'])->name('railway-receipts.upload');
+        Route::get('railway-receipts', [RailwayReceiptApiController::class, 'index'])->name('railway-receipts.index');
+        Route::get('railway-receipts/{rrDocument}', [RailwayReceiptApiController::class, 'show'])->name('railway-receipts.show');
+        Route::get('railway-receipts/{rrDocument}/download', [RailwayReceiptApiController::class, 'download'])->name('railway-receipts.download');
+
+        // Weighments
+        Route::post('weighments/upload', [WeighmentUploadController::class, 'store'])->name('weighments.upload');
+        Route::get('weighments/template-xlsx', [RakeWeighmentWorkflowApiController::class, 'downloadTemplateXlsx'])->name('weighments.template-xlsx');
+
+        Route::get('sidings', [SidingController::class, 'index'])->name('sidings.index');
+        Route::get('power-plants', [PowerPlantApiController::class, 'index'])->name('power-plants.index');
+
+        // Siding vehicle dispatches
+        Route::get('siding-vehicle-dispatches', [SidingVehicleDispatchController::class, 'index'])->name('siding-vehicle-dispatches.index');
+
+        Route::get('roles/{role}/permissions', [RolePermissionController::class, 'index'])->name('roles.permissions.index');
+
+        // Rakes
+        Route::get('rakes', [RakeController::class, 'index'])->name('rakes.index');
+        Route::get('rakes/export', [RakeController::class, 'export'])->name('rakes.export');
+        Route::get('rakes/{rake}', [RakeController::class, 'show'])->name('rakes.show');
+        Route::get('rakes/{rake}/rr-hub-state', RakeRrHubStateApiController::class)->name('rakes.rr-hub-state');
+        Route::patch('rakes/{rake}/diversion-mode', [RakeRrDiversionApiController::class, 'updateDiversionMode'])->name('rakes.diversion-mode.update');
+        Route::post('rakes/{rake}/diverrt-destinations', [RakeRrDiversionApiController::class, 'storeDiverrtDestination'])->name('rakes.diverrt-destinations.store');
+        Route::delete('rakes/{rake}/diverrt-destinations/{diverrtDestination}', [RakeRrDiversionApiController::class, 'destroyDiverrtDestination'])->name('rakes.diverrt-destinations.destroy');
+
+        // Rake weighments
+        Route::get('rake-weighments', [RakeWeighmentApiController::class, 'index'])->name('rake-weighments.index');
+        Route::get('rake-weighments/{rakeWeighment}', [RakeWeighmentApiController::class, 'show'])->name('rake-weighments.show');
+        Route::get('rake-weighments/{rakeWeighment}/download', [RakeWeighmentApiController::class, 'download'])->name('rake-weighments.download');
+        Route::post('rakes/{rake}/weighments/manual', [RakeWeighmentWorkflowApiController::class, 'storeManual'])->name('rakes.weighments.manual');
+        Route::post('rakes/{rake}/weighments/fetch-from-rr', [RakeWeighmentWorkflowApiController::class, 'fetchFromRr'])->name('rakes.weighments.fetch-from-rr');
+        Route::patch('rakes/{rake}/weighments/{rakeWeighment}/manual', [RakeWeighmentWorkflowApiController::class, 'updateManual'])->name('rakes.weighments.update-manual');
+        Route::delete('rakes/{rake}/weighments', [RakeWeighmentWorkflowApiController::class, 'destroy'])->name('rakes.weighments.destroy');
+
+        // Management dashboard (mobile)
+        Route::prefix('dashboard')->name('dashboard.')->group(function (): void {
+            Route::get('filter-options', [MobileDashboardController::class, 'filterOptions'])->name('filter-options');
+            Route::get('admin-kpis', [MobileDashboardController::class, 'adminKpis'])->name('admin-kpis');
+            Route::get('executive', [MobileDashboardController::class, 'executive'])->name('executive');
+            Route::get('executive/custom-range', [MobileDashboardController::class, 'executiveCustomRange'])->name('executive.custom-range');
+            Route::get('siding-overview', [MobileDashboardController::class, 'sidingOverview'])->name('siding-overview');
+            Route::get('rr-upload-coverage', [MobileDashboardController::class, 'rrUploadCoverage'])->name('rr-upload-coverage');
+            Route::get('siding-performance-metrics', [MobileDashboardController::class, 'sidingPerformanceMetrics'])->name('siding-performance-metrics');
+            Route::get('executive-overview', [MobileDashboardController::class, 'executiveOverview'])->name('executive-overview');
+            Route::get('operations', [MobileDashboardController::class, 'operations'])->name('operations');
+            Route::get('penalty-control', [MobileDashboardController::class, 'penaltyControl'])->name('penalty-control');
+            Route::get('rake-performance/rakes', [MobileDashboardController::class, 'rakePerformanceRakesIndex'])->name('rake-performance.rakes.index');
+            Route::get('rake-performance/rakes/{rake}', [MobileDashboardController::class, 'rakePerformanceRakeShow'])->name('rake-performance.rakes.show');
+            Route::get('rake-performance', [MobileDashboardController::class, 'rakePerformance'])->name('rake-performance');
+            Route::get('loader-overload/loaders', [MobileDashboardController::class, 'loaderOverloadLoadersIndex'])->name('loader-overload.loaders.index');
+            Route::get('loader-overload/loaders/{loader}', [MobileDashboardController::class, 'loaderOverloadLoaderShow'])->name('loader-overload.loaders.show');
+            Route::get('loader-overload/operators', [MobileDashboardController::class, 'loaderOverloadOperatorsIndex'])->name('loader-overload.operators.index');
+            Route::get('loader-overload/operators/show', [MobileDashboardController::class, 'loaderOverloadOperatorShow'])->name('loader-overload.operators.show');
+            Route::get('loader-overload', [MobileDashboardController::class, 'loaderOverload'])->name('loader-overload');
+            Route::get('power-plant', [MobileDashboardController::class, 'powerPlant'])->name('power-plant');
+        });
     });
 });

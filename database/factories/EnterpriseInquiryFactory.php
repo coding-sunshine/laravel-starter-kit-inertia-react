@@ -20,11 +20,11 @@ final class EnterpriseInquiryFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'company' => fake()->company(),
-            'phone' => fake()->phoneNumber(),
-            'message' => fake()->paragraphs(2, true),
+            'name' => $this->faker->name(),
+            'email' => $this->faker->unique()->safeEmail(),
+            'company' => $this->faker->company(),
+            'phone' => $this->faker->phoneNumber(),
+            'message' => $this->faker->paragraphs(2, true),
             'status' => 'new',
         ];
     }

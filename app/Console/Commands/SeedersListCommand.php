@@ -11,12 +11,25 @@ use Illuminate\Support\Str;
 
 final class SeedersListCommand extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'seeders:list
                             {--category= : Filter by category}
                             {--json : Output as JSON}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'List all available seeders with their status';
 
+    /**
+     * Execute the console command.
+     */
     public function handle(): int
     {
         $category = $this->option('category');
@@ -25,7 +38,8 @@ final class SeedersListCommand extends Command
         $seeders = [];
 
         foreach ($categories as $cat) {
-            $path = database_path('seeders/'.$cat->value);
+            $folder = ucfirst($cat->value);
+            $path = database_path("seeders/{$folder}");
 
             if (! File::isDirectory($path)) {
                 continue;

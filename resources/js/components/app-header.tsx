@@ -34,7 +34,7 @@ import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
 import AppLogo from './app-logo';
-import AppLogoIcon from './app-logo-icon';
+import AppearanceToggleDropdown from './appearance-dropdown';
 
 const mainNavItems: NavItem[] = [
     {
@@ -93,7 +93,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                     Navigation Menu
                                 </SheetTitle>
                                 <SheetHeader className="flex justify-start text-left">
-                                    <AppLogoIcon className="h-6 w-6 fill-current text-black dark:text-white" />
+                                    <AppLogo className="flex-none text-lg text-black dark:text-white [&_span]:font-bold" />
                                 </SheetHeader>
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
                                     <div className="flex h-full flex-col justify-between text-sm">
@@ -102,6 +102,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                 <Link
                                                     key={item.title}
                                                     href={item.href}
+                                                    prefetch
                                                     className="flex items-center space-x-2 font-medium"
                                                 >
                                                     {item.icon && (
@@ -168,6 +169,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                     >
                                         <Link
                                             href={item.href}
+                                            prefetch
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 page.url ===
@@ -276,8 +278,9 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             </div>
             {breadcrumbs.length > 1 && (
                 <div className="flex w-full border-b border-sidebar-border/70">
-                    <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
+                    <div className="mx-auto flex h-12 w-full items-center justify-between px-4 text-neutral-500 md:max-w-7xl">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
+                        <AppearanceToggleDropdown />
                     </div>
                 </div>
             )}

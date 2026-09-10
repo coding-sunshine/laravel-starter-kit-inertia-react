@@ -4,35 +4,26 @@ declare(strict_types=1);
 
 use App\Features\OnboardingFeature;
 use App\Models\User;
-use App\Settings\SetupWizardSettings;
 use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 use Laravel\Pennant\Feature;
 
 beforeEach(function (): void {
-    $settings = resolve(SetupWizardSettings::class);
-    $settings->setup_completed = true;
-    $settings->save();
+    $this->seed(RolesAndPermissionsSeeder::class);
 });
 
-test('users without completed onboarding are redirected to next unfinished step', function (): void {
-    $this->seed(RolesAndPermissionsSeeder::class);
-    $user = User::withoutEvents(fn (): User => User::factory()->withoutTwoFactor()->needsOnboarding()->create());
-    assignRoleForTestUser($user, 'user');
-
-    $nextStep = $user->onboarding()->nextUnfinishedStep();
-    expect($nextStep)->not->toBeNull();
+test('users without completed onboarding are redirected to onboarding page', function (): void {
+    $user = User::factory()->needsOnboarding()->create();
 
     $this->actingAs($user)
         ->get(route('dashboard'))
-        ->assertRedirect($nextStep->link);
+        ->assertRedirect(route('onboarding'));
 });
 
 test('users with completed onboarding can access dashboard', function (): void {
-    $this->seed(RolesAndPermissionsSeeder::class);
-    $user = User::withoutEvents(fn (): User => User::factory()->withoutTwoFactor()->create([
+    $user = User::factory()->withoutTwoFactor()->create([
         'onboarding_completed' => true,
-    ]));
-    assignRoleForTestUser($user, 'user');
+    ]);
+    $user->assignRole('super-admin');
 
     $this->actingAs($user)
         ->get(route('dashboard'))
@@ -40,9 +31,7 @@ test('users with completed onboarding can access dashboard', function (): void {
 });
 
 test('onboarding page is accessible for incomplete users', function (): void {
-    $this->seed(RolesAndPermissionsSeeder::class);
-    $user = User::withoutEvents(fn (): User => User::factory()->withoutTwoFactor()->needsOnboarding()->create());
-    assignRoleForTestUser($user, 'user');
+    $user = User::factory()->needsOnboarding()->create();
 
     $this->actingAs($user)
         ->get(route('onboarding'))
@@ -50,11 +39,9 @@ test('onboarding page is accessible for incomplete users', function (): void {
 });
 
 test('completed users can view onboarding page again for review', function (): void {
-    $this->seed(RolesAndPermissionsSeeder::class);
-    $user = User::withoutEvents(fn (): User => User::factory()->withoutTwoFactor()->create([
+    $user = User::factory()->withoutTwoFactor()->create([
         'onboarding_completed' => true,
-    ]));
-    assignRoleForTestUser($user, 'user');
+    ]);
 
     $response = $this->actingAs($user)
         ->get(route('onboarding'))
@@ -66,9 +53,7 @@ test('completed users can view onboarding page again for review', function (): v
 });
 
 test('can complete onboarding', function (): void {
-    $this->seed(RolesAndPermissionsSeeder::class);
-    $user = User::withoutEvents(fn (): User => User::factory()->withoutTwoFactor()->needsOnboarding()->create());
-    assignRoleForTestUser($user, 'user');
+    $user = User::factory()->needsOnboarding()->create();
 
     $this->actingAs($user)
         ->post(route('onboarding.store'))
@@ -79,9 +64,7 @@ test('can complete onboarding', function (): void {
 });
 
 test('logout is accessible without completing onboarding', function (): void {
-    $this->seed(RolesAndPermissionsSeeder::class);
-    $user = User::withoutEvents(fn (): User => User::factory()->withoutTwoFactor()->needsOnboarding()->create());
-    assignRoleForTestUser($user, 'user');
+    $user = User::factory()->needsOnboarding()->create();
 
     $this->actingAs($user)
         ->post(route('logout'))
@@ -89,9 +72,8 @@ test('logout is accessible without completing onboarding', function (): void {
 });
 
 test('when onboarding feature is inactive user can access dashboard without completing onboarding', function (): void {
-    $this->seed(RolesAndPermissionsSeeder::class);
-    $user = User::withoutEvents(fn (): User => User::factory()->withoutTwoFactor()->needsOnboarding()->create());
-    assignRoleForTestUser($user, 'user');
+    $user = User::factory()->needsOnboarding()->create();
+    $user->assignRole('super-admin');
     Feature::for($user)->deactivate(OnboardingFeature::class);
 
     $this->actingAs($user)

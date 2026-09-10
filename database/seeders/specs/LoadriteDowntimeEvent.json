@@ -1,0 +1,87 @@
+{
+    "model": "LoadriteDowntimeEvent",
+    "table": "loadrite_downtime_events",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "downtime_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "start_local_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "end_local_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "duration_minutes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "reason_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "sub_reason_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "equipment_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "raw_payload": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": {
+        "reason_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "sub_reason_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "equipment_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

@@ -60,6 +60,7 @@ export function NavFooter({
                                     ) : (
                                         <Link
                                             href={url}
+                                            prefetch
                                             {...(item.dataPan
                                                 ? { 'data-pan': item.dataPan }
                                                 : {})}

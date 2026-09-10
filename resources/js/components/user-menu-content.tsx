@@ -1,5 +1,4 @@
 import {
-    DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
@@ -7,12 +6,9 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
-import { edit as editAppearance } from '@/routes/appearance';
-import { index as billingIndex } from '@/routes/billing';
-import { edit } from '@/routes/user-profile';
 import { type User } from '@/types';
 import { Link, router } from '@inertiajs/react';
-import { CreditCard, LogOut, Palette, User as UserIcon } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 interface UserMenuContentProps {
     user: User;
@@ -34,45 +30,6 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                    <Link
-                        className="block w-full"
-                        href={edit()}
-                        as="button"
-                        prefetch="click"
-                        onClick={cleanup}
-                    >
-                        <UserIcon className="mr-2 size-4" />
-                        Profile
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link
-                        className="block w-full"
-                        href={editAppearance()}
-                        as="button"
-                        prefetch="click"
-                        onClick={cleanup}
-                    >
-                        <Palette className="mr-2 size-4" />
-                        Appearance
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link
-                        className="block w-full"
-                        href={billingIndex()}
-                        as="button"
-                        prefetch="click"
-                        onClick={cleanup}
-                    >
-                        <CreditCard className="mr-2 size-4" />
-                        Billing
-                    </Link>
-                </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
                 <Link
                     className="block w-full"
@@ -81,7 +38,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                     onClick={handleLogout}
                     data-test="logout-button"
                 >
-                    <LogOut className="mr-2 size-4" />
+                    <LogOut className="mr-2" />
                     Log out
                 </Link>
             </DropdownMenuItem>

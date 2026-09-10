@@ -1,7 +1,7 @@
-import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-import { index as helpIndex, show as helpShow } from '@/routes/help';
-import { type BreadcrumbItem } from '@/types';
+import AppLogo from '@/components/app-logo';
+import TextLink from '@/components/text-link';
+import { home } from '@/routes';
+import { show as helpShow } from '@/routes/help';
 import { Head, Link } from '@inertiajs/react';
 
 interface HelpArticle {
@@ -18,16 +18,24 @@ interface Props {
 }
 
 export default function HelpIndex({ featured, byCategory }: Props) {
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
-        { title: 'Help', href: helpIndex().url },
-    ];
-
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
             <Head title="Help Center" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-                <h1 className="text-2xl font-mono font-semibold tracking-tight">Help Center</h1>
+            <div className="min-h-svh bg-background">
+                <header className="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                    <div className="mx-auto flex max-w-3xl items-center justify-between">
+                        <Link
+                            href={home()}
+                            className="flex items-center gap-2 font-medium text-foreground"
+                        >
+                            <AppLogo className="flex-none [&_span]:text-lg [&_span]:font-bold" />
+                            <span className="sr-only">Home</span>
+                        </Link>
+                        <TextLink href={home()}>Back to home</TextLink>
+                    </div>
+                </header>
+                <main className="mx-auto max-w-3xl p-8 px-4">
+                    <h1 className="mb-6 text-2xl font-semibold">Help Center</h1>
                 {featured.length === 0 &&
                 Object.keys(byCategory).length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
@@ -42,7 +50,7 @@ export default function HelpIndex({ featured, byCategory }: Props) {
                 ) : null}
                 {featured.length > 0 && (
                     <section className="mb-8">
-                        <h2 className="mb-3 font-mono text-lg font-medium tracking-tight">
+                        <h2 className="mb-3 text-lg font-medium">
                             Featured articles
                         </h2>
                         <ul className="grid gap-3 sm:grid-cols-2">
@@ -75,7 +83,7 @@ export default function HelpIndex({ featured, byCategory }: Props) {
                         ([category, articles]) =>
                             articles.length > 0 && (
                                 <div key={category} className="mb-8">
-                                    <h2 className="mb-3 font-mono text-lg font-medium capitalize tracking-tight">
+                                    <h2 className="mb-3 text-lg font-medium capitalize">
                                         {category}
                                     </h2>
                                     <ul className="space-y-2">
@@ -99,7 +107,8 @@ export default function HelpIndex({ featured, byCategory }: Props) {
                             ),
                     )}
                 </section>
+                </main>
             </div>
-        </AppLayout>
+        </>
     );
 }

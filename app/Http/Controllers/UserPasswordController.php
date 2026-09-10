@@ -53,6 +53,8 @@ final readonly class UserPasswordController
     {
         $action->handle($user, $request->string('password')->value());
 
+        Inertia::flash('status', __('Your password has been updated.'));
+
         return back();
     }
 }

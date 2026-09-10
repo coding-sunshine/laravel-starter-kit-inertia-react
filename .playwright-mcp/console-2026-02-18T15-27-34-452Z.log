@@ -1,0 +1,2 @@
+[    1875ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://laravel-starter-kit-inertia-react.test/favicon.ico:0
+[   20102ms] [ERROR] Failed to load resource: the server responded with a status of 409 () @ https://laravel-starter-kit-inertia-react.test/login:0

@@ -1,5 +1,4 @@
 import type { LucideIcon } from "lucide-react";
-import type { DataTableTranslations } from "../data-table/i18n";
 
 export type FilterType = "text" | "number" | "date" | "option" | "boolean";
 
@@ -10,6 +9,10 @@ export interface FilterColumn {
     icon?: LucideIcon;
     options?: { label: string; value: string }[];
     searchThreshold?: number;
+    /** When type is `text` and filters are inline, lock the operator (default is contains). */
+    textFixedOperator?: 'contains' | 'eq';
+    /** Tailwind classes for the inline filter field wrapper (width, shrink). */
+    inlineWrapClassName?: string;
 }
 
 export interface FilterValue {
@@ -21,36 +24,36 @@ export type ActiveFilters = Record<string, FilterValue>;
 
 export interface OperatorDef {
     value: string;
-    labelKey: keyof DataTableTranslations;
+    label: string;
     multi: boolean;
 }
 
 export const OPERATORS: Record<FilterType, OperatorDef[]> = {
     text: [
-        { value: "contains", labelKey: "opContains", multi: false },
-        { value: "eq", labelKey: "opExact", multi: false },
+        { value: "contains", label: "contains", multi: false },
+        { value: "eq", label: "equals", multi: false },
     ],
     number: [
-        { value: "eq", labelKey: "opEquals", multi: false },
-        { value: "neq", labelKey: "opNotEquals", multi: false },
-        { value: "gt", labelKey: "opGreaterThan", multi: false },
-        { value: "gte", labelKey: "opGreaterOrEqual", multi: false },
-        { value: "lt", labelKey: "opLessThan", multi: false },
-        { value: "lte", labelKey: "opLessOrEqual", multi: false },
-        { value: "between", labelKey: "opBetween", multi: true },
+        { value: "eq", label: "=", multi: false },
+        { value: "neq", label: "≠", multi: false },
+        { value: "gt", label: ">", multi: false },
+        { value: "gte", label: "≥", multi: false },
+        { value: "lt", label: "<", multi: false },
+        { value: "lte", label: "≤", multi: false },
+        { value: "between", label: "between", multi: true },
     ],
     date: [
-        { value: "eq", labelKey: "opOnDate", multi: false },
-        { value: "before", labelKey: "opBefore", multi: false },
-        { value: "after", labelKey: "opAfter", multi: false },
-        { value: "between", labelKey: "opBetween", multi: true },
+        { value: "eq", label: "is", multi: false },
+        { value: "before", label: "before", multi: false },
+        { value: "after", label: "after", multi: false },
+        { value: "between", label: "between", multi: true },
     ],
     option: [
-        { value: "in", labelKey: "opIs", multi: false },
-        { value: "not_in", labelKey: "opIsNot", multi: false },
+        { value: "in", label: "is", multi: false },
+        { value: "not_in", label: "is not", multi: false },
     ],
     boolean: [
-        { value: "eq", labelKey: "opIs", multi: false },
+        { value: "eq", label: "is", multi: false },
     ],
 };
 

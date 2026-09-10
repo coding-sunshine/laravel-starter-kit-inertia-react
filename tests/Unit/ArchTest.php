@@ -5,8 +5,6 @@ declare(strict_types=1);
 arch()->preset()->php();
 arch()->preset()->security()->ignoring([
     'assert',
-    App\Console\Commands\AppDemoCommand::class,
-    App\Console\Commands\ModuleInstallCommand::class,
 ]);
 
 arch('controllers')
@@ -14,7 +12,14 @@ arch('controllers')
     ->not->toBeUsed()
     ->ignoring([
         App\Http\Controllers\Api\V1\BaseApiController::class,
-        App\Http\Controllers\Controller::class, // base class extended by all controllers
+        // Bound in AppServiceProvider to swap Filament's default panel-home redirect controller.
+        App\Http\Controllers\Filament\RedirectAdminHomeController::class,
+        // Base Controller is meant to be extended by every controller in subnamespaces.
+        App\Http\Controllers\Controller::class,
+        // MobileDashboardController reuses ExecutiveDashboardController's public `build*`
+        // data-building methods to avoid duplicating the web dashboard logic. Extracting
+        // those into a dedicated service is a larger refactor tracked separately.
+        App\Http\Controllers\Api\Dashboard\MobileDashboardController::class,
     ]);
 
 // Prism: only PrismService may use the Prism facade; all other app code must use PrismService or ai().
@@ -61,12 +66,12 @@ arch('seeders do not use Controllers')
 arch('seeders only use allowed layers')
     ->expect(['Database\Seeders\Essential', 'Database\Seeders\Development', 'Database\Seeders\Production'])
     ->toOnlyUse([
+        'App\Actions',
         'App\Enums',
         'App\Events',
         'App\Models',
-        'App\Notifications',
         'App\Services',
-        'App\Support',
+        'Carbon',
         'Database\Seeders',
         'Database\Factories',
         'Illuminate\Database',
@@ -75,13 +80,10 @@ arch('seeders only use allowed layers')
         'Illuminate\Foundation',
         'LevelUp\Experience',
         'MartinPetricko\LaravelDatabaseMail',
-        'Modules\Billing',
-        'Modules\PageBuilder',
-        'Modules\Workflows',
         'Pgvector\Laravel',
         'Spatie\Permission',
     ])
-    ->ignoring(['RuntimeException', 'Throwable', 'app', 'config', 'database_path', 'fake', 'now', 'resolve']);
+    ->ignoring(['RuntimeException', 'Throwable', 'app', 'base_path', 'bcrypt', 'config', 'database_path', 'now', 'resolve', 'str']);
 
 // Strict preset disabled: Filament resource pages override protected getHeaderActions()
 // and LoadsJsonData uses protected loadJson(); strict()->ignoring() did not exclude them.

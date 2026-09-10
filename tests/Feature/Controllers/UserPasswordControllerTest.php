@@ -149,6 +149,11 @@ it('may update password', function (): void {
     $response->assertRedirectToRoute('password.edit');
 
     expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
+
+    $this->get(route('password.edit'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->hasFlash('status', 'Your password has been updated.'));
 });
 
 it('requires current password to update', function (): void {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateSessionRequest;
-use App\Settings\AuthSettings;
+use App\Services\Auth\HomeRedirectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +20,6 @@ final readonly class SessionController
         return Inertia::render('session/create', [
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
-            'socialProviders' => $this->getEnabledProviders(),
         ]);
     }
 
@@ -31,17 +30,24 @@ final readonly class SessionController
         if ($user->hasEnabledTwoFactorAuthentication()) {
             $request->session()->put([
                 'login.id' => $user->getKey(),
-                'login.remember' => $request->boolean('remember'),
+                'login.remember' => false,
             ]);
 
             return to_route('two-factor.login');
         }
 
-        Auth::login($user, $request->boolean('remember'));
+        Auth::login($user, false);
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $authenticatedUser = $request->user();
+        if ($authenticatedUser !== null) {
+            $homeRoute = resolve(HomeRedirectService::class)->getHomeRouteFor($authenticatedUser);
+
+            return redirect()->route($homeRoute);
+        }
+
+        return redirect()->route('dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -52,24 +58,5 @@ final readonly class SessionController
         $request->session()->regenerateToken();
 
         return redirect('/');
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function getEnabledProviders(): array
-    {
-        $settings = resolve(AuthSettings::class);
-        $providers = [];
-
-        if ($settings->google_oauth_enabled && $settings->google_client_id) {
-            $providers[] = 'google';
-        }
-
-        if ($settings->github_oauth_enabled && $settings->github_client_id) {
-            $providers[] = 'github';
-        }
-
-        return $providers;
     }
 }

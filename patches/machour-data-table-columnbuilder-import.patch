@@ -1,0 +1,12 @@
+diff --git a/src/AbstractDataTable.php b/src/AbstractDataTable.php
+index 0000000..0000001 100644
+--- a/src/AbstractDataTable.php
++++ b/src/AbstractDataTable.php
+@@ -3,6 +3,7 @@
+ namespace Machour\DataTable;
+ 
+ use Machour\DataTable\Columns\Column;
++use Machour\DataTable\Columns\ColumnBuilder;
+ use Illuminate\Database\Eloquent\Builder;
+ use Illuminate\Database\Eloquent\SoftDeletes;
+ use Illuminate\Http\Request;
