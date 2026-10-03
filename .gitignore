@@ -51,4 +51,5 @@ polyscope.json
 .gstack/
 .worktrees
 .superpowers/
-config.bat
+.env
+.env.production
