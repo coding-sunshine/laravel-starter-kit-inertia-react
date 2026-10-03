@@ -34,5 +34,6 @@ yarn-error.log
 !resources/**/*.png
 !public/**/*.png
 !docs/**/*.png
-config.bat
 live.md
+.env
+.env.production
