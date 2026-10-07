@@ -41,7 +41,7 @@ export function SidingCoalStock({ stocks }: { stocks: Record<number, SidingStock
                                 <div key={s.siding_id} className="flex items-center justify-between py-2">
                                     <div>
                                         <p className="font-mono text-base font-semibold tabular-nums text-gray-900">
-                                            {s.closing_balance_mt.toLocaleString('en-IN')} MT
+                                            {s.closing_balance_mt.toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT
                                         </p>
                                         <p className="text-[11px] text-gray-400">
                                             {s.last_receipt_at ? `Last receipt: ${s.last_receipt_at}` : 'No recent receipt'}

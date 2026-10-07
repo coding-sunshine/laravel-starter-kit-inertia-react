@@ -1065,10 +1065,10 @@ function executiveChartFormatBarTooltipValue(
     unit: 'count' | 'mt',
 ): string {
     if (unit === 'count') {
-        return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+        return n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
     }
 
-    return `${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`;
+    return `${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`;
 }
 
 function ExecutiveSidingBarChartCard(props: {
@@ -1381,10 +1381,8 @@ function ExecutiveProductionDonutCard(props: {
 
                                     return [
                                         props.valueKind === 'qty'
-                                            ? `${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
-                                            : v.toLocaleString(undefined, {
-                                                  maximumFractionDigits: 0,
-                                              }),
+                                            ? `${v.toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`
+                                            : v.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
                                         String(name),
                                     ];
                                 }}
@@ -1608,10 +1606,7 @@ function ExecutiveYesterdayTable({
             return '—';
         }
 
-        return qty.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
+        return qty.toLocaleString('en-IN', { maximumFractionDigits: 0 });
     };
 
     const formatTripsOrDash = (trips: number | null): string => {
@@ -1619,7 +1614,7 @@ function ExecutiveYesterdayTable({
             return '—';
         }
 
-        return trips.toLocaleString();
+        return trips.toLocaleString('en-IN', { maximumFractionDigits: 0 });
     };
 
     return (
@@ -1748,11 +1743,9 @@ export function ExecutiveYesterdaySection({
         setCustomTo(data.customRanges.roadDispatch.to);
     }, [data]);
 
-    const fmtNumber = (n: number, fractionDigits = 0): string =>
-        n.toLocaleString(undefined, {
-            minimumFractionDigits: fractionDigits,
-            maximumFractionDigits: fractionDigits,
-        });
+    // Management dashboard shows whole numbers (Indian grouping); fractionDigits kept for call-site compatibility.
+    const fmtNumber = (n: number, _fractionDigits = 0): string =>
+        n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
     const execPeriodOrder = [
         'yesterday',
@@ -3756,7 +3749,7 @@ export function SidingPerformanceSection({
                             />
                             <Tooltip
                                 formatter={numericTooltipFormatter((value) =>
-                                    value.toLocaleString(),
+                                    value.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
                                 )}
                             />
                             <Bar
@@ -3997,10 +3990,7 @@ function RakePerformanceDetailCharts({
     }, [r.wagon_overloads, underloadThresholdPercent]);
 
     const fmtMt = (n: number): string =>
-        n.toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-        });
+        n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
     return (
         <div className="space-y-5">
@@ -4125,7 +4115,7 @@ function RakePerformanceDetailCharts({
                                 </Pie>
                                 <Tooltip
                                     formatter={(value, name) => [
-                                        `${Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`,
+                                        `${Number(value ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`,
                                         String(name ?? ''),
                                     ]}
                                 />
@@ -4308,21 +4298,21 @@ function RakePerformanceDetailCharts({
                                         const wagonNum = pl.wagon_number ?? '—';
                                         const cc =
                                             pl.cc_capacity_mt != null
-                                                ? `${Number(pl.cc_capacity_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                ? `${Number(pl.cc_capacity_mt).toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`
                                                 : '—';
                                         const net =
                                             pl.net_weight_mt != null
-                                                ? `${Number(pl.net_weight_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                ? `${Number(pl.net_weight_mt).toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`
                                                 : '—';
                                         const over =
                                             pl.over_load_mt != null &&
                                             pl.over_load_mt > 0
-                                                ? `${Number(pl.over_load_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                ? `${Number(pl.over_load_mt).toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`
                                                 : '—';
                                         const under =
                                             pl.under_load_mt != null &&
                                             pl.under_load_mt > 0
-                                                ? `${Number(pl.under_load_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                ? `${Number(pl.under_load_mt).toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`
                                                 : '—';
                                         const sf =
                                             pl.shortfall_pct != null
@@ -4442,7 +4432,7 @@ function RakePerformanceDetailCharts({
                                         aria-hidden
                                     />
                                     <span className="text-lg font-bold text-red-700 tabular-nums">
-                                        +{r.over_load.toLocaleString()} MT total
+                                        +{r.over_load.toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT total
                                     </span>
                                     <span className="text-xs text-gray-600">
                                         No wagon-level weighment data
@@ -5024,13 +5014,13 @@ export function RakePerformanceSection({
                                     <TableCell className="text-right text-red-700 tabular-nums">
                                         {row.over_load != null &&
                                         row.over_load > 0
-                                            ? row.over_load.toLocaleString()
+                                            ? row.over_load.toLocaleString('en-IN', { maximumFractionDigits: 0 })
                                             : '—'}
                                     </TableCell>
                                     <TableCell className="text-right text-amber-800 tabular-nums">
                                         {row.under_load != null &&
                                         row.under_load > 0
-                                            ? row.under_load.toLocaleString()
+                                            ? row.under_load.toLocaleString('en-IN', { maximumFractionDigits: 0 })
                                             : '—'}
                                     </TableCell>
                                 </TableRow>
@@ -5269,7 +5259,7 @@ function RakesPerPowerPlantExecutiveChart({
                                 tick={{ fontSize: 11 }}
                                 tickFormatter={(v) =>
                                     valueKind === 'qty'
-                                        ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                        ? `${Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
                                         : `${v}`
                                 }
                                 domain={isEmpty ? [0, 'auto'] : undefined}
@@ -5285,7 +5275,7 @@ function RakesPerPowerPlantExecutiveChart({
 
                                     return valueKind === 'qty'
                                         ? [
-                                              `${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`,
+                                              `${v.toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`,
                                               'Qty',
                                           ]
                                         : [v, 'Rakes'];
@@ -5316,7 +5306,7 @@ function RakesPerPowerPlantExecutiveChart({
                                         position="top"
                                         formatter={(v: unknown) =>
                                             valueKind === 'qty'
-                                                ? `${Number(v ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                ? `${Number(v ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
                                                 : String(v ?? '')
                                         }
                                     />

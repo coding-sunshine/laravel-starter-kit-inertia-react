@@ -148,13 +148,13 @@ export function Operations({
                                                             <Fragment key={m.siding_name}>
                                                                 <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{m.trips}</td>
                                                                 <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                                    {m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    {m.qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                                 </td>
                                                             </Fragment>
                                                         ))}
                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{row.total_trips}</td>
                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                            {row.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {row.total_qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -165,13 +165,13 @@ export function Operations({
                                                         <Fragment key={m.siding_name}>
                                                             <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{m.trips}</td>
                                                             <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                                {m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                {m.qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                             </td>
                                                         </Fragment>
                                                     ))}
                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{coalTransportReport.totals.total_trips}</td>
                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                        {coalTransportReport.totals.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        {coalTransportReport.totals.total_qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -250,15 +250,15 @@ export function Operations({
                                                         <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{r.siding_name}</td>
                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.day_rakes}</td>
                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                            {r.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {r.day_qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                         </td>
                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.month_rakes}</td>
                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                            {r.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {r.month_qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                         </td>
                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.year_rakes}</td>
                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                            {r.year_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {r.year_qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -267,15 +267,15 @@ export function Operations({
                                                     <td className="border border-[#d5dbe4] px-3 py-2">TOTAL</td>
                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.day_rakes}</td>
                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                        {dailyRakeDetails.totals.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        {dailyRakeDetails.totals.day_qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                     </td>
                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.month_rakes}</td>
                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                        {dailyRakeDetails.totals.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        {dailyRakeDetails.totals.month_qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                     </td>
                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.year_rakes}</td>
                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                        {dailyRakeDetails.totals.year_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        {dailyRakeDetails.totals.year_qty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                                     </td>
                                                 </tr>
                                             </tbody>

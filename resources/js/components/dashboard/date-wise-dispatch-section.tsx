@@ -153,7 +153,7 @@ export function DateWiseDispatchSection({
                     stackColors={penaltyColors}
                     yLabel="₹"
                     height={300}
-                    formatTooltip={(v) => `₹${v.toLocaleString()}`}
+                    formatTooltip={(v) => `₹${v.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                 />
             </div>
         </div>

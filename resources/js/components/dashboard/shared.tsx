@@ -38,14 +38,11 @@ export function formatRakeSequenceBySiding(
 }
 
 export function formatCurrency(n: number): string {
-    if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
-    if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
-    return `₹${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
 
 export function formatWeight(n: number): string {
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}K MT`;
-    return `${n.toLocaleString()} MT`;
+    return `${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })} MT`;
 }
 
 export function SectionHeader({

@@ -108,7 +108,7 @@ export function ExecutiveOverview({
                                                         value={stockMt}
                                                         format={(v) =>
                                                             v.toLocaleString(
-                                                                undefined,
+                                                                'en-IN',
                                                                 {
                                                                     maximumFractionDigits: 0,
                                                                 },
