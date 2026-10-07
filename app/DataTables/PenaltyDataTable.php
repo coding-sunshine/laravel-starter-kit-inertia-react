@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\DataTables;
 
 use App\Models\PenaltyType;
+use App\Models\RrDocument;
 use App\Models\RrPenaltySnapshot;
 use App\Models\Siding;
 use App\Support\PenaltyDateFilter;
@@ -95,6 +96,7 @@ final class PenaltyDataTable extends AbstractDataTable
             ->leftJoin('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->leftJoin('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->leftJoin('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
+            ->whereRaw(RrDocument::effectiveSql())
             ->whereIn('rakes.siding_id', $sidingIds);
     }
 

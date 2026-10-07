@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Ai\Tools;
 
 use App\Models\PenaltyType;
+use App\Models\RrDocument;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Contracts\Tool;
@@ -29,6 +30,7 @@ final class PenaltySummaryTool implements Tool
             ->join('penalty_types as pt', 'pt.code', '=', 'rps.penalty_code')
             ->leftJoin('rakes as r', 'r.id', '=', 'rps.rake_id')
             ->leftJoin('rr_documents as rd', 'rd.id', '=', 'rps.rr_document_id')
+            ->whereRaw(RrDocument::effectiveSql('rd'))
             ->whereIn('r.siding_id', $this->sidingIds);
 
         if ($request['date_from'] ?? null) {

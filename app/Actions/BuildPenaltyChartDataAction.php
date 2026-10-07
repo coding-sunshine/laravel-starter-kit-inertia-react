@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Models\RrDocument;
 use App\Support\PenaltyDateFilter;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -38,7 +39,8 @@ final readonly class BuildPenaltyChartDataAction
             ->leftJoin('rr_documents', 'rr_penalty_snapshots.rr_document_id', '=', 'rr_documents.id')
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->leftJoin('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code');
+            ->leftJoin('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
+            ->whereRaw(RrDocument::effectiveSql());
 
         if (! $hasDateFilter) {
             $query->whereRaw(PenaltyDateFilter::DATE_EXPR.' >= ?', [now()->startOfMonth()->subMonthsNoOverflow(11)]);

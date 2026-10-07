@@ -42,6 +42,18 @@ final class RrDocument extends Model implements HasMedia
         'updated_by',
     ];
 
+    /**
+     * SQL that is true when the RR aliased as `$alias` is NOT superseded.
+     *
+     * On a diverted rake the railway issues a fresh RR for the diversion leg; that RR
+     * is the effective one and the original RR (diverrt_destination_id null) must not
+     * be counted again in reports or penalty totals. A missing RR (left join) passes.
+     */
+    public static function effectiveSql(string $alias = 'rr_documents'): string
+    {
+        return "NOT ({$alias}.id IS NOT NULL AND {$alias}.diverrt_destination_id IS NULL AND EXISTS (SELECT 1 FROM rr_documents rr_div WHERE rr_div.rake_id = {$alias}.rake_id AND rr_div.diverrt_destination_id IS NOT NULL))";
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('rr_pdf')

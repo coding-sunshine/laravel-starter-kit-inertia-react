@@ -460,6 +460,7 @@ final readonly class RunReportAction
             ->selectRaw('rw.rake_id as rake_id, SUM(COALESCE(rww.net_weight_mt, 0)) as net_mt');
 
         $penaltyByRake = DB::table('rr_penalty_snapshots')
+            ->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->whereNotNull('rake_id')
             ->groupBy('rake_id')
             ->selectRaw('rake_id, SUM(COALESCE(amount, 0)) as penalty_sum');
@@ -601,6 +602,7 @@ final readonly class RunReportAction
 
         $primaryRrPerRake = DB::table('rr_documents')
             ->selectRaw('rake_id, MIN(id) as rr_id')
+            ->whereRaw(RrDocument::effectiveSql())
             ->whereNotNull('to_station_code')
             ->where('to_station_code', '!=', '')
             ->groupBy('rake_id');
@@ -1017,6 +1019,7 @@ final readonly class RunReportAction
             $join->on('rk.id', '=', 'rr.rake_id')->whereNull('rk.deleted_at');
         })
             ->whereNotNull('rr.rake_id')
+            ->whereRaw(RrDocument::effectiveSql('rr'))
             ->whereIn('rk.siding_id', $sidingIds);
         $this->applyWeighmentVsRrRakeFiltersOnAlias($rrChargeable, 'rk', $params);
         $rrChargeable = $rrChargeable
@@ -1029,12 +1032,14 @@ final readonly class RunReportAction
                 $join->on('rk2.id', '=', 'rr2.rake_id')->whereNull('rk2.deleted_at');
             })
             ->whereNotNull('rr2.rake_id')
+            ->whereRaw(RrDocument::effectiveSql('rr2'))
             ->whereIn('rk2.siding_id', $sidingIds);
         $this->applyWeighmentVsRrRakeFiltersOnAlias($rrOverload, 'rk2', $params);
         $rrOverload = $rrOverload->groupBy('rr2.rake_id')
             ->selectRaw('rr2.rake_id as rake_id, SUM(COALESCE(rws.overload_weight_mt, 0)) as rr_overload_mt');
 
         $penSnapAgg = DB::table('rr_penalty_snapshots as rps')
+            ->whereRaw(RrPenaltySnapshot::effectiveSql('rps'))
             ->join('rakes as rkps', function ($join): void {
                 $join->on('rkps.id', '=', 'rps.rake_id')->whereNull('rkps.deleted_at');
             })
@@ -1175,6 +1180,7 @@ final readonly class RunReportAction
             $join->on('rk.id', '=', 'rr.rake_id')->whereNull('rk.deleted_at');
         })
             ->whereNotNull('rr.rake_id')
+            ->whereRaw(RrDocument::effectiveSql('rr'))
             ->whereIn('rk.siding_id', $sidingIds);
         $this->applyWeighmentVsRrRakeFiltersOnAlias($rrChargeable, 'rk', $params);
         $rrChargeable = $rrChargeable
@@ -1198,7 +1204,7 @@ final readonly class RunReportAction
         );
 
         $primaryDoc = DB::table('rr_documents')
-            ->whereNull('diverrt_destination_id')
+            ->whereRaw(RrDocument::effectiveSql())
             ->whereNotNull('rake_id')
             ->groupBy('rake_id')
             ->selectRaw('rake_id, MIN(id) as primary_rr_document_id');
@@ -1354,6 +1360,7 @@ final readonly class RunReportAction
         }
 
         $rows = DB::table('rr_penalty_snapshots')
+            ->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->whereIn('rake_id', $rakeIds)
             ->orderBy('penalty_code')
             ->get(['rake_id', 'penalty_code', 'amount']);
@@ -2423,6 +2430,7 @@ final readonly class RunReportAction
                 ->whereColumn('rr_penalty_snapshots.rake_id', 'applied_penalties.rake_id'));
 
         $snapshotQuery = RrPenaltySnapshot::query()
+            ->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->with(['rake.siding:id,name'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 
@@ -3750,6 +3758,7 @@ final readonly class RunReportAction
     private function penaltyRegisterRrSnapshot(array $sidingIds, array $params): array
     {
         $query = RrPenaltySnapshot::query()
+            ->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->with(['rake.siding:id,name', 'rrDocument:id,rr_received_date'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 

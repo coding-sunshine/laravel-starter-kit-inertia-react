@@ -88,6 +88,7 @@ final readonly class ReconcilePenaltyHeadsAction
     private function aggregateBilled(Rake $rake): Collection
     {
         return RrPenaltySnapshot::query()
+            ->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->where('rake_id', $rake->id)
             ->groupBy('penalty_code')
             ->selectRaw('penalty_code, sum(amount) as total')

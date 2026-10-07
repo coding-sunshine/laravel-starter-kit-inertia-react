@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mcp\Tools;
 
 use App\Models\PenaltyType;
+use App\Models\RrDocument;
 use App\Models\Siding;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -38,6 +39,7 @@ final class PenaltiesIndexTool extends Tool
             ->join('penalty_types as pt', 'pt.code', '=', 'rps.penalty_code')
             ->leftJoin('rakes as r', 'r.id', '=', 'rps.rake_id')
             ->leftJoin('rr_documents as rd', 'rd.id', '=', 'rps.rr_document_id')
+            ->whereRaw(RrDocument::effectiveSql('rd'))
             ->whereIn('r.siding_id', $sidingIds);
 
         if ($request->get('date_from')) {

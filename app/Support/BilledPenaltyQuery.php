@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Models\RrDocument;
 use App\Models\RrPenaltySnapshot;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,6 +35,7 @@ final class BilledPenaltyQuery
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->leftJoin('rr_documents', 'rr_penalty_snapshots.rr_document_id', '=', 'rr_documents.id')
             ->leftJoin('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
+            ->whereRaw(RrDocument::effectiveSql())
             ->whereIn('rakes.siding_id', $sidingIds);
     }
 

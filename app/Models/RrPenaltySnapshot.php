@@ -23,6 +23,15 @@ final class RrPenaltySnapshot extends Model
         'meta',
     ];
 
+    /**
+     * SQL that is true when the snapshot aliased as `$alias` belongs to an effective RR,
+     * i.e. not to an original RR superseded by a diversion RR (see RrDocument::effectiveSql()).
+     */
+    public static function effectiveSql(string $alias = 'rr_penalty_snapshots'): string
+    {
+        return 'NOT EXISTS (SELECT 1 FROM rr_documents rr_orig WHERE rr_orig.id = '.$alias.'.rr_document_id AND NOT '.RrDocument::effectiveSql('rr_orig').')';
+    }
+
     public function rrDocument(): BelongsTo
     {
         return $this->belongsTo(RrDocument::class);

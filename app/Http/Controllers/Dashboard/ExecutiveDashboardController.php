@@ -1018,7 +1018,7 @@ final class ExecutiveDashboardController extends Controller
             }
         }
 
-        $totalPenaltyThisMonth = (float) RrPenaltySnapshot::query()
+        $totalPenaltyThisMonth = (float) RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereIn('rakes.siding_id', $sidingIds)
             ->whereNotNull('rakes.loading_date')
@@ -1102,7 +1102,7 @@ final class ExecutiveDashboardController extends Controller
                 ->whereColumn('rr_penalty_snapshots.rake_id', 'applied_penalties.rake_id'))
             ->sum('amount');
 
-        $actualThisMonth = RrPenaltySnapshot::query()
+        $actualThisMonth = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
@@ -1214,7 +1214,7 @@ final class ExecutiveDashboardController extends Controller
 
         $startDate = $start->toDateString();
         $endDate = $end->toDateString();
-        $penaltyQuery = RrPenaltySnapshot::query()
+        $penaltyQuery = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereNotNull('rakes.loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$startDate, $endDate]);
@@ -1309,7 +1309,7 @@ final class ExecutiveDashboardController extends Controller
 
         $startDate = $start->toDateString();
         $endDate = $end->toDateString();
-        $penaltyQuery = RrPenaltySnapshot::query()
+        $penaltyQuery = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereNotNull('rakes.loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$startDate, $endDate]);
@@ -2332,7 +2332,7 @@ final class ExecutiveDashboardController extends Controller
                 ->keyBy('siding_id');
         }
 
-        $actualQuery = RrPenaltySnapshot::query()
+        $actualQuery = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereNotNull('rakes.loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
@@ -2455,7 +2455,7 @@ final class ExecutiveDashboardController extends Controller
         }
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $query = RrPenaltySnapshot::query()
+        $query = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->join('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereNotNull('rakes.loading_date')
@@ -2512,7 +2512,7 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $query = RrPenaltySnapshot::query()
+        $query = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereNotNull('rakes.loading_date')
@@ -2956,7 +2956,7 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $penaltyQuery = RrPenaltySnapshot::query()
+        $penaltyQuery = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereNotNull('rakes.loading_date')
@@ -3907,7 +3907,7 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('rake_id');
 
-        $actualPenaltyTotals = RrPenaltySnapshot::query()
+        $actualPenaltyTotals = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())
             ->whereIn('rake_id', $rakeIds)
             ->selectRaw('rake_id, sum(amount) as total_penalty, count(*) as penalty_count')
             ->groupBy('rake_id')

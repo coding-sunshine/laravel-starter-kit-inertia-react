@@ -11,6 +11,7 @@ use App\DataTables\PenaltyDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdatePenaltyRequest;
 use App\Models\Penalty;
+use App\Models\RrDocument;
 use App\Models\Siding;
 use App\Support\PenaltyDateFilter;
 use Illuminate\Http\JsonResponse;
@@ -138,6 +139,7 @@ final class PenaltyController extends Controller
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->leftJoin('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
+            ->whereRaw(RrDocument::effectiveSql())
             ->whereIn('rakes.siding_id', $sidingIds);
 
         $filters = $request->get('filter', []);
