@@ -1188,7 +1188,11 @@ function ExecutiveSidingBarChartCard(props: {
                                 />
                                 <YAxis
                                     tick={{ fontSize: 11 }}
+                                    width={84}
                                     domain={[0, max * 1.12]}
+                                    tickFormatter={(v: number) =>
+                                        Math.round(v).toLocaleString('en-IN')
+                                    }
                                 />
                                 <Tooltip
                                     content={({ active, payload, label }) => {
@@ -2874,7 +2878,11 @@ export function ExecutiveYesterdaySection({
                             />
                             <YAxis
                                 tick={{ fontSize: 11 }}
+                                width={84}
                                 domain={[0, max * 1.12]}
+                                tickFormatter={(v: number) =>
+                                    Math.round(v).toLocaleString('en-IN')
+                                }
                             />
                             <Tooltip
                                 content={(tooltipProps: unknown) => {
