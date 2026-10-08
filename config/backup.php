@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+// Mail only when a real recipient is configured; a placeholder address makes SMTP reject the
+// notification, which spatie/laravel-backup then reports as a failed backup.
+$mailChannels = env('BACKUP_MAIL_TO') ? ['mail'] : [];
+
 return [
 
     'backup' => [
@@ -203,12 +207,12 @@ return [
      */
     'notifications' => [
         'notifications' => [
-            Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification::class => ['mail'],
-            Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification::class => ['mail'],
-            Spatie\Backup\Notifications\Notifications\CleanupHasFailedNotification::class => ['mail'],
-            Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification::class => ['mail'],
-            Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification::class => ['mail'],
-            Spatie\Backup\Notifications\Notifications\CleanupWasSuccessfulNotification::class => ['mail'],
+            Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification::class => $mailChannels,
+            Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification::class => $mailChannels,
+            Spatie\Backup\Notifications\Notifications\CleanupHasFailedNotification::class => $mailChannels,
+            Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification::class => $mailChannels,
+            Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification::class => $mailChannels,
+            Spatie\Backup\Notifications\Notifications\CleanupWasSuccessfulNotification::class => $mailChannels,
         ],
 
         /*
@@ -218,7 +222,7 @@ return [
         'notifiable' => Spatie\Backup\Notifications\Notifiable::class,
 
         'mail' => [
-            'to' => 'your@example.com',
+            'to' => env('BACKUP_MAIL_TO'),
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
