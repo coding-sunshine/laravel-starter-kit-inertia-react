@@ -62,8 +62,8 @@ final readonly class AggregateSidingPerformance
             (float) Rake::query()
                 ->where('siding_id', $sidingId)
                 ->whereDate('loading_end_time', $date)
-                ->where('demurrage_hours', '>', 0)
-                ->avg('demurrage_hours') ?? 0
+                ->where('detention_hours', '>', 0)
+                ->avg('detention_hours') ?? 0
         );
 
         $overloadIncidents = Wagon::query()
