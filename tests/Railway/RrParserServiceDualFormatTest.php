@@ -252,6 +252,18 @@ test('RrImportService assertParsedRrInternalConsistency rejects FOIS when wagon 
     expect(fn () => $m->invoke($svc, $p))->toThrow(InvalidArgumentException::class, 'does not match header ACTL WGHT');
 });
 
+test('RrImportService assertParsedRrInternalConsistency skips weight check for sender-weight RR (ACTL WGHT 0)', function (): void {
+    $p = $this->parser->parseExtractedText(rrMinimalFoisPrintedText());
+    $p['actual_weight_mt'] = 0;
+
+    $svc = new RrImportService;
+    $m = new ReflectionMethod(RrImportService::class, 'assertParsedRrInternalConsistency');
+    $m->setAccessible(true);
+    $m->invoke($svc, $p);
+
+    expect(true)->toBeTrue();
+});
+
 test('RrImportService assertParsedRrInternalConsistency rejects FOIS when wagon row count mismatches WGON FRWH', function (): void {
     $p = $this->parser->parseExtractedText(rrMinimalFoisPrintedText());
     array_pop($p['wagons']);

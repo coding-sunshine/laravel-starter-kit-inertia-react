@@ -241,7 +241,8 @@ final readonly class RrImportService
             }
 
             $actualHeader = $parsed['actual_weight_mt'] ?? null;
-            if (is_numeric($actualHeader) && $wagons !== []) {
+            // Sender-weight RRs print ACTL WGHT 0 (no weighment), so there is no header total to check against.
+            if (is_numeric($actualHeader) && (float) $actualHeader > 0 && $wagons !== []) {
                 $actualHeaderF = round((float) $actualHeader, 2);
                 $sumLoaded = round((float) array_sum(array_map(
                     static fn (array $w): float => (float) ($w['loaded_weight'] ?? $w['loaded_weight_mt'] ?? 0),
