@@ -8,7 +8,6 @@ use App\Models\CoalStock;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\SidingPerformance;
-use App\Models\Wagon;
 use App\Support\BilledPenaltyQuery;
 use Carbon\CarbonImmutable;
 
@@ -44,10 +43,6 @@ final readonly class AggregateSidingPerformance
      */
     public function aggregateForSiding(int $sidingId, CarbonImmutable $date): SidingPerformance
     {
-        $rakeIds = Rake::query()
-            ->where('siding_id', $sidingId)
-            ->pluck('id');
-
         $rakesProcessed = Rake::query()
             ->where('siding_id', $sidingId)
             ->whereDate('loading_end_time', $date)
@@ -66,11 +61,10 @@ final readonly class AggregateSidingPerformance
                 ->avg('detention_hours') ?? 0
         );
 
-        $overloadIncidents = Wagon::query()
-            ->whereIn('rake_id', $rakeIds)
-            ->where('is_overloaded', true)
-            ->whereDate('created_at', $date)
-            ->count();
+        $overloadIncidents = (int) Rake::query()
+            ->where('siding_id', $sidingId)
+            ->whereDate('loading_end_time', $date)
+            ->sum('overload_wagon_count');
 
         $closingStock = CoalStock::query()
             ->where('siding_id', $sidingId)
