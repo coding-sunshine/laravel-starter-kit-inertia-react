@@ -1091,15 +1091,15 @@ final class ExecutiveDashboardController extends Controller
 
         $totalRakes = (int) array_sum($rakesByState);
 
-        // Predicted penalties are superseded once the RR arrives, so count the
-        // actual snapshot for those rakes instead of both (which double-counted).
+        // Predicted penalties are superseded once the RR arrives (even a zero-penalty
+        // RR), so count the actual snapshot for those rakes instead of both.
         $predictedThisMonth = AppliedPenalty::query()
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->whereNotExists(fn (QueryBuilder $q) => $q->select(DB::raw(1))
-                ->from('rr_penalty_snapshots')
-                ->whereColumn('rr_penalty_snapshots.rake_id', 'applied_penalties.rake_id'))
+                ->from('rr_documents')
+                ->whereColumn('rr_documents.rake_id', 'applied_penalties.rake_id'))
             ->sum('amount');
 
         $actualThisMonth = RrPenaltySnapshot::query()->whereRaw(RrPenaltySnapshot::effectiveSql())

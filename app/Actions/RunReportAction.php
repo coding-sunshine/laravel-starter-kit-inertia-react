@@ -2419,15 +2419,15 @@ final readonly class RunReportAction
      */
     private function penaltyRegisterBaseQueries(array $sidingIds, array $params): array
     {
-        // Predicted (pre-RR) penalties are superseded once the RR arrives and
-        // real penalty snapshots exist for that rake. Without this exclusion the
-        // register lists — and totals — both estimates for the same rake.
+        // Predicted (pre-RR) penalties are superseded once the RR arrives, even when
+        // the RR carries no penalty. Without this exclusion the register lists, and
+        // totals, estimates alongside the final RR for the same rake.
         $appliedQuery = AppliedPenalty::query()
             ->with(['rake.siding:id,name', 'penaltyType:id,code,name,calculation_type'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->whereNotExists(fn (QueryBuilder $q) => $q->select(DB::raw(1))
-                ->from('rr_penalty_snapshots')
-                ->whereColumn('rr_penalty_snapshots.rake_id', 'applied_penalties.rake_id'));
+                ->from('rr_documents')
+                ->whereColumn('rr_documents.rake_id', 'applied_penalties.rake_id'));
 
         $snapshotQuery = RrPenaltySnapshot::query()
             ->whereRaw(RrPenaltySnapshot::effectiveSql())
