@@ -13,6 +13,7 @@ use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
 use Carbon\Carbon;
 use DateTimeInterface;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -56,12 +57,19 @@ final readonly class DailyVehicleEntryService
 
         $entryType = $data['entry_type'] ?? DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
 
-        return DailyVehicleEntry::create([
+        $attributes = [
             ...$data,
             'entry_type' => $entryType,
             'reached_at' => $data['reached_at'] ?? now(),
             'created_by' => auth()->id(),
-        ]);
+        ];
+
+        // A double-submitted form hits the (siding, date, shift, vehicle, reached_at) unique index;
+        // return the row the first submit created instead of failing with a 500.
+        return DailyVehicleEntry::createOrFirst(
+            Arr::only($attributes, ['siding_id', 'entry_date', 'shift', 'vehicle_no', 'reached_at']),
+            $attributes,
+        );
     }
 
     public function updateEntry(DailyVehicleEntry $entry, array $data): DailyVehicleEntry
