@@ -222,7 +222,7 @@ return [
         'notifiable' => Spatie\Backup\Notifications\Notifiable::class,
 
         'mail' => [
-            'to' => env('BACKUP_MAIL_TO'),
+            'to' => env('BACKUP_MAIL_TO', 'backup@sharereport.in'), // spatie validates this even when mail is off
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
