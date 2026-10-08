@@ -72,6 +72,7 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            'permission' => 0666, // php-fpm (www-data) and CLI/cron (sharproj) both write the same file
             'replace_placeholders' => true,
         ],
 
