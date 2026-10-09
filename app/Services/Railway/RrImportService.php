@@ -228,11 +228,13 @@ final readonly class RrImportService
             return null;
         }
 
-        return RrDocument::query()
+        // rr_details is a text column (array cast), so the format is checked in PHP; rr_number is unique.
+        $existing = RrDocument::query()
             ->where('rr_number', $parsed['rr_number'])
-            ->where('rr_details->rr_format', RrParserService::RR_FORMAT_WBPDCL_ERP)
             ->where('rake_id', $rake?->id)
             ->first();
+
+        return ($existing?->rr_details['rr_format'] ?? null) === RrParserService::RR_FORMAT_WBPDCL_ERP ? $existing : null;
     }
 
     private function validateNoDuplicates(array $parsed): void
