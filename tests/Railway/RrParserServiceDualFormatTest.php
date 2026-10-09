@@ -348,3 +348,36 @@ test('parses BMGK multipage ET-RR PDF when fixture and pdftotext are available',
 
     return mb_trim((string) shell_exec('command -v pdftotext 2>/dev/null')) === '';
 }, 'Skipping: BMGK PDF missing or pdftotext unavailable');
+
+test('parses WBPDCL ERP RR: joins wrapped wagon number/type, base freight, own format', function (): void {
+    $text = <<<'TXT'
+                                    Electronically Transmitted Railway Receipt
+             RR No:452000167 RR Date:08.10.2026 FNR:26100211559 Station From:DUMK Station To:STPS
+Wagons                   2                      Total Weight             130.000
+Actual            124.300
+Chargeable        130.000
+Freight(Rs.)              1,000.00
+Other Charges
+GST      50.00
+Total Freight                                1,050.00
+
+SR. OWN TYPE    WGON CC(T) TARE No of CMDT GROS DIP DIP Actl. PERM OVER OVER OVER CHBL
+No. G           NUMB              (T) Article CODE S WT Msmt. Unit Wt.    CC WT. WT. WT. WT
+    RLY                                                                         TOTL Norm POL
+ 1  ECO BOBRNH 731222117 65.000 25.610        299132 88.760 0     63.150 65.000 0.000 0.000 0.000 65.000
+          SM2      84                            3
+ 2  ECO BOBRM1 731222117 65.000 25.610        299132 86.760 0     61.150 65.000 0.000 0.000 0.000 65.000
+                   26                            3
+TXT;
+
+    $p = (new RrParserService)->parseExtractedText($text);
+
+    expect($p['rr_format'])->toBe(RrParserService::RR_FORMAT_WBPDCL_ERP)
+        ->and($p['wagons'])->toHaveCount(2)
+        ->and($p['wagons'][0]['wagon_number'])->toBe('73122211784')
+        ->and($p['wagons'][0]['wagon_type'])->toBe('BOBRNHSM2')
+        ->and($p['wagons'][1]['wagon_number'])->toBe('73122211726')
+        ->and($p['wagons'][1]['wagon_type'])->toBe('BOBRM1')
+        ->and((float) $p['freight_total'])->toBe(1000.0)
+        ->and((float) collect($p['charges'])->firstWhere('code', 'FREIGHT')['amount'])->toBe(1000.0);
+});

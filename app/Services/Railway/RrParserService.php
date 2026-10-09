@@ -31,6 +31,9 @@ final readonly class RrParserService
     /** Multi-page ET-RR (SR. OWNG wagon table; CC / CHBL / Actl. column layout). */
     public const RR_FORMAT_ET_RR_MULTIPAGE = 'et_rr_multipage';
 
+    /** WBPDCL SAP/ERP copy of the eT-RR (SR. OWN TYPE table). The railway RR supersedes it for the same RR number. */
+    public const RR_FORMAT_WBPDCL_ERP = 'wbpdcl_erp';
+
     private const WAGON_SECTION_START = 'Wagon details of the Railway Receipt';
 
     private const FOIS_WAGON_SECTION_START = 'Wagon Details of the RR';
@@ -118,7 +121,19 @@ final readonly class RrParserService
         // Detect: full ET-RR title + "SR. OWNG … WGON" header or compact wagon rows (e.g. BMGK_BTMT_RR_461001833).
         // Wagon weights: CC(T)→pcc, CHBL WT→permissible, Actl. Wt.→loaded; header Total Weight→chargeable total.
         if ($this->detectEtRrMultipageFormat($text)) {
-            return $this->parseExtractedTextEtRrMultipage($text);
+            $parsed = $this->parseExtractedTextEtRrMultipage($text);
+
+            // WBPDCL ERP copy: same layout, but "SR. OWN TYPE" header. Freight = Freight(Rs.) like the railway eT-RR.
+            if (preg_match('/^\s*SR\.\s+OWN\s+TYPE\b/im', $text)) {
+                $parsed['rr_format'] = self::RR_FORMAT_WBPDCL_ERP;
+                foreach ($parsed['charges'] as $charge) {
+                    if ($charge['code'] === 'FREIGHT') {
+                        $parsed['freight_total'] = (float) $charge['amount'];
+                    }
+                }
+            }
+
+            return $parsed;
         }
 
         // FOIS portal print / RR from railway (rr_format: fois_printed).
@@ -403,8 +418,12 @@ final readonly class RrParserService
         if (preg_match('/\bFreight\s*\(\s*Rs\.?\s*\)\s+([\d,]+(?:\.\d+)?)/iu', $chargesText, $m)) {
             $amount = (float) str_replace(',', '', mb_trim($m[1]));
             $hasFreight = false;
-            foreach ($charges as $charge) {
+            foreach ($charges as $i => $charge) {
                 if (($charge['code'] ?? '') === 'FREIGHT') {
+                    // parseChargesSection falls back to Total Freight, which already includes GST/OTC lines.
+                    if ($amount > 0) {
+                        $charges[$i]['amount'] = $amount;
+                    }
                     $hasFreight = true;
                     break;
                 }
@@ -426,20 +445,37 @@ final readonly class RrParserService
      */
     private function parseEtRrMultipageWagonSection(string $text): array
     {
-        $wagons = [];
-        $seenWagonNumbers = [];
+        $rows = [];
+        $previousWasRow = false;
 
         foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
             $trimLine = mb_trim((string) $line);
             if ($trimLine === '' || $this->isEtRrMultipageWagonSkipLine($trimLine)) {
+                $previousWasRow = false;
+
                 continue;
             }
 
             $wagon = $this->parseEtRrMultipageWagonRow($trimLine);
-            if ($wagon === null) {
+            if ($wagon !== null) {
+                $rows[] = $wagon;
+                $previousWasRow = true;
+
                 continue;
             }
 
+            // Wrapped cells (WBPDCL ERP): "SM2   84   3" under the row = wagon type suffix, wagon number tail, CMDT tail.
+            if ($previousWasRow && preg_match('/^(?:([A-Z0-9]{1,4})\s+)?(\d{1,4})\s+\d{1,2}$/i', $trimLine, $m)) {
+                $last = array_key_last($rows);
+                $rows[$last]['wagon_type'] .= mb_strtoupper($m[1]);
+                $rows[$last]['wagon_number'] .= $m[2];
+            }
+            $previousWasRow = false;
+        }
+
+        $wagons = [];
+        $seenWagonNumbers = [];
+        foreach ($rows as $wagon) {
             $wagonNumber = (string) ($wagon['wagon_number'] ?? '');
             if ($wagonNumber === '' || isset($seenWagonNumbers[$wagonNumber])) {
                 continue;

@@ -34,7 +34,7 @@ final readonly class PreviewRailwayReceiptImport
      *     rake_id: int,
      *     rake_number: string|null,
      *     rake_serial_number: string|null,
-     *     rr_format: 'et_rr'|'et_rr_multipage'|'fois_printed',
+     *     rr_format: 'et_rr'|'et_rr_multipage'|'fois_printed'|'wbpdcl_erp',
      *     actual_weight_mt: float|null,
      *     chargeable_weight_mt: float,
      * }
@@ -63,7 +63,7 @@ final readonly class PreviewRailwayReceiptImport
             abort(403);
         }
 
-        $this->rrImportService->assertDefaultUploadSlotAvailableForPreview($rake);
+        $this->rrImportService->assertDefaultUploadSlotAvailableForPreview($rake, $parsed);
 
         return [
             'fnr_from_rr' => $normalizedFnr,

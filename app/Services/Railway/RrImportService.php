@@ -71,6 +71,8 @@ final readonly class RrImportService
                 throw new InvalidArgumentException('A rake is required when uploading a diversion Railway Receipt.');
             }
 
+            $this->replaceSupersededErpRr($parsed, $rake);
+
             if ($rake !== null) {
                 $this->assertRrUploadSlotAvailable($rake, $diverrtDestination);
                 $this->validateParsedRailwayReceiptAgainstRake($parsed, $rake, $diverrtDestination);
@@ -111,8 +113,12 @@ final readonly class RrImportService
      *
      * @throws InvalidArgumentException When the primary or default slot for this rake is already filled
      */
-    public function assertDefaultUploadSlotAvailableForPreview(Rake $rake): void
+    public function assertDefaultUploadSlotAvailableForPreview(Rake $rake, array $parsed = []): void
     {
+        if ($this->findSupersededErpRr($parsed, $rake) !== null) {
+            return;
+        }
+
         $this->assertRrUploadSlotAvailable($rake, null);
     }
 
@@ -201,6 +207,34 @@ final readonly class RrImportService
         }
     }
 
+    /**
+     * Client rule: the railway RR is final. Uploading it replaces the WBPDCL ERP copy of the same RR number
+     * (same rake). The ERP PDF is removed only after the replacement commits.
+     */
+    private function replaceSupersededErpRr(array $parsed, ?Rake $rake): void
+    {
+        $erp = $this->findSupersededErpRr($parsed, $rake);
+        if ($erp === null) {
+            return;
+        }
+
+        $erp->deletePreservingMedia();
+        DB::afterCommit(fn () => $erp->media()->get()->each->delete());
+    }
+
+    private function findSupersededErpRr(array $parsed, ?Rake $rake): ?RrDocument
+    {
+        if (empty($parsed['rr_number']) || ($parsed['rr_format'] ?? null) === RrParserService::RR_FORMAT_WBPDCL_ERP) {
+            return null;
+        }
+
+        return RrDocument::query()
+            ->where('rr_number', $parsed['rr_number'])
+            ->where('rr_details->rr_format', RrParserService::RR_FORMAT_WBPDCL_ERP)
+            ->where('rake_id', $rake?->id)
+            ->first();
+    }
+
     private function validateNoDuplicates(array $parsed): void
     {
         $rrNumber = $parsed['rr_number'] ?? null;
@@ -228,7 +262,8 @@ final readonly class RrImportService
         }
 
         if ($format === RrParserService::RR_FORMAT_FOIS_PRINTED
-            || $format === RrParserService::RR_FORMAT_ET_RR_MULTIPAGE) {
+            || $format === RrParserService::RR_FORMAT_ET_RR_MULTIPAGE
+            || $format === RrParserService::RR_FORMAT_WBPDCL_ERP) {
             $headerWagonCount = (int) ($parsed['wagon_count'] ?? 0);
             if ($headerWagonCount > 0 && $wagons !== [] && count($wagons) !== $headerWagonCount) {
                 throw new InvalidArgumentException(
